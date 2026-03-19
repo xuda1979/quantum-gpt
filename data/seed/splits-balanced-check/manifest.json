@@ -1,0 +1,65 @@
+{
+  "manifest_version": "seed-splits-v2",
+  "input_path": "data/seed/train-chat.jsonl",
+  "source_schema": "chat-sft-v1",
+  "seed": "seed-splits-v1",
+  "mode": "balanced_domain",
+  "ratios": {
+    "train": 0.67,
+    "val": 0.17,
+    "test": 0.16
+  },
+  "splits": {
+    "train": {
+      "path": "data/seed/splits-balanced-check/train.jsonl",
+      "summary": {
+        "count": 4,
+        "domains": {
+          "quantum": 2,
+          "software": 2
+        },
+        "task_types": {
+          "implementation": 1,
+          "repair": 2,
+          "test_writing": 1
+        }
+      },
+      "example_ids": [
+        "quantum_bell_pair_001",
+        "quantum_measurement_repair_001",
+        "software_bugfix_off_by_one_001",
+        "software_parser_tests_001"
+      ],
+      "count_written": 4
+    },
+    "val": {
+      "path": "data/seed/splits-balanced-check/val.jsonl",
+      "summary": {
+        "count": 2,
+        "domains": {
+          "quantum": 1,
+          "software": 1
+        },
+        "task_types": {
+          "implementation": 1,
+          "refactor": 1
+        }
+      },
+      "example_ids": [
+        "quantum_superdense_coding_001",
+        "software_refactor_duplicate_logic_001"
+      ],
+      "count_written": 2
+    },
+    "test": {
+      "path": "data/seed/splits-balanced-check/test.jsonl",
+      "summary": {
+        "count": 0,
+        "domains": {},
+        "task_types": {}
+      },
+      "example_ids": [],
+      "count_written": 0
+    }
+  }
+}

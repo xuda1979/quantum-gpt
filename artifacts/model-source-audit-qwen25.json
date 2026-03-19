@@ -1,0 +1,11 @@
+{
+  "timestamp_utc": "2026-03-18T11:45:30.025318+00:00",
+  "python": "3.9.6",
+  "platform": "macOS-26.3-arm64-arm-64bit",
+  "model_id": "Qwen/Qwen2.5-1.5B-Instruct",
+  "status": "error",
+  "stage": "fetch_model_info",
+  "error_type": "URLError",
+  "error": "<urlopen error [Errno 60] Operation timed out>",
+  "timeout_seconds": 90.0
+}

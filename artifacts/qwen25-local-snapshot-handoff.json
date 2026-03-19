@@ -1,0 +1,60 @@
+{
+  "status": "dry_run",
+  "target": "qwen25",
+  "model_id": "Qwen/Qwen2.5-1.5B-Instruct",
+  "audit_out": "artifacts/model-source-audit-qwen25.json",
+  "handoff_note": "research/qwen25-public-fallback-handoff.md",
+  "remote_model_dir": "/root/root/work/quantum-gpt/models/Qwen2.5-1.5B-Instruct",
+  "handoff_manifest": "artifacts/qwen25-local-snapshot-handoff.json",
+  "next_step_hint": "If this target is approved for execution, rerun without --dry-run and continue with research/qwen25-public-fallback-handoff.md",
+  "audit_summary": {
+    "timestamp_utc": "2026-03-18T01:38:19.620433+00:00",
+    "python": "3.9.6",
+    "platform": "macOS-26.3-arm64-arm-64bit",
+    "model_id": "Qwen/Qwen2.5-1.5B-Instruct",
+    "status": "ok",
+    "resolved_id": "Qwen/Qwen2.5-1.5B-Instruct",
+    "private": false,
+    "disabled": false,
+    "gated": false,
+    "downloads": 8912388,
+    "likes": 641,
+    "pipeline_tag": "text-generation",
+    "library_name": "transformers",
+    "tags_sample": [
+      "transformers",
+      "safetensors",
+      "qwen2",
+      "text-generation",
+      "chat",
+      "conversational",
+      "en",
+      "arxiv:2407.10671",
+      "base_model:Qwen/Qwen2.5-1.5B",
+      "base_model:finetune:Qwen/Qwen2.5-1.5B",
+      "license:apache-2.0",
+      "text-generation-inference",
+      "endpoints_compatible",
+      "deploy:azure",
+      "region:us"
+    ],
+    "file_count": 10,
+    "config_model_type": "qwen2",
+    "config_architectures": [
+      "Qwen2ForCausalLM"
+    ],
+    "family_evidence": {
+      "expected_family_substring": "qwen",
+      "matched": true,
+      "hits": [
+        "Qwen/Qwen2.5-1.5B-Instruct",
+        "Qwen",
+        "qwen2",
+        "qwen2",
+        "base_model:Qwen/Qwen2.5-1.5B",
+        "base_model:finetune:Qwen/Qwen2.5-1.5B",
+        "Qwen2ForCausalLM"
+      ]
+    }
+  }
+}

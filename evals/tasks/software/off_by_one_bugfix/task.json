@@ -1,0 +1,8 @@
+{
+  "id": "software_off_by_one_bugfix",
+  "name": "Off-by-one bug fix",
+  "domain": "software",
+  "category": "bugfix",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

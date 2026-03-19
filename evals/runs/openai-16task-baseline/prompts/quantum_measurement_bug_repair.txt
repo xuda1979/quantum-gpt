@@ -1,0 +1,57 @@
+Task ID: quantum_measurement_bug_repair
+Task name: Measurement mapping bug repair
+Domain: quantum
+Category: debug_repair
+
+Write a Python file that passes the supplied tests.
+Return only the candidate file contents.
+
+Reference candidate style example (for format guidance, not for blind copying):
+--- BEGIN REFERENCE CANDIDATE ---
+def measurement_mapping(bitstring: str) -> dict[str, int]:
+    """Map q0/q1 to integer measurement results from a two-bit string.
+
+    Input ordering is q1q0, so the rightmost bit is q0.
+    """
+    if len(bitstring) != 2 or any(ch not in "01" for ch in bitstring):
+        raise ValueError("expected a two-bit measurement string")
+    return {"q0": int(bitstring[1]), "q1": int(bitstring[0])}
+
+--- END REFERENCE CANDIDATE ---
+
+Tests the candidate must satisfy:
+--- BEGIN TESTS ---
+import importlib.util
+
+
+def _load(candidate_path: str):
+    spec = importlib.util.spec_from_file_location("candidate", candidate_path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
+def run_tests(candidate_path: str) -> dict:
+    module = _load(candidate_path)
+    ok = True
+    details = []
+
+    if module.measurement_mapping("10") != {"q0": 0, "q1": 1}:
+        ok = False
+        details.append("mapping for '10' was incorrect")
+
+    if module.measurement_mapping("01") != {"q0": 1, "q1": 0}:
+        ok = False
+        details.append("mapping for '01' was incorrect")
+
+    try:
+        module.measurement_mapping("2")
+        ok = False
+        details.append("invalid input should raise ValueError")
+    except ValueError:
+        details.append("invalid input rejected correctly")
+
+    return {"passed": ok, "details": details or ["measurement mapping passed"]}
+
+--- END TESTS ---

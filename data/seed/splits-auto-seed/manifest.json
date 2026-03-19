@@ -1,0 +1,82 @@
+{
+  "manifest_version": "seed-splits-v3",
+  "input_path": "data/seed/train-chat.jsonl",
+  "source_schema": "chat-sft-v1",
+  "seed": "seed-splits-v1",
+  "ratios": {
+    "train": 0.67,
+    "val": 0.17,
+    "test": 0.16
+  },
+  "balance_key": "domain",
+  "min_per_balance_group": 1,
+  "auto_policy": {
+    "policy": "domain_balanced",
+    "flags": [
+      "--balance-key",
+      "domain",
+      "--min-per-balance-group",
+      "1"
+    ],
+    "reason": "Corpus is still tiny relative to the three-way split, so explicit domain coverage matters more than preserving nominal ratios."
+  },
+  "splits": {
+    "train": {
+      "path": "data/seed/splits-auto-seed/train.jsonl",
+      "summary": {
+        "count": 2,
+        "domains": {
+          "quantum": 1,
+          "software": 1
+        },
+        "task_types": {
+          "implementation": 1,
+          "refactor": 1
+        }
+      },
+      "example_ids": [
+        "quantum_bell_pair_001",
+        "software_refactor_duplicate_logic_001"
+      ],
+      "count_written": 2
+    },
+    "val": {
+      "path": "data/seed/splits-auto-seed/val.jsonl",
+      "summary": {
+        "count": 2,
+        "domains": {
+          "quantum": 1,
+          "software": 1
+        },
+        "task_types": {
+          "implementation": 1,
+          "repair": 1
+        }
+      },
+      "example_ids": [
+        "quantum_superdense_coding_001",
+        "software_bugfix_off_by_one_001"
+      ],
+      "count_written": 2
+    },
+    "test": {
+      "path": "data/seed/splits-auto-seed/test.jsonl",
+      "summary": {
+        "count": 2,
+        "domains": {
+          "quantum": 1,
+          "software": 1
+        },
+        "task_types": {
+          "repair": 1,
+          "test_writing": 1
+        }
+      },
+      "example_ids": [
+        "quantum_measurement_repair_001",
+        "software_parser_tests_001"
+      ],
+      "count_written": 2
+    }
+  }
+}

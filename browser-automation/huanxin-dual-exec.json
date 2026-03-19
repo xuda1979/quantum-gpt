@@ -1,0 +1,26 @@
+{
+  "ok": true,
+  "remoteDir": null,
+  "sources": [],
+  "ai1": {
+    "envName": "ai1",
+    "profileCopyName": "ai1-1773664203095",
+    "exec": {
+      "ok": true,
+      "exitCode": 0,
+      "stdout": "{\n  \"ok\": true,\n  \"envName\": \"ai1\",\n  \"url\": \"https://aihuanxin.cn/kunlun/kl-web?poolId=1&projectId=3ed7854b946a47b1a49ad754baa76cd3#/train-dev/environment/dl-eceabe8229a33144abe9cac96d08dcd3?name=ai1\",\n  \"command\": \"python3 -c \\\"import importlib.util as u; mods=['peft','datasets','accelerate','trl']; print({m:(u.find_spec(m) is not None) for m in mods})\\\"\",\n  \"before\": \"Welcome to 4.19.90-2107.6.0.0192.8.oe1.bclinux.aarch64System information as of time: Mon Mar 16 20:30:18 CST 2026System load: 12.45Memory used: 2.1%Swap used: 0.0%Usage On: 16%Users online: 0root:/#\",\n  \"after\": \"Welcome to 4.19.90-2107.6.0.0192.8.oe1.bclinux.aarch64System information as of time: Mon Mar 16 20:30:18 CST 2026System load: 12.45Memory used: 2.1%Swap used: 0.0%Usage On: 16%Users online: 0root:/# python3 -c \\\"import importlib.util as u; mods=['peft','datasets','accelerate','trl']; print({m:(u.find_spec(m) is not None) for m in mods})\\\"{'peft': True, 'datasets': True, 'accelerate': True, 'trl': False}root:/#\"\n}\n",
+      "stderr": ""
+    }
+  },
+  "ai2": {
+    "envName": "ai2",
+    "profileCopyName": "ai2-1773664203096",
+    "exec": {
+      "ok": true,
+      "exitCode": 0,
+      "stdout": "{\n  \"ok\": true,\n  \"envName\": \"ai2\",\n  \"url\": \"https://aihuanxin.cn/kunlun/kl-web?poolId=1&projectId=3ed7854b946a47b1a49ad754baa76cd3#/train-dev/environment/dl-332c4679dcf533b7b978d6df217292d4?name=ai2\",\n  \"command\": \"python3 -c \\\"import importlib.util as u; mods=['peft','datasets','accelerate','trl']; print({m:(u.find_spec(m) is not None) for m in mods})\\\"\",\n  \"before\": \"Welcome to 4.19.90-2107.6.0.0192.8.oe1.bclinux.aarch64System information as of time: Mon Mar 16 20:30:17 CST 2026System load: 24.71Memory used: 30.8%Swap used: 0.0%Usage On: 11%Users online: 0root:/#\",\n  \"after\": \"Welcome to 4.19.90-2107.6.0.0192.8.oe1.bclinux.aarch64System information as of time: Mon Mar 16 20:30:17 CST 2026System load: 24.71Memory used: 30.8%Swap used: 0.0%Usage On: 11%Users online: 0root:/# python3 -c \\\"import importlib.util as u; mods=['peft','datasets','accelerate','trl']; print({m:(u.find_spec(m) is not None) for m in mods})\\\"{'peft': True, 'datasets': True, 'accelerate': True, 'trl': False}root:/#\"\n}\n",
+      "stderr": ""
+    }
+  },
+  "timestamp": "2026-03-16T12:30:25.623Z"
+}

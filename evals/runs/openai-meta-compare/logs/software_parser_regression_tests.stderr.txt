@@ -1,0 +1,1 @@
+provider=openai model=gpt-5.4 response_id=resp_0f791e089997175e0069b3be17251c8193a942ad78c34a6e53 input_tokens=605 output_tokens=271

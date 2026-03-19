@@ -1,0 +1,476 @@
+{
+  "ok": true,
+  "title": "焕新社区",
+  "url": "https://aihuanxin.cn/kunlun/kl-web?poolId=1&projectId=3ed7854b946a47b1a49ad754baa76cd3#/train-dev",
+  "state": "authenticated_surface_ready",
+  "bodyPreview": "内蒙-1 帮助中心 消息中心 xuda2025 我的项目 未来院项目组 项目空间详情 模型广场 模型训练 开发环境 训练任务 模型调优 有监督微调 模型推理 推理服务 应用接入 调用统计 资产管理 模型管理 镜像管理 文件管理 数据集管理 运营运维 告警管理 操作日志 项目空间管理/ 模型训练/ 开发环境 欢迎使用开发环境！ 开发环境创建及运行 您可在当前项目空间内新建开发环境，挂载训练数据，选择训练镜像，配置资源信息，并启动实例 立即新建 开发环境访问及使用 您可进入Jupyter、VSCode或Shell终端，在云端进行开发和训练 开发环境持久化保存 您安装的软件及依赖，开发环境重启后将丢失；如需持久化保存，请进行保存镜像操作 开发环境列表 仅我创建 新建开发环境 开发环境名称 所属资源组 创建人 环境状态 实例数 单实例资源配置 最近启动时间 操作 ai1 专属研究院未来院临时专用资源组 xuda2025 运行中 1 8加速卡 160核CPU 1920GB内存 2026-03-17 09:58:06 打开 停止 编辑 删除 ai2 专属研究院未来院临时专用资源组 xuda2025 运行中 1 8加速卡 160核CPU 1920GB内存 2026-02-04 12:51:34 打开 停止 编辑 删除 共 2 条 每页显示 10 条 1",
+  "attemptTrace": [
+    {
+      "attempt": 1,
+      "title": "焕新社区",
+      "url": "https://aihuanxin.cn/kunlun/kl-web?poolId=1&projectId=3ed7854b946a47b1a49ad754baa76cd3#/train-dev",
+      "state": "authenticated_surface_ready",
+      "bodyPreview": "内蒙-1 帮助中心 消息中心 xuda2025 我的项目 未来院项目组 项目空间详情 模型广场 模型训练 开发环境 训练任务 模型调优 有监督微调 模型推理 推理服务 应用接入 调用统计 资产管理 模型管理 镜像管理 文件管理 数据集管理 运营运维 告警管理 操作日志 项目空间管理/ 模型训练/ 开发环境 欢迎使用开发环境！ 开发环境创建及运行 您可在当前项目空间内新建开发环境，挂载训练数据，选择训练镜像，配置资源信息，并启动实例 立即新建 开发环境访问及使用 您可进入Jupyter、VSCode或Shell终端，在云端进行开发和训练 开发环境持久化保存 您安装的软件及依赖，开发环境重启后将丢失；如需持久化保存，请进行保存镜像操作 开发环境列表 仅我创建 新建开发环境 开发环境名称 所属资源组 创建人 环境状态 实例数 单实例资源配置 最近启动时间 操作 ai1 专属研究院未来院临时专用资",
+      "hasLikelyRemoteSurface": true
+    }
+  ],
+  "links": [
+    {
+      "text": "项目空间管理",
+      "href": "#/project-space"
+    },
+    {
+      "text": "立即新建",
+      "href": "#/train-dev/create"
+    },
+    {
+      "text": "1",
+      "href": ""
+    }
+  ],
+  "surfaceSummary": {
+    "interesting": [
+      {
+        "tag": "INPUT",
+        "text": "",
+        "placeholder": "",
+        "role": "combobox",
+        "className": "ant-select-selection-search-input",
+        "id": "rc_select_0",
+        "editable": "",
+        "testId": ""
+      },
+      {
+        "tag": "INPUT",
+        "text": "",
+        "placeholder": "",
+        "role": "combobox",
+        "className": "ant-select-selection-search-input",
+        "id": "rc_select_1",
+        "editable": "",
+        "testId": ""
+      },
+      {
+        "tag": "A",
+        "text": "项目空间管理",
+        "placeholder": "",
+        "role": "",
+        "className": "",
+        "id": "",
+        "editable": "",
+        "testId": ""
+      },
+      {
+        "tag": "A",
+        "text": "立即新建",
+        "placeholder": "",
+        "role": "",
+        "className": "button",
+        "id": "",
+        "editable": "",
+        "testId": ""
+      },
+      {
+        "tag": "BUTTON",
+        "text": "",
+        "placeholder": "",
+        "role": "",
+        "className": "css-3nz3m5 ant-btn ant-btn-default icon-reload-button ant-btn-icon-only",
+        "id": "",
+        "editable": "",
+        "testId": ""
+      },
+      {
+        "tag": "INPUT",
+        "text": "",
+        "placeholder": "请输入开发环境/创建人",
+        "role": "",
+        "className": "ant-input css-3nz3m5",
+        "id": "",
+        "editable": "",
+        "testId": ""
+      },
+      {
+        "tag": "INPUT",
+        "text": "",
+        "placeholder": "",
+        "role": "combobox",
+        "className": "ant-select-selection-search-input",
+        "id": "rc_select_2",
+        "editable": "",
+        "testId": ""
+      },
+      {
+        "tag": "BUTTON",
+        "text": "新建开发环境",
+        "placeholder": "",
+        "role": "",
+        "className": "css-3nz3m5 ant-btn ant-btn-primary kl-create-btn",
+        "id": "",
+        "editable": "",
+        "testId": ""
+      },
+      {
+        "tag": "SPAN",
+        "text": "",
+        "placeholder": "",
+        "role": "button",
+        "className": "ant-table-filter-trigger ant-dropdown-trigger",
+        "id": "",
+        "editable": "",
+        "testId": ""
+      },
+      {
+        "tag": "SPAN",
+        "text": "",
+        "placeholder": "",
+        "role": "button",
+        "className": "ant-table-filter-trigger ant-dropdown-trigger",
+        "id": "",
+        "editable": "",
+        "testId": ""
+      },
+      {
+        "tag": "BUTTON",
+        "text": "打开",
+        "placeholder": "",
+        "role": "",
+        "className": "css-3nz3m5 ant-btn ant-btn-link",
+        "id": "",
+        "editable": "",
+        "testId": ""
+      },
+      {
+        "tag": "BUTTON",
+        "text": "停止",
+        "placeholder": "",
+        "role": "",
+        "className": "css-3nz3m5 ant-btn ant-btn-link",
+        "id": "",
+        "editable": "",
+        "testId": ""
+      },
+      {
+        "tag": "BUTTON",
+        "text": "编辑",
+        "placeholder": "",
+        "role": "",
+        "className": "css-3nz3m5 ant-btn ant-btn-link",
+        "id": "",
+        "editable": "",
+        "testId": ""
+      },
+      {
+        "tag": "BUTTON",
+        "text": "删除",
+        "placeholder": "",
+        "role": "",
+        "className": "css-3nz3m5 ant-btn ant-btn-link",
+        "id": "",
+        "editable": "",
+        "testId": ""
+      },
+      {
+        "tag": "BUTTON",
+        "text": "打开",
+        "placeholder": "",
+        "role": "",
+        "className": "css-3nz3m5 ant-btn ant-btn-link",
+        "id": "",
+        "editable": "",
+        "testId": ""
+      },
+      {
+        "tag": "BUTTON",
+        "text": "停止",
+        "placeholder": "",
+        "role": "",
+        "className": "css-3nz3m5 ant-btn ant-btn-link",
+        "id": "",
+        "editable": "",
+        "testId": ""
+      },
+      {
+        "tag": "BUTTON",
+        "text": "编辑",
+        "placeholder": "",
+        "role": "",
+        "className": "css-3nz3m5 ant-btn ant-btn-link",
+        "id": "",
+        "editable": "",
+        "testId": ""
+      },
+      {
+        "tag": "BUTTON",
+        "text": "删除",
+        "placeholder": "",
+        "role": "",
+        "className": "css-3nz3m5 ant-btn ant-btn-link",
+        "id": "",
+        "editable": "",
+        "testId": ""
+      },
+      {
+        "tag": "INPUT",
+        "text": "",
+        "placeholder": "",
+        "role": "combobox",
+        "className": "ant-select-selection-search-input",
+        "id": "rc_select_3",
+        "editable": "",
+        "testId": ""
+      },
+      {
+        "tag": "BUTTON",
+        "text": "",
+        "placeholder": "",
+        "role": "",
+        "className": "ant-pagination-item-link",
+        "id": "",
+        "editable": "",
+        "testId": ""
+      },
+      {
+        "tag": "A",
+        "text": "1",
+        "placeholder": "",
+        "role": "",
+        "className": "",
+        "id": "",
+        "editable": "",
+        "testId": ""
+      },
+      {
+        "tag": "BUTTON",
+        "text": "",
+        "placeholder": "",
+        "role": "",
+        "className": "ant-pagination-item-link",
+        "id": "",
+        "editable": "",
+        "testId": ""
+      },
+      {
+        "tag": "BUTTON",
+        "text": "",
+        "placeholder": "",
+        "role": "",
+        "className": "ant-modal-close",
+        "id": "",
+        "editable": "",
+        "testId": ""
+      },
+      {
+        "tag": "INPUT",
+        "text": "",
+        "placeholder": "",
+        "role": "combobox",
+        "className": "ant-select-selection-search-input",
+        "id": "form_item_category",
+        "editable": "",
+        "testId": ""
+      },
+      {
+        "tag": "TEXTAREA",
+        "text": "",
+        "placeholder": "请详细描述您的问题，并提供您的手机号、用户名、问题页面网址等相关信息，以便我们定位和排查",
+        "role": "",
+        "className": "ant-input",
+        "id": "form_item_description",
+        "editable": "",
+        "testId": ""
+      },
+      {
+        "tag": "SPAN",
+        "text": "上传附件支持png、jpg、jpeg、PNG、JPG、JPEG格式，最多上传5个文件，每个文件大小不超过10 MB",
+        "placeholder": "",
+        "role": "button",
+        "className": "ant-upload",
+        "id": "",
+        "editable": "",
+        "testId": ""
+      },
+      {
+        "tag": "BUTTON",
+        "text": "上传附件",
+        "placeholder": "",
+        "role": "",
+        "className": "ant-btn upload-btn",
+        "id": "",
+        "editable": "",
+        "testId": ""
+      },
+      {
+        "tag": "BUTTON",
+        "text": "取消",
+        "placeholder": "",
+        "role": "",
+        "className": "ant-btn",
+        "id": "",
+        "editable": "",
+        "testId": ""
+      },
+      {
+        "tag": "BUTTON",
+        "text": "确定",
+        "placeholder": "",
+        "role": "",
+        "className": "ant-btn ant-btn-primary",
+        "id": "",
+        "editable": "",
+        "testId": ""
+      },
+      {
+        "tag": "BUTTON",
+        "text": "",
+        "placeholder": "",
+        "role": "",
+        "className": "ant-modal-close",
+        "id": "",
+        "editable": "",
+        "testId": ""
+      },
+      {
+        "tag": "INPUT",
+        "text": "",
+        "placeholder": "请输入",
+        "role": "",
+        "className": "ant-input",
+        "id": "form_item_companyName",
+        "editable": "",
+        "testId": ""
+      },
+      {
+        "tag": "INPUT",
+        "text": "",
+        "placeholder": "请输入11位手机号",
+        "role": "",
+        "className": "ant-input",
+        "id": "form_item_phoneNum",
+        "editable": "",
+        "testId": ""
+      },
+      {
+        "tag": "INPUT",
+        "text": "",
+        "placeholder": "请输入",
+        "role": "",
+        "className": "ant-input",
+        "id": "form_item_email",
+        "editable": "",
+        "testId": ""
+      },
+      {
+        "tag": "INPUT",
+        "text": "",
+        "placeholder": "",
+        "role": "combobox",
+        "className": "ant-select-selection-search-input",
+        "id": "form_item_collaborationScope",
+        "editable": "",
+        "testId": ""
+      },
+      {
+        "tag": "TEXTAREA",
+        "text": "",
+        "placeholder": "请输入",
+        "role": "",
+        "className": "ant-input",
+        "id": "form_item_description",
+        "editable": "",
+        "testId": ""
+      },
+      {
+        "tag": "SPAN",
+        "text": "上传附件支持pdf、doc、docx格式，最多上传5个文件，每个文件大小不超过10 MB",
+        "placeholder": "",
+        "role": "button",
+        "className": "ant-upload",
+        "id": "",
+        "editable": "",
+        "testId": ""
+      },
+      {
+        "tag": "BUTTON",
+        "text": "上传附件",
+        "placeholder": "",
+        "role": "",
+        "className": "ant-btn upload-btn",
+        "id": "",
+        "editable": "",
+        "testId": ""
+      },
+      {
+        "tag": "BUTTON",
+        "text": "取消",
+        "placeholder": "",
+        "role": "",
+        "className": "ant-btn",
+        "id": "",
+        "editable": "",
+        "testId": ""
+      },
+      {
+        "tag": "BUTTON",
+        "text": "确定",
+        "placeholder": "",
+        "role": "",
+        "className": "ant-btn ant-btn-primary",
+        "id": "",
+        "editable": "",
+        "testId": ""
+      }
+    ],
+    "likelyTerminalTargets": [],
+    "likelyEditorTargets": [
+      {
+        "tag": "BUTTON",
+        "text": "编辑",
+        "placeholder": "",
+        "role": "",
+        "className": "css-3nz3m5 ant-btn ant-btn-link",
+        "id": "",
+        "editable": "",
+        "testId": ""
+      },
+      {
+        "tag": "BUTTON",
+        "text": "编辑",
+        "placeholder": "",
+        "role": "",
+        "className": "css-3nz3m5 ant-btn ant-btn-link",
+        "id": "",
+        "editable": "",
+        "testId": ""
+      },
+      {
+        "tag": "SPAN",
+        "text": "上传附件支持png、jpg、jpeg、PNG、JPG、JPEG格式，最多上传5个文件，每个文件大小不超过10 MB",
+        "placeholder": "",
+        "role": "button",
+        "className": "ant-upload",
+        "id": "",
+        "editable": "",
+        "testId": ""
+      },
+      {
+        "tag": "SPAN",
+        "text": "上传附件支持pdf、doc、docx格式，最多上传5个文件，每个文件大小不超过10 MB",
+        "placeholder": "",
+        "role": "button",
+        "className": "ant-upload",
+        "id": "",
+        "editable": "",
+        "testId": ""
+      }
+    ],
+    "hasLikelyRemoteSurface": true
+  },
+  "timestamp": "2026-03-17T05:59:58.109Z",
+  "usedPersistentProfile": true,
+  "profileInfo": {
+    "profileDir": "/Users/daxu/.openclaw/workspace-quantum-rnd/browser-automation/profile",
+    "isolated": false,
+    "sourceDir": "/Users/daxu/.openclaw/workspace-quantum-rnd/browser-automation/profile"
+  }
+}

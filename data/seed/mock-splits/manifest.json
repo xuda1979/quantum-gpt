@@ -1,0 +1,92 @@
+{
+  "manifest_version": "seed-splits-v2",
+  "input_path": "data/seed/mock-train-chat.jsonl",
+  "source_schema": "chat-sft-v1",
+  "seed": "seed-splits-v1",
+  "ratios": {
+    "train": 0.67,
+    "val": 0.17,
+    "test": 0.16
+  },
+  "balance_key": null,
+  "min_per_balance_group": 0,
+  "splits": {
+    "train": {
+      "path": "data/seed/mock-splits/train.jsonl",
+      "summary": {
+        "count": 18,
+        "domains": {
+          "quantum": 9,
+          "software": 9
+        },
+        "task_types": {
+          "implementation": 7,
+          "repair": 4,
+          "test_writing": 4,
+          "refactor": 3
+        }
+      },
+      "example_ids": [
+        "quantum_bell_pair_001__variant_01",
+        "quantum_bell_pair_001__variant_02",
+        "quantum_bell_pair_001__variant_03",
+        "quantum_bell_pair_001__variant_04",
+        "quantum_measurement_repair_001__variant_01",
+        "quantum_measurement_repair_001__variant_02",
+        "quantum_superdense_coding_001__variant_01",
+        "quantum_superdense_coding_001__variant_03",
+        "quantum_superdense_coding_001__variant_04",
+        "software_bugfix_off_by_one_001__variant_01",
+        "software_bugfix_off_by_one_001__variant_03",
+        "software_parser_tests_001__variant_01",
+        "software_parser_tests_001__variant_02",
+        "software_parser_tests_001__variant_03",
+        "software_parser_tests_001__variant_04",
+        "software_refactor_duplicate_logic_001__variant_01",
+        "software_refactor_duplicate_logic_001__variant_03",
+        "software_refactor_duplicate_logic_001__variant_04"
+      ],
+      "count_written": 18
+    },
+    "val": {
+      "path": "data/seed/mock-splits/val.jsonl",
+      "summary": {
+        "count": 3,
+        "domains": {
+          "quantum": 1,
+          "software": 2
+        },
+        "task_types": {
+          "implementation": 1,
+          "repair": 1,
+          "refactor": 1
+        }
+      },
+      "example_ids": [
+        "quantum_superdense_coding_001__variant_02",
+        "software_bugfix_off_by_one_001__variant_02",
+        "software_refactor_duplicate_logic_001__variant_02"
+      ],
+      "count_written": 3
+    },
+    "test": {
+      "path": "data/seed/mock-splits/test.jsonl",
+      "summary": {
+        "count": 3,
+        "domains": {
+          "quantum": 2,
+          "software": 1
+        },
+        "task_types": {
+          "repair": 3
+        }
+      },
+      "example_ids": [
+        "quantum_measurement_repair_001__variant_03",
+        "quantum_measurement_repair_001__variant_04",
+        "software_bugfix_off_by_one_001__variant_04"
+      ],
+      "count_written": 3
+    }
+  }
+}

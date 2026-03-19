@@ -1,0 +1,77 @@
+Task ID: software_docstring_contract
+Task name: Docstring contract preservation
+Domain: software
+Category: api_quality
+
+Write a Python file that passes the supplied tests.
+Return only the candidate file contents.
+
+Reference candidate style example (for format guidance, not for blind copying):
+--- BEGIN REFERENCE CANDIDATE ---
+def normalize_identifier(raw: str) -> str:
+    """Return a lowercase snake_case identifier built from a human label.
+
+    Rules:
+    - Trim leading/trailing whitespace.
+    - Convert internal runs of whitespace or hyphens to a single underscore.
+    - Remove any characters that are not ASCII letters, digits, underscores, spaces, or hyphens.
+    - Collapse repeated underscores.
+    """
+    cleaned = []
+    for char in raw.strip().lower():
+        if char.isascii() and (char.isalnum() or char in {"_", " ", "-"}):
+            cleaned.append(char)
+
+    text = "".join(cleaned).replace("-", "_").replace(" ", "_")
+    while "__" in text:
+        text = text.replace("__", "_")
+    return text.strip("_")
+
+--- END REFERENCE CANDIDATE ---
+
+Tests the candidate must satisfy:
+--- BEGIN TESTS ---
+import importlib.util
+
+
+CASES = [
+    ("  Hello World  ", "hello_world"),
+    ("Already__Snake", "already_snake"),
+    ("quantum-phase-estimation", "quantum_phase_estimation"),
+    ("Noisy Label!!! 42", "noisy_label_42"),
+]
+
+REQUIRED_DOCSTRING_SNIPPETS = [
+    "lowercase snake_case identifier",
+    "Collapse repeated underscores",
+]
+
+
+def _load(candidate_path: str):
+    spec = importlib.util.spec_from_file_location("candidate", candidate_path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
+def run_tests(candidate_path: str) -> dict:
+    module = _load(candidate_path)
+    failures = []
+
+    for raw, expected in CASES:
+        actual = module.normalize_identifier(raw)
+        if actual != expected:
+            failures.append(f"normalize_identifier({raw!r}) -> {actual!r}, expected {expected!r}")
+
+    docstring = module.normalize_identifier.__doc__ or ""
+    for snippet in REQUIRED_DOCSTRING_SNIPPETS:
+        if snippet not in docstring:
+            failures.append(f"docstring missing required phrase: {snippet!r}")
+
+    return {
+        "passed": not failures,
+        "details": failures or ["Behavior and documented contract both preserved"],
+    }
+
+--- END TESTS ---

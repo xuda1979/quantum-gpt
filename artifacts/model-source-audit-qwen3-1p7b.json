@@ -1,0 +1,11 @@
+{
+  "timestamp_utc": "2026-03-18T09:22:09.548847+00:00",
+  "python": "3.9.6",
+  "platform": "macOS-26.3-arm64-arm-64bit",
+  "model_id": "Qwen/Qwen3-1.7B",
+  "status": "error",
+  "stage": "fetch_model_info",
+  "error_type": "URLError",
+  "error": "<urlopen error timed out>",
+  "timeout_seconds": 60.0
+}

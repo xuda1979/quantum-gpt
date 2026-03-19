@@ -1,0 +1,8 @@
+{
+  "id": "quantum_measurement_bug_repair",
+  "name": "Measurement mapping bug repair",
+  "domain": "quantum",
+  "category": "debug_repair",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

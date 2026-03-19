@@ -1,0 +1,12 @@
+{
+  "quantum_bell_pair_construction": "candidates/quantum_bell_pair_construction.py",
+  "quantum_measurement_bug_repair": "candidates/quantum_measurement_bug_repair.py",
+  "quantum_qft_phase_pattern": "candidates/quantum_qft_phase_pattern.py",
+  "quantum_superdense_coding": "candidates/quantum_superdense_coding.py",
+  "quantum_teleportation_corrections": "candidates/quantum_teleportation_corrections.py",
+  "software_config_merge": "candidates/software_config_merge.py",
+  "software_docstring_contract": "candidates/software_docstring_contract.py",
+  "software_duplicate_logic_refactor": "candidates/software_duplicate_logic_refactor.py",
+  "software_off_by_one_bugfix": "candidates/software_off_by_one_bugfix.py",
+  "software_parser_regression_tests": "candidates/software_parser_regression_tests.py"
+}

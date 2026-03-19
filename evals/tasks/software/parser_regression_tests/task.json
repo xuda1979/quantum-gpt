@@ -1,0 +1,8 @@
+{
+  "id": "software_parser_regression_tests",
+  "name": "Parser regression tests",
+  "domain": "software",
+  "category": "test_writing",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

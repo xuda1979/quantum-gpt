@@ -1,0 +1,36 @@
+{
+  "updated_at_utc": "2026-03-16T17:34:00Z",
+  "project": "quantum-coding-llm-rnd",
+  "remote_target": {
+    "platform": "Huanxin train-dev",
+    "project_id": "3ed7854b946a47b1a49ad754baa76cd3",
+    "workdir": "/root/root/work/quantum-gpt"
+  },
+  "local_gate": {
+    "required_eval": "python3 evals/runner/run_eval.py",
+    "status": "pass_from_last_verified_cycle",
+    "last_verified_note": "19/19 pass recorded in memory/2026-03-17.md before this cycle's file changes"
+  },
+  "latest_probe": {
+    "artifact": "browser-automation/huanxin-probe.json",
+    "title": "焕新社区",
+    "state": "login_required",
+    "has_likely_remote_surface": false,
+    "profile_dir": "/var/folders/py/d8v62mnd40vg77h4cls6n0t80000gn/T/huanxin-profile-probe",
+    "profile_source": "browser-automation/profile"
+  },
+  "latest_bundle": {
+    "bundle_dir": "artifacts/huanxin-bootstrap/20260316T143522Z",
+    "label": "huanxin-cpu-bootstrap",
+    "manifest": "artifacts/huanxin-bootstrap/20260316T143522Z/manifest.json",
+    "command_sheet": "artifacts/huanxin-bootstrap/20260316T143522Z/REMOTE_BOOTSTRAP_COMMANDS.sh",
+    "file_count": 9
+  },
+  "next_remote_step": [
+    "Refresh Huanxin login in browser-automation/profile.",
+    "Rerun HUANXIN_PROFILE_COPY_NAME=probe node browser-automation/huanxin_probe.js until state is not login_required and a remote surface is detected.",
+    "Paste only the validated bundle from artifacts/huanxin-bootstrap/20260316T143522Z into /root/root/work/quantum-gpt.",
+    "Run the package-install -> tokenizer smoke -> optional model-load -> optional 1-step PEFT smoke sequence from REMOTE_BOOTSTRAP_COMMANDS.sh."
+  ],
+  "blocker": "Current machine-local persisted Huanxin browser session is unauthenticated, so remote copy/paste or training cannot be honestly continued yet."
+}

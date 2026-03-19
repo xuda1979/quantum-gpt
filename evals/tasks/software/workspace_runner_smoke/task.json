@@ -1,0 +1,11 @@
+{
+  "id": "software_workspace_runner_smoke",
+  "name": "Workspace runner smoke",
+  "domain": "software",
+  "category": "workspace_smoke",
+  "candidate_files": [
+    "pkg/logic.py"
+  ],
+  "workspace_dir": "workspace",
+  "test_file": "tests.py"
+}

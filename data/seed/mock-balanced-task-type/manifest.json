@@ -1,0 +1,96 @@
+{
+  "manifest_version": "seed-splits-v2",
+  "input_path": "data/seed/mock-train-chat.jsonl",
+  "source_schema": "chat-sft-v1",
+  "seed": "seed-splits-v1",
+  "ratios": {
+    "train": 0.67,
+    "val": 0.17,
+    "test": 0.16
+  },
+  "balance_key": "task_type",
+  "min_per_balance_group": 1,
+  "splits": {
+    "train": {
+      "path": "data/seed/mock-balanced-task-type/train.jsonl",
+      "summary": {
+        "count": 16,
+        "domains": {
+          "quantum": 9,
+          "software": 7
+        },
+        "task_types": {
+          "implementation": 6,
+          "repair": 6,
+          "test_writing": 2,
+          "refactor": 2
+        }
+      },
+      "example_ids": [
+        "quantum_bell_pair_001__variant_03",
+        "quantum_bell_pair_001__variant_04",
+        "quantum_measurement_repair_001__variant_02",
+        "quantum_measurement_repair_001__variant_03",
+        "quantum_measurement_repair_001__variant_04",
+        "quantum_superdense_coding_001__variant_01",
+        "quantum_superdense_coding_001__variant_02",
+        "quantum_superdense_coding_001__variant_03",
+        "quantum_superdense_coding_001__variant_04",
+        "software_bugfix_off_by_one_001__variant_01",
+        "software_bugfix_off_by_one_001__variant_02",
+        "software_bugfix_off_by_one_001__variant_03",
+        "software_parser_tests_001__variant_01",
+        "software_parser_tests_001__variant_04",
+        "software_refactor_duplicate_logic_001__variant_01",
+        "software_refactor_duplicate_logic_001__variant_03"
+      ],
+      "count_written": 16
+    },
+    "val": {
+      "path": "data/seed/mock-balanced-task-type/val.jsonl",
+      "summary": {
+        "count": 4,
+        "domains": {
+          "quantum": 1,
+          "software": 3
+        },
+        "task_types": {
+          "implementation": 1,
+          "repair": 1,
+          "test_writing": 1,
+          "refactor": 1
+        }
+      },
+      "example_ids": [
+        "quantum_bell_pair_001__variant_02",
+        "software_bugfix_off_by_one_001__variant_04",
+        "software_parser_tests_001__variant_03",
+        "software_refactor_duplicate_logic_001__variant_04"
+      ],
+      "count_written": 4
+    },
+    "test": {
+      "path": "data/seed/mock-balanced-task-type/test.jsonl",
+      "summary": {
+        "count": 4,
+        "domains": {
+          "quantum": 2,
+          "software": 2
+        },
+        "task_types": {
+          "implementation": 1,
+          "repair": 1,
+          "test_writing": 1,
+          "refactor": 1
+        }
+      },
+      "example_ids": [
+        "quantum_bell_pair_001__variant_01",
+        "quantum_measurement_repair_001__variant_01",
+        "software_parser_tests_001__variant_02",
+        "software_refactor_duplicate_logic_001__variant_02"
+      ],
+      "count_written": 4
+    }
+  }
+}

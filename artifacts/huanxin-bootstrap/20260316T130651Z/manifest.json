@@ -1,0 +1,48 @@
+{
+  "created_at_utc": "2026-03-16T13:06:51.086438+00:00",
+  "label": "huanxin-cpu-bootstrap",
+  "workspace_root": "/Users/daxu/.openclaw/workspace-quantum-rnd",
+  "remote_root": "/root/root/work/quantum-gpt",
+  "files": [
+    {
+      "path": "training/requirements-huanxin-cpu.txt",
+      "bytes": 373,
+      "sha256": "19119d3982552ad4d5d7adb24e5d72380d012da25120485b81b547723e2cf4ed"
+    },
+    {
+      "path": "training/huanxin_cpu_smoke.py",
+      "bytes": 4315,
+      "sha256": "3274a9bf23988d4b9e20b3bcb2da4873ac204538606fc09812cfeab02edadd9a"
+    },
+    {
+      "path": "training/qwen_sft_peft.py",
+      "bytes": 9671,
+      "sha256": "6f1c12e33ef85b1ee13aa6642a8b52dccdeb0629fdb943f3d250c4ac07bd3c39"
+    },
+    {
+      "path": "data/seed/train-chat.jsonl",
+      "bytes": 34673,
+      "sha256": "544881061873c41694dd94950e482431bea1fb184d3589eba8e792596e7396ca"
+    },
+    {
+      "path": "data/seed/splits-auto-seed/train.jsonl",
+      "bytes": 5737,
+      "sha256": "d87c741f094d89ff44e960e017932358a8eed63b0de1d5cd2e4b57e3e2b9aeac"
+    },
+    {
+      "path": "data/seed/splits-auto-seed/val.jsonl",
+      "bytes": 5708,
+      "sha256": "f6219bd726decb537d0d583410170af6cbb37bd00328666424ee059f50b5b41c"
+    },
+    {
+      "path": "research/huanxin-remote-env-manifest.md",
+      "bytes": 2001,
+      "sha256": "cd270e52f276ec28204583019518ad67c0d41ebcc88039885c25c95b2ed4a51c"
+    },
+    {
+      "path": "research/huanxin-remote-bootstrap-plan.md",
+      "bytes": 5661,
+      "sha256": "9ed56ffc4fe2c6418daef33af1f9c43f48364f8d93f6d2364f016b3b8cbc8614"
+    }
+  ]
+}

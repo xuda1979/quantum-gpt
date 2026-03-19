@@ -1,0 +1,84 @@
+{
+  "scored_at_utc": "2026-03-13T06:34:08.413423+00:00",
+  "candidate_map": "/Users/daxu/.openclaw/workspace-quantum-rnd/evals/runs/openai-baseline-smoke/candidate-map.json",
+  "results": [
+    {
+      "id": "quantum_bell_pair_construction",
+      "domain": "quantum",
+      "category": "circuit_construction",
+      "name": "Bell pair construction",
+      "passed": true,
+      "details": [
+        "state=[0.7071067811865476, 0.0, 0.0, 0.7071067811865476]"
+      ],
+      "candidate_path": "/Users/daxu/.openclaw/workspace-quantum-rnd/evals/runs/openai-baseline-smoke/candidates/quantum_bell_pair_construction.py",
+      "source": "override",
+      "error_type": null
+    },
+    {
+      "id": "quantum_measurement_bug_repair",
+      "domain": "quantum",
+      "category": "debug_repair",
+      "name": "Measurement mapping bug repair",
+      "passed": true,
+      "details": [
+        "invalid input rejected correctly"
+      ],
+      "candidate_path": "/Users/daxu/.openclaw/workspace-quantum-rnd/evals/runs/openai-baseline-smoke/candidates/quantum_measurement_bug_repair.py",
+      "source": "override",
+      "error_type": null
+    },
+    {
+      "id": "quantum_superdense_coding",
+      "domain": "quantum",
+      "category": "reasoning",
+      "name": "Superdense coding encode/decode",
+      "passed": true,
+      "details": [
+        "all message mappings round-trip correctly"
+      ],
+      "candidate_path": "/Users/daxu/.openclaw/workspace-quantum-rnd/evals/runs/openai-baseline-smoke/candidates/quantum_superdense_coding.py",
+      "source": "override",
+      "error_type": null
+    },
+    {
+      "id": "software_duplicate_logic_refactor",
+      "domain": "software",
+      "category": "refactor",
+      "name": "Duplicate logic refactor",
+      "passed": true,
+      "details": [
+        "shared normalization helper is used consistently"
+      ],
+      "candidate_path": "/Users/daxu/.openclaw/workspace-quantum-rnd/evals/runs/openai-baseline-smoke/candidates/software_duplicate_logic_refactor.py",
+      "source": "override",
+      "error_type": null
+    },
+    {
+      "id": "software_off_by_one_bugfix",
+      "domain": "software",
+      "category": "bugfix",
+      "name": "Off-by-one bug fix",
+      "passed": true,
+      "details": [
+        "range sum behaves inclusively"
+      ],
+      "candidate_path": "/Users/daxu/.openclaw/workspace-quantum-rnd/evals/runs/openai-baseline-smoke/candidates/software_off_by_one_bugfix.py",
+      "source": "override",
+      "error_type": null
+    },
+    {
+      "id": "software_parser_regression_tests",
+      "domain": "software",
+      "category": "test_writing",
+      "name": "Parser regression tests",
+      "passed": true,
+      "details": [
+        "regression cases cover parser edge cases"
+      ],
+      "candidate_path": "/Users/daxu/.openclaw/workspace-quantum-rnd/evals/runs/openai-baseline-smoke/candidates/software_parser_regression_tests.py",
+      "source": "override",
+      "error_type": null
+    }
+  ]
+}

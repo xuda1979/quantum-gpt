@@ -1,0 +1,4 @@
+{
+  "quantum_bell_pair_construction": "../tasks/quantum/bell_pair_construction/candidate.py",
+  "software_off_by_one_bugfix": "../tasks/software/off_by_one_bugfix/candidate.py"
+}

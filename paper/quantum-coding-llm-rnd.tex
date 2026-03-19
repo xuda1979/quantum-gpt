@@ -1,0 +1,103 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{xcolor}
+
+\title{A CPU-First R\&D Scaffold for Quantum Coding Language Models\\
+\large Reproducible Evaluation, Eval-Derived Data Bootstrapping, and Tiny-Corpus Split Policy Design}
+\author{Mira \and David Hsu}
+\date{March 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We present a practical research scaffold for developing a quantum coding language model under strict local-compute constraints. Instead of beginning with expensive model training, we construct a CPU-first experimental stack that aligns three layers: (1) executable evaluation tasks spanning both quantum and general software-engineering work, (2) a run-oriented inference and scoring workflow that persists prompts, outputs, metadata, and scorecards as durable artifacts, and (3) an eval-derived dataset pipeline that converts executable tasks into supervised and chat-style fine-tuning records. We further study a failure mode that appears in extremely small corpora: naive deterministic train/validation/test hashing can produce misleading domain-skewed holdouts. To address this, we introduce a deterministic, coverage-aware split policy with explicit balancing controls. The resulting system is not yet a trained frontier model; rather, it is a reproducible R\&D substrate that reduces ambiguity before adaptation experiments. We argue that this form of infrastructure work is an essential precursor to credible small-model specialization in technical domains such as quantum programming.
+\end{abstract}
+
+\section{Introduction}
+Specializing small language models for technical code generation is often framed as a training problem. In practice, the harder early-stage problem is experimental validity: before tuning begins, one must know what will be measured, how outputs will be collected, how failures will be logged, and how data artifacts will be generated without contaminating evaluation. These issues are especially sharp in quantum programming, where tasks must remain CPU-runnable, correctness is often executable rather than stylistic, and data volume is limited.
+
+This paper documents a CPU-first scaffold for research on a quantum coding language model centered on the smallest practical Qwen 3.5 instruct checkpoint. The contribution is methodological rather than benchmark-theatrical: we build the experimental substrate required for later training, and we make several design choices explicit enough to be tested, criticized, and extended.
+
+\paragraph{Core thesis.}
+For small-model domain specialization, reproducible evaluation and data provenance should be treated as first-class research objects, not as setup trivia. In the present work, infrastructure choices already produce nontrivial research findings: crash-tolerant score persistence changes what can be measured, eval-derived data generation clarifies supervision boundaries, and tiny-corpus split policy materially affects the apparent credibility of a held-out set.
+
+\section{Problem Setting}
+Our target setting combines four constraints:
+\begin{enumerate}[leftmargin=1.5em]
+    \item \textbf{CPU-first iteration.} Early research must remain lightweight and locally runnable.
+    \item \textbf{Dual capability target.} The model should support both quantum tasks and general software-engineering tasks.
+    \item \textbf{Executable correctness.} Progress should be measured primarily through runnable tests rather than prose quality.
+    \item \textbf{Low data regime.} Initial datasets are tiny, forcing careful treatment of data leakage, task packaging, and split policy.
+\end{enumerate}
+
+\section{System Overview}
+The scaffold consists of five coupled components:
+\begin{enumerate}[leftmargin=1.5em]
+    \item a target-model selection note centered on Qwen3.5-1.5B-Instruct;
+    \item a local executable eval harness with seed tasks from both domains;
+    \item a prepared-run workflow that materializes prompts, candidate slots, manifests, logs, and scorecards;
+    \item an eval-derived dataset builder plus chat-format converter;
+    \item a deterministic split-and-audit toolkit for tiny corpora.
+\end{enumerate}
+
+\subsection{Executable evaluation tasks}
+The current seed suite contains six tasks split evenly across quantum and software work. Task families include implementation, repair, test writing, and refactoring. Each task exposes a minimal Python test contract so scoring is based on executable outcomes.
+
+\subsection{Prepared runs as experimental units}
+A prepared run directory stores a shared system prompt, per-task prompt files, candidate output paths, a manifest, logs, and (after scoring) a scorecard. This design turns prompt-style or model comparisons into file-backed experiments rather than transient terminal sessions.
+
+\subsection{Crash-tolerant scoring}
+Generated code often fails syntactically or semantically. Rather than aborting batch evaluation on the first error, the scorer records malformed or crashing candidates as failed tasks with traceback diagnostics. This preserves full-batch measurement and produces more informative failure analysis.
+
+\section{Eval-Derived Data Bootstrapping}
+A common early-stage mistake is to design training schemas in the abstract. We instead derive a minimal \texttt{dataset-v0} schema directly from executable eval tasks. This has two advantages. First, supervision boundaries remain anchored to concrete task artifacts. Second, the same task identifiers, domains, and categories remain aligned across evaluation and training data.
+
+\subsection{Supervision-boundary finding}
+An important implementation finding emerged during data construction: edit-style tasks must not reuse the gold reference file as both the input artifact and the target response. For repair and refactor tasks, the dataset must preserve an imperfect \texttt{broken\_candidate} or \texttt{original\_file} artifact while keeping the corrected file in the response field. Otherwise the training signal silently collapses.
+
+\section{Tiny-Corpus Split Policy as a Research Question}
+When corpora are extremely small, standard deterministic hashing is not neutral. In our six-example seed corpus, plain hashing produced domain-skewed holdouts, including software-only validation and quantum-only test splits. This is not merely aesthetically bad; it undermines the interpretability of any downstream baseline comparison.
+
+We therefore introduce an explicit balancing mechanism with two parameters: a grouping key (e.g., domain or task type) and a minimum per-group coverage target. On the present corpus, enforcing minimum domain coverage across train, validation, and test produces a balanced 2/2/2 split in which each split contains one quantum and one software example.
+
+\paragraph{Interpretation.}
+This result reveals a useful principle: in the extreme low-data regime, coverage constraints dominate nominal ratio targets. The correct response is not to hide this distortion but to record it explicitly in the manifest and treat split policy as part of the experiment design.
+
+\section{Preliminary Artifacts and Findings}
+The current scaffold yields the following concrete outcomes:
+\begin{itemize}[leftmargin=1.5em]
+    \item a working local eval harness with six executable seed tasks;
+    \item prompt-style materialization and run comparison reporting;
+    \item score persistence via per-run scorecards;
+    \item a provider-agnostic execution bridge for prepared runs;
+    \item a seed supervised corpus and chat-style projection derived from the eval tasks;
+    \item deterministic split generation, split auditing, and split-policy recommendation utilities.
+\end{itemize}
+
+These are not final scientific results about model quality. They are research-enabling results: they establish a reproducible substrate on top of which model baselines, adaptation experiments, and ablations can be run without redesigning the pipeline at each step.
+
+\section{Limitations}
+The present work does not yet include a full training run, a broad benchmark study, or a statistically meaningful held-out test corpus. The dataset is intentionally tiny, and some utilities are validated primarily as engineering artifacts. In addition, the current model-execution seam is prepared for integration but not yet used to produce large-scale baseline comparisons across real model backends.
+
+\section{Next Steps}
+The next research phase is straightforward:
+\begin{enumerate}[leftmargin=1.5em]
+    \item connect prepared runs to a real model backend and produce baseline scorecards;
+    \item expand the eval-derived corpus while preserving provenance and split integrity;
+    \item compare prompt styles, model backends, and later adaptation methods under the same scorer;
+    \item extend the paper from infrastructure methodology to empirical model results.
+\end{enumerate}
+
+\section{Conclusion}
+We argue that a credible quantum coding LLM project should begin not with heroic training runs but with disciplined experimental infrastructure. In a CPU-first regime, evaluation packaging, score persistence, data provenance, and split policy are not peripheral implementation details; they are the early research itself. The scaffold described here is therefore a substantive contribution: it converts an aspirational model-specialization project into a reproducible research program.
+
+\end{document}

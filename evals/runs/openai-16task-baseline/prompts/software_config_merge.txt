@@ -1,0 +1,86 @@
+Task ID: software_config_merge
+Task name: Configuration merge semantics
+Domain: software
+Category: data_transforms
+
+Write a Python file that passes the supplied tests.
+Return only the candidate file contents.
+
+Reference candidate style example (for format guidance, not for blind copying):
+--- BEGIN REFERENCE CANDIDATE ---
+def merge_config(defaults: dict, overrides: dict) -> dict:
+    """Recursively merge overrides into defaults without mutating inputs.
+
+    Nested dicts should be merged recursively.
+    Non-dict override values replace the default value entirely.
+    """
+    result = dict(defaults)
+    for key, override_value in overrides.items():
+        default_value = result.get(key)
+        if isinstance(default_value, dict) and isinstance(override_value, dict):
+            result[key] = merge_config(default_value, override_value)
+        else:
+            result[key] = override_value
+    return result
+
+--- END REFERENCE CANDIDATE ---
+
+Tests the candidate must satisfy:
+--- BEGIN TESTS ---
+import copy
+import importlib.util
+
+
+DEFAULTS = {
+    "optimizer": {"name": "adam", "lr": 0.001, "beta1": 0.9},
+    "batch_size": 8,
+    "logging": {"level": "info", "json": False},
+}
+
+OVERRIDES = {
+    "optimizer": {"lr": 0.0005},
+    "logging": {"json": True},
+    "new_flag": True,
+}
+
+EXPECTED = {
+    "optimizer": {"name": "adam", "lr": 0.0005, "beta1": 0.9},
+    "batch_size": 8,
+    "logging": {"level": "info", "json": True},
+    "new_flag": True,
+}
+
+
+def _load(candidate_path: str):
+    spec = importlib.util.spec_from_file_location("candidate", candidate_path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
+def run_tests(candidate_path: str) -> dict:
+    module = _load(candidate_path)
+
+    defaults = copy.deepcopy(DEFAULTS)
+    overrides = copy.deepcopy(OVERRIDES)
+    merged = module.merge_config(defaults, overrides)
+
+    failures = []
+    if merged != EXPECTED:
+        failures.append(f"merge_config returned {merged}, expected {EXPECTED}")
+    if defaults != DEFAULTS:
+        failures.append("merge_config mutated defaults input")
+    if overrides != OVERRIDES:
+        failures.append("merge_config mutated overrides input")
+    if merged is defaults:
+        failures.append("merge_config returned the original defaults object")
+    if merged["optimizer"] is defaults["optimizer"]:
+        failures.append("merge_config reused nested optimizer dict instead of producing a merged copy")
+
+    return {
+        "passed": not failures,
+        "details": failures or ["Recursive config merge preserves semantics and input immutability"],
+    }
+
+--- END TESTS ---
