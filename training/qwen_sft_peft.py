@@ -6,12 +6,14 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import os
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+import torch
+from torch.utils.data import DataLoader, Dataset
+
 if TYPE_CHECKING:
-    import torch
-    from torch.utils.data import DataLoader, Dataset
     from transformers import AutoTokenizer
 
 
@@ -33,6 +35,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--lora-rank", type=int, default=16)
     parser.add_argument("--lora-alpha", type=int, default=32)
     parser.add_argument("--lora-dropout", type=float, default=0.05)
+    parser.add_argument("--load-in-8bit", action="store_true")
+    parser.add_argument("--train-on-completions-only", action="store_true")
     parser.add_argument(
         "--target-modules",
         nargs="*",
@@ -111,25 +115,36 @@ def render_messages(tokenizer: Any, record: dict) -> str:
 
 
 class ChatSftDataset:
-    def __init__(self, path: Path, tokenizer: Any, max_length: int) -> None:
+    def __init__(self, path: Path, tokenizer: Any, max_length: int, train_on_completions_only: bool = False) -> None:
         rows = load_jsonl(path)
         self.examples = []
         for record in rows:
-            text = render_messages(tokenizer, record)
+            full_text = render_messages(tokenizer, record)
             encoded = tokenizer(
-                text,
+                full_text,
                 truncation=True,
                 max_length=max_length,
                 padding=False,
                 return_attention_mask=True,
             )
-            self.examples.append(
-                {
-                    "input_ids": encoded["input_ids"],
-                    "attention_mask": encoded["attention_mask"],
-                    "example_id": record.get("example_id"),
-                }
-            )
+            example = {
+                "input_ids": encoded["input_ids"],
+                "attention_mask": encoded["attention_mask"],
+                "example_id": record.get("example_id"),
+            }
+            if train_on_completions_only:
+                messages = record.get("messages", [])
+                if len(messages) >= 2 and messages[-1].get("role") == "assistant":
+                    prompt_text = render_messages(tokenizer, {"messages": messages[:-1]})
+                    prompt_ids = tokenizer(
+                        prompt_text,
+                        truncation=True,
+                        max_length=max_length,
+                        padding=False,
+                        return_attention_mask=False,
+                    )["input_ids"]
+                    example["prompt_token_count"] = min(len(prompt_ids), len(example["input_ids"]))
+            self.examples.append(example)
 
     def __len__(self) -> int:
         return len(self.examples)
@@ -150,11 +165,15 @@ class PaddingCollator:
         )
         labels = padded["input_ids"].clone()
         labels[padded["attention_mask"] == 0] = -100
+        for row_index, item in enumerate(batch):
+            prompt_token_count = item.get("prompt_token_count")
+            if prompt_token_count:
+                labels[row_index, :prompt_token_count] = -100
         padded["labels"] = labels
         return padded
 
 
-def evaluate(torch: Any, model: Any, loader: Any, device: Any) -> dict[str, float]:
+def evaluate(model: Any, loader: Any, device: Any) -> dict[str, float]:
     model.eval()
     total_loss = 0.0
     total_items = 0
@@ -185,24 +204,42 @@ def main() -> int:
     ) = require_training_dependencies()
 
     device = resolve_device(torch, args.device)
-    if device.type == "npu":
-        torch.npu.set_device(0)
+
+    # DDP setup
+    distributed = "RANK" in os.environ and "WORLD_SIZE" in os.environ
+    local_rank = int(os.environ.get("LOCAL_RANK", 0))
+    rank = int(os.environ.get("RANK", 0))
+    world_size = int(os.environ.get("WORLD_SIZE", 1))
+
+    if distributed:
+        if device.type == "npu":
+            torch.npu.set_device(local_rank)
+            device = torch.device(f"npu:{local_rank}")
+        torch.distributed.init_process_group(backend="hccl" if device.type == "npu" else "nccl")
+    else:
+        if device.type == "npu":
+            torch.npu.set_device(0)
 
     tokenizer = AutoTokenizer.from_pretrained(args.model_name, trust_remote_code=True)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
     tokenizer.padding_side = "right"
 
-    train_dataset = ChatSftDataset(args.train_file, tokenizer, args.max_length)
-    eval_dataset = ChatSftDataset(args.eval_file, tokenizer, args.max_length) if args.eval_file else None
+    train_dataset = ChatSftDataset(args.train_file, tokenizer, args.max_length, train_on_completions_only=args.train_on_completions_only)
+    eval_dataset = ChatSftDataset(args.eval_file, tokenizer, args.max_length, train_on_completions_only=args.train_on_completions_only) if args.eval_file else None
 
     collator = PaddingCollator(tokenizer)
-    train_loader = DataLoader(train_dataset, batch_size=args.per_device_batch_size, shuffle=True, collate_fn=collator)
+    train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset, num_replicas=world_size, rank=rank, shuffle=True) if distributed else None
+    train_loader = DataLoader(train_dataset, batch_size=args.per_device_batch_size, shuffle=(train_sampler is None), collate_fn=collator, sampler=train_sampler)
     eval_loader = None
     if eval_dataset is not None:
         eval_loader = DataLoader(eval_dataset, batch_size=args.per_device_batch_size, shuffle=False, collate_fn=collator)
 
-    model = AutoModelForCausalLM.from_pretrained(args.model_name, trust_remote_code=True)
+    model_kwargs = {"trust_remote_code": True}
+    if args.load_in_8bit:
+        model_kwargs["load_in_8bit"] = True
+        model_kwargs["device_map"] = "auto"
+    model = AutoModelForCausalLM.from_pretrained(args.model_name, **model_kwargs)
     lora_config = LoraConfig(
         task_type=TaskType.CAUSAL_LM,
         r=args.lora_rank,
@@ -213,6 +250,8 @@ def main() -> int:
     )
     model = get_peft_model(model, lora_config)
     model.to(device)
+    if distributed:
+        model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[local_rank])
     model.train()
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.learning_rate)
@@ -224,6 +263,8 @@ def main() -> int:
     optimizer.zero_grad(set_to_none=True)
 
     for epoch in range(args.num_epochs):
+        if train_sampler is not None:
+            train_sampler.set_epoch(epoch)
         for batch_index, batch in enumerate(train_loader, start=1):
             batch = {name: tensor.to(device) for name, tensor in batch.items()}
             outputs = model(**batch)
@@ -245,32 +286,40 @@ def main() -> int:
                         "lr": float(scheduler.get_last_lr()[0]),
                     }
                     if eval_loader is not None and global_step % args.eval_steps == 0:
-                        record.update({f"eval_{k}": v for k, v in evaluate(model, eval_loader, device).items()})
+                        record.update({f"eval_{k}": v for k, v in evaluate(model.module if distributed else model, eval_loader, device).items()})
                         model.train()
                     metrics.append(record)
-                    print(json.dumps(record, ensure_ascii=False))
+                    if rank == 0:
+                        print(json.dumps(record, ensure_ascii=False))
 
                 if global_step >= args.max_steps:
                     break
         if global_step >= args.max_steps:
             break
 
-    final_eval = evaluate(model, eval_loader, device) if eval_loader is not None else None
-    adapter_dir = args.output_dir / "adapter"
-    model.save_pretrained(adapter_dir)
-    tokenizer.save_pretrained(adapter_dir)
+    final_eval = evaluate(model.module if distributed else model, eval_loader, device) if eval_loader is not None else None
 
-    summary = {
-        "model_name": args.model_name,
-        "device": str(device),
-        "train_examples": len(train_dataset),
-        "eval_examples": len(eval_dataset) if eval_dataset is not None else 0,
-        "max_steps": global_step,
-        "final_eval": final_eval,
-        "metrics": metrics,
-    }
-    (args.output_dir / "metrics.json").write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
-    print(json.dumps(summary, ensure_ascii=False, indent=2))
+    if rank == 0:
+        save_model = model.module if distributed else model
+        adapter_dir = args.output_dir / "adapter"
+        save_model.save_pretrained(adapter_dir)
+        tokenizer.save_pretrained(adapter_dir)
+
+        summary = {
+            "model_name": args.model_name,
+            "device": str(device),
+            "world_size": world_size,
+            "train_examples": len(train_dataset),
+            "eval_examples": len(eval_dataset) if eval_dataset is not None else 0,
+            "max_steps": global_step,
+            "final_eval": final_eval,
+            "metrics": metrics,
+        }
+        (args.output_dir / "metrics.json").write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
+        print(json.dumps(summary, ensure_ascii=False, indent=2))
+
+    if distributed:
+        torch.distributed.destroy_process_group()
     return 0
 
 
