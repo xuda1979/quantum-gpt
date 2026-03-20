@@ -1,0 +1,30 @@
+{
+  "model_name": "models/Qwen2.5-1.5B-Instruct",
+  "device": "cpu",
+  "world_size": 1,
+  "train_examples": 32,
+  "eval_examples": 8,
+  "max_steps": 2,
+  "final_eval": {
+    "loss": 1.2518115192651749,
+    "perplexity": 3.4966715113893816
+  },
+  "metrics": [
+    {
+      "step": 1,
+      "epoch": 1,
+      "train_loss": 1.3347454071044922,
+      "lr": 0.0001,
+      "eval_loss": 1.2901916205883026,
+      "eval_perplexity": 3.633482739149206
+    },
+    {
+      "step": 2,
+      "epoch": 1,
+      "train_loss": 1.0161439180374146,
+      "lr": 0.0,
+      "eval_loss": 1.2518115192651749,
+      "eval_perplexity": 3.4966715113893816
+    }
+  ]
+}
