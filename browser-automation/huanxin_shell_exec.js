@@ -1,9 +1,60 @@
+const http = require('http');
+const fs = require('fs');
 const { chromium } = require('playwright');
 const { ensureProfileDir } = require('./huanxin_profile');
+
+const ENV_PORTS = { ai1: 19001, ai2: 19002 };
 
 function usage() {
   console.error('Usage: node huanxin_shell_exec.js <envName> --command <shell command>');
   process.exit(1);
+}
+
+/**
+ * Try to send a command to an already-running daemon.
+ * Returns the JSON result, or null if the daemon is not available.
+ */
+function tryDaemon(envName, command, waitMs) {
+  const portFilePath = `/tmp/huanxin-daemon-${envName}.port`;
+  let port;
+  try {
+    port = parseInt(fs.readFileSync(portFilePath, 'utf8').trim(), 10);
+  } catch {
+    return Promise.resolve(null);
+  }
+
+  return new Promise((resolve) => {
+    const body = JSON.stringify({ command, waitMs });
+    const requestTimeoutMs = Math.max(waitMs + 10000, 30000);
+    const req = http.request(
+      {
+        hostname: '127.0.0.1',
+        port,
+        path: '/exec',
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
+        timeout: requestTimeoutMs,
+      },
+      (res) => {
+        let data = '';
+        res.on('data', (chunk) => (data += chunk));
+        res.on('end', () => {
+          try {
+            resolve(JSON.parse(data));
+          } catch {
+            resolve(null);
+          }
+        });
+      }
+    );
+    req.on('error', () => resolve(null));
+    req.on('timeout', () => {
+      req.destroy();
+      resolve(null);
+    });
+    req.write(body);
+    req.end();
+  });
 }
 
 function parseArgs(argv) {
@@ -11,23 +62,55 @@ function parseArgs(argv) {
   if (!envName) usage();
 
   let command = null;
+  let waitMs = 10000;
+  let requireDaemon = false;
+  let skipDaemon = false;
   for (let index = 1; index < argv.length; index += 1) {
     if (argv[index] === '--command') {
       command = argv[index + 1] || null;
       index += 1;
       continue;
     }
+    if (argv[index] === '--wait-ms') {
+      waitMs = parseInt(argv[index + 1] || '10000', 10);
+      index += 1;
+      continue;
+    }
+    if (argv[index] === '--require-daemon') {
+      requireDaemon = true;
+      continue;
+    }
+    if (argv[index] === '--skip-daemon') {
+      skipDaemon = true;
+      continue;
+    }
     usage();
   }
 
   if (!command) usage();
-  return { envName, command };
+  return { envName, command, waitMs, requireDaemon, skipDaemon };
 }
 
 async function openShell(page, envName) {
+  const findExistingEnvPage = () =>
+    page
+      .context()
+      .pages()
+      .find(
+        (candidate) =>
+          candidate.url().includes('/train-dev/environment/') && candidate.url().includes(`name=${envName}`)
+      );
+
   let lastError = null;
   for (let attempt = 1; attempt <= 3; attempt += 1) {
     try {
+      const existingPage = findExistingEnvPage();
+      if (existingPage) {
+        await existingPage.bringToFront().catch(() => {});
+        await existingPage.waitForTimeout(1000);
+        return existingPage;
+      }
+
       await page.goto(
         'https://aihuanxin.cn/kunlun/kl-web?poolId=1&projectId=3ed7854b946a47b1a49ad754baa76cd3#/train-dev',
         { waitUntil: 'networkidle', timeout: 180000 }
@@ -36,7 +119,35 @@ async function openShell(page, envName) {
 
       const row = page.locator('tr', { hasText: envName }).first();
       await row.waitFor({ state: 'visible', timeout: 60000 });
-      await row.getByRole('button', { name: '打开' }).click({ timeout: 15000 });
+      const openButton = row.getByRole('button', { name: '打开' }).first();
+
+      let clicked = false;
+      for (let poll = 0; poll < 20; poll += 1) {
+        const existingAfterLoad = findExistingEnvPage();
+        if (existingAfterLoad) {
+          await existingAfterLoad.bringToFront().catch(() => {});
+          await existingAfterLoad.waitForTimeout(1000);
+          return existingAfterLoad;
+        }
+
+        const enabled = await openButton.isEnabled().catch(() => false);
+        const spinning = await page.locator('.ant-spin-spinning, .ant-spin-blur').count().catch(() => 0);
+        if (enabled && spinning === 0) {
+          await openButton.click({ timeout: 15000 });
+          clicked = true;
+          break;
+        }
+        await page.waitForTimeout(2000);
+      }
+
+      if (!clicked) {
+        const rowText = ((await row.textContent().catch(() => '')) || '').replace(/\s+/g, ' ').trim();
+        const enabled = await openButton.isEnabled().catch(() => false);
+        const spinning = await page.locator('.ant-spin-spinning, .ant-spin-blur').count().catch(() => 0);
+        throw new Error(
+          `Open button for ${envName} never became clickable. enabled=${enabled} spinning=${spinning} row=${rowText}`
+        );
+      }
       await page.waitForTimeout(5000);
       lastError = null;
       break;
@@ -73,33 +184,214 @@ async function focusTerminal(activePage) {
 
 async function readTerminalText(activePage) {
   return activePage.evaluate(() => {
-    const rows = Array.from(document.querySelectorAll('.terminal.xterm .xterm-rows')).map((node) =>
-      (node.textContent || '').replace(/\u00a0/g, ' ')
-    );
-    return rows
-      .join('\n')
+    const rowContainer = document.querySelector('.terminal.xterm .xterm-rows');
+    const accessibilityContainer = document.querySelector('.terminal.xterm .xterm-accessibility');
+    const helper = document.querySelector('.terminal.xterm .xterm-helper-textarea');
+
+    const collectChildrenText = (container) => {
+      if (!container) return [];
+      return Array.from(container.children)
+        .map((row) => (row.textContent || '').replace(/\u00a0/g, ' ').trimEnd())
+        .filter((line) => line.length > 0);
+    };
+
+    const collectContainerText = (container) => {
+      if (!container) return [];
+      const childLines = collectChildrenText(container);
+      if (childLines.length > 0) return childLines;
+      return (container.textContent || '')
+        .replace(/\u00a0/g, ' ')
+        .split('\n')
+        .map((line) => line.trimEnd())
+        .filter((line) => line.length > 0);
+    };
+
+    const rowLines = collectContainerText(rowContainer);
+    const accessibilityLines = collectContainerText(accessibilityContainer);
+    const terminalText = ((document.querySelector('.terminal.xterm')?.innerText) || (document.querySelector('.terminal.xterm')?.textContent) || '')
+      .replace(/\u00a0/g, ' ')
       .split('\n')
-      .map((line) => line.replace(/\s+/g, ' ').trim())
-      .filter(Boolean)
-      .join('\n');
+      .map((line) => line.trimEnd())
+      .filter((line) => line.length > 0);
+
+    let lines = accessibilityLines.length > rowLines.length ? accessibilityLines : rowLines;
+    if (terminalText.length > lines.length) {
+      lines = terminalText;
+    }
+
+    return {
+      text: lines.join('\n'),
+      debug: {
+        rowCount: rowContainer ? rowContainer.children.length : 0,
+        accessibilityCount: accessibilityContainer ? accessibilityContainer.children.length : 0,
+        rowTextLength: rowContainer ? ((rowContainer.textContent || '').length) : 0,
+        accessibilityTextLength: accessibilityContainer ? ((accessibilityContainer.textContent || '').length) : 0,
+        helperValue: helper ? helper.value : null,
+        activeTag: document.activeElement ? document.activeElement.tagName : null,
+        activeClassName: document.activeElement ? (document.activeElement.className || '') : '',
+      },
+    };
   });
 }
 
-async function sendCommand(activePage, command, waitMs = 2500) {
+async function sendCommand(activePage, command, waitMs = 10000) {
   await focusTerminal(activePage);
-  const before = await readTerminalText(activePage);
-  await activePage.keyboard.insertText(command);
+
+  const terminalInput = activePage.locator('.xterm-helper-textarea').first();
+  const clearTerminal = async () => {
+    await activePage.keyboard.press('Control+L').catch(() => {});
+    await activePage.waitForTimeout(250);
+    await activePage.keyboard.press('Control+L').catch(() => {});
+    await activePage.waitForTimeout(250);
+  };
+
+  const waitForPrompt = async (timeoutMs = 8000) => {
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+      const snapshot = await readTerminalText(activePage);
+      const text = snapshot.text;
+      const lines = text.split('\n').map((line) => line.trimEnd()).filter(Boolean);
+      const lastLine = lines[lines.length - 1] || '';
+      if (/[#$>]\s*$/.test(lastLine)) return text;
+      await activePage.waitForTimeout(300);
+    }
+    return (await readTerminalText(activePage)).text;
+  };
+
+  // Flush prior prompt/output before issuing a new command.
+  await waitForPrompt().catch(() => {});
+  await clearTerminal();
+  const beforeSnapshot = await readTerminalText(activePage);
+  const before = beforeSnapshot.text;
+
+  // Use unique start/end markers and preserve literal newlines in the command.
+  const token = `OC_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const startMarker = `__${token}_START__`;
+  const endMarker = `__${token}_END__`;
+  const safeCommand = command;
+  const wrappedCmd = `printf '${startMarker}\\n'; ${safeCommand}; printf '\\n${endMarker}\\n'`;
+
+  const literalCommand = `${wrappedCmd}${wrappedCmd.endsWith('\n') ? '' : '\n'}`;
+  await terminalInput.evaluate((element) => {
+    element.value = '';
+  }).catch(() => {});
+  await activePage.keyboard.insertText(literalCommand);
   await activePage.keyboard.press('Enter');
-  await activePage.waitForTimeout(waitMs);
-  const after = await readTerminalText(activePage);
-  return { before, after };
+
+  const waitForStableAfterEnd = async (timeoutMs = 3000) => {
+    const deadline = Date.now() + timeoutMs;
+    let lastText = '';
+    let stableCount = 0;
+    while (Date.now() < deadline) {
+      await activePage.waitForTimeout(250);
+      const snapshot = await readTerminalText(activePage);
+      const text = snapshot.text;
+      if (text === lastText) {
+        stableCount += 1;
+      } else {
+        stableCount = 0;
+        lastText = text;
+      }
+      const lines = text.split('\n').map((line) => line.trimEnd()).filter(Boolean);
+      const lastLine = lines[lines.length - 1] || '';
+      if (text.includes(endMarker) && /[#$>]\s*$/.test(lastLine) && stableCount >= 2) {
+        return { text, debug: snapshot.debug };
+      }
+    }
+    return readTerminalText(activePage);
+  };
+
+  const deadline = Date.now() + waitMs;
+  let after = '';
+  let afterDebug = null;
+  while (Date.now() < deadline) {
+    await activePage.waitForTimeout(500);
+    const snapshot = await readTerminalText(activePage);
+    after = snapshot.text;
+    afterDebug = snapshot.debug;
+    if (after.includes(endMarker)) {
+      const stable = await waitForStableAfterEnd();
+      after = stable.text;
+      afterDebug = stable.debug;
+      break;
+    }
+  }
+
+  let output = '';
+  const afterLines = after.split('\n');
+  const startLineIdx = afterLines.findIndex((line) => line.includes(startMarker));
+  if (startLineIdx >= 0) {
+    const candidateLines = [];
+    for (let index = startLineIdx + 1; index < afterLines.length; index += 1) {
+      const line = afterLines[index];
+      if (line.includes(endMarker)) break;
+      candidateLines.push(line);
+    }
+    output = candidateLines.join('\n');
+  } else {
+    const beforeLines = before.split('\n');
+    output = afterLines.slice(beforeLines.length).join('\n');
+  }
+
+  output = output
+    .replace(/^\n+/, '')
+    .replace(/\n+$/, '');
+
+  // Remove echoed wrapper fragments and prompt lines around the captured payload.
+  const promptLike = /^.*[#$>]\s*$/;
+  let outputLines = output.split('\n');
+  const firstMarkerLine = outputLines.findIndex((line) => line.includes(startMarker));
+  if (firstMarkerLine >= 0) {
+    outputLines = outputLines.slice(firstMarkerLine + 1);
+  }
+  const lastMarkerLine = outputLines.findIndex((line) => line.includes(endMarker));
+  if (lastMarkerLine >= 0) {
+    outputLines = outputLines.slice(0, lastMarkerLine);
+  }
+  output = outputLines.join('\n');
+
+  const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const escapedStartMarker = escapeRegex(startMarker);
+  const escapedEndMarker = escapeRegex(endMarker);
+  const wrapperRegex = new RegExp(`^.*printf '(?:${escapedStartMarker}\\n|\\n?${escapedEndMarker}\\n)'.*$`);
+  const wrapperFragmentRegex = /^\\n';\s.*printf '\\$/;
+  outputLines = output.split('\n').filter((line) => {
+    const trimmed = line.trim();
+    if (!trimmed) return false;
+    if (promptLike.test(trimmed)) return false;
+    if (line.includes(startMarker) || line.includes(endMarker)) return false;
+    if (wrapperRegex.test(line) || wrapperFragmentRegex.test(line)) return false;
+    if (trimmed === "'" || trimmed === ";" || trimmed === "n") return false;
+    return true;
+  });
+  output = outputLines.join('\n').trim();
+
+  return { before, after, output, debug: { before: beforeSnapshot.debug, after: afterDebug } };
 }
 
 async function main() {
-  const { envName, command } = parseArgs(process.argv.slice(2));
+  const { envName, command, waitMs, requireDaemon, skipDaemon } = parseArgs(process.argv.slice(2));
+
+  // Try the persistent daemon first — avoids launching a new browser
+  if (!skipDaemon) {
+    const daemonStartedAt = Date.now();
+    const daemonResult = await tryDaemon(envName, command, waitMs);
+    if (daemonResult) {
+      daemonResult.transport = 'daemon';
+      daemonResult.durationMs = daemonResult.durationMs ?? (Date.now() - daemonStartedAt);
+      console.log(JSON.stringify(daemonResult, null, 2));
+      return;
+    }
+  }
+
+  if (requireDaemon) {
+    throw new Error(`Huanxin daemon for ${envName} is not available`);
+  }
+
+  // No daemon running — fall back to standalone browser (headless by default)
   const { profileDir } = ensureProfileDir();
   const context = await chromium.launchPersistentContext(profileDir, {
-    headless: process.env.HUANXIN_HEADLESS === '1',
+    headless: process.env.HUANXIN_HEADLESS !== '0',
     viewport: { width: 1600, height: 1000 },
     slowMo: 50,
   });
@@ -108,8 +400,9 @@ async function main() {
     const page = context.pages()[0] || (await context.newPage());
     page.setDefaultTimeout(30000);
 
+    const startedAt = Date.now();
     const activePage = await openShell(page, envName);
-  const { before, after } = await sendCommand(activePage, command);
+    const { before, after, output, debug } = await sendCommand(activePage, command, waitMs);
 
     await activePage.screenshot({ path: `browser-automation/huanxin-shell-${envName}.png`, fullPage: true });
     console.log(
@@ -117,10 +410,14 @@ async function main() {
         {
           ok: true,
           envName,
+          transport: 'standalone',
           url: activePage.url(),
           command,
+          durationMs: Date.now() - startedAt,
+          output: output || '',
           before,
           after,
+          debug,
         },
         null,
         2
