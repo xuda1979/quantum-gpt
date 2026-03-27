@@ -4,9 +4,11 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
 import os
+import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -15,6 +17,33 @@ from torch.utils.data import DataLoader, Dataset
 
 if TYPE_CHECKING:
     from transformers import AutoTokenizer
+
+
+def load_model_config_metadata(model_name: str) -> dict[str, Any]:
+    from transformers import PretrainedConfig
+
+    config_dict, _unused_kwargs = PretrainedConfig.get_config_dict(model_name, trust_remote_code=True)
+    return config_dict
+
+
+def ensure_text_causal_lm_compatible(model_name: str) -> dict[str, Any] | None:
+    try:
+        config_dict = load_model_config_metadata(model_name)
+    except Exception:
+        return None
+
+    model_type = str(config_dict.get("model_type") or "")
+    architectures = [str(item) for item in (config_dict.get("architectures") or [])]
+    if model_type == "qwen3_5" or any("ConditionalGeneration" in item for item in architectures):
+        raise SystemExit(
+            "Current training/qwen_sft_peft.py only supports text-only AutoTokenizer + "
+            "AutoModelForCausalLM checkpoints. "
+            f"Requested model '{model_name}' exposes model_type='{model_type}' "
+            f"architectures={architectures}, which indicates a conditional-generation path "
+            "such as OmniCoder-9B/Qwen3.5. Upgrade the Transformers runtime and add a "
+            "processor-aware training path before launching this fine-tune."
+        )
+    return config_dict
 
 
 def parse_args() -> argparse.Namespace:
@@ -37,6 +66,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--lora-dropout", type=float, default=0.05)
     parser.add_argument("--load-in-8bit", action="store_true")
     parser.add_argument("--train-on-completions-only", action="store_true")
+    parser.add_argument("--overwrite-output-dir", action="store_true")
+    parser.add_argument("--allow-output-dir-reuse", action="store_true")
     parser.add_argument(
         "--target-modules",
         nargs="*",
@@ -188,9 +219,64 @@ def evaluate(model: Any, loader: Any, device: Any) -> dict[str, float]:
     return {"loss": mean_loss, "perplexity": float(math.exp(min(mean_loss, 20.0)))}
 
 
+def build_run_signature(args: argparse.Namespace) -> dict[str, Any]:
+    signature = {
+        "model_name": args.model_name,
+        "train_file": str(args.train_file),
+        "eval_file": str(args.eval_file) if args.eval_file else None,
+        "device": args.device,
+        "max_length": args.max_length,
+        "per_device_batch_size": args.per_device_batch_size,
+        "gradient_accumulation_steps": args.gradient_accumulation_steps,
+        "learning_rate": args.learning_rate,
+        "num_epochs": args.num_epochs,
+        "max_steps": args.max_steps,
+        "eval_steps": args.eval_steps,
+        "log_steps": args.log_steps,
+        "lora_rank": args.lora_rank,
+        "lora_alpha": args.lora_alpha,
+        "lora_dropout": args.lora_dropout,
+        "load_in_8bit": args.load_in_8bit,
+        "train_on_completions_only": args.train_on_completions_only,
+        "target_modules": list(args.target_modules),
+    }
+    signature_json = json.dumps(signature, sort_keys=True)
+    signature["signature_sha256"] = hashlib.sha256(signature_json.encode("utf-8")).hexdigest()
+    return signature
+
+
+def validate_output_dir(args: argparse.Namespace, run_signature: dict[str, Any]) -> None:
+    config_path = args.output_dir / "run_config.json"
+    has_existing_artifacts = config_path.exists() or (args.output_dir / "adapter").exists() or (args.output_dir / "metrics.json").exists()
+
+    if args.overwrite_output_dir:
+        return
+
+    if not has_existing_artifacts:
+        return
+
+    if config_path.exists():
+        existing = json.loads(config_path.read_text(encoding="utf-8"))
+        existing_signature = existing.get("signature", {})
+        if existing_signature != run_signature:
+            raise SystemExit(
+                "Refusing to reuse an existing output directory with a different training configuration. "
+                f"Use a new --output-dir or pass --overwrite-output-dir if replacement is intentional: {args.output_dir}"
+            )
+
+    if not args.allow_output_dir_reuse:
+        raise SystemExit(
+            f"Output directory already contains prior run artifacts: {args.output_dir}. "
+            "Use a new --output-dir, or pass --allow-output-dir-reuse / --overwrite-output-dir explicitly."
+        )
+
+
 def main() -> int:
     args = parse_args()
     args.output_dir.mkdir(parents=True, exist_ok=True)
+    run_signature = build_run_signature(args)
+    validate_output_dir(args, run_signature)
+    print(json.dumps({"stage": "args_parsed", "output_dir": str(args.output_dir), "train_file": str(args.train_file), "eval_file": str(args.eval_file) if args.eval_file else None}, ensure_ascii=False), flush=True)
 
     (
         torch,
@@ -202,8 +288,24 @@ def main() -> int:
         AutoModelForCausalLM,
         AutoTokenizer,
     ) = require_training_dependencies()
+    print(json.dumps({"stage": "deps_loaded"}, ensure_ascii=False), flush=True)
+
+    config_metadata = ensure_text_causal_lm_compatible(args.model_name)
+    if config_metadata is not None:
+        print(
+            json.dumps(
+                {
+                    "stage": "model_runtime_compat_ok",
+                    "model_type": config_metadata.get("model_type"),
+                    "architectures": config_metadata.get("architectures"),
+                },
+                ensure_ascii=False,
+            ),
+            flush=True,
+        )
 
     device = resolve_device(torch, args.device)
+    print(json.dumps({"stage": "device_resolved", "device": str(device), "requested": args.device}, ensure_ascii=False), flush=True)
 
     # DDP setup
     distributed = "RANK" in os.environ and "WORLD_SIZE" in os.environ
@@ -219,14 +321,17 @@ def main() -> int:
     else:
         if device.type == "npu":
             torch.npu.set_device(0)
+    print(json.dumps({"stage": "ddp_ready", "distributed": distributed, "rank": rank, "world_size": world_size, "device": str(device)}, ensure_ascii=False), flush=True)
 
     tokenizer = AutoTokenizer.from_pretrained(args.model_name, trust_remote_code=True)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
     tokenizer.padding_side = "right"
+    print(json.dumps({"stage": "tokenizer_loaded", "pad_token": tokenizer.pad_token, "padding_side": tokenizer.padding_side}, ensure_ascii=False), flush=True)
 
     train_dataset = ChatSftDataset(args.train_file, tokenizer, args.max_length, train_on_completions_only=args.train_on_completions_only)
     eval_dataset = ChatSftDataset(args.eval_file, tokenizer, args.max_length, train_on_completions_only=args.train_on_completions_only) if args.eval_file else None
+    print(json.dumps({"stage": "datasets_ready", "train_examples": len(train_dataset), "eval_examples": len(eval_dataset) if eval_dataset is not None else 0, "max_length": args.max_length}, ensure_ascii=False), flush=True)
 
     collator = PaddingCollator(tokenizer)
     train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset, num_replicas=world_size, rank=rank, shuffle=True) if distributed else None
@@ -235,11 +340,57 @@ def main() -> int:
     if eval_dataset is not None:
         eval_loader = DataLoader(eval_dataset, batch_size=args.per_device_batch_size, shuffle=False, collate_fn=collator)
 
+    optimizer_steps_per_epoch = len(train_loader) // args.gradient_accumulation_steps
+    max_available_steps = optimizer_steps_per_epoch * args.num_epochs
+    if optimizer_steps_per_epoch < 1:
+        raise ValueError(
+            "Not enough batches to produce one optimizer step. "
+            "Lower --gradient-accumulation-steps or increase training data."
+        )
+    if args.max_steps > max_available_steps:
+        raise ValueError(
+            f"Requested --max-steps {args.max_steps} but current settings only allow "
+            f"{max_available_steps} optimizer step(s) across {args.num_epochs} epoch(s). "
+            "Increase --num-epochs, lower --gradient-accumulation-steps, or reduce --max-steps."
+        )
+    print(
+        json.dumps(
+            {
+                "stage": "train_schedule_ready",
+                "optimizer_steps_per_epoch": optimizer_steps_per_epoch,
+                "max_available_steps": max_available_steps,
+                "requested_max_steps": args.max_steps,
+                "num_epochs": args.num_epochs,
+            },
+            ensure_ascii=False,
+        ),
+        flush=True,
+    )
+
     model_kwargs = {"trust_remote_code": True}
     if args.load_in_8bit:
         model_kwargs["load_in_8bit"] = True
         model_kwargs["device_map"] = "auto"
-    model = AutoModelForCausalLM.from_pretrained(args.model_name, **model_kwargs)
+    print(json.dumps({"stage": "model_load_start", "model_name": args.model_name, "t": time.time()}, ensure_ascii=False), flush=True)
+    model_load_started_at = time.time()
+    try:
+        model = AutoModelForCausalLM.from_pretrained(args.model_name, **model_kwargs)
+    except Exception as exc:
+        print(
+            json.dumps(
+                {
+                    "stage": "model_load_failed",
+                    "t": time.time(),
+                    "dt_model_load_sec": round(time.time() - model_load_started_at, 3),
+                    "error_type": type(exc).__name__,
+                    "error": str(exc),
+                },
+                ensure_ascii=False,
+            ),
+            flush=True,
+        )
+        raise
+    print(json.dumps({"stage": "model_loaded", "t": time.time(), "dt_model_load_sec": round(time.time() - model_load_started_at, 3)}, ensure_ascii=False), flush=True)
     lora_config = LoraConfig(
         task_type=TaskType.CAUSAL_LM,
         r=args.lora_rank,
@@ -249,10 +400,14 @@ def main() -> int:
         bias="none",
     )
     model = get_peft_model(model, lora_config)
+    print(json.dumps({"stage": "lora_wrapped"}, ensure_ascii=False), flush=True)
     model.to(device)
+    print(json.dumps({"stage": "model_on_device", "device": str(device)}, ensure_ascii=False), flush=True)
     if distributed:
         model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[local_rank])
+        print(json.dumps({"stage": "ddp_wrapped"}, ensure_ascii=False), flush=True)
     model.train()
+    print(json.dumps({"stage": "train_mode"}, ensure_ascii=False), flush=True)
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.learning_rate)
     total_train_steps = max(args.max_steps, 1)
@@ -261,21 +416,40 @@ def main() -> int:
     metrics: list[dict[str, float | int]] = []
     global_step = 0
     optimizer.zero_grad(set_to_none=True)
+    print(json.dumps({"stage": "optimizer_ready", "max_steps": args.max_steps, "gradient_accumulation_steps": args.gradient_accumulation_steps}, ensure_ascii=False), flush=True)
 
     for epoch in range(args.num_epochs):
         if train_sampler is not None:
             train_sampler.set_epoch(epoch)
+        print(json.dumps({"stage": "epoch_start", "epoch": epoch + 1}, ensure_ascii=False), flush=True)
         for batch_index, batch in enumerate(train_loader, start=1):
+            if batch_index == 1:
+                first_batch_time = time.time()
+                print(json.dumps({"stage": "first_batch_loaded", "batch_index": batch_index, "input_shape": list(batch["input_ids"].shape), "t": first_batch_time}, ensure_ascii=False), flush=True)
             batch = {name: tensor.to(device) for name, tensor in batch.items()}
             outputs = model(**batch)
+            if batch_index == 1:
+                print(json.dumps({"stage": "first_forward_done", "batch_index": batch_index, "t": time.time(), "dt_from_batch_loaded_sec": round(time.time() - first_batch_time, 3)}, ensure_ascii=False), flush=True)
             loss = outputs.loss / args.gradient_accumulation_steps
+            if batch_index == 1:
+                print(json.dumps({"stage": "first_loss_ready", "batch_index": batch_index, "loss": float(loss.item())}, ensure_ascii=False), flush=True)
             loss.backward()
+            if batch_index == 1:
+                print(json.dumps({"stage": "first_backward_done", "batch_index": batch_index}, ensure_ascii=False), flush=True)
 
             if batch_index % args.gradient_accumulation_steps == 0:
                 torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+                if batch_index == 1:
+                    print(json.dumps({"stage": "first_clip_done", "batch_index": batch_index}, ensure_ascii=False), flush=True)
                 optimizer.step()
+                if batch_index == 1:
+                    print(json.dumps({"stage": "first_optimizer_step_done", "batch_index": batch_index}, ensure_ascii=False), flush=True)
                 scheduler.step()
+                if batch_index == 1:
+                    print(json.dumps({"stage": "first_scheduler_step_done", "batch_index": batch_index}, ensure_ascii=False), flush=True)
                 optimizer.zero_grad(set_to_none=True)
+                if batch_index == 1:
+                    print(json.dumps({"stage": "first_zero_grad_done", "batch_index": batch_index}, ensure_ascii=False), flush=True)
                 global_step += 1
 
                 if global_step % args.log_steps == 0:
@@ -285,8 +459,15 @@ def main() -> int:
                         "train_loss": float(loss.item() * args.gradient_accumulation_steps),
                         "lr": float(scheduler.get_last_lr()[0]),
                     }
+                    if batch_index == 1:
+                        print(json.dumps({"stage": "first_record_ready", "batch_index": batch_index}, ensure_ascii=False), flush=True)
                     if eval_loader is not None and global_step % args.eval_steps == 0:
+                        if batch_index == 1:
+                            print(json.dumps({"stage": "first_eval_start", "batch_index": batch_index, "t": time.time()}, ensure_ascii=False), flush=True)
+                        eval_started_at = time.time()
                         record.update({f"eval_{k}": v for k, v in evaluate(model.module if distributed else model, eval_loader, device).items()})
+                        if batch_index == 1:
+                            print(json.dumps({"stage": "first_eval_done", "batch_index": batch_index, "t": time.time(), "dt_eval_sec": round(time.time() - eval_started_at, 3)}, ensure_ascii=False), flush=True)
                         model.train()
                     metrics.append(record)
                     if rank == 0:
@@ -297,26 +478,41 @@ def main() -> int:
         if global_step >= args.max_steps:
             break
 
-    final_eval = evaluate(model.module if distributed else model, eval_loader, device) if eval_loader is not None else None
+    final_eval = None
+    if eval_loader is not None:
+        print(json.dumps({"stage": "final_eval_start", "t": time.time()}, ensure_ascii=False), flush=True)
+        final_eval_started_at = time.time()
+        final_eval = evaluate(model.module if distributed else model, eval_loader, device)
+        print(json.dumps({"stage": "final_eval_done", "t": time.time(), "dt_final_eval_sec": round(time.time() - final_eval_started_at, 3)}, ensure_ascii=False), flush=True)
 
     if rank == 0:
         save_model = model.module if distributed else model
         adapter_dir = args.output_dir / "adapter"
+        print(json.dumps({"stage": "save_start", "t": time.time(), "adapter_dir": str(adapter_dir)}, ensure_ascii=False), flush=True)
+        save_started_at = time.time()
         save_model.save_pretrained(adapter_dir)
         tokenizer.save_pretrained(adapter_dir)
+        print(json.dumps({"stage": "save_done", "t": time.time(), "dt_save_sec": round(time.time() - save_started_at, 3)}, ensure_ascii=False), flush=True)
 
         summary = {
             "model_name": args.model_name,
+            "signature": run_signature,
             "device": str(device),
             "world_size": world_size,
             "train_examples": len(train_dataset),
             "eval_examples": len(eval_dataset) if eval_dataset is not None else 0,
+            "optimizer_steps_per_epoch": optimizer_steps_per_epoch,
+            "max_available_steps": max_available_steps,
+            "requested_max_steps": args.max_steps,
+            "completed_steps": global_step,
             "max_steps": global_step,
             "final_eval": final_eval,
             "metrics": metrics,
         }
+        (args.output_dir / "run_config.json").write_text(json.dumps({"signature": run_signature}, indent=2) + "\n", encoding="utf-8")
         (args.output_dir / "metrics.json").write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
         print(json.dumps(summary, ensure_ascii=False, indent=2))
+
 
     if distributed:
         torch.distributed.destroy_process_group()

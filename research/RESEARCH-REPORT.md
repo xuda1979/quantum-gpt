@@ -35,7 +35,7 @@
    - `ai1`：`mix75` 的同切片定性评测已经启动过，但当前没有 fresh readback，所以最新状态仍待确认
 7. 下一轮基座已经明确切换方向：
    - 目标：`OmniCoder-9B`
-   - 当前状态：`preflight / handoff / archive` 链路先补齐，模型本体尚未证明已经落在本地或 `ai2`
+   - 当前状态：`preflight / handoff / archive` 链路已补齐，但当前运行时已明确不兼容 `qwen3_5` / `Qwen3_5ForConditionalGeneration`，所以还不能直接沿用现有纯文本 SFT 脚本开训
 
 ---
 

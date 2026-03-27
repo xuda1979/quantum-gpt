@@ -9,7 +9,7 @@
   "preflight_manifest": "artifacts/omnicoder9b-local-snapshot-preflight.json",
   "next_step_hint": "If this target is approved for execution, rerun without --dry-run and continue with research/omnicoder9b-public-handoff.md",
   "audit_summary": {
-    "timestamp_utc": "2026-03-27T07:22:05.314454+00:00",
+    "timestamp_utc": "2026-03-27T07:37:26.757698+00:00",
     "python": "3.9.6",
     "platform": "macOS-26.3-arm64-arm-64bit",
     "model_id": "Tesslate/OmniCoder-9B",
@@ -18,8 +18,8 @@
     "private": false,
     "disabled": false,
     "gated": false,
-    "downloads": 22089,
-    "likes": 481,
+    "downloads": 24018,
+    "likes": 482,
     "pipeline_tag": "text-generation",
     "library_name": "transformers",
     "tags_sample": [
@@ -62,10 +62,5 @@
       ]
     }
   },
-  "bootstrap_bundle": "/Users/daxu/software/quantum-gpt/artifacts/huanxin-bootstrap/20260316T143522Z",
-  "remote_commands": "/Users/daxu/software/quantum-gpt/artifacts/huanxin-bootstrap/20260316T143522Z/REMOTE_BOOTSTRAP_COMMANDS-OmniCoder-9B.sh",
-  "remote_commands_render": {
-    "bundle": "/Users/daxu/software/quantum-gpt/artifacts/huanxin-bootstrap/20260316T143522Z",
-    "output": "/Users/daxu/software/quantum-gpt/artifacts/huanxin-bootstrap/20260316T143522Z/REMOTE_BOOTSTRAP_COMMANDS-OmniCoder-9B.sh"
-  }
+  "render_remote_commands_warning": "Generic remote bootstrap command rendering is disabled for this target because the current bootstrap path assumes a text-only AutoTokenizer + AutoModelForCausalLM stack. OmniCoder-9B requires a newer Transformers runtime and a processor-aware path first."
 }

@@ -14,6 +14,25 @@
 - 建议远端模型目录：`/root/root/work/quantum-gpt/models/OmniCoder-9B`
 - 当前数据主线：`data/generated/fast-mini-interface-prefix-semantic-v4`
 
+## 当前已确认的真实阻塞
+
+截至 `2026-03-27` 的本地探测，阻塞已经不是“还没下载权重”这么简单，而是：
+
+1. `OmniCoder-9B` 暴露的是：
+   - `model_type = qwen3_5`
+   - `architectures = [Qwen3_5ForConditionalGeneration]`
+2. 当前训练器 `training/qwen_sft_peft.py` 走的是：
+   - `AutoTokenizer`
+   - `AutoModelForCausalLM`
+3. 当前 smoke 脚本 `training/huanxin_cpu_smoke.py` 也是同一条纯文本路径
+
+所以当前的真实结论是：
+
+- `OmniCoder-9B` 不是“可以直接按 Qwen2.5 文本模型那样微调，只差下载”
+- 而是“需要更高版本的 Transformers/runtime，加上一条 processor-aware 的训练/加载路径”
+
+也因此，通用的 remote bootstrap 命令单在这个模型上暂时被禁用，避免误导性地让远端直接跑到 `AutoTokenizer` / `AutoModelForCausalLM` 再失败。
+
 ## 为什么这一轮切到 OmniCoder-9B
 
 当前仓库已经证明：
@@ -47,6 +66,11 @@ python3 training/acquire_public_qwen_snapshot.py \
 
 它只冻结“目标模型是谁、准备放到哪里、后续该怎么交接”，不假装已经拿到本地权重。
 
+注意：
+
+- 对 `OmniCoder-9B` 来说，`--render-remote-commands` 当前只会返回 warning
+- 不会再生成那种假设“纯文本 CausalLM 直接可跑”的通用命令单
+
 ### 2. 如果 preflight 没问题，再决定是否真实下载
 
 ```bash
@@ -61,7 +85,12 @@ python3 training/acquire_public_qwen_snapshot.py --target omnicoder9b
 
 ### 先跑 smoke
 
-先证明 9B 基座能被当前训练器加载，而不是直接长跑：
+在真正 smoke 之前，必须先补两件事：
+
+1. 让远端/本地 `transformers` 运行时支持 `qwen3_5`
+2. 给训练链路补上 processor-aware 路径
+
+在这两件事补完之前，下面这类命令只应被视为“未来目标格式”，不应现在直接下发：
 
 ```bash
 cd /root/root/work/quantum-gpt
@@ -124,11 +153,16 @@ python3 scripts/archive_model_run.py <output-dir> \
 
 - `OmniCoder-9B` 还没有被证明已经存在于当前本地 `models/` 目录
 - 也还没有被证明已经存在于 `ai2` 的远端 `models/` 目录
-- 但 preflight/交接/归档链路已经可以先准备好
+- preflight/交接/归档链路已经准备好
+- 但当前运行时已经被证明确实不兼容 `qwen3_5` 这条模型路径
 
 这意味着：
 
-- 当前不是训练脚本逻辑卡住
-- 当前是“模型本体还未正式落地”
+- 当前不只是“模型本体还未正式落地”
+- 当前还存在“训练运行时路径不兼容”的明确工程阻塞
 
-下一步最小动作就是先跑 preflight，然后再决定是否真实拉取模型。
+下一步最小动作不再是直接发起远端训练，而是：
+
+1. 先升级并验证 `qwen3_5` 运行时
+2. 再实现 processor-aware smoke / SFT 路径
+3. 最后才是下载模型并发起真实 smoke

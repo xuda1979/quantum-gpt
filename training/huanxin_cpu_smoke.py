@@ -29,6 +29,13 @@ REQUIRED_MODULES = [
 ]
 
 
+def load_model_config_metadata(model_name: str) -> dict:
+    from transformers import PretrainedConfig
+
+    config_dict, _unused_kwargs = PretrainedConfig.get_config_dict(model_name, trust_remote_code=True)
+    return config_dict
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--model-name", required=True, help="HF model id or local path")
@@ -151,6 +158,31 @@ def main() -> int:
         summary["torch_cuda_available"] = torch.cuda.is_available()
     except Exception as exc:
         summary["stage"] = "torch_cuda_check"
+        summary["status"] = "error"
+        summary["error_type"] = type(exc).__name__
+        summary["error"] = str(exc)
+        print(json.dumps(summary, indent=2, ensure_ascii=False))
+        return 1
+
+    try:
+        config_dict = load_model_config_metadata(args.model_name)
+        summary["config_model_type"] = config_dict.get("model_type")
+        summary["config_architectures"] = config_dict.get("architectures")
+        if summary["config_model_type"] == "qwen3_5" or any(
+            "ConditionalGeneration" in str(item) for item in (summary["config_architectures"] or [])
+        ):
+            summary["stage"] = "runtime_compat"
+            summary["status"] = "error"
+            summary["error_type"] = "UnsupportedModelArchitecture"
+            summary["error"] = (
+                "Current smoke path only supports text-only AutoTokenizer + AutoModelForCausalLM checkpoints. "
+                "This target exposes a qwen3_5 conditional-generation architecture and needs a newer "
+                "Transformers runtime plus a processor-aware path before remote fine-tuning."
+            )
+            print(json.dumps(summary, indent=2, ensure_ascii=False))
+            return 1
+    except Exception as exc:
+        summary["stage"] = "config_probe"
         summary["status"] = "error"
         summary["error_type"] = type(exc).__name__
         summary["error"] = str(exc)

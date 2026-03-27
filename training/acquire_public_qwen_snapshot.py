@@ -29,6 +29,7 @@ PUBLIC_MODELS = {
         "model_id": "Qwen/Qwen2.5-1.5B-Instruct",
         "expected_substring": "Qwen2.5-1.5B-Instruct",
         "expected_family_substring": "qwen",
+        "supports_generic_remote_commands": True,
         "audit_out": "artifacts/model-source-audit-qwen25.json",
         "handoff_note": "research/qwen25-public-fallback-handoff.md",
         "remote_model_dir": "/root/root/work/quantum-gpt/models/Qwen2.5-1.5B-Instruct",
@@ -39,6 +40,7 @@ PUBLIC_MODELS = {
         "model_id": "Qwen/Qwen3-1.7B",
         "expected_substring": "Qwen3-1.7B",
         "expected_family_substring": "qwen",
+        "supports_generic_remote_commands": True,
         "audit_out": "artifacts/model-source-audit-qwen3-1p7b.json",
         "handoff_note": "research/qwen3-public-alternative-handoff.md",
         "remote_model_dir": "/root/root/work/quantum-gpt/models/Qwen3-1.7B",
@@ -49,6 +51,7 @@ PUBLIC_MODELS = {
         "model_id": "Tesslate/OmniCoder-9B",
         "expected_substring": "OmniCoder-9B",
         "expected_family_substring": "qwen",
+        "supports_generic_remote_commands": False,
         "audit_out": "artifacts/model-source-audit-omnicoder9b.json",
         "handoff_note": "research/omnicoder9b-public-handoff.md",
         "remote_model_dir": "/root/root/work/quantum-gpt/models/OmniCoder-9B",
@@ -136,6 +139,7 @@ def main() -> int:
     model_id = spec["model_id"]
     expected_substring = spec["expected_substring"]
     expected_family_substring = spec.get("expected_family_substring", "qwen")
+    supports_generic_remote_commands = bool(spec.get("supports_generic_remote_commands", True))
     audit_out = Path(spec["audit_out"])
     handoff_note = spec["handoff_note"]
     remote_model_dir = spec["remote_model_dir"]
@@ -192,7 +196,7 @@ def main() -> int:
             "next_step_hint": f"If this target is approved for execution, rerun without --dry-run and continue with {handoff_note}",
             "audit_summary": audit_summary,
         }
-        if args.render_remote_commands:
+        if args.render_remote_commands and supports_generic_remote_commands:
             try:
                 remote_commands_path, render_payload = render_remote_commands(args.bootstrap_bundle, remote_model_dir)
             except subprocess.CalledProcessError as exc:
@@ -202,6 +206,12 @@ def main() -> int:
             result["bootstrap_bundle"] = str(args.bootstrap_bundle.resolve())
             result["remote_commands"] = str(remote_commands_path)
             result["remote_commands_render"] = render_payload
+        elif args.render_remote_commands:
+            result["render_remote_commands_warning"] = (
+                "Generic remote bootstrap command rendering is disabled for this target because the current "
+                "bootstrap path assumes a text-only AutoTokenizer + AutoModelForCausalLM stack. "
+                "OmniCoder-9B requires a newer Transformers runtime and a processor-aware path first."
+            )
         preflight_manifest.write_text(json.dumps(result, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
         print(json.dumps(result, indent=2, ensure_ascii=False))
         return 0
@@ -261,7 +271,7 @@ def main() -> int:
         "next_step_hint": f"If this target is approved for execution, continue with {handoff_note}",
         "verify_summary": verify_summary,
     }
-    if args.render_remote_commands:
+    if args.render_remote_commands and supports_generic_remote_commands:
         try:
             remote_commands_path, render_payload = render_remote_commands(args.bootstrap_bundle, remote_model_dir)
         except subprocess.CalledProcessError as exc:
@@ -271,6 +281,12 @@ def main() -> int:
         result["bootstrap_bundle"] = str(args.bootstrap_bundle.resolve())
         result["remote_commands"] = str(remote_commands_path)
         result["remote_commands_render"] = render_payload
+    elif args.render_remote_commands:
+        result["render_remote_commands_warning"] = (
+            "Generic remote bootstrap command rendering is disabled for this target because the current "
+            "bootstrap path assumes a text-only AutoTokenizer + AutoModelForCausalLM stack. "
+            "OmniCoder-9B requires a newer Transformers runtime and a processor-aware path first."
+        )
     handoff_manifest.write_text(json.dumps(result, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     print(json.dumps(result, indent=2, ensure_ascii=False))
     return 0
