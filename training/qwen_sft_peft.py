@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+from dataclasses import dataclass
 import hashlib
 import json
 import math
@@ -16,7 +17,15 @@ import torch
 from torch.utils.data import DataLoader, Dataset
 
 if TYPE_CHECKING:
-    from transformers import AutoTokenizer
+    from transformers import AutoProcessor, AutoTokenizer
+
+
+@dataclass
+class TextPreprocessorBackend:
+    render_backend: Any
+    text_backend: Any
+    save_backend: Any
+    backend_kind: str
 
 
 def load_model_config_metadata(model_name: str) -> dict[str, Any]:
@@ -76,12 +85,12 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def require_training_dependencies() -> tuple[Any, Any, Any, Any, Any, Any]:
+def require_training_dependencies() -> tuple[Any, Any, Any, Any, Any, Any, Any, Any, Any]:
     try:
         import torch
         from peft import LoraConfig, TaskType, get_peft_model
         from torch.utils.data import DataLoader, Dataset
-        from transformers import AutoModelForCausalLM, AutoTokenizer
+        from transformers import AutoModelForCausalLM, AutoProcessor, AutoTokenizer
     except ImportError as exc:
         raise SystemExit(
             "Missing training dependencies. Install the bootstrap stack first, for example: "
@@ -93,7 +102,42 @@ def require_training_dependencies() -> tuple[Any, Any, Any, Any, Any, Any]:
     except ImportError:
         pass
 
-    return torch, LoraConfig, TaskType, get_peft_model, DataLoader, Dataset, AutoModelForCausalLM, AutoTokenizer
+    return torch, LoraConfig, TaskType, get_peft_model, DataLoader, Dataset, AutoModelForCausalLM, AutoTokenizer, AutoProcessor
+
+
+def supports_text_backend(candidate: Any) -> bool:
+    return candidate is not None and hasattr(candidate, "__call__") and hasattr(candidate, "pad")
+
+
+def load_text_preprocessor_backend(model_name: str, auto_tokenizer_cls: Any, auto_processor_cls: Any) -> TextPreprocessorBackend:
+    processor_error: Exception | None = None
+    try:
+        processor = auto_processor_cls.from_pretrained(model_name, trust_remote_code=True)
+        processor_tokenizer = getattr(processor, "tokenizer", None)
+        if supports_text_backend(processor_tokenizer):
+            render_backend = processor if hasattr(processor, "apply_chat_template") else processor_tokenizer
+            return TextPreprocessorBackend(
+                render_backend=render_backend,
+                text_backend=processor_tokenizer,
+                save_backend=processor,
+                backend_kind="processor.tokenizer",
+            )
+    except Exception as exc:  # noqa: BLE001
+        processor_error = exc
+
+    try:
+        tokenizer = auto_tokenizer_cls.from_pretrained(model_name, trust_remote_code=True)
+        return TextPreprocessorBackend(
+            render_backend=tokenizer,
+            text_backend=tokenizer,
+            save_backend=tokenizer,
+            backend_kind="tokenizer",
+        )
+    except Exception as exc:  # noqa: BLE001
+        error_parts = [f"AutoTokenizer load failed: {type(exc).__name__}: {exc}"]
+        if processor_error is not None:
+            error_parts.append(f"AutoProcessor fallback also failed: {type(processor_error).__name__}: {processor_error}")
+        raise SystemExit("Unable to load a text preprocessing backend. " + " | ".join(error_parts)) from exc
 
 
 def resolve_device(torch: Any, choice: str) -> Any:
@@ -130,12 +174,12 @@ def load_jsonl(path: Path) -> list[dict]:
     return rows
 
 
-def render_messages(tokenizer: Any, record: dict) -> str:
+def render_messages(render_backend: Any, record: dict) -> str:
     messages = record.get("messages")
     if not isinstance(messages, list) or not messages:
         raise ValueError(f"Record {record.get('example_id')} has no messages")
-    if hasattr(tokenizer, "apply_chat_template"):
-        return tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=False)
+    if hasattr(render_backend, "apply_chat_template"):
+        return render_backend.apply_chat_template(messages, tokenize=False, add_generation_prompt=False)
 
     parts = []
     for message in messages:
@@ -146,12 +190,12 @@ def render_messages(tokenizer: Any, record: dict) -> str:
 
 
 class ChatSftDataset:
-    def __init__(self, path: Path, tokenizer: Any, max_length: int, train_on_completions_only: bool = False) -> None:
+    def __init__(self, path: Path, backend: TextPreprocessorBackend, max_length: int, train_on_completions_only: bool = False) -> None:
         rows = load_jsonl(path)
         self.examples = []
         for record in rows:
-            full_text = render_messages(tokenizer, record)
-            encoded = tokenizer(
+            full_text = render_messages(backend.render_backend, record)
+            encoded = backend.text_backend(
                 full_text,
                 truncation=True,
                 max_length=max_length,
@@ -166,8 +210,8 @@ class ChatSftDataset:
             if train_on_completions_only:
                 messages = record.get("messages", [])
                 if len(messages) >= 2 and messages[-1].get("role") == "assistant":
-                    prompt_text = render_messages(tokenizer, {"messages": messages[:-1]})
-                    prompt_ids = tokenizer(
+                    prompt_text = render_messages(backend.render_backend, {"messages": messages[:-1]})
+                    prompt_ids = backend.text_backend(
                         prompt_text,
                         truncation=True,
                         max_length=max_length,
@@ -185,11 +229,11 @@ class ChatSftDataset:
 
 
 class PaddingCollator:
-    def __init__(self, tokenizer: Any) -> None:
-        self.tokenizer = tokenizer
+    def __init__(self, text_backend: Any) -> None:
+        self.text_backend = text_backend
 
     def __call__(self, batch: list[dict]) -> dict[str, torch.Tensor]:
-        padded = self.tokenizer.pad(
+        padded = self.text_backend.pad(
             [{"input_ids": item["input_ids"], "attention_mask": item["attention_mask"]} for item in batch],
             padding=True,
             return_tensors="pt",
@@ -287,6 +331,7 @@ def main() -> int:
         _Dataset,
         AutoModelForCausalLM,
         AutoTokenizer,
+        AutoProcessor,
     ) = require_training_dependencies()
     print(json.dumps({"stage": "deps_loaded"}, ensure_ascii=False), flush=True)
 
@@ -303,6 +348,21 @@ def main() -> int:
             ),
             flush=True,
         )
+
+    text_preprocessor = load_text_preprocessor_backend(args.model_name, AutoTokenizer, AutoProcessor)
+    print(
+        json.dumps(
+            {
+                "stage": "text_preprocessor_loaded",
+                "backend_kind": text_preprocessor.backend_kind,
+                "render_backend_class": text_preprocessor.render_backend.__class__.__name__,
+                "text_backend_class": text_preprocessor.text_backend.__class__.__name__,
+                "save_backend_class": text_preprocessor.save_backend.__class__.__name__,
+            },
+            ensure_ascii=False,
+        ),
+        flush=True,
+    )
 
     device = resolve_device(torch, args.device)
     print(json.dumps({"stage": "device_resolved", "device": str(device), "requested": args.device}, ensure_ascii=False), flush=True)
@@ -323,17 +383,17 @@ def main() -> int:
             torch.npu.set_device(0)
     print(json.dumps({"stage": "ddp_ready", "distributed": distributed, "rank": rank, "world_size": world_size, "device": str(device)}, ensure_ascii=False), flush=True)
 
-    tokenizer = AutoTokenizer.from_pretrained(args.model_name, trust_remote_code=True)
+    tokenizer = text_preprocessor.text_backend
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
     tokenizer.padding_side = "right"
     print(json.dumps({"stage": "tokenizer_loaded", "pad_token": tokenizer.pad_token, "padding_side": tokenizer.padding_side}, ensure_ascii=False), flush=True)
 
-    train_dataset = ChatSftDataset(args.train_file, tokenizer, args.max_length, train_on_completions_only=args.train_on_completions_only)
-    eval_dataset = ChatSftDataset(args.eval_file, tokenizer, args.max_length, train_on_completions_only=args.train_on_completions_only) if args.eval_file else None
+    train_dataset = ChatSftDataset(args.train_file, text_preprocessor, args.max_length, train_on_completions_only=args.train_on_completions_only)
+    eval_dataset = ChatSftDataset(args.eval_file, text_preprocessor, args.max_length, train_on_completions_only=args.train_on_completions_only) if args.eval_file else None
     print(json.dumps({"stage": "datasets_ready", "train_examples": len(train_dataset), "eval_examples": len(eval_dataset) if eval_dataset is not None else 0, "max_length": args.max_length}, ensure_ascii=False), flush=True)
 
-    collator = PaddingCollator(tokenizer)
+    collator = PaddingCollator(text_preprocessor.text_backend)
     train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset, num_replicas=world_size, rank=rank, shuffle=True) if distributed else None
     train_loader = DataLoader(train_dataset, batch_size=args.per_device_batch_size, shuffle=(train_sampler is None), collate_fn=collator, sampler=train_sampler)
     eval_loader = None
@@ -491,7 +551,7 @@ def main() -> int:
         print(json.dumps({"stage": "save_start", "t": time.time(), "adapter_dir": str(adapter_dir)}, ensure_ascii=False), flush=True)
         save_started_at = time.time()
         save_model.save_pretrained(adapter_dir)
-        tokenizer.save_pretrained(adapter_dir)
+        text_preprocessor.save_backend.save_pretrained(adapter_dir)
         print(json.dumps({"stage": "save_done", "t": time.time(), "dt_save_sec": round(time.time() - save_started_at, 3)}, ensure_ascii=False), flush=True)
 
         summary = {

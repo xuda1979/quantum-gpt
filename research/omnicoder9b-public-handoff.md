@@ -31,6 +31,27 @@
 - `OmniCoder-9B` 不是“可以直接按 Qwen2.5 文本模型那样微调，只差下载”
 - 而是“需要更高版本的 Transformers/runtime，加上一条 processor-aware 的训练/加载路径”
 
+补充一个已经做过的实测：
+
+- 在隔离虚拟环境里安装了公开发布版 `transformers 4.57.6`
+- 依然不能通过 `AutoConfig.from_pretrained('Tesslate/OmniCoder-9B')` 识别 `qwen3_5`
+- 但仓库文件侧已经确认存在：
+  - `processor_config.json`
+  - `preprocessor_config.json`
+  - `chat_template.jinja`
+
+所以当前不是“随便升到一个更新 release 就够了”，而是很可能需要：
+
+1. 更靠前的上游 runtime 支持
+2. 仓库内 processor-aware 文本子路径
+
+为避免后面拿到本地 snapshot 后再误判，`training/verify_qwen_snapshot.py` 现在也已经升级：
+
+- 对纯文本 Qwen 路径，仍按 `config + tokenizer + weights` 验证
+- 对 `ConditionalGeneration / vision_config / image_token_id` 这类路径，会额外要求：
+  - processor/preprocessor config
+  - chat template 证据
+
 也因此，通用的 remote bootstrap 命令单在这个模型上暂时被禁用，避免误导性地让远端直接跑到 `AutoTokenizer` / `AutoModelForCausalLM` 再失败。
 
 ## 为什么这一轮切到 OmniCoder-9B

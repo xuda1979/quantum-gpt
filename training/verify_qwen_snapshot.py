@@ -38,6 +38,16 @@ WEIGHT_CANDIDATES = [
     "pytorch_model.bin.index.json",
 ]
 
+PROCESSOR_CANDIDATES = [
+    "processor_config.json",
+    "preprocessor_config.json",
+]
+
+CHAT_TEMPLATE_CANDIDATES = [
+    "chat_template.jinja",
+    "chat_template.json",
+]
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -75,6 +85,19 @@ def collect_weight_files(root: Path) -> list[str]:
     return found
 
 
+def requires_processor_artifacts(config: dict | None) -> bool:
+    if not isinstance(config, dict):
+        return False
+    architectures = [str(item) for item in (config.get("architectures") or [])]
+    if any("ConditionalGeneration" in item for item in architectures):
+        return True
+    if config.get("vision_config") is not None:
+        return True
+    if config.get("image_token_id") is not None or config.get("video_token_id") is not None:
+        return True
+    return False
+
+
 def main() -> int:
     args = parse_args()
     root = args.snapshot_dir.expanduser().resolve()
@@ -96,13 +119,17 @@ def main() -> int:
     present_config = find_present(root, REQUIRED_CONFIG_FILES)
     present_tokenizer = find_present(root, TOKENIZER_CANDIDATES)
     present_weights = collect_weight_files(root)
+    present_processor = find_present(root, PROCESSOR_CANDIDATES)
+    present_chat_template = find_present(root, CHAT_TEMPLATE_CANDIDATES)
 
     config = load_json(root / "config.json")
     tokenizer_config = load_json(root / "tokenizer_config.json")
     generation_config = load_json(root / "generation_config.json")
+    processor_config = load_json(root / "processor_config.json")
+    preprocessor_config = load_json(root / "preprocessor_config.json")
 
     candidate_strings: list[str] = [str(root)]
-    for payload in (config, tokenizer_config, generation_config):
+    for payload in (config, tokenizer_config, generation_config, processor_config, preprocessor_config):
         if isinstance(payload, dict):
             for key in ("_name_or_path", "model_type", "architectures", "tokenizer_class"):
                 value = payload.get(key)
@@ -123,13 +150,18 @@ def main() -> int:
     summary["present_config_files"] = present_config
     summary["present_tokenizer_files"] = present_tokenizer
     summary["present_weight_files"] = present_weights
+    summary["present_processor_files"] = present_processor
+    summary["present_chat_template_files"] = present_chat_template
     summary["accepted_tokenizer_evidence"] = present_tokenizer[:]
     summary["accepted_weight_evidence"] = present_weights[:]
+    summary["accepted_processor_evidence"] = present_processor[:]
+    summary["accepted_chat_template_evidence"] = present_chat_template[:]
     summary["config_model_type"] = config_model_type
     summary["config_architectures"] = config_architectures
     summary["expected_substring_hit"] = expected_hit
     summary["qwen_metadata_hit"] = qwen_metadata_hit
     summary["directory_file_count"] = sum(1 for _ in root.iterdir())
+    summary["requires_processor_artifacts"] = requires_processor_artifacts(config)
 
     missing_reasons = []
     if not present_config:
@@ -138,6 +170,11 @@ def main() -> int:
         missing_reasons.append("missing tokenizer files")
     if not present_weights:
         missing_reasons.append("missing model weight files")
+    if summary["requires_processor_artifacts"]:
+        if not present_processor:
+            missing_reasons.append("missing processor/preprocessor config files for conditional-generation snapshot")
+        if not present_chat_template and not (isinstance(tokenizer_config, dict) and tokenizer_config.get("chat_template")):
+            missing_reasons.append("missing chat template for conditional-generation snapshot")
     if not expected_hit:
         missing_reasons.append("expected model substring not found in path/config metadata")
     if not qwen_metadata_hit:
