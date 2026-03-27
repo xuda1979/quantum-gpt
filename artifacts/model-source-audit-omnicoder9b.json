@@ -1,0 +1,54 @@
+{
+  "timestamp_utc": "2026-03-27T07:22:05.314454+00:00",
+  "python": "3.9.6",
+  "platform": "macOS-26.3-arm64-arm-64bit",
+  "model_id": "Tesslate/OmniCoder-9B",
+  "status": "ok",
+  "resolved_id": "Tesslate/OmniCoder-9B",
+  "private": false,
+  "disabled": false,
+  "gated": false,
+  "downloads": 22089,
+  "likes": 481,
+  "pipeline_tag": "text-generation",
+  "library_name": "transformers",
+  "tags_sample": [
+    "transformers",
+    "safetensors",
+    "qwen3_5",
+    "image-text-to-text",
+    "qwen3.5",
+    "code",
+    "agent",
+    "sft",
+    "omnicoder",
+    "tesslate",
+    "text-generation",
+    "conversational",
+    "en",
+    "base_model:Qwen/Qwen3.5-9B",
+    "base_model:finetune:Qwen/Qwen3.5-9B",
+    "license:apache-2.0",
+    "model-index",
+    "endpoints_compatible",
+    "deploy:azure",
+    "region:us"
+  ],
+  "file_count": 11,
+  "config_model_type": "qwen3_5",
+  "config_architectures": [
+    "Qwen3_5ForConditionalGeneration"
+  ],
+  "family_evidence": {
+    "expected_family_substring": "qwen",
+    "matched": true,
+    "hits": [
+      "qwen3_5",
+      "qwen3_5",
+      "qwen3.5",
+      "base_model:Qwen/Qwen3.5-9B",
+      "base_model:finetune:Qwen/Qwen3.5-9B",
+      "Qwen3_5ForConditionalGeneration"
+    ]
+  }
+}

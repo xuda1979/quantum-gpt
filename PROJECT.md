@@ -6,13 +6,21 @@ Build an R&D program for a quantum-coding LLM that can write high-quality quantu
 
 ## Model Direction
 
-- Base model target: Qwen 3.5 smallest practical model
-- Near-term orchestration model: openai/gpt-5.4
-- Training hardware constraint: local CPU only for now
+- Current validated baseline: **Qwen2.5-1.5B-Instruct** (on ai2 at `models/Qwen2.5-1.5B-Instruct`)
+- Next-round target: **OmniCoder-9B** (planned remote path: `models/OmniCoder-9B`)
+- Near-term orchestration model: yunwu/gpt-5.4
+- Training hardware: 8x Ascend 910B NPUs on Huanxin AI2
 
 ## Current Objective
 
-Use this workspace to incrementally research, design, and implement a CPU-first local development and validation pipeline for the target Qwen model, then move validated code into the Huanxin environment from the local machine and run remote fine-tuning there.
+Use this workspace to incrementally research, design, and implement a CPU-first local development and validation pipeline for the current coding base model, then move validated code into the Huanxin environment from the local machine and run remote fine-tuning there.
+
+Execution mode for this workspace is Codex-first and repo-local:
+
+- run commands from this repo directly
+- use `scripts/` and `browser-automation/` as the source of truth for Huanxin access
+- use local `rclone` for S3 movement
+- do not depend on OpenClaw gateway state, managed skills, or session approvals
 
 The work should stay realistic under current constraints:
 
@@ -24,12 +32,12 @@ The work should stay realistic under current constraints:
 
 - Huanxin route: `https://aihuanxin.cn/kunlun/kl-web?poolId=1&projectId=3ed7854b946a47b1a49ad754baa76cd3#/train-dev`
 - Intended remote workdir: `/root/root/work/quantum-gpt`
-- Transfer mode for now: copy/paste or equivalent direct local-to-remote actions from the local machine inside the Huanxin environment, not S3 staging
-- Preferred automation seam: browser-side click and paste actions through the local persistent Playwright profile under `browser-automation/`
-- Local validation is mandatory before remote copy/paste or training:
+- Transfer mode: S3 staging via `./scripts/push_to_s3.sh`, `./scripts/ai2_sync_from_s3.sh`, `./scripts/ai2_push_results_to_s3.sh`
+- Shell access: `./scripts/ai2_shell.sh "your command"`
+- Local validation is mandatory before remote training:
 	- run `python3 evals/runner/run_eval.py`
 	- run any additional local tests for files you changed
-	- do not copy code into the remote environment or trigger remote training unless all local checks pass
+	- do not push code or trigger remote training unless all local checks pass
 - If Huanxin auth or the remote editing surface is unavailable, treat that as a blocker and document it precisely instead of pretending the remote step completed
 
 ## Deliverables To Build Iteratively
@@ -54,14 +62,14 @@ The work should stay realistic under current constraints:
 - Keep a running log in memory/YYYY-MM-DD.md
 - When a substantial decision is made, update MEMORY.md if it exists or create it if needed
 - If code is changed, leave the repo in a runnable state and record how to verify it
-- Before any remote copy/paste or fine-tuning attempt, run the local eval harness and any relevant local tests first; only proceed if they all pass
-- When local validation passes, prefer moving only the necessary validated code and commands into the Huanxin remote environment from this machine instead of relying on S3 staging
+- Before any remote training attempt, run the local eval harness and any relevant local tests first; only proceed if they all pass
+- Transfer code via S3 scripts, run training via `./scripts/ai2_shell.sh`
 - If blocked, document the blocker and define the smallest next experiment
 
 ## First Milestones
 
 1. Define scope and success metrics for the target model
-2. Choose a CPU-feasible adaptation strategy for Qwen 3.5 small
+2. Choose a CPU-feasible adaptation strategy for Qwen2.5-1.5B-Instruct
 3. Build a starter corpus specification for quantum and software-engineering tasks
 4. Create evaluation tasks with objective scoring
 5. Implement the first end-to-end prototype pipeline in this workspace

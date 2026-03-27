@@ -1,0 +1,31 @@
+{
+  "archive_version": "model-run-index-v1",
+  "runs": [
+    {
+      "label": "codefirst-semantic-mix75-true20-e2",
+      "output_dir": "outputs/codefirst-semantic-mix75-8npu-true20-e2-20260326T2118CST",
+      "archive_path": "artifacts/model-registry/codefirst-semantic-mix75-8npu-true20-e2-20260326T2118CST.json",
+      "base_model": "models/Qwen2.5-1.5B-Instruct",
+      "training_method": "LoRA SFT",
+      "train_file": "data/generated/fast-mini-codefirst-semantic-mix75/train.jsonl",
+      "eval_file": "data/generated/fast-mini-codefirst-semantic-mix75/eval.jsonl",
+      "completed_steps": 20,
+      "final_eval_loss": 0.735347468405962,
+      "final_eval_perplexity": 2.086206757517806,
+      "head_commit": "3372a70b66e57a304608b7e38aae6868e4351a3e"
+    },
+    {
+      "label": "semantic-v4-true20-e2-best",
+      "output_dir": "outputs/interface-prefix-semantic-v4-8npu-true20-e2-20260326T1627CST",
+      "archive_path": "artifacts/model-registry/interface-prefix-semantic-v4-8npu-true20-e2-20260326T1627CST.json",
+      "base_model": "models/Qwen2.5-1.5B-Instruct",
+      "training_method": "LoRA SFT",
+      "train_file": "data/generated/fast-mini-interface-prefix-semantic-v4/train.jsonl",
+      "eval_file": "data/generated/fast-mini-interface-prefix-semantic-v4/eval.jsonl",
+      "completed_steps": 20,
+      "final_eval_loss": 0.6986174695193768,
+      "final_eval_perplexity": 2.0109705566192857,
+      "head_commit": "3372a70b66e57a304608b7e38aae6868e4351a3e"
+    }
+  ]
+}

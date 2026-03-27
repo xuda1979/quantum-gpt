@@ -28,6 +28,7 @@ PUBLIC_MODELS = {
     "qwen25": {
         "model_id": "Qwen/Qwen2.5-1.5B-Instruct",
         "expected_substring": "Qwen2.5-1.5B-Instruct",
+        "expected_family_substring": "qwen",
         "audit_out": "artifacts/model-source-audit-qwen25.json",
         "handoff_note": "research/qwen25-public-fallback-handoff.md",
         "remote_model_dir": "/root/root/work/quantum-gpt/models/Qwen2.5-1.5B-Instruct",
@@ -37,11 +38,22 @@ PUBLIC_MODELS = {
     "qwen3-1.7b": {
         "model_id": "Qwen/Qwen3-1.7B",
         "expected_substring": "Qwen3-1.7B",
+        "expected_family_substring": "qwen",
         "audit_out": "artifacts/model-source-audit-qwen3-1p7b.json",
         "handoff_note": "research/qwen3-public-alternative-handoff.md",
         "remote_model_dir": "/root/root/work/quantum-gpt/models/Qwen3-1.7B",
         "handoff_manifest": "artifacts/qwen3-1p7b-local-snapshot-handoff.json",
         "preflight_manifest": "artifacts/qwen3-1p7b-local-snapshot-preflight.json",
+    },
+    "omnicoder9b": {
+        "model_id": "Tesslate/OmniCoder-9B",
+        "expected_substring": "OmniCoder-9B",
+        "expected_family_substring": "qwen",
+        "audit_out": "artifacts/model-source-audit-omnicoder9b.json",
+        "handoff_note": "research/omnicoder9b-public-handoff.md",
+        "remote_model_dir": "/root/root/work/quantum-gpt/models/OmniCoder-9B",
+        "handoff_manifest": "artifacts/omnicoder9b-local-snapshot-handoff.json",
+        "preflight_manifest": "artifacts/omnicoder9b-local-snapshot-preflight.json",
     },
 }
 
@@ -123,6 +135,7 @@ def main() -> int:
     spec = PUBLIC_MODELS[args.target]
     model_id = spec["model_id"]
     expected_substring = spec["expected_substring"]
+    expected_family_substring = spec.get("expected_family_substring", "qwen")
     audit_out = Path(spec["audit_out"])
     handoff_note = spec["handoff_note"]
     remote_model_dir = spec["remote_model_dir"]
@@ -133,8 +146,8 @@ def main() -> int:
     preflight_manifest.parent.mkdir(parents=True, exist_ok=True)
 
     hf_env = {
-        "HF_HUB_DOWNLOAD_TIMEOUT": str(args.hf_timeout_seconds),
-        "HF_HUB_ETAG_TIMEOUT": str(args.hf_timeout_seconds),
+        "HF_HUB_DOWNLOAD_TIMEOUT": str(int(args.hf_timeout_seconds)),
+        "HF_HUB_ETAG_TIMEOUT": str(int(args.hf_timeout_seconds)),
     }
 
     try:
@@ -145,7 +158,7 @@ def main() -> int:
                 "--model-id",
                 model_id,
                 "--expected-family-substring",
-                "qwen",
+                expected_family_substring,
                 "--out",
                 str(audit_out),
                 "--timeout-seconds",

@@ -1,0 +1,290 @@
+{
+  "archive_version": "model-run-archive-v1",
+  "archived_at_utc": "2026-03-27T07:22:29.726354+00:00",
+  "label": "semantic-v4-true20-e2-best",
+  "output_dir": "outputs/interface-prefix-semantic-v4-8npu-true20-e2-20260326T1627CST",
+  "artifacts": {
+    "metrics_path": "outputs/interface-prefix-semantic-v4-8npu-true20-e2-20260326T1627CST/metrics.json",
+    "metrics_sha256": "d6d928176a2f4ae90ce670841d272402644a2dee723d6da5c2c9bb107b30b7ee",
+    "run_config_path": "outputs/interface-prefix-semantic-v4-8npu-true20-e2-20260326T1627CST/run_config.json",
+    "run_config_sha256": "a0f689e4ec96d1a10206b2db86771f62b37a4c0b000c5f25374f9a65e55a8135",
+    "adapter_dir": "outputs/interface-prefix-semantic-v4-8npu-true20-e2-20260326T1627CST/adapter",
+    "adapter_exists": true,
+    "adapter_model_path": "outputs/interface-prefix-semantic-v4-8npu-true20-e2-20260326T1627CST/adapter/adapter_model.safetensors",
+    "adapter_model_exists": false,
+    "adapter_files": [
+      "README.md",
+      "adapter_config.json",
+      "added_tokens.json",
+      "special_tokens_map.json",
+      "tokenizer_config.json"
+    ]
+  },
+  "model": {
+    "base_model": "models/Qwen2.5-1.5B-Instruct",
+    "base_model_family": "qwen",
+    "training_method": "LoRA SFT",
+    "training_method_detail": {
+      "stage": "supervised_fine_tuning",
+      "adapter_strategy": "LoRA",
+      "training_method": "LoRA SFT",
+      "loss_function": {
+        "name": "causal_lm_cross_entropy",
+        "label_masking": "padding tokens masked to -100; prompt tokens also masked when train_on_completions_only=true",
+        "train_on_completions_only": false
+      },
+      "optimizer": {
+        "name": "AdamW",
+        "learning_rate": 0.0002
+      },
+      "scheduler": {
+        "name": "CosineAnnealingLR",
+        "t_max_steps": 20
+      }
+    },
+    "training_script": "training/qwen_sft_peft.py",
+    "training_command_reconstructed": "python3 training/qwen_sft_peft.py --model-name models/Qwen2.5-1.5B-Instruct --train-file data/generated/fast-mini-interface-prefix-semantic-v4/train.jsonl --eval-file data/generated/fast-mini-interface-prefix-semantic-v4/eval.jsonl --device npu --max-length 512 --per-device-batch-size 1 --gradient-accumulation-steps 2 --learning-rate 0.0002 --num-epochs 2 --max-steps 20 --eval-steps 10 --log-steps 1 --lora-rank 16 --lora-alpha 32 --lora-dropout 0.05 --target-modules q_proj k_proj v_proj o_proj gate_proj up_proj down_proj"
+  },
+  "training_signature": {
+    "model_name": "models/Qwen2.5-1.5B-Instruct",
+    "train_file": "data/generated/fast-mini-interface-prefix-semantic-v4/train.jsonl",
+    "eval_file": "data/generated/fast-mini-interface-prefix-semantic-v4/eval.jsonl",
+    "device": "npu",
+    "max_length": 512,
+    "per_device_batch_size": 1,
+    "gradient_accumulation_steps": 2,
+    "learning_rate": 0.0002,
+    "num_epochs": 2,
+    "max_steps": 20,
+    "eval_steps": 10,
+    "log_steps": 1,
+    "lora_rank": 16,
+    "lora_alpha": 32,
+    "lora_dropout": 0.05,
+    "load_in_8bit": false,
+    "train_on_completions_only": false,
+    "target_modules": [
+      "q_proj",
+      "k_proj",
+      "v_proj",
+      "o_proj",
+      "gate_proj",
+      "up_proj",
+      "down_proj"
+    ],
+    "signature_sha256": "dd251ffa371d1d32bd27b5f1e2dcb8d54ed8443b46c3a286ccee36c8624bca2b"
+  },
+  "training_data": {
+    "train": {
+      "path": "data/generated/fast-mini-interface-prefix-semantic-v4/train.jsonl",
+      "exists": true,
+      "sha256": "76881fc97983e2d40b3bc1c2eab9c581a2021af4dfd20229f5462358a4027fd4",
+      "rows": 160,
+      "manifest_path": "data/generated/fast-mini-interface-prefix-semantic-v4/manifest.json",
+      "manifest_exists": false,
+      "manifest_valid_json": false,
+      "manifest_error": "missing",
+      "dataset_summary": {
+        "row_count": 160,
+        "unique_example_ids": 160,
+        "unique_task_ids": 23,
+        "task_ids": [
+          "quantum_bell_pair_construction",
+          "quantum_circuit_depth_optimization",
+          "quantum_circuit_phase_repair",
+          "quantum_gate_alias_normalization",
+          "quantum_measurement_bug_repair",
+          "quantum_phase_estimation_circuit",
+          "quantum_qaoa_maxcut",
+          "quantum_qft_phase_pattern",
+          "quantum_stabilizer_tableau_update_repair",
+          "quantum_superdense_coding",
+          "quantum_teleportation_corrections",
+          "quantum_vqe_energy_minimization",
+          "software_config_merge",
+          "software_docstring_contract",
+          "software_duplicate_logic_refactor",
+          "software_multifile_patch_conflict_repair",
+          "software_off_by_one_bugfix",
+          "software_parser_regression_tests",
+          "software_patch_application_conflict_resolver",
+          "software_retry_decorator",
+          "software_session_event_log",
+          "software_session_window_summary",
+          "software_tree_serialization"
+        ],
+        "formats": {
+          "chat-sft-v1": 160
+        },
+        "source_schemas": {
+          "template-v1": 160
+        },
+        "domains": {
+          "quantum": 90,
+          "software": 70
+        },
+        "categories": {
+          "algorithm_implementation": 14,
+          "algorithm_reasoning": 10,
+          "api_normalization": 10,
+          "api_quality": 9,
+          "bugfix": 5,
+          "circuit_construction": 7,
+          "circuit_optimization": 8,
+          "data_structures": 4,
+          "data_transforms": 8,
+          "debug_repair": 25,
+          "design_pattern": 9,
+          "multifile_repair": 5,
+          "protocol_logic": 8,
+          "reasoning": 8,
+          "refactor": 5,
+          "stateful_logic": 20,
+          "test_writing": 5
+        },
+        "task_types": {
+          "implementation": 160
+        },
+        "sources": {
+          "template": 160
+        },
+        "prompt_variants": {
+          "interface-prefix-semantic-v4": 160
+        }
+      }
+    },
+    "eval": {
+      "path": "data/generated/fast-mini-interface-prefix-semantic-v4/eval.jsonl",
+      "exists": true,
+      "sha256": "358657ca92ff62220ed32a365e3e533eed1dc944d986e4f44c15a9ba724d2533",
+      "rows": 32,
+      "manifest_path": "data/generated/fast-mini-interface-prefix-semantic-v4/manifest.json",
+      "manifest_exists": false,
+      "manifest_valid_json": false,
+      "manifest_error": "missing",
+      "dataset_summary": {
+        "row_count": 32,
+        "unique_example_ids": 32,
+        "unique_task_ids": 18,
+        "task_ids": [
+          "quantum_bell_pair_construction",
+          "quantum_circuit_depth_optimization",
+          "quantum_circuit_phase_repair",
+          "quantum_measurement_bug_repair",
+          "quantum_phase_estimation_circuit",
+          "quantum_stabilizer_tableau_update_repair",
+          "quantum_superdense_coding",
+          "quantum_teleportation_corrections",
+          "quantum_vqe_energy_minimization",
+          "software_config_merge",
+          "software_docstring_contract",
+          "software_duplicate_logic_refactor",
+          "software_multifile_patch_conflict_repair",
+          "software_parser_regression_tests",
+          "software_retry_decorator",
+          "software_session_event_log",
+          "software_session_window_summary",
+          "software_tree_serialization"
+        ],
+        "formats": {
+          "chat-sft-v1": 32
+        },
+        "source_schemas": {
+          "template-v1": 32
+        },
+        "domains": {
+          "quantum": 15,
+          "software": 17
+        },
+        "categories": {
+          "algorithm_implementation": 6,
+          "api_quality": 1,
+          "circuit_construction": 1,
+          "circuit_optimization": 1,
+          "data_structures": 3,
+          "data_transforms": 1,
+          "debug_repair": 3,
+          "design_pattern": 1,
+          "multifile_repair": 2,
+          "protocol_logic": 2,
+          "reasoning": 2,
+          "refactor": 2,
+          "stateful_logic": 5,
+          "test_writing": 2
+        },
+        "task_types": {
+          "implementation": 32
+        },
+        "sources": {
+          "template": 32
+        },
+        "prompt_variants": {
+          "interface-prefix-semantic-v4": 32
+        }
+      }
+    }
+  },
+  "evaluation": {
+    "quantitative": {
+      "local_eval_runner": "evals/runner/run_eval.py",
+      "datasets": [
+        {
+          "path": "evals/tasks",
+          "exists": true,
+          "kind": "executable_task_suite"
+        }
+      ],
+      "scorecard": {
+        "path": "evals/runner/scorecard.json",
+        "exists": true,
+        "sha256": "6486b5ccb6d809efbe399d18c1f01f6277d217dee89b7b136e6c30ffeda7e76a",
+        "valid_json": true,
+        "validation_error": null
+      },
+      "metrics": {
+        "device": "npu:0",
+        "world_size": 8,
+        "train_examples": 160,
+        "eval_examples": 32,
+        "optimizer_steps_per_epoch": 10,
+        "max_available_steps": 20,
+        "requested_max_steps": 20,
+        "completed_steps": 20,
+        "final_eval": {
+          "loss": 0.6986174695193768,
+          "perplexity": 2.0109705566192857
+        }
+      }
+    },
+    "qualitative": {
+      "reports": [
+        {
+          "path": "reports/base_vs_adapter_outputs_interface_prefix_semantic_v4_true20_e2_rerun_20260327.json",
+          "exists": true,
+          "sha256": "aad33045f9e68de40afaf25b918846ccef014b56429d68420c31a79bdb192452",
+          "valid_json": false,
+          "validation_error": "JSONDecodeError: Invalid control character at: line 13 column 120 (char 620)"
+        }
+      ],
+      "slices": [
+        {
+          "path": "reports/base_vs_adapter_eval_slice_interface_prefix.json",
+          "exists": true,
+          "sha256": "3380991b8690eb77da7b9ab340104cca8234827051d1cc26bf1e0d1e62948dc8",
+          "valid_json": true,
+          "validation_error": null
+        }
+      ],
+      "eval_commands": [
+        "python3 evals/runner/run_eval.py",
+        "python3 scripts/run_base_vs_adapter_eval.py --slice-json reports/base_vs_adapter_eval_slice_interface_prefix.json --base-model models/Qwen2.5-1.5B-Instruct --adapter outputs/interface-prefix-semantic-v4-8npu-true20-e2-20260326T1627CST/adapter --output reports/base_vs_adapter_outputs_interface_prefix_semantic_v4_true20_e2_rerun_20260327.json --device cpu"
+      ]
+    }
+  },
+  "git": {
+    "head_commit": "3372a70b66e57a304608b7e38aae6868e4351a3e",
+    "head_commit_short": "3372a70",
+    "status_porcelain": "M .openclaw/workspace-state.json\n M AGENTS.md\n M HEARTBEAT.md\n M IDENTITY.md\n M PROJECT.md\n M SOUL.md\n M TOOLS.md\n M USER.md\n M artifacts/model-source-audit-qwen25.json\n M artifacts/model-source-audit-qwen3-1p7b.json\n M artifacts/qwen25-local-snapshot-handoff.json\n M browser-automation/huanxin-probe.html\n M browser-automation/huanxin-probe.json\n M browser-automation/huanxin-probe.png\n M browser-automation/huanxin-shell-ai1.png\n M browser-automation/huanxin-shell-ai2.png\n M browser-automation/huanxin_env_visibility_probe.js\n M browser-automation/huanxin_open_env.js\n M browser-automation/huanxin_profile.js\n M browser-automation/huanxin_shell_sync.js\n D browser-automation/profile/BrowserMetrics/BrowserMetrics-69BB5D35-16B14.pma\n M browser-automation/profile/Default/Cache/Cache_Data/0cedb8f07d0c9d50_0\n M browser-automation/profile/Default/Cache/Cache_Data/211a0fc402d13783_0\n M browser-automation/profile/Default/Cache/Cache_Data/297742b75b95302f_0\n M browser-automation/profile/Default/Cache/Cache_Data/34f30fdc638c0800_0\n M browser-automation/profile/Default/Cache/Cache_Data/3c73cecf55f4a3d8_0\n M browser-automation/profile/Default/Cache/Cache_Data/4a596cbc36c4f4fd_0\n M browser-automation/profile/Default/Cache/Cache_Data/670d20543162058d_0\n M browser-automation/profile/Default/Cache/Cache_Data/70d96111b776ba72_0\n M browser-automation/profile/Default/Cache/Cache_Data/7f8ee9fd66baf8d5_0\n M browser-automation/profile/Default/Cache/Cache_Data/8ab05a28d6609d7d_0\n M browser-automation/profile/Default/Cache/Cache_Data/913026f54727fb35_0\n M browser-automation/profile/Default/Cache/Cache_Data/99f1c00cae8cbed2_0\n M browser-automation/profile/Default/Cache/Cache_Data/9de318e86dd175f2_0\n M browser-automation/profile/Default/Cache/Cache_Data/ac82d7f162ac88f8_0\n M browser-automation/profile/Default/Cache/Cache_Data/b34d62d5a070ebe0_0\n M browser-automation/profile/Default/Cache/Cache_Data/c486a425128b7710_0\n M browser-automation/profile/Default/Cache/Cache_Data/c6b781ba8d3d5d47_0\n M browser-automation/profile/Default/Cache/Cache_Data/eb78f8d6558a2c7a_0\n M browser-automation/profile/Default/Cache/Cache_Data/fc3d1b152e9a8ab5_0\n M browser-automation/profile/Default/Cache/Cache_Data/fc8361f02796213e_0\n M browser-automation/profile/Default/Cache/Cache_Data/index-dir/the-real-index\n M \"browser-automation/profile/Default/Code Cache/js/index-dir/the-real-index\"\n M browser-automation/profile/Default/Cookies\n M browser-automation/profile/Default/DIPS\n M browser-automation/profile/Default/DawnGraphiteCache/data_1\n M browser-automation/profile/Default/DawnGraphiteCache/index\n M browser-automation/profile/Default/DawnWebGPUCache/data_1\n M browser-automation/profile/Default/DawnWebGPUCache/index\n M \"browser-automation/profile/Default/Extension State/LOG\"\n M \"browser-automation/profile/Default/Extension State/LOG.old\"\n M browser-automation/profile/Default/Favicons\n M \"browser-automation/profile/Default/GCM Store/LOG\"\n M \"browser-automation/profile/Default/GCM Store/LOG.old\"\n M browser-automation/profile/Default/GPUCache/data_1\n M browser-automation/profile/Default/GPUCache/index\n M browser-automation/profile/Default/History\n M \"browser-automation/profile/Default/Local Storage/leveldb/000003.log\"\n M \"browser-automation/profile/Default/Local Storage/leveldb/LOG\"\n M \"browser-automation/profile/Default/Local Storage/leveldb/LOG.old\"\n M \"browser-automation/profile/Default/Network Action Predictor\"\n M \"browser-automation/profile/Default/Network Persistent State\"\n M browser-automation/profile/Default/Preferences\n M \"browser-automation/profile/Default/Reporting and NEL\"\n M \"browser-automation/profile/Default/Secure Preferences\"\n M \"browser-automation/profile/Default/Session Storage/000003.log\"\n M \"browser-automation/profile/Default/Session Storage/LOG\"\n M \"browser-automation/profile/Default/Session Storage/LOG.old\"\n D browser-automation/profile/Default/Sessions/Session_13418207035553274\n D browser-automation/profile/Default/Sessions/Session_13418360132647145\n D browser-automation/profile/Default/Sessions/Tabs_13418360133646740\n D browser-automation/profile/Default/SharedStorage-wal\n M \"browser-automation/profile/Default/Site Characteristics Database/000003.log\"\n M \"browser-automation/profile/Default/Site Characteristics Database/LOG\"\n M \"browser-automation/profile/Default/Site Characteristics Database/LOG.old\"\n M \"browser-automation/profile/Default/Sync Data/LevelDB/LOG\"\n M \"browser-automation/profile/Default/Sync Data/LevelDB/LOG.old\"\n M browser-automation/profile/Default/TransportSecurity\n M browser-automation/profile/Default/shared_proto_db/000003.log\n M browser-automation/profile/Default/shared_proto_db/LOG\n M browser-automation/profile/Default/shared_proto_db/LOG.old\n M browser-automation/profile/Default/shared_proto_db/metadata/000003.log\n M browser-automation/profile/Default/shared_proto_db/metadata/LOG\n M browser-automation/profile/Default/shared_proto_db/metadata/LOG.old\n M browser-automation/profile/GrShaderCache/data_1\n M browser-automation/profile/GrShaderCache/index\n M browser-automation/profile/GraphiteDawnCache/data_0\n M browser-automation/profile/GraphiteDawnCache/data_1\n M browser-automation/profile/GraphiteDawnCache/data_2\n M browser-automation/profile/GraphiteDawnCache/data_3\n M browser-automation/profile/GraphiteDawnCache/index\n M \"browser-automation/profile/Local State\"\n D browser-automation/profile/RunningChromeVersion\n M browser-automation/profile/ShaderCache/data_1\n M browser-automation/profile/ShaderCache/index\n D browser-automation/profile/SingletonCookie\n D browser-automation/profile/SingletonLock\n D browser-automation/profile/SingletonSocket\n M browser-automation/profile/Variations\n M browser-automation/profile/first_party_sets.db\n M browser-automation/profile/segmentation_platform/ukm_db\n M data/seed/build_seed_dataset.py\n M data/seed/splits-auto-seed/manifest.json\n M data/seed/splits-auto-seed/test.jsonl\n M data/seed/splits-auto-seed/train.jsonl\n M data/seed/splits-auto-seed/val.jsonl\n M data/seed/splits/manifest.json\n M data/seed/splits/test.jsonl\n M data/seed/splits/train.jsonl\n M data/seed/splits/val.jsonl\n M data/seed/train-chat.jsonl\n M data/seed/train.jsonl\n M memory/2026-03-19.md\n M research/RESEARCH-REPORT.md\n M scripts/ai2_push_results_to_s3.sh\n M scripts/ai2_shell.sh\n M scripts/ai2_sync_from_s3.sh\n M scripts/push_to_s3.sh\n M skills/huanxin-browser/SKILL.md\n M skills/s3-transfer/SKILL.md\n M training/acquire_public_qwen_snapshot.py\n M training/qwen_sft_peft.py\n?? .huanxin_jobs/\n?? .openclaw/extensions/\n?? artifacts/huanxin-bootstrap/20260316T143522Z/REMOTE_BOOTSTRAP_COMMANDS-OmniCoder-9B.sh\n?? artifacts/huanxin-bootstrap/20260316T143522Z/REMOTE_BOOTSTRAP_COMMANDS-Qwen2.5-1.5B-Instruct.sh\n?? artifacts/huanxin-bootstrap/20260316T143522Z/REMOTE_BOOTSTRAP_COMMANDS-Qwen3-1.7B.sh\n?? artifacts/huanxin-bootstrap/20260319T032757Z/\n?? artifacts/model-registry/\n?? artifacts/model-source-audit-omnicoder9b.json\n?? artifacts/omnicoder9b-local-snapshot-preflight.json\n?? artifacts/qwen25-local-snapshot-preflight.json\n?? artifacts/qwen3-1p7b-local-snapshot-preflight.json\n?? artifacts/read_true20_metrics.py\n?? artifacts/remote-run-snapshots/\n?? browser-automation/check_xterm.js\n?? browser-automation/debug_xterm_snapshot.js\n?? browser-automation/huanxin-open-ai1.png\n?? browser-automation/huanxin_browser_daemon.js\n?? browser-automation/profile/BrowserMetrics-spare.pma\n?? browser-automation/profile/Default/Cache/Cache_Data/00d7c560a5641643_0\n?? browser-automation/profile/Default/Cache/Cache_Data/01f247f7c49df669_0\n?? browser-automation/profile/Default/Cache/Cache_Data/02aa7504ceeec85a_0\n?? browser-automation/profile/Default/Cache/Cache_Data/03b2856ba9451ebd_0\n?? browser-automation/profile/Default/Cache/Cache_Data/03cb60b77b6fc973_0\n?? browser-automation/profile/Default/Cache/Cache_Data/05155bc6111a958c_0\n?? browser-automation/profile/Default/Cache/Cache_Data/057e64349064456a_0\n?? browser-automation/profile/Default/Cache/Cache_Data/05dda7f6646d0f93_0\n?? browser-automation/profile/Default/Cache/Cache_Data/062111307115d59e_0\n?? browser-automation/profile/Default/Cache/Cache_Data/07629061a15bb09f_0\n?? browser-automation/profile/Default/Cache/Cache_Data/095086ebab2091f1_0\n?? browser-automation/profile/Default/Cache/Cache_Data/0a9eb21647a7b3c4_0\n?? browser-automation/profile/Default/Cache/Cache_Data/0c19d2e0c300ba0e_0\n?? browser-automation/profile/Default/Cache/Cache_Data/0c7713f8aae0f459_0\n?? browser-automation/profile/Default/Cache/Cache_Data/0d92a239103d296d_0\n?? browser-automation/profile/Default/Cache/Cache_Data/0dbafd80095845a9_0\n?? browser-automation/profile/Default/Cache/Cache_Data/0ea9c16c89d35e7a_0\n?? browser-automation/profile/Default/Cache/Cache_Data/0fc8c3e662a0f5ff_0\n?? browser-automation/profile/Default/Cache/Cache_Data/104d2d88703dab1b_0\n?? browser-automation/profile/Default/Cache/Cache_Data/110d1b4bd1d6943b_0\n?? browser-automation/profile/Default/Cache/Cache_Data/1123eaabc1eacd08_0\n?? browser-automation/profile/Default/Cache/Cache_Data/116fc689fa5bc5c8_0\n?? browser-automation/profile/Default/Cache/Cache_Data/162239b00c6c242a_0\n?? browser-automation/profile/Default/Cache/Cache_Data/16b4b0738e30dd32_0\n?? browser-automation/profile/Default/Cache/Cache_Data/16ffc30e828f9ff7_0\n?? browser-automation/profile/Default/Cache/Cache_Data/17eaa877a07034b8_0\n?? browser-automation/profile/Default/Cache/Cache_Data/1c159deb5b61f741_0\n?? browser-automation/profile/Default/Cache/Cache_Data/1c2fb2d0c2420114_0\n?? browser-automation/profile/Default/Cache/Cache_Data/1c4cc3cbd0ab35e9_0\n?? browser-automation/profile/Default/Cache/Cache_Data/1f6b6b25be524c77_0\n?? browser-automation/profile/Default/Cache/Cache_Data/216c0f65c2166f64_0\n?? browser-automation/profile/Default/Cache/Cache_Data/21daf295f818fdea_0\n?? browser-automation/profile/Default/Cache/Cache_Data/228cf4288708ffc7_0\n?? browser-automation/profile/Default/Cache/Cache_Data/234de9fa40a9e9d3_0\n?? browser-automation/profile/Default/Cache/Cache_Data/23cfceb52159bb70_0\n?? browser-automation/profile/Default/Cache/Cache_Data/247a1a3c2d78fe8d_0\n?? browser-automation/profile/Default/Cache/Cache_Data/24d49e2f0e2d001c_0\n?? browser-automation/profile/Default/Cache/Cache_Data/24e7f94932d8c0f4_0\n?? browser-automation/profile/Default/Cache/Cache_Data/24fa6699cf4c2b03_0\n?? browser-automation/profile/Default/Cache/Cache_Data/262a82607716ee87_0\n?? browser-automation/profile/Default/Cache/Cache_Data/27c4301fa9164922_0\n?? browser-automation/profile/Default/Cache/Cache_Data/28a661ef5ae74d10_0\n?? browser-automation/profile/Default/Cache/Cache_Data/2944fb312b1b4009_0\n?? browser-automation/profile/Default/Cache/Cache_Data/2a7f160265597f17_0\n?? browser-automation/profile/Default/Cache/Cache_Data/2acb0c6562d1922c_0\n?? browser-automation/profile/Default/Cache/Cache_Data/2de7adb0d5d2f9e4_0\n?? browser-automation/profile/Default/Cache/Cache_Data/2e4d44ec959c489d_0\n?? browser-automation/profile/Default/Cache/Cache_Data/2e6353893e96461a_0\n?? browser-automation/profile/Default/Cache/Cache_Data/2e692d73d216cdaf_0\n?? browser-automation/profile/Default/Cache/Cache_Data/2ec5e19590e5a64e_0\n?? browser-automation/profile/Default/Cache/Cache_Data/2f90f333b1e57447_0\n?? browser-automation/profile/Default/Cache/Cache_Data/2f98506d0227da93_0\n?? browser-automation/profile/Default/Cache/Cache_Data/2f98e86519f6d315_0\n?? browser-automation/profile/Default/Cache/Cache_Data/31f3bab0aab0e71c_0\n?? browser-automation/profile/Default/Cache/Cache_Data/33272a1ed574ae37_0\n?? browser-automation/profile/Default/Cache/Cache_Data/33b456ba76f1deca_0\n?? browser-automation/profile/Default/Cache/Cache_Data/3760ad8ff6fe6da7_0\n?? browser-automation/profile/Default/Cache/Cache_Data/377684bd13bddca5_0\n?? browser-automation/profile/Default/Cache/Cache_Data/37a304d13c207a0f_0\n?? browser-automation/profile/Default/Cache/Cache_Data/38615a612e5f6d4d_0\n?? browser-automation/profile/Default/Cache/Cache_Data/390fa9d33ed6691c_0\n?? browser-automation/profile/Default/Cache/Cache_Data/3c2e6d2b5d80dc6e_0\n?? browser-automation/profile/Default/Cache/Cache_Data/3c529fa603f0e446_0\n?? browser-automation/profile/Default/Cache/Cache_Data/3cdeed867efbaada_0\n?? browser-automation/profile/Default/Cache/Cache_Data/3cec3cf8615fc46a_0\n?? browser-automation/profile/Default/Cache/Cache_Data/3d5a4d411ce47a86_0\n?? browser-automation/profile/Default/Cache/Cache_Data/3d9c35b03d5282eb_0\n?? browser-automation/profile/Default/Cache/Cache_Data/409d47d9dba07644_0\n?? browser-automation/profile/Default/Cache/Cache_Data/42f6b86ff03585a8_0\n?? browser-automation/profile/Default/Cache/Cache_Data/448b7d9f8e49c11e_0\n?? browser-automation/profile/Default/Cache/Cache_Data/449f3d1885afb8d3_0\n?? browser-automation/profile/Default/Cache/Cache_Data/46865f13dfcb9095_0\n?? browser-automation/profile/Default/Cache/Cache_Data/475050c40c535b87_0\n?? browser-automation/profile/Default/Cache/Cache_Data/4781d1b1fb85bf19_0\n?? browser-automation/profile/Default/Cache/Cache_Data/493b67add50ce2ad_0\n?? browser-automation/profile/Default/Cache/Cache_Data/4a60c7b199a7c37d_0\n?? browser-automation/profile/Default/Cache/Cache_Data/4ab8dad5160c1a58_0\n?? browser-automation/profile/Default/Cache/Cache_Data/4b021bb80d2c4e00_0\n?? browser-automation/profile/Default/Cache/Cache_Data/4b7b61b5209bf169_0\n?? browser-automation/profile/Default/Cache/Cache_Data/4d574c90ef403500_0\n?? browser-automation/profile/Default/Cache/Cache_Data/4e1f80c694bfbcbc_0\n?? browser-automation/profile/Default/Cache/Cache_Data/4e77205542652df8_0\n?? browser-automation/profile/Default/Cache/Cache_Data/4e89d233755c9a18_0\n?? browser-automation/profile/Default/Cache/Cache_Data/4ec8c71368497470_0\n?? browser-automation/profile/Default/Cache/Cache_Data/4f716e4e65e251cb_0\n?? browser-automation/profile/Default/Cache/Cache_Data/5072bd0ebc0eed63_0\n?? browser-automation/profile/Default/Cache/Cache_Data/50b25aeb78a89bc6_0\n?? browser-automation/profile/Default/Cache/Cache_Data/516e7493b724af45_0\n?? browser-automation/profile/Default/Cache/Cache_Data/51f7daf91034791f_0\n?? browser-automation/profile/Default/Cache/Cache_Data/52e5ff0ac5402bcc_0\n?? browser-automation/profile/Default/Cache/Cache_Data/53ab96ead3de3f79_0\n?? browser-automation/profile/Default/Cache/Cache_Data/53e4a70f6bceaa79_0\n?? browser-automation/profile/Default/Cache/Cache_Data/54a27a663a388401_0\n?? browser-automation/profile/Default/Cache/Cache_Data/555376aba27ecf68_0\n?? browser-automation/profile/Default/Cache/Cache_Data/55731234ce6ce51b_0\n?? browser-automation/profile/Default/Cache/Cache_Data/56265dc4d7a7ead0_0\n?? browser-automation/profile/Default/Cache/Cache_Data/56a5d58b251d91e2_0\n?? browser-automation/profile/Default/Cache/Cache_Data/5877daf5eef93d90_0\n?? browser-automation/profile/Default/Cache/Cache_Data/59bd4c74646c58a6_0\n?? browser-automation/profile/Default/Cache/Cache_Data/59d9ecf503f8ad3e_0\n?? browser-automation/profile/Default/Cache/Cache_Data/5b6d9b0145c4e9d2_0\n?? browser-automation/profile/Default/Cache/Cache_Data/5bcf4960fc87ce12_0\n?? browser-automation/profile/Default/Cache/Cache_Data/5ca5b8f8e737d42b_0\n?? browser-automation/profile/Default/Cache/Cache_Data/5e188607795b666b_0\n?? browser-automation/profile/Default/Cache/Cache_Data/5e5c2005429870b2_0\n?? browser-automation/profile/Default/Cache/Cache_Data/5ff1e35afb3c1e6d_0\n?? browser-automation/profile/Default/Cache/Cache_Data/5ff481dc6f4f82ed_0\n?? browser-automation/profile/Default/Cache/Cache_Data/61313ebb6ff782d0_0\n?? browser-automation/profile/Default/Cache/Cache_Data/62e293e998a454e4_0\n?? browser-automation/profile/Default/Cache/Cache_Data/6528b5442f92ef2b_0\n?? browser-automation/profile/Default/Cache/Cache_Data/656aa7bc105ac30d_0\n?? browser-automation/profile/Default/Cache/Cache_Data/693359a890f3366e_0\n?? browser-automation/profile/Default/Cache/Cache_Data/69f4d5b1e9a34622_0\n?? browser-automation/profile/Default/Cache/Cache_Data/6a59fffb9fa46308_0\n?? browser-automation/profile/Default/Cache/Cache_Data/6a826f5a39537360_0\n?? browser-automation/profile/Default/Cache/Cache_Data/6c98025c031935b3_0\n?? browser-automation/profile/Default/Cache/Cache_Data/6e49ffc2f07a9833_0\n?? browser-automation/profile/Default/Cache/Cache_Data/6ffa3ef82ebd0975_0\n?? browser-automation/profile/Default/Cache/Cache_Data/72cc09680097979b_0\n?? browser-automation/profile/Default/Cache/Cache_Data/72d8978382a84cfc_0\n?? browser-automation/profile/Default/Cache/Cache_Data/732fb0087ada5515_0\n?? browser-automation/profile/Default/Cache/Cache_Data/734f6c7b88adcd2c_0\n?? browser-automation/profile/Default/Cache/Cache_Data/738066e6752c9d26_0\n?? browser-automation/profile/Default/Cache/Cache_Data/73c2628056b20c7f_0\n?? browser-automation/profile/Default/Cache/Cache_Data/74b4827a15c44b25_0\n?? browser-automation/profile/Default/Cache/Cache_Data/756c0de8b8a54c06_0\n?? browser-automation/profile/Default/Cache/Cache_Data/7607fe9fae2a2134_0\n?? browser-automation/profile/Default/Cache/Cache_Data/768e8a67ef611c68_0\n?? browser-automation/profile/Default/Cache/Cache_Data/76f250ca8b1cc04f_0\n?? browser-automation/profile/Default/Cache/Cache_Data/775bdc9f6a2c5f16_0\n?? browser-automation/profile/Default/Cache/Cache_Data/78d2f1e82c569a55_0\n?? browser-automation/profile/Default/Cache/Cache_Data/78f3f8bb1b2520e2_0\n?? browser-automation/profile/Default/Cache/Cache_Data/7912bc6a994e29dd_0\n?? browser-automation/profile/Default/Cache/Cache_Data/7a1534f96ac55d8f_0\n?? browser-automation/profile/Default/Cache/Cache_Data/7bf39a61370f2869_0\n?? browser-automation/profile/Default/Cache/Cache_Data/7de942b71e998958_0\n?? browser-automation/profile/Default/Cache/Cache_Data/7f2b68edd83ad934_0\n?? browser-automation/profile/Default/Cache/Cache_Data/8022583f8e960124_0\n?? browser-automation/profile/Default/Cache/Cache_Data/80afc220c6deff49_0\n?? browser-automation/profile/Default/Cache/Cache_Data/81395f11b38d393a_0\n?? browser-automation/profile/Default/Cache/Cache_Data/82ddcdef2102954d_0\n?? browser-automation/profile/Default/Cache/Cache_Data/8324932a097542f4_0\n?? browser-automation/profile/Default/Cache/Cache_Data/83d0123c244f3d10_0\n?? browser-automation/profile/Default/Cache/Cache_Data/83e55d07e52886cb_0\n?? browser-automation/profile/Default/Cache/Cache_Data/83eb500cdbad5da5_0\n?? browser-automation/profile/Default/Cache/Cache_Data/851a424f1d519dbb_0\n?? browser-automation/profile/Default/Cache/Cache_Data/851fdbbaf8854cc2_0\n?? browser-automation/profile/Default/Cache/Cache_Data/8525dc20c9959e4f_0\n?? browser-automation/profile/Default/Cache/Cache_Data/85ceb3cbfa8e3911_0\n?? browser-automation/profile/Default/Cache/Cache_Data/86366daab23e113d_0\n?? browser-automation/profile/Default/Cache/Cache_Data/87587e7b6fb86dee_0\n?? browser-automation/profile/Default/Cache/Cache_Data/883c2e193ab827d0_0\n?? browser-automation/profile/Default/Cache/Cache_Data/8b647535023e994f_0\n?? browser-automation/profile/Default/Cache/Cache_Data/8c67f68bfd89fb65_0\n?? browser-automation/profile/Default/Cache/Cache_Data/8c7e25688808beea_0\n?? browser-automation/profile/Default/Cache/Cache_Data/8ce2b1c9c656d055_0\n?? browser-automation/profile/Default/Cache/Cache_Data/8d670dba241e5cb0_0\n?? browser-automation/profile/Default/Cache/Cache_Data/8d79b9d4e2dbfb62_0\n?? browser-automation/profile/Default/Cache/Cache_Data/8f1af57c0ad7c338_0\n?? browser-automation/profile/Default/Cache/Cache_Data/8f3bac66bba7634d_0\n?? browser-automation/profile/Default/Cache/Cache_Data/8fc9f8ddcba92c32_0\n?? browser-automation/profile/Default/Cache/Cache_Data/903cab22eb702ccb_0\n?? browser-automation/profile/Default/Cache/Cache_Data/924708cf020ae730_0\n?? browser-automation/profile/Default/Cache/Cache_Data/92af05093a636f57_0\n?? browser-automation/profile/Default/Cache/Cache_Data/969bea9b4320e678_0\n?? browser-automation/profile/Default/Cache/Cache_Data/978ddeb0c8802764_0\n?? browser-automation/profile/Default/Cache/Cache_Data/98206efb39d3ee4d_0\n?? browser-automation/profile/Default/Cache/Cache_Data/9a72cc2555783ed2_0\n?? browser-automation/profile/Default/Cache/Cache_Data/9a8b2d182dabc86d_0\n?? browser-automation/profile/Default/Cache/Cache_Data/9b086c48746a17fc_0\n?? browser-automation/profile/Default/Cache/Cache_Data/9bfe892ec57f73c3_0\n?? browser-automation/profile/Default/Cache/Cache_Data/9e0f00c205afd6de_0\n?? browser-automation/profile/Default/Cache/Cache_Data/9e554283a2af8ac0_0\n?? browser-automation/profile/Default/Cache/Cache_Data/9e60bcc9deb09ef8_0\n?? browser-automation/profile/Default/Cache/Cache_Data/9fd6a48be089f75e_0\n?? browser-automation/profile/Default/Cache/Cache_Data/9fec55176d10cf4f_0\n?? browser-automation/profile/Default/Cache/Cache_Data/a0a10b7915da70bf_0\n?? browser-automation/profile/Default/Cache/Cache_Data/a16c1019496c07e6_0\n?? browser-automation/profile/Default/Cache/Cache_Data/a271c3e8edb9470e_0\n?? browser-automation/profile/Default/Cache/Cache_Data/a49decc82e07756f_0\n?? browser-automation/profile/Default/Cache/Cache_Data/a4cb886f5b906447_0\n?? browser-automation/profile/Default/Cache/Cache_Data/a52e9478c1f5620a_0\n?? browser-automation/profile/Default/Cache/Cache_Data/a55207f0f2bc5338_0\n?? browser-automation/profile/Default/Cache/Cache_Data/a5a1fec10f521c3f_0\n?? browser-automation/profile/Default/Cache/Cache_Data/a6df2353ca9ab347_0\n?? browser-automation/profile/Default/Cache/Cache_Data/a6f46d1f206ce1ca_0\n?? browser-automation/profile/Default/Cache/Cache_Data/a8626c96a26b21fd_0\n?? browser-automation/profile/Default/Cache/Cache_Data/a89098b16d67acef_0\n?? browser-automation/profile/Default/Cache/Cache_Data/a9318fb67b28a445_0\n?? browser-automation/profile/Default/Cache/Cache_Data/ab0b7d26e7a16163_0\n?? browser-automation/profile/Default/Cache/Cache_Data/ad074279fd29aa1a_0\n?? browser-automation/profile/Default/Cache/Cache_Data/afb05e119d9090f3_0\n?? browser-automation/profile/Default/Cache/Cache_Data/b0526627f6aad437_0\n?? browser-automation/profile/Default/Cache/Cache_Data/b0f521914090f763_0\n?? browser-automation/profile/Default/Cache/Cache_Data/b1870d3b5cb1e5ee_0\n?? browser-automation/profile/Default/Cache/Cache_Data/b215f0f1bf217ba9_0\n?? browser-automation/profile/Default/Cache/Cache_Data/b2b220d7b0b1282e_0\n?? browser-automation/profile/Default/Cache/Cache_Data/b324ba996af99245_0\n?? browser-automation/profile/Default/Cache/Cache_Data/b415dfd5126a6660_0\n?? browser-automation/profile/Default/Cache/Cache_Data/b47bc23bf3bd5d31_0\n?? browser-automation/profile/Default/Cache/Cache_Data/b5b4a256a88d6232_0\n?? browser-automation/profile/Default/Cache/Cache_Data/b6539844203d07c2_0\n?? browser-automation/profile/Default/Cache/Cache_Data/b6cf8f8423e52e32_0\n?? browser-automation/profile/Default/Cache/Cache_Data/b96d190628a20c5a_0\n?? browser-automation/profile/Default/Cache/Cache_Data/ba344e09d0e8b8d3_0\n?? browser-automation/profile/Default/Cache/Cache_Data/baabb17bc4a16e2a_0\n?? browser-automation/profile/Default/Cache/Cache_Data/bb5e0f7d29f77378_0\n?? browser-automation/profile/Default/Cache/Cache_Data/bc7b6f8a66e05b8b_0\n?? browser-automation/profile/Default/Cache/Cache_Data/bd4c082ce0872b9b_0\n?? browser-automation/profile/Default/Cache/Cache_Data/bd9e591668035e65_0\n?? browser-automation/profile/Default/Cache/Cache_Data/bddab389f6c53ddc_0\n?? browser-automation/profile/Default/Cache/Cache_Data/bef6539a17313691_0\n?? browser-automation/profile/Default/Cache/Cache_Data/bf5a24cbf2234e81_0\n?? browser-automation/profile/Default/Cache/Cache_Data/c2b9849a8ee1601e_0\n?? browser-automation/profile/Default/Cache/Cache_Data/c33708dcdae86eb0_0\n?? browser-automation/profile/Default/Cache/Cache_Data/c3ba13d1aaf71d1b_0\n?? browser-automation/profile/Default/Cache/Cache_Data/c50477c9ede28d1e_0\n?? browser-automation/profile/Default/Cache/Cache_Data/c5c164d6513e62ab_0\n?? browser-automation/profile/Default/Cache/Cache_Data/c698ceb963bebd58_0\n?? browser-automation/profile/Default/Cache/Cache_Data/c7c47f518c738374_0\n?? browser-automation/profile/Default/Cache/Cache_Data/c7cfad8f136e3721_0\n?? browser-automation/profile/Default/Cache/Cache_Data/c8aaa521799546b0_0\n?? browser-automation/profile/Default/Cache/Cache_Data/c8f06d7f23d42b08_0\n?? browser-automation/profile/Default/Cache/Cache_Data/cb287206aee9b7a4_0\n?? browser-automation/profile/Default/Cache/Cache_Data/cc5892e430517c28_0\n?? browser-automation/profile/Default/Cache/Cache_Data/cd2ba4ed01faa42c_0\n?? browser-automation/profile/Default/Cache/Cache_Data/d08a0a695c10a19c_0\n?? browser-automation/profile/Default/Cache/Cache_Data/d2cb3313e5774cf5_0\n?? browser-automation/profile/Default/Cache/Cache_Data/d386198682b66ee0_0\n?? browser-automation/profile/Default/Cache/Cache_Data/d436d274cf86149b_0\n?? browser-automation/profile/Default/Cache/Cache_Data/d597653a425c809e_0\n?? browser-automation/profile/Default/Cache/Cache_Data/d5ae6a1ba0e245e5_0\n?? browser-automation/profile/Default/Cache/Cache_Data/d5db8a40559e3238_0\n?? browser-automation/profile/Default/Cache/Cache_Data/d722512e69203d16_0\n?? browser-automation/profile/Default/Cache/Cache_Data/d73b0081470b0013_0\n?? browser-automation/profile/Default/Cache/Cache_Data/d78431d3089a556e_0\n?? browser-automation/profile/Default/Cache/Cache_Data/d7a1f7046aa4d264_0\n?? browser-automation/profile/Default/Cache/Cache_Data/d815285716158b8b_0\n?? browser-automation/profile/Default/Cache/Cache_Data/d8836fa644437bc2_0\n?? browser-automation/profile/Default/Cache/Cache_Data/d9bdbbb6f33935d7_0\n?? browser-automation/profile/Default/Cache/Cache_Data/dc08e3a70e447536_0\n?? browser-automation/profile/Default/Cache/Cache_Data/dd27dc5e0e88b373_0\n?? browser-automation/profile/Default/Cache/Cache_Data/dda15c9d49ca4c02_0\n?? browser-automation/profile/Default/Cache/Cache_Data/dddcc692e9c7cbc6_0\n?? browser-automation/profile/Default/Cache/Cache_Data/ddf8b0c16b6097cc_0\n?? browser-automation/profile/Default/Cache/Cache_Data/de10a9daba805c09_0\n?? browser-automation/profile/Default/Cache/Cache_Data/def7d27ce822e833_0\n?? browser-automation/profile/Default/Cache/Cache_Data/df6ba6e31a35ef20_0\n?? browser-automation/profile/Default/Cache/Cache_Data/e19e1ba8bd8a4836_0\n?? browser-automation/profile/Default/Cache/Cache_Data/e40b6c058c7da098_0\n?? browser-automation/profile/Default/Cache/Cache_Data/e41719a0c877e931_0\n?? browser-automation/profile/Default/Cache/Cache_Data/e4b964d535cead5e_0\n?? browser-automation/profile/Default/Cache/Cache_Data/e9e20834009de8c1_0\n?? browser-automation/profile/Default/Cache/Cache_Data/ea0f99254613126f_0\n?? browser-automation/profile/Default/Cache/Cache_Data/eb7a5e3df84ec45e_0\n?? browser-automation/profile/Default/Cache/Cache_Data/eb9202f4303d11f2_0\n?? browser-automation/profile/Default/Cache/Cache_Data/ee3b9352fca45211_0\n?? browser-automation/profile/Default/Cache/Cache_Data/ef37041508f65e0b_0\n?? browser-automation/profile/Default/Cache/Cache_Data/efd29c9796a3ae62_0\n?? browser-automation/profile/Default/Cache/Cache_Data/f302066d016ae7f4_0\n?? browser-automation/profile/Default/Cache/Cache_Data/f41093ecb1475398_0\n?? browser-automation/profile/Default/Cache/Cache_Data/f4c9f5380bfd1f4b_0\n?? browser-automation/profile/Default/Cache/Cache_Data/f526b366d0dd11d7_0\n?? browser-automation/profile/Default/Cache/Cache_Data/f5a6ed8afab0a9a0_0\n?? browser-automation/profile/Default/Cache/Cache_Data/f681fe086694c988_0\n?? browser-automation/profile/Default/Cache/Cache_Data/f74b87168b2a0fe8_0\n?? browser-automation/profile/Default/Cache/Cache_Data/f76c780f352e5cec_0\n?? browser-automation/profile/Default/Cache/Cache_Data/f80183ec7565c4e4_0\n?? browser-automation/profile/Default/Cache/Cache_Data/f8aaa05d9a35f1ea_0\n?? browser-automation/profile/Default/Cache/Cache_Data/f94bbdac0f1b1c39_0\n?? browser-automation/profile/Default/Cache/Cache_Data/fa58b072028d71cf_0\n?? browser-automation/profile/Default/Cache/Cache_Data/fbac1324fe38aca1_0\n?? browser-automation/profile/Default/Cache/Cache_Data/fcdbc3ef15aa1ebb_0\n?? browser-automation/profile/Default/Cache/Cache_Data/fd4e880e3e2ce2a3_0\n?? browser-automation/profile/Default/Cache/Cache_Data/ff45577e07885528_0\n?? browser-automation/profile/Default/Cache/Cache_Data/ff57d75229f14e26_0\n?? \"browser-automation/profile/Default/Code Cache/js/0ed3aeef2f2ee613_0\"\n?? \"browser-automation/profile/Default/Code Cache/js/1c55992c30f1adc6_0\"\n?? \"browser-automation/profile/Default/Code Cache/js/438ae7e41e8974e6_0\"\n?? \"browser-automation/profile/Default/Code Cache/js/46bec91ab3083aab_0\"\n?? \"browser-automation/profile/Default/Code Cache/js/4b04fca82145e297_0\"\n?? \"browser-automation/profile/Default/Code Cache/js/5cb6596427890c21_0\"\n?? \"browser-automation/profile/Default/Code Cache/js/6b8cc160680db946_0\"\n?? \"browser-automation/profile/Default/Code Cache/js/8c0c2d5dc7bb4cc5_0\"\n?? \"browser-automation/profile/Default/Code Cache/js/8d9d3ee1df7a5e5a_0\"\n?? \"browser-automation/profile/Default/Code Cache/js/a1b0e6f7ff4c3a64_0\"\n?? \"browser-automation/profile/Default/Code Cache/js/af4659235114f117_0\"\n?? \"browser-automation/profile/Default/Code Cache/js/c4131d27a477a05e_0\"\n?? \"browser-automation/profile/Default/Code Cache/js/cbb994f4272829e3_0\"\n?? \"browser-automation/profile/Default/Code Cache/js/cd6d58f6276f3f92_0\"\n?? \"browser-automation/profile/Default/Code Cache/js/d8c2a84b423c19c4_0\"\n?? \"browser-automation/profile/Default/Code Cache/js/e68238df56c01ddd_0\"\n?? \"browser-automation/profile/Default/Code Cache/js/e9a528723c8eb8f2_0\"\n?? \"browser-automation/profile/Default/Code Cache/js/f3cffd9274fac3e3_0\"\n?? \"browser-automation/profile/Default/Code Cache/js/fe647506511afc76_0\"\n?? browser-automation/profile/Default/DIPS-wal\n?? browser-automation/profile/Default/Sessions/Session_13418368837837545\n?? browser-automation/profile/Default/Sessions/Session_13418368888520270\n?? browser-automation/profile/Default/Sessions/Tabs_13418368838045120\n?? browser-automation/profile/Default/Sessions/Tabs_13418368888628326\n?? browser-automation/profile/Default/passkey_enclave_state\n?? data/generate/\n?? data/generated/fast-mini-codefirst-semantic-mix75/\n?? data/generated/fast-mini-codefirst-semantic-mix90/\n?? data/generated/fast-mini-codefirst/\n?? data/generated/fast-mini-interface-prefix-safe-preview.jsonl\n?? data/generated/fast-mini-interface-prefix-semantic-v4/\n?? data/generated/fast-mini-interface-prefix-semantic/\n?? data/generated/fast-mini-interface-prefix-v4/\n?? data/generated/fast-mini-interface-prefix/\n?? data/generated/fast-mini-interface/\n?? data/generated/template-v1.jsonl\n?? data/generated/template-v2.jsonl\n?? evals/runner/scorecard.json\n?? evals/tasks/quantum/circuit_depth_optimization/\n?? evals/tasks/quantum/phase_estimation_circuit/\n?? evals/tasks/quantum/qaoa_maxcut/\n?? evals/tasks/quantum/vqe_energy_minimization/\n?? evals/tasks/software/retry_decorator/\n?? evals/tasks/software/tree_serialization/\n?? logs/\n?? memory/2026-03-20.md\n?? memory/2026-03-21.md\n?? memory/2026-03-22.md\n?? memory/2026-03-23.md\n?? memory/2026-03-24.md\n?? memory/2026-03-25.md\n?? memory/2026-03-26.md\n?? models/\n?? outputs/codefirst-semantic-mix75-8npu-true20-e2-20260326T2118CST/\n?? outputs/fast-lora-qwen25-1p5b-codefirst-mini/\n?? outputs/fast-lora-qwen25-1p5b-interface-prefix-semantic-v4-smoke20/\n?? outputs/fast-lora-qwen25-1p5b-interface-prefix-smoke1/\n?? outputs/fast-lora-qwen25-1p5b-interface-prefix-smoke4/\n?? outputs/fast-lora-qwen25-1p5b-interface-prefix-smoke8/\n?? outputs/fast-lora-qwen25-1p5b-interface-smoke1-l256/\n?? outputs/fast-lora-qwen25-1p5b-interface-smoke1/\n?? outputs/fast-lora-qwen25-1p5b-interface-smoke8-noeval128-timedload/\n?? outputs/fast-lora-qwen25-1p5b-mini/\n?? outputs/fast-lora-qwen25-1p5b-small/adapter/\n?? outputs/fast-lora-qwen25-1p5b-tiny/adapter/\n?? outputs/interface-prefix-semantic-v4-8npu-20step/\n?? outputs/interface-prefix-semantic-v4-8npu-true20-20260326T032603Z/\n?? outputs/interface-prefix-semantic-v4-8npu-true20-e2-20260326T1627CST/\n?? reports/base_vs_adapter_eval_slice.md\n?? reports/base_vs_adapter_eval_slice_interface_prefix.json\n?? reports/base_vs_adapter_outputs_codefirst_smoke2.json\n?? reports/base_vs_adapter_outputs_interface_prefix_semantic_v4_true20_e2_rerun_20260327.json\n?? reports/base_vs_adapter_outputs_interface_prefix_smoke1.json\n?? reports/base_vs_adapter_outputs_interface_prefix_smoke4.json\n?? reports/base_vs_adapter_outputs_interface_prefix_smoke4_matched.json\n?? reports/base_vs_adapter_outputs_interface_prefix_smoke4_matched_full5.json\n?? reports/base_vs_adapter_outputs_interface_prefix_smoke8_matched_full5.json\n?? reports/base_vs_adapter_outputs_interface_smoke1.json\n?? reports/base_vs_adapter_outputs_interface_smoke1_full5.json\n?? reports/base_vs_adapter_outputs_smoke.json\n?? reports/base_vs_adapter_outputs_smoke2.json\n?? reports/base_vs_adapter_outputs_smoke3.json\n?? reports/prompt_format_improvement_notes_2026-03-20.md\n?? reports/run_metrics_snapshot_2026-03-23.md\n?? research/omnicoder9b-public-handoff.md\n?? research/qwen35-source-decision-matrix.md\n?? scripts/ai1_shell.sh\n?? scripts/ai2_job.sh\n?? scripts/ai2_push_to_s3.sh\n?? scripts/archive_model_run.py\n?? scripts/build_codefirst_fast_mini.py\n?? scripts/build_interface_augmented_fast_mini.py\n?? scripts/build_mixed_fast_mini.py\n?? scripts/pull_from_s3.sh\n?? scripts/run_base_vs_adapter_eval.py\n?? scripts/summarize_run_metrics.py\n?? training/grpo_trainer.py"
+  },
+  "notes": "Current best quantitative run. Qualitative rerun report exists locally but currently fails strict JSON validation due control-character corruption in recovery path."
+}
