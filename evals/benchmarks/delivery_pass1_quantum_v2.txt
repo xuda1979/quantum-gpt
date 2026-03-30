@@ -1,0 +1,16 @@
+# Fixed 12-task quantum-only delivery gate for next-round code pass@1 tracking.
+# Primary metric: quantum programming pass@1 on a larger, harder set than v1.
+# Leadership continuity threshold: >= 4 / 12 on first generation with no manual repair.
+# Stretch target: >= 8 / 12.
+quantum_bell_pair_construction
+quantum_circuit_depth_optimization
+quantum_circuit_phase_repair
+quantum_gate_alias_normalization
+quantum_measurement_bug_repair
+quantum_phase_estimation_circuit
+quantum_qaoa_maxcut
+quantum_qft_phase_pattern
+quantum_stabilizer_tableau_update_repair
+quantum_superdense_coding
+quantum_teleportation_corrections
+quantum_vqe_energy_minimization

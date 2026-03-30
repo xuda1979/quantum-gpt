@@ -1,0 +1,105 @@
+{
+  "prompt_version": "v2",
+  "prompt_style": "repair_focused",
+  "created_at_utc": "2026-03-30T04:22:52.464019+00:00",
+  "system_prompt": "You are solving a single evaluation task as a careful repair engineer. Produce only the final Python candidate file. Preserve simplicity, avoid unnecessary abstractions, and do not emit markdown or explanation text.",
+  "notes": "Quantum-focused delivery gate: 12 tasks, pass@1 tracked on ai2.",
+  "tasks": [
+    {
+      "id": "quantum_bell_pair_construction",
+      "name": "Bell pair construction",
+      "domain": "quantum",
+      "category": "circuit_construction",
+      "prompt_file": "prompts/quantum_bell_pair_construction.txt",
+      "candidate_file": "candidates/quantum_bell_pair_construction.py"
+    },
+    {
+      "id": "quantum_circuit_depth_optimization",
+      "name": "Greedy circuit depth optimization via ASAP scheduling",
+      "domain": "quantum",
+      "category": "circuit_optimization",
+      "prompt_file": "prompts/quantum_circuit_depth_optimization.txt",
+      "candidate_file": "candidates/quantum_circuit_depth_optimization.py"
+    },
+    {
+      "id": "quantum_circuit_phase_repair",
+      "name": "Circuit phase repair from noisy gate stream",
+      "domain": "quantum",
+      "category": "debug_repair",
+      "prompt_file": "prompts/quantum_circuit_phase_repair.txt",
+      "candidate_file": "candidates/quantum_circuit_phase_repair.py"
+    },
+    {
+      "id": "quantum_gate_alias_normalization",
+      "name": "Gate alias normalization repair",
+      "domain": "quantum",
+      "category": "api_normalization",
+      "prompt_file": "prompts/quantum_gate_alias_normalization.txt",
+      "candidate_file": "candidates/quantum_gate_alias_normalization.py"
+    },
+    {
+      "id": "quantum_measurement_bug_repair",
+      "name": "Measurement mapping bug repair",
+      "domain": "quantum",
+      "category": "debug_repair",
+      "prompt_file": "prompts/quantum_measurement_bug_repair.txt",
+      "candidate_file": "candidates/quantum_measurement_bug_repair.py"
+    },
+    {
+      "id": "quantum_phase_estimation_circuit",
+      "name": "Quantum phase estimation unitary eigenvalue extraction",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "prompt_file": "prompts/quantum_phase_estimation_circuit.txt",
+      "candidate_file": "candidates/quantum_phase_estimation_circuit.py"
+    },
+    {
+      "id": "quantum_qaoa_maxcut",
+      "name": "QAOA MaxCut cost function and classical simulation",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "prompt_file": "prompts/quantum_qaoa_maxcut.txt",
+      "candidate_file": "candidates/quantum_qaoa_maxcut.py"
+    },
+    {
+      "id": "quantum_qft_phase_pattern",
+      "name": "QFT phase pattern",
+      "domain": "quantum",
+      "category": "algorithm_reasoning",
+      "prompt_file": "prompts/quantum_qft_phase_pattern.txt",
+      "candidate_file": "candidates/quantum_qft_phase_pattern.py"
+    },
+    {
+      "id": "quantum_stabilizer_tableau_update_repair",
+      "name": "Stabilizer tableau single-qubit update repair",
+      "domain": "quantum",
+      "category": "debug_repair",
+      "prompt_file": "prompts/quantum_stabilizer_tableau_update_repair.txt",
+      "candidate_file": "candidates/quantum_stabilizer_tableau_update_repair.py"
+    },
+    {
+      "id": "quantum_superdense_coding",
+      "name": "Superdense coding encode/decode",
+      "domain": "quantum",
+      "category": "reasoning",
+      "prompt_file": "prompts/quantum_superdense_coding.txt",
+      "candidate_file": "candidates/quantum_superdense_coding.py"
+    },
+    {
+      "id": "quantum_teleportation_corrections",
+      "name": "Teleportation correction mapping",
+      "domain": "quantum",
+      "category": "protocol_logic",
+      "prompt_file": "prompts/quantum_teleportation_corrections.txt",
+      "candidate_file": "candidates/quantum_teleportation_corrections.py"
+    },
+    {
+      "id": "quantum_vqe_energy_minimization",
+      "name": "VQE energy expectation from parameterized ansatz",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "prompt_file": "prompts/quantum_vqe_energy_minimization.txt",
+      "candidate_file": "candidates/quantum_vqe_energy_minimization.py"
+    }
+  ]
+}

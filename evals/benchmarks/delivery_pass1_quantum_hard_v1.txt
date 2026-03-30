@@ -1,0 +1,10 @@
+# Fixed 7-task harder quantum subset for fast smoke/regression checks.
+# Purpose: catch failures on the more semantic/algorithmic quantum tasks before full runs.
+# Smoke gate: >= 3 / 7 on first generation with no manual repair.
+quantum_circuit_depth_optimization
+quantum_circuit_phase_repair
+quantum_phase_estimation_circuit
+quantum_qaoa_maxcut
+quantum_qft_phase_pattern
+quantum_stabilizer_tableau_update_repair
+quantum_vqe_energy_minimization

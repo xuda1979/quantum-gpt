@@ -1,0 +1,119 @@
+Task ID: quantum_vqe_energy_minimization
+Task name: VQE energy expectation from parameterized ansatz
+Domain: quantum
+Category: algorithm_implementation
+
+Treat this as a minimal-edit repair or implementation task.
+Write the simplest Python file that satisfies the supplied tests and return only that file.
+
+Reference candidate style example (for format guidance, not for blind copying):
+--- BEGIN REFERENCE CANDIDATE ---
+import math
+
+
+def ry_state(theta: float) -> tuple[float, float]:
+    """Return the statevector after applying RY(theta) to |0>.
+
+    Returns (alpha, beta) where state = alpha|0> + beta|1>.
+    """
+    return (math.cos(theta / 2), math.sin(theta / 2))
+
+
+def energy_expectation(theta: float, h_coeffs: tuple[float, float, float]) -> float:
+    """Compute <psi(theta)| H |psi(theta)> for a single-qubit Hamiltonian.
+
+    H = c_I * I + c_Z * Z + c_X * X
+
+    h_coeffs = (c_I, c_Z, c_X)
+
+    The ansatz is RY(theta)|0>.
+    """
+    c_i, c_z, c_x = h_coeffs
+    alpha, beta = ry_state(theta)
+    # <Z> = |alpha|^2 - |beta|^2
+    exp_z = alpha ** 2 - beta ** 2
+    # <X> = 2 * Re(alpha * conj(beta)) — both real here
+    exp_x = 2 * alpha * beta
+    return c_i + c_z * exp_z + c_x * exp_x
+
+
+def find_min_energy(h_coeffs: tuple[float, float, float], n_samples: int = 200) -> tuple[float, float]:
+    """Brute-force search for the theta that minimizes energy_expectation.
+
+    Returns (best_theta, best_energy). Search over [0, 2*pi).
+    """
+    best_theta = 0.0
+    best_energy = float("inf")
+    for i in range(n_samples):
+        theta = 2 * math.pi * i / n_samples
+        e = energy_expectation(theta, h_coeffs)
+        if e < best_energy:
+            best_energy = e
+            best_theta = theta
+    return (best_theta, best_energy)
+
+--- END REFERENCE CANDIDATE ---
+
+Tests the candidate must satisfy:
+--- BEGIN TESTS ---
+import importlib.util
+import math
+
+
+def _load(candidate_path: str):
+    spec = importlib.util.spec_from_file_location("candidate", candidate_path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
+def run_tests(candidate_path: str) -> dict:
+    module = _load(candidate_path)
+    failures = []
+
+    # ry_state tests
+    a, b = module.ry_state(0.0)
+    if not (math.isclose(a, 1.0) and math.isclose(b, 0.0)):
+        failures.append(f"ry_state(0) -> ({a}, {b}), expected (1, 0)")
+
+    a, b = module.ry_state(math.pi)
+    if not (math.isclose(a, 0.0, abs_tol=1e-9) and math.isclose(b, 1.0)):
+        failures.append(f"ry_state(pi) -> ({a}, {b}), expected (0, 1)")
+
+    # energy_expectation: H = Z (eigenvalues +1, -1)
+    e0 = module.energy_expectation(0.0, (0.0, 1.0, 0.0))  # |0> -> <Z>=+1
+    if not math.isclose(e0, 1.0, abs_tol=1e-9):
+        failures.append(f"energy(0, Z) -> {e0}, expected 1.0")
+
+    e1 = module.energy_expectation(math.pi, (0.0, 1.0, 0.0))  # |1> -> <Z>=-1
+    if not math.isclose(e1, -1.0, abs_tol=1e-9):
+        failures.append(f"energy(pi, Z) -> {e1}, expected -1.0")
+
+    # energy_expectation: H = X (eigenvalues +1, -1)
+    e_x = module.energy_expectation(math.pi / 2, (0.0, 0.0, 1.0))  # RY(pi/2)|0> = |+>
+    if not math.isclose(e_x, 1.0, abs_tol=1e-9):
+        failures.append(f"energy(pi/2, X) -> {e_x}, expected 1.0")
+
+    # H = I + 0.5*Z + 0.3*X at theta=0: E = 1 + 0.5*1 + 0.3*0 = 1.5
+    e_combo = module.energy_expectation(0.0, (1.0, 0.5, 0.3))
+    if not math.isclose(e_combo, 1.5, abs_tol=1e-9):
+        failures.append(f"energy(0, (1,0.5,0.3)) -> {e_combo}, expected 1.5")
+
+    # find_min_energy: H = Z should find theta ~ pi (E = -1)
+    best_theta, best_e = module.find_min_energy((0.0, 1.0, 0.0))
+    if not math.isclose(best_e, -1.0, abs_tol=0.05):
+        failures.append(f"find_min_energy(Z) -> E={best_e}, expected ~-1.0")
+
+    # find_min_energy: H = 0.5*Z + 0.5*X, ground state energy = -1/sqrt(2) ~ -0.707
+    _, best_e2 = module.find_min_energy((0.0, 0.5, 0.5))
+    expected_gs = -math.sqrt(0.5)
+    if not math.isclose(best_e2, expected_gs, abs_tol=0.05):
+        failures.append(f"find_min_energy(0.5Z+0.5X) -> E={best_e2}, expected ~{expected_gs:.4f}")
+
+    return {
+        "passed": not failures,
+        "details": failures or ["VQE energy minimization correct for all test cases"],
+    }
+
+--- END TESTS ---
