@@ -19,6 +19,12 @@ from torch.utils.data import DataLoader, Dataset
 if TYPE_CHECKING:
     from transformers import AutoProcessor, AutoTokenizer
 
+try:
+    from torch.distributed.elastic.multiprocessing.errors import record as elastic_record
+except Exception:  # noqa: BLE001
+    def elastic_record(function: Any) -> Any:
+        return function
+
 
 @dataclass
 class TextPreprocessorBackend:
@@ -35,7 +41,14 @@ def load_model_config_metadata(model_name: str) -> dict[str, Any]:
     return config_dict
 
 
-def ensure_text_causal_lm_compatible(model_name: str) -> dict[str, Any] | None:
+def load_tokenizer_config_metadata(model_name: str) -> dict[str, Any]:
+    tokenizer_config_path = Path(model_name) / "tokenizer_config.json"
+    if not tokenizer_config_path.exists():
+        return {}
+    return json.loads(tokenizer_config_path.read_text(encoding="utf-8"))
+
+
+def probe_model_runtime_compat(model_name: str, auto_config_cls: Any) -> dict[str, Any] | None:
     try:
         config_dict = load_model_config_metadata(model_name)
     except Exception:
@@ -43,21 +56,38 @@ def ensure_text_causal_lm_compatible(model_name: str) -> dict[str, Any] | None:
 
     model_type = str(config_dict.get("model_type") or "")
     architectures = [str(item) for item in (config_dict.get("architectures") or [])]
-    if model_type == "qwen3_5" or any("ConditionalGeneration" in item for item in architectures):
-        raise SystemExit(
-            "Current training/qwen_sft_peft.py only supports text-only AutoTokenizer + "
-            "AutoModelForCausalLM checkpoints. "
-            f"Requested model '{model_name}' exposes model_type='{model_type}' "
-            f"architectures={architectures}, which indicates a conditional-generation path "
-            "such as OmniCoder-9B/Qwen3.5. Upgrade the Transformers runtime and add a "
-            "processor-aware training path before launching this fine-tune."
-        )
-    return config_dict
+    summary: dict[str, Any] = {
+        "config_model_type": model_type,
+        "config_architectures": architectures,
+        "runtime_autoconfig_ok": False,
+    }
+    try:
+        runtime_config = auto_config_cls.from_pretrained(model_name, trust_remote_code=True)
+        summary["runtime_autoconfig_ok"] = True
+        summary["runtime_config_class"] = runtime_config.__class__.__name__
+    except Exception as exc:  # noqa: BLE001
+        summary["runtime_autoconfig_error_type"] = type(exc).__name__
+        summary["runtime_autoconfig_error"] = str(exc)
+        if model_type == "qwen3_5":
+            raise SystemExit(
+                f"Transformers runtime is too old for '{model_name}' "
+                f"(model_type='{model_type}', architectures={architectures}). "
+                "This path now supports processor-aware text preprocessing, but the active "
+                "runtime still cannot resolve Qwen3.5 configs. Upgrade the bootstrap stack "
+                "to a Qwen3.5-capable Transformers build before launching this fine-tune."
+            ) from exc
+    return summary
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--model-name", required=True)
+    parser.add_argument(
+        "--adapter-init",
+        type=Path,
+        default=None,
+        help="Optional existing PEFT adapter directory to continue training from.",
+    )
     parser.add_argument("--train-file", type=Path, required=True)
     parser.add_argument("--eval-file", type=Path)
     parser.add_argument("--output-dir", type=Path, required=True)
@@ -85,12 +115,12 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def require_training_dependencies() -> tuple[Any, Any, Any, Any, Any, Any, Any, Any, Any]:
+def require_training_dependencies() -> tuple[Any, Any, Any, Any, Any, Any, Any, Any, Any, Any, Any]:
     try:
         import torch
-        from peft import LoraConfig, TaskType, get_peft_model
+        from peft import LoraConfig, PeftModel, TaskType, get_peft_model
         from torch.utils.data import DataLoader, Dataset
-        from transformers import AutoModelForCausalLM, AutoProcessor, AutoTokenizer
+        from transformers import AutoConfig, AutoModelForCausalLM, AutoProcessor, AutoTokenizer, PreTrainedTokenizerFast
     except ImportError as exc:
         raise SystemExit(
             "Missing training dependencies. Install the bootstrap stack first, for example: "
@@ -102,14 +132,66 @@ def require_training_dependencies() -> tuple[Any, Any, Any, Any, Any, Any, Any, 
     except ImportError:
         pass
 
-    return torch, LoraConfig, TaskType, get_peft_model, DataLoader, Dataset, AutoModelForCausalLM, AutoTokenizer, AutoProcessor
+    return (
+        torch,
+        LoraConfig,
+        PeftModel,
+        TaskType,
+        get_peft_model,
+        DataLoader,
+        Dataset,
+        AutoConfig,
+        AutoModelForCausalLM,
+        AutoTokenizer,
+        AutoProcessor,
+        PreTrainedTokenizerFast,
+    )
 
 
 def supports_text_backend(candidate: Any) -> bool:
     return candidate is not None and hasattr(candidate, "__call__") and hasattr(candidate, "pad")
 
 
-def load_text_preprocessor_backend(model_name: str, auto_tokenizer_cls: Any, auto_processor_cls: Any) -> TextPreprocessorBackend:
+def load_tokenizers_backend_fallback(model_name: str, pretrained_tokenizer_fast_cls: Any) -> TextPreprocessorBackend | None:
+    tokenizer_config = load_tokenizer_config_metadata(model_name)
+    if tokenizer_config.get("tokenizer_class") != "TokenizersBackend":
+        return None
+
+    tokenizer_path = Path(model_name) / "tokenizer.json"
+    if not tokenizer_path.exists():
+        return None
+
+    additional_special_tokens = []
+    for key in (
+        "image_token",
+        "video_token",
+        "vision_bos_token",
+        "vision_eos_token",
+        "audio_bos_token",
+        "audio_eos_token",
+        "audio_token",
+    ):
+        value = tokenizer_config.get(key)
+        if value and value not in additional_special_tokens:
+            additional_special_tokens.append(value)
+
+    tokenizer = pretrained_tokenizer_fast_cls(
+        tokenizer_file=str(tokenizer_path),
+        pad_token=tokenizer_config.get("pad_token"),
+        eos_token=tokenizer_config.get("eos_token"),
+        additional_special_tokens=additional_special_tokens or None,
+        clean_up_tokenization_spaces=bool(tokenizer_config.get("clean_up_tokenization_spaces", False)),
+        model_max_length=int(tokenizer_config.get("model_max_length", 262144)),
+    )
+    return TextPreprocessorBackend(
+        render_backend=tokenizer,
+        text_backend=tokenizer,
+        save_backend=tokenizer,
+        backend_kind="pretrained_tokenizer_fast_fallback",
+    )
+
+
+def load_text_preprocessor_backend(model_name: str, auto_tokenizer_cls: Any, auto_processor_cls: Any, pretrained_tokenizer_fast_cls: Any) -> TextPreprocessorBackend:
     processor_error: Exception | None = None
     try:
         processor = auto_processor_cls.from_pretrained(model_name, trust_remote_code=True)
@@ -134,6 +216,9 @@ def load_text_preprocessor_backend(model_name: str, auto_tokenizer_cls: Any, aut
             backend_kind="tokenizer",
         )
     except Exception as exc:  # noqa: BLE001
+        fallback = load_tokenizers_backend_fallback(model_name, pretrained_tokenizer_fast_cls)
+        if fallback is not None:
+            return fallback
         error_parts = [f"AutoTokenizer load failed: {type(exc).__name__}: {exc}"]
         if processor_error is not None:
             error_parts.append(f"AutoProcessor fallback also failed: {type(processor_error).__name__}: {processor_error}")
@@ -266,6 +351,7 @@ def evaluate(model: Any, loader: Any, device: Any) -> dict[str, float]:
 def build_run_signature(args: argparse.Namespace) -> dict[str, Any]:
     signature = {
         "model_name": args.model_name,
+        "adapter_init": str(args.adapter_init) if args.adapter_init else None,
         "train_file": str(args.train_file),
         "eval_file": str(args.eval_file) if args.eval_file else None,
         "device": args.device,
@@ -315,6 +401,7 @@ def validate_output_dir(args: argparse.Namespace, run_signature: dict[str, Any])
         )
 
 
+@elastic_record
 def main() -> int:
     args = parse_args()
     args.output_dir.mkdir(parents=True, exist_ok=True)
@@ -325,31 +412,33 @@ def main() -> int:
     (
         torch,
         LoraConfig,
+        PeftModel,
         TaskType,
         get_peft_model,
         DataLoader,
         _Dataset,
+        AutoConfig,
         AutoModelForCausalLM,
         AutoTokenizer,
         AutoProcessor,
+        PreTrainedTokenizerFast,
     ) = require_training_dependencies()
     print(json.dumps({"stage": "deps_loaded"}, ensure_ascii=False), flush=True)
 
-    config_metadata = ensure_text_causal_lm_compatible(args.model_name)
-    if config_metadata is not None:
+    runtime_compat = probe_model_runtime_compat(args.model_name, AutoConfig)
+    if runtime_compat is not None:
         print(
             json.dumps(
                 {
-                    "stage": "model_runtime_compat_ok",
-                    "model_type": config_metadata.get("model_type"),
-                    "architectures": config_metadata.get("architectures"),
+                    "stage": "model_runtime_compat_checked",
+                    **runtime_compat,
                 },
                 ensure_ascii=False,
             ),
             flush=True,
         )
 
-    text_preprocessor = load_text_preprocessor_backend(args.model_name, AutoTokenizer, AutoProcessor)
+    text_preprocessor = load_text_preprocessor_backend(args.model_name, AutoTokenizer, AutoProcessor, PreTrainedTokenizerFast)
     print(
         json.dumps(
             {
@@ -427,8 +516,15 @@ def main() -> int:
         flush=True,
     )
 
-    model_kwargs = {"trust_remote_code": True}
+    # Keep remote multi-rank launches from spiking host RAM while preserving the
+    # checkpoint's native precision for OmniCoder/Qwen-family snapshots.
+    model_kwargs = {
+        "trust_remote_code": True,
+        "low_cpu_mem_usage": True,
+        "torch_dtype": "auto",
+    }
     if args.load_in_8bit:
+        model_kwargs.pop("torch_dtype", None)
         model_kwargs["load_in_8bit"] = True
         model_kwargs["device_map"] = "auto"
     print(json.dumps({"stage": "model_load_start", "model_name": args.model_name, "t": time.time()}, ensure_ascii=False), flush=True)
@@ -451,16 +547,29 @@ def main() -> int:
         )
         raise
     print(json.dumps({"stage": "model_loaded", "t": time.time(), "dt_model_load_sec": round(time.time() - model_load_started_at, 3)}, ensure_ascii=False), flush=True)
-    lora_config = LoraConfig(
-        task_type=TaskType.CAUSAL_LM,
-        r=args.lora_rank,
-        lora_alpha=args.lora_alpha,
-        lora_dropout=args.lora_dropout,
-        target_modules=args.target_modules,
-        bias="none",
-    )
-    model = get_peft_model(model, lora_config)
-    print(json.dumps({"stage": "lora_wrapped"}, ensure_ascii=False), flush=True)
+    if args.adapter_init is not None:
+        model = PeftModel.from_pretrained(model, str(args.adapter_init), is_trainable=True)
+        print(
+            json.dumps(
+                {
+                    "stage": "adapter_init_loaded",
+                    "adapter_init": str(args.adapter_init),
+                },
+                ensure_ascii=False,
+            ),
+            flush=True,
+        )
+    else:
+        lora_config = LoraConfig(
+            task_type=TaskType.CAUSAL_LM,
+            r=args.lora_rank,
+            lora_alpha=args.lora_alpha,
+            lora_dropout=args.lora_dropout,
+            target_modules=args.target_modules,
+            bias="none",
+        )
+        model = get_peft_model(model, lora_config)
+        print(json.dumps({"stage": "lora_wrapped"}, ensure_ascii=False), flush=True)
     model.to(device)
     print(json.dumps({"stage": "model_on_device", "device": str(device)}, ensure_ascii=False), flush=True)
     if distributed:

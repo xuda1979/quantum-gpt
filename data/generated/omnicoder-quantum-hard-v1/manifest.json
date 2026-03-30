@@ -1,0 +1,53 @@
+{
+  "manifest_version": "task-subset-v1",
+  "input": "data/generated/template-v2.jsonl",
+  "task_id_file": "evals/benchmarks/delivery_pass1_quantum_hard_v1.txt",
+  "out_dir": "data/generated/omnicoder-quantum-hard-v1",
+  "train_ratio": 0.85,
+  "seed_tag": "omnicoder-quantum-hard-v1",
+  "selected_summary": {
+    "count": 140,
+    "domains": {
+      "quantum": 140
+    },
+    "tasks": {
+      "quantum_circuit_depth_optimization": 20,
+      "quantum_circuit_phase_repair": 20,
+      "quantum_phase_estimation_circuit": 20,
+      "quantum_qaoa_maxcut": 20,
+      "quantum_qft_phase_pattern": 20,
+      "quantum_stabilizer_tableau_update_repair": 20,
+      "quantum_vqe_energy_minimization": 20
+    }
+  },
+  "train_summary": {
+    "count": 121,
+    "domains": {
+      "quantum": 121
+    },
+    "tasks": {
+      "quantum_circuit_depth_optimization": 18,
+      "quantum_circuit_phase_repair": 15,
+      "quantum_phase_estimation_circuit": 19,
+      "quantum_qaoa_maxcut": 17,
+      "quantum_qft_phase_pattern": 16,
+      "quantum_stabilizer_tableau_update_repair": 18,
+      "quantum_vqe_energy_minimization": 18
+    }
+  },
+  "eval_summary": {
+    "count": 19,
+    "domains": {
+      "quantum": 19
+    },
+    "tasks": {
+      "quantum_circuit_depth_optimization": 2,
+      "quantum_circuit_phase_repair": 5,
+      "quantum_phase_estimation_circuit": 1,
+      "quantum_qaoa_maxcut": 3,
+      "quantum_qft_phase_pattern": 4,
+      "quantum_stabilizer_tableau_update_repair": 2,
+      "quantum_vqe_energy_minimization": 2
+    }
+  }
+}
