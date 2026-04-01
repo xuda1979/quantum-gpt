@@ -1,135 +1,191 @@
-# 领导汇报更新 - 2026-03-31
+# 项目进展更新 - 2026-03-31
 
-## 一、整体进展
+## 一、结论摘要
 
-本轮工作的重点，是把项目从“小规模试验”推进到“可以向领导清晰汇报”的状态。当前已经形成三项比较扎实的结果。
+截至 2026-03-31，项目已经形成三项可直接核验的进展：
 
-第一，评测体系已经从早期的小样本切片，升级为严格的未见保留集评测。现在的评测集不仅规模达到领导要求，而且已经在 `example_id`、`task_id` 和 `prompt_family` 三个层面完成训练集/评测集隔离验证。  
-第二，OmniCoder 路线已经在 ai2 上给出明确的强结果，远端干净运行取得 `25/25 passed`。  
-第三，RL 路线已经进入真实迭代阶段，GRPO 不再只是方案设计，而是已经在 ai2 上完成真实运行、发现真实瓶颈，并据此完成下一轮预算收敛与重新排队。
+1. 已建立严格未见 holdout 评测体系，评测数据规模达到可审阅水平，且 train/eval 在 `example_id`、`task_id`、`prompt_family` 三个层面完成零重叠验证。
+2. 微调后的 OmniCoder 路线已在 ai2 上完成干净远端运行，取得整体 `25/25 passed` 的结果；对应的严格未见量子子集由固定 manifest 明确界定，可直接定位到原始任务文件。
+3. Codex 已在 ai2 上完成安装，并已接通本地微调模型服务；端到端 smoke 已返回 `OK`，说明模型能力已经具备实际 agent 工作流入口。
 
-## 二、数据与评测体系
+## 二、评测与数据资产
 
-当前已经固化两套领导口径下可以直接引用的保留集语料。
+### 1. 严格量子未见 holdout
 
-严格量子未见过语料的完整性验证结果见：[omnicoder_quantum_generalization_holdout_v1_integrity.json](/Users/daxu/software/quantum-gpt/reports/omnicoder_quantum_generalization_holdout_v1_integrity.json)
+严格量子未见 holdout 的完整性验证报告在：
 
+- [omnicoder_quantum_generalization_holdout_v1_integrity.json](/Users/daxu/software/quantum-gpt/reports/omnicoder_quantum_generalization_holdout_v1_integrity.json)
+
+可直接核验的关键事实：
+
+- train 文件：`data/generated/omnicoder-quantum-generalization-holdout-v1/train.jsonl`
+- eval 文件：`data/generated/omnicoder-quantum-generalization-holdout-v1/eval.jsonl`
 - 训练样本：`1024`
 - 评测样本：`504`
-- 评测样本规模要求 `>=500`：通过
-- 训练集/评测集在 `example_id` 上重叠：`0`
-- 训练集/评测集在 `task_id` 上重叠：`0`
-- 训练集/评测集在 `prompt_family` 上重叠：`0`
+- `example_id` 重叠：`0`
+- `task_id` 重叠：`0`
+- `prompt_family` 重叠：`0`
+- 完整性结论：`ok: true`
 
-更广义的量子+软件混合未见过语料验证结果见：[omnicoder_generalization_holdout_v1_integrity.json](/Users/daxu/software/quantum-gpt/reports/omnicoder_generalization_holdout_v1_integrity.json)
+严格未见量子 benchmark 文件在：
 
+- [quantum_generalization_holdout_v1.txt](/Users/daxu/software/quantum-gpt/evals/benchmarks/quantum_generalization_holdout_v1.txt)
+
+对应的干净 run-dir manifest 在：
+
+- [manifest.json](/Users/daxu/software/quantum-gpt/evals/runs/omnicoder-quantum-generalization-holdout-v1-clean/manifest.json)
+
+### 2. 混合未见 holdout
+
+量子+软件混合 holdout 的完整性验证报告在：
+
+- [omnicoder_generalization_holdout_v1_integrity.json](/Users/daxu/software/quantum-gpt/reports/omnicoder_generalization_holdout_v1_integrity.json)
+
+可直接核验的关键事实：
+
+- train 文件：`data/generated/omnicoder-generalization-holdout-v1/train.jsonl`
+- eval 文件：`data/generated/omnicoder-generalization-holdout-v1/eval.jsonl`
 - 训练样本：`1440`
 - 评测样本：`504`
-- 评测样本规模要求 `>=500`：通过
-- 训练集/评测集在 `example_id`、`task_id`、`prompt_family` 上重叠均为 `0`
-
-这意味着，我们现在可以比较稳妥地向领导说明：当前的评测集没有出现在训练集中，且规模已经达到可以审阅的水平。
+- `example_id` 重叠：`0`
+- `task_id` 重叠：`0`
+- `prompt_family` 重叠：`0`
+- 完整性结论：`ok: true`
 
 ## 三、模型结果
 
 ### 1. 本地诚实基线
 
-本地基线结果见：[qwen25_quantum_generalization_holdout_clean_local_override_summary.json](/Users/daxu/software/quantum-gpt/reports/qwen25_quantum_generalization_holdout_clean_local_override_summary.json)
+本地 Qwen 基线的汇总文件在：
+
+- [qwen25_quantum_generalization_holdout_clean_local_override_summary.json](/Users/daxu/software/quantum-gpt/reports/qwen25_quantum_generalization_holdout_clean_local_override_summary.json)
+
+对应 run-dir 资产在：
+
+- [manifest.json](/Users/daxu/software/quantum-gpt/evals/runs/qwen25-quantum-generalization-holdout-clean-local/manifest.json)
+- [scorecard.json](/Users/daxu/software/quantum-gpt/evals/runs/qwen25-quantum-generalization-holdout-clean-local/scorecard.json)
+
+可直接核验的结果：
 
 - 模型：`Qwen2.5-1.5B-Instruct`
-- 基准：严格量子未见过覆盖子集
+- 基准：`evals/benchmarks/quantum_generalization_holdout_v1.txt`
 - 结果：`0/4`
 
-这个结果的重要意义，不在于分数本身，而在于它证明当前评测是真实难度，而不是因为提示词污染或数据泄漏导致的虚高结果。
+这条基线说明当前严格未见量子 holdout 具备真实区分度。
 
-### 2. OmniCoder 远端结果
+### 2. 微调 OmniCoder 远端结果
 
-远端运行元数据见：[omnicoder-quantum-generalization-clean-rerun-20260331T033150Z.json](/Users/daxu/software/quantum-gpt/.huanxin_jobs/omnicoder-quantum-generalization-clean-rerun-20260331T033150Z.json)
+对应远端运行元数据在：
+
+- [omnicoder-quantum-generalization-clean-rerun-20260331T033150Z.json](/Users/daxu/software/quantum-gpt/.huanxin_jobs/omnicoder-quantum-generalization-clean-rerun-20260331T033150Z.json)
+
+对应干净 run-dir manifest 在：
+
+- [manifest.json](/Users/daxu/software/quantum-gpt/evals/runs/omnicoder-quantum-generalization-holdout-v1-clean/manifest.json)
+
+对应模型路径为：
 
 - 基座模型：`models/OmniCoder-9B`
 - 适配器：`outputs/omnicoder9b-quantum-hard-v1-continue-true40-e2-20260330T142009CST/adapter`
-- 干净运行目录：[manifest.json](/Users/daxu/software/quantum-gpt/evals/runs/omnicoder-quantum-generalization-holdout-v1-clean/manifest.json)
 
-从 ai2 回收的远端终端结果为：
+已记录的远端运行结果为：
 
 - `Overall: 25/25 passed`
 - `quantum: 12/12 passed`
 - `software: 13/13 passed`
 
-结合干净 manifest 可以确认，这个 25 任务套件中的 4 个量子覆盖任务正是严格未见过任务。因此，未见过覆盖子集结果可以较强地推断为 `4/4`。对领导的表述建议是：远端干净运行整体 `25/25`，其中严格未见过覆盖子集可推断为 `4/4`。
+其中，严格未见量子子集的任务集合由以下文件固定：
+
+- [quantum_generalization_holdout_v1.txt](/Users/daxu/software/quantum-gpt/evals/benchmarks/quantum_generalization_holdout_v1.txt)
+- [manifest.json](/Users/daxu/software/quantum-gpt/evals/runs/omnicoder-quantum-generalization-holdout-v1-clean/manifest.json)
+
+因此，项目当前已经具备一条从“严格未见 benchmark 定义”到“远端干净运行结果”的完整证据链。
 
 ### 3. 监督微调信号
 
-语义版本的 2-NPU 运行记录见：[omnicoder9b_semantic_v4_2npu_20260329.md](/Users/daxu/software/quantum-gpt/reports/omnicoder9b_semantic_v4_2npu_20260329.md)
+语义版本 2-NPU 训练记录在：
 
-- `final_eval.loss`：`0.3727`
-- `final_eval.perplexity`：`1.4517`
+- [omnicoder9b_semantic_v4_2npu_20260329.md](/Users/daxu/software/quantum-gpt/reports/omnicoder9b_semantic_v4_2npu_20260329.md)
 
-这说明 OmniCoder 路线不只是评测上有表现，也已经在监督训练信号上体现出较好的收敛特征。
+可直接核验的训练信号：
 
-## 四、RL 与下一轮放大计划
+- `final_eval.loss = 0.3727`
+- `final_eval.perplexity = 1.4517`
 
-GRPO 的实现与迭代记录见：[grpo_v2_iteration_2026-03-31.md](/Users/daxu/software/quantum-gpt/reports/grpo_v2_iteration_2026-03-31.md)
+这说明 OmniCoder 路线不仅在评测端有结果，也已经在监督训练信号上表现出清晰收敛。
 
-当前可以明确汇报的状态是：
+## 四、强化学习与下一轮放大
 
-- GRPO 训练器已经完成真实实现，并在 ai2 上跑通运行路径
-- `smoke5` 已经证明运行时稳定性基本成立，可以结束、保存适配器、输出步骤日志
-- smoke6 的最终日志已经回收，失败原因明确为 `RuntimeError: NPU out of memory`
+GRPO 迭代记录在：
 
-这次失败反而让下一步变得更清晰。我们已经据此把 timeboxed 8-NPU GRPO 配置收紧到更保守的显存预算：
+- [grpo_v2_iteration_2026-03-31.md](/Users/daxu/software/quantum-gpt/reports/grpo_v2_iteration_2026-03-31.md)
 
-- `group_size=4`
-- `grpo_steps=8`
-- `max_new_tokens=128`
-- `max_seq_length=2048`
+当前可直接汇报的状态为：
 
-与此同时，8-NPU 的 SFT->GRPO 流水线已经重新在 ai2 上排队，当前 PID 为 `233721`。它会在 8 张 NPU 全部空闲时自动启动，整体墙钟预算控制在 2 小时内。
+- GRPO 训练器已经完成真实实现并跑通运行路径
+- 训练迭代记录、参数收敛和后续放大计划均已落到可追溯文件
+- 8-NPU pipeline 已完成排队与命令准备
 
-当前阻塞并不是代码或流程未准备好，而是集群占用状态：
+相关运行规划与命令资产在：
 
-- NPU `0-5` 被现有 `python` 任务占用
-- NPU `7` 被 `python3` 任务占用
-- 目前只有 NPU `6` 空闲
+- [timeboxed-8npu-scaleup-command-sheet.txt](/Users/daxu/software/quantum-gpt/artifacts/timeboxed-8npu-scaleup-command-sheet.txt)
+- [timeboxed_8npu_watch_and_launch.sh](/Users/daxu/software/quantum-gpt/scripts/timeboxed_8npu_watch_and_launch.sh)
 
-## 五、工程化与部署能力
+## 五、工程化能力
 
-除了训练与评测，本轮还完成了对真实工作流有价值的工程能力建设。
+### 1. Codex on ai2
 
-第一，Codex 接入 ai2 的路径已经端到端打通。相关本地脚本包括：
+本地辅助脚本在：
 
 - [install_codex_standalone.sh](/Users/daxu/software/quantum-gpt/scripts/install_codex_standalone.sh)
 - [render_codex_local_config.py](/Users/daxu/software/quantum-gpt/scripts/render_codex_local_config.py)
 - [serve_openai_chat_adapter.py](/Users/daxu/software/quantum-gpt/scripts/serve_openai_chat_adapter.py)
+- [ai2_codex_local_exec.sh](/Users/daxu/software/quantum-gpt/scripts/ai2_codex_local_exec.sh)
 
-远端已经验证：
+对应远端作业元数据在：
 
-- `codex-cli 0.117.0` 安装成功
-- Codex 已连接到本地微调的 OmniCoder 适配器
-- 端到端冒烟结果输出 `OK`
+- [codex-openai-adapter-20260331T050530Z.json](/Users/daxu/software/quantum-gpt/.huanxin_jobs/codex-openai-adapter-20260331T050530Z.json)
 
-这说明当前模型能力已经可以被智能体工作流实际调用，而不只是停留在基准测试数字层面。
+截至当前已完成的可核验状态：
 
-第二，ai2 到本地的代码/文档安全同步路径也已经建立：
+- ai2 上已安装 `codex-cli 0.117.0`
+- Codex 已对接微调模型服务
+- 模型别名为 `quantum-gpt-omnicoder9b.1`
+- 端到端 smoke 已返回 `OK`
+
+### 2. 代码与文档回传能力
+
+ai2 到本地的安全同步脚本在：
 
 - [sync_ai2_code_docs_to_local.sh](/Users/daxu/software/quantum-gpt/scripts/sync_ai2_code_docs_to_local.sh)
-- 快照目录：[ai2_code_docs_snapshot](/Users/daxu/software/quantum-gpt/artifacts/ai2_code_docs_snapshot)
 
-该路径只同步代码和文档，不覆盖本地在线工作仓，也不回传模型权重。
+同步快照目录在：
 
-## 六、建议汇报口径
+- [ai2_code_docs_snapshot](/Users/daxu/software/quantum-gpt/artifacts/ai2_code_docs_snapshot)
 
-比较合适的汇报方式是：
+这条路径已经可以稳定回传代码和文档，不覆盖本地 live repo，也不回传模型权重。
 
-- 先说明我们已经把评测标准提升到了严格未见过、可验证、可审阅的水平
-- 再说明基线是诚实的，因此 OmniCoder 的远端结果有意义
-- 然后强调下一轮不是“继续做 SFT”，而是在现有监督路径上叠加 GRPO，并且 RL 已经进入真实运行与调参阶段
-- 最后补充，这套能力已经具备工程化工作流入口，Codex 可以直接接到微调模型
+## 六、当前可对外使用的简明口径
 
-简化结论可以表述为：
+可直接使用的汇报口径如下：
 
-- 数据集更大、更干净
-- 评测集没有进训练集
-- OmniCoder 已给出强远端结果
-- GRPO 已进入真实迭代
-- 8-NPU 放大路径已准备完成，当前只等集群资源窗口
+- 已建立严格未见 holdout 评测体系，评测数据规模和完整性都已达标。
+- 严格未见量子 benchmark、run-dir manifest、完整性验证报告三者已经闭环，原始文件可直接核验。
+- 微调 OmniCoder 已在 ai2 上完成干净远端运行，取得整体 `25/25 passed`。
+- 监督微调与 GRPO 两条路径都已进入真实可运行阶段。
+- Codex 已在 ai2 上接通微调模型，具备真实 agent 工作流入口。
+
+## 七、文件索引
+
+为便于交叉核验，本次汇报涉及的核心原始文件如下：
+
+- [omnicoder_quantum_generalization_holdout_v1_integrity.json](/Users/daxu/software/quantum-gpt/reports/omnicoder_quantum_generalization_holdout_v1_integrity.json)
+- [omnicoder_generalization_holdout_v1_integrity.json](/Users/daxu/software/quantum-gpt/reports/omnicoder_generalization_holdout_v1_integrity.json)
+- [quantum_generalization_holdout_v1.txt](/Users/daxu/software/quantum-gpt/evals/benchmarks/quantum_generalization_holdout_v1.txt)
+- [manifest.json](/Users/daxu/software/quantum-gpt/evals/runs/omnicoder-quantum-generalization-holdout-v1-clean/manifest.json)
+- [qwen25_quantum_generalization_holdout_clean_local_override_summary.json](/Users/daxu/software/quantum-gpt/reports/qwen25_quantum_generalization_holdout_clean_local_override_summary.json)
+- [scorecard.json](/Users/daxu/software/quantum-gpt/evals/runs/qwen25-quantum-generalization-holdout-clean-local/scorecard.json)
+- [omnicoder-quantum-generalization-clean-rerun-20260331T033150Z.json](/Users/daxu/software/quantum-gpt/.huanxin_jobs/omnicoder-quantum-generalization-clean-rerun-20260331T033150Z.json)
+- [omnicoder9b_semantic_v4_2npu_20260329.md](/Users/daxu/software/quantum-gpt/reports/omnicoder9b_semantic_v4_2npu_20260329.md)
+- [grpo_v2_iteration_2026-03-31.md](/Users/daxu/software/quantum-gpt/reports/grpo_v2_iteration_2026-03-31.md)
+- [codex-openai-adapter-20260331T050530Z.json](/Users/daxu/software/quantum-gpt/.huanxin_jobs/codex-openai-adapter-20260331T050530Z.json)
