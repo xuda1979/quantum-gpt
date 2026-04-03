@@ -1,7 +1,7 @@
 const http = require('http');
 const fs = require('fs');
-const { chromium } = require('playwright');
 const { ensureProfileDir } = require('./huanxin_profile');
+const { launchPersistentContext } = require('./huanxin_browser_launch');
 
 const ENV_PORTS = { ai1: 19001, ai2: 19002 };
 
@@ -91,6 +91,44 @@ function parseArgs(argv) {
   return { envName, command, waitMs, requireDaemon, skipDaemon };
 }
 
+async function detectPageState(page) {
+  const url = page.url();
+  const bodyText = ((await page.locator('body').innerText().catch(() => '')) || '').replace(/\s+/g, ' ').trim();
+  const lowerUrl = url.toLowerCase();
+  const lowerText = bodyText.toLowerCase();
+
+  if (
+    lowerUrl.includes('/auth/realms/') ||
+    lowerUrl.includes('openid-connect/auth') ||
+    lowerUrl.includes('login') ||
+    lowerText.includes('短信登录') ||
+    lowerText.includes('密码登录') ||
+    lowerText.includes('获取验证码')
+  ) {
+    return { state: 'login_required', url, bodyPreview: bodyText.slice(0, 300) };
+  }
+
+  const rowTexts = await page.locator('tr').evaluateAll((rows) =>
+    rows
+      .map((row) => (row.innerText || row.textContent || '').replace(/\s+/g, ' ').trim())
+      .filter(Boolean)
+      .slice(0, 20)
+  ).catch(() => []);
+
+  return {
+    state: 'ready',
+    url,
+    bodyPreview: bodyText.slice(0, 300),
+    rowPreview: rowTexts,
+  };
+}
+
+// Direct environment URLs — skip the general list navigation entirely.
+// Add entries here whenever a new environment's direct link is known.
+const DIRECT_ENV_URLS = {
+  ai2: 'https://aihuanxin.cn/kunlun/kl-web?poolId=1&projectId=3ed7854b946a47b1a49ad754baa76cd3#/train-dev/environment/dl-332c4679dcf533b7b978d6df217292d4?name=ai2',
+};
+
 async function openShell(page, envName) {
   const findExistingEnvPage = () =>
     page
@@ -100,6 +138,10 @@ async function openShell(page, envName) {
         (candidate) =>
           candidate.url().includes('/train-dev/environment/') && candidate.url().includes(`name=${envName}`)
       );
+
+  // If we have a direct URL for this env, navigate straight to the terminal
+  // instead of going through the general list and clicking "打开".
+  const directUrl = DIRECT_ENV_URLS[envName];
 
   let lastError = null;
   for (let attempt = 1; attempt <= 3; attempt += 1) {
@@ -111,11 +153,33 @@ async function openShell(page, envName) {
         return existingPage;
       }
 
+      if (directUrl) {
+        // Fast path: navigate directly to the environment terminal page.
+        await page.goto(directUrl, { waitUntil: 'networkidle', timeout: 180000 });
+        await page.waitForTimeout(3000);
+        const pageState = await detectPageState(page);
+        if (pageState.state === 'login_required') {
+          throw new Error(
+            `Huanxin auth expired before opening ${envName}; login_required at ${pageState.url}. Body preview: ${pageState.bodyPreview}`
+          );
+        }
+        // Direct URL lands straight on the terminal page — no button click needed.
+        lastError = null;
+        break;
+      }
+
+      // Fallback: navigate to the general list and click "打开".
       await page.goto(
         'https://aihuanxin.cn/kunlun/kl-web?poolId=1&projectId=3ed7854b946a47b1a49ad754baa76cd3#/train-dev',
         { waitUntil: 'networkidle', timeout: 180000 }
       );
       await page.waitForTimeout(3000);
+      const pageState = await detectPageState(page);
+      if (pageState.state === 'login_required') {
+        throw new Error(
+          `Huanxin auth expired before opening ${envName}; login_required at ${pageState.url}. Body preview: ${pageState.bodyPreview}`
+        );
+      }
 
       const row = page.locator('tr', { hasText: envName }).first();
       await row.waitFor({ state: 'visible', timeout: 60000 });
@@ -153,6 +217,10 @@ async function openShell(page, envName) {
       break;
     } catch (error) {
       lastError = error;
+      const message = String(error && (error.stack || error.message || error));
+      if (message.includes('login_required')) {
+        throw error;
+      }
       if (attempt === 3) {
         throw error;
       }
@@ -166,7 +234,42 @@ async function openShell(page, envName) {
   await activePage.waitForTimeout(3000);
 
   const shellTrigger = activePage.getByText('Shell终端', { exact: true }).first();
-  await shellTrigger.click({ timeout: 10000 });
+  const waitForSpinnerToClear = async (timeoutMs = 30000) => {
+    const spinner = activePage.locator('.ant-spin-spinning, .ant-spin-blur, [aria-busy="true"]').first();
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+      const visible = await spinner.isVisible().catch(() => false);
+      if (!visible) return;
+      await activePage.waitForTimeout(500);
+    }
+  };
+
+  const shellTabSelected = async () => {
+    const selected = await shellTrigger.getAttribute('aria-selected').catch(() => null);
+    return selected === 'true';
+  };
+
+  for (let attempt = 1; attempt <= 20; attempt += 1) {
+    if (await shellTabSelected()) {
+      break;
+    }
+    await waitForSpinnerToClear(3000).catch(() => {});
+    try {
+      await shellTrigger.click({ timeout: 5000 });
+    } catch (error) {
+      const message = String(error && (error.stack || error.message || error));
+      if (!message.includes('intercepts pointer events') && !message.includes('Timeout')) {
+        throw error;
+      }
+      await activePage.waitForTimeout(1000);
+      continue;
+    }
+    await activePage.waitForTimeout(1000);
+  }
+
+  if (!(await shellTabSelected())) {
+    throw new Error(`Failed to activate Shell终端 tab for ${envName} after repeated spinner-aware retries.`);
+  }
   await activePage.waitForTimeout(5000);
   return activePage;
 }
@@ -235,8 +338,6 @@ async function readTerminalText(activePage) {
 }
 
 async function sendCommand(activePage, command, waitMs = 10000) {
-  await focusTerminal(activePage);
-
   const terminalInput = activePage.locator('.xterm-helper-textarea').first();
   const clearTerminal = async () => {
     await activePage.keyboard.press('Control+L').catch(() => {});
@@ -258,27 +359,7 @@ async function sendCommand(activePage, command, waitMs = 10000) {
     return (await readTerminalText(activePage)).text;
   };
 
-  // Flush prior prompt/output before issuing a new command.
-  await waitForPrompt().catch(() => {});
-  await clearTerminal();
-  const beforeSnapshot = await readTerminalText(activePage);
-  const before = beforeSnapshot.text;
-
-  // Use unique start/end markers and preserve literal newlines in the command.
-  const token = `OC_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-  const startMarker = `__${token}_START__`;
-  const endMarker = `__${token}_END__`;
-  const safeCommand = command;
-  const wrappedCmd = `printf '${startMarker}\\n'; ${safeCommand}; printf '\\n${endMarker}\\n'`;
-
-  const literalCommand = `${wrappedCmd}${wrappedCmd.endsWith('\n') ? '' : '\n'}`;
-  await terminalInput.evaluate((element) => {
-    element.value = '';
-  }).catch(() => {});
-  await activePage.keyboard.insertText(literalCommand);
-  await activePage.keyboard.press('Enter');
-
-  const waitForStableAfterEnd = async (timeoutMs = 3000) => {
+  const waitForStableAfterEnd = async (endMarker, timeoutMs = 3000) => {
     const deadline = Date.now() + timeoutMs;
     let lastText = '';
     let stableCount = 0;
@@ -301,72 +382,108 @@ async function sendCommand(activePage, command, waitMs = 10000) {
     return readTerminalText(activePage);
   };
 
-  const deadline = Date.now() + waitMs;
-  let after = '';
-  let afterDebug = null;
-  while (Date.now() < deadline) {
-    await activePage.waitForTimeout(500);
-    const snapshot = await readTerminalText(activePage);
-    after = snapshot.text;
-    afterDebug = snapshot.debug;
-    if (after.includes(endMarker)) {
-      const stable = await waitForStableAfterEnd();
-      after = stable.text;
-      afterDebug = stable.debug;
-      break;
+  let lastAttemptError = null;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    await focusTerminal(activePage);
+
+    // Flush prior prompt/output before issuing a new command.
+    await waitForPrompt().catch(() => {});
+    await clearTerminal();
+    const beforeSnapshot = await readTerminalText(activePage);
+    const before = beforeSnapshot.text;
+
+    // Use unique start/end markers and preserve literal newlines in the command.
+    const token = `OC_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const startMarker = `__${token}_START__`;
+    const endMarker = `__${token}_END__`;
+    const wrappedCmd = `printf '${startMarker}\\n'; ${command}; printf '\\n${endMarker}\\n'`;
+
+    const literalCommand = `${wrappedCmd}${wrappedCmd.endsWith('\n') ? '' : '\n'}`;
+    await terminalInput.evaluate((element) => {
+      element.value = '';
+    }).catch(() => {});
+    await activePage.keyboard.insertText(literalCommand);
+    await activePage.keyboard.press('Enter');
+
+    const deadline = Date.now() + waitMs;
+    let after = '';
+    let afterDebug = null;
+    let sawStartMarker = false;
+    let sawEndMarker = false;
+    while (Date.now() < deadline) {
+      await activePage.waitForTimeout(500);
+      const snapshot = await readTerminalText(activePage);
+      after = snapshot.text;
+      afterDebug = snapshot.debug;
+      sawStartMarker = sawStartMarker || after.includes(startMarker);
+      sawEndMarker = sawEndMarker || after.includes(endMarker);
+      if (sawEndMarker) {
+        const stable = await waitForStableAfterEnd(endMarker);
+        after = stable.text;
+        afterDebug = stable.debug;
+        break;
+      }
     }
-  }
 
-  let output = '';
-  const afterLines = after.split('\n');
-  const startLineIdx = afterLines.findIndex((line) => line.includes(startMarker));
-  if (startLineIdx >= 0) {
-    const candidateLines = [];
-    for (let index = startLineIdx + 1; index < afterLines.length; index += 1) {
-      const line = afterLines[index];
-      if (line.includes(endMarker)) break;
-      candidateLines.push(line);
+    if (!after.includes(startMarker) && !after.includes(endMarker)) {
+      lastAttemptError = new Error(
+        `Terminal never showed command markers on attempt ${attempt}; retrying command injection.`
+      );
+      await activePage.waitForTimeout(1000);
+      continue;
     }
-    output = candidateLines.join('\n');
-  } else {
-    const beforeLines = before.split('\n');
-    output = afterLines.slice(beforeLines.length).join('\n');
+
+    let output = '';
+    const afterLines = after.split('\n');
+    const startLineIdx = afterLines.findIndex((line) => line.includes(startMarker));
+    if (startLineIdx >= 0) {
+      const candidateLines = [];
+      for (let index = startLineIdx + 1; index < afterLines.length; index += 1) {
+        const line = afterLines[index];
+        if (line.includes(endMarker)) break;
+        candidateLines.push(line);
+      }
+      output = candidateLines.join('\n');
+    } else {
+      const beforeLines = before.split('\n');
+      output = afterLines.slice(beforeLines.length).join('\n');
+    }
+
+    output = output.replace(/^\n+/, '').replace(/\n+$/, '');
+
+    // Remove echoed wrapper fragments and prompt lines around the captured payload.
+    const promptLike = /^.*[#$>]\s*$/;
+    let outputLines = output.split('\n');
+    const firstMarkerLine = outputLines.findIndex((line) => line.includes(startMarker));
+    if (firstMarkerLine >= 0) {
+      outputLines = outputLines.slice(firstMarkerLine + 1);
+    }
+    const lastMarkerLine = outputLines.findIndex((line) => line.includes(endMarker));
+    if (lastMarkerLine >= 0) {
+      outputLines = outputLines.slice(0, lastMarkerLine);
+    }
+    output = outputLines.join('\n');
+
+    const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const escapedStartMarker = escapeRegex(startMarker);
+    const escapedEndMarker = escapeRegex(endMarker);
+    const wrapperRegex = new RegExp(`^.*printf '(?:${escapedStartMarker}\\n|\\n?${escapedEndMarker}\\n)'.*$`);
+    const wrapperFragmentRegex = /^\\n';\s.*printf '\\$/;
+    outputLines = output.split('\n').filter((line) => {
+      const trimmed = line.trim();
+      if (!trimmed) return false;
+      if (promptLike.test(trimmed)) return false;
+      if (line.includes(startMarker) || line.includes(endMarker)) return false;
+      if (wrapperRegex.test(line) || wrapperFragmentRegex.test(line)) return false;
+      if (trimmed === "'" || trimmed === ";" || trimmed === "n") return false;
+      return true;
+    });
+    output = outputLines.join('\n').trim();
+
+    return { before, after, output, debug: { before: beforeSnapshot.debug, after: afterDebug } };
   }
 
-  output = output
-    .replace(/^\n+/, '')
-    .replace(/\n+$/, '');
-
-  // Remove echoed wrapper fragments and prompt lines around the captured payload.
-  const promptLike = /^.*[#$>]\s*$/;
-  let outputLines = output.split('\n');
-  const firstMarkerLine = outputLines.findIndex((line) => line.includes(startMarker));
-  if (firstMarkerLine >= 0) {
-    outputLines = outputLines.slice(firstMarkerLine + 1);
-  }
-  const lastMarkerLine = outputLines.findIndex((line) => line.includes(endMarker));
-  if (lastMarkerLine >= 0) {
-    outputLines = outputLines.slice(0, lastMarkerLine);
-  }
-  output = outputLines.join('\n');
-
-  const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const escapedStartMarker = escapeRegex(startMarker);
-  const escapedEndMarker = escapeRegex(endMarker);
-  const wrapperRegex = new RegExp(`^.*printf '(?:${escapedStartMarker}\\n|\\n?${escapedEndMarker}\\n)'.*$`);
-  const wrapperFragmentRegex = /^\\n';\s.*printf '\\$/;
-  outputLines = output.split('\n').filter((line) => {
-    const trimmed = line.trim();
-    if (!trimmed) return false;
-    if (promptLike.test(trimmed)) return false;
-    if (line.includes(startMarker) || line.includes(endMarker)) return false;
-    if (wrapperRegex.test(line) || wrapperFragmentRegex.test(line)) return false;
-    if (trimmed === "'" || trimmed === ";" || trimmed === "n") return false;
-    return true;
-  });
-  output = outputLines.join('\n').trim();
-
-  return { before, after, output, debug: { before: beforeSnapshot.debug, after: afterDebug } };
+  throw lastAttemptError || new Error('Failed to inject command into Huanxin terminal after retries.');
 }
 
 async function main() {
@@ -390,11 +507,8 @@ async function main() {
 
   // No daemon running — fall back to standalone browser (headless by default)
   const { profileDir } = ensureProfileDir();
-  const context = await chromium.launchPersistentContext(profileDir, {
-    headless: process.env.HUANXIN_HEADLESS !== '0',
-    viewport: { width: 1600, height: 1000 },
-    slowMo: 50,
-  });
+  const launch = await launchPersistentContext(profileDir);
+  const context = launch.context;
 
   try {
     const page = context.pages()[0] || (await context.newPage());
@@ -411,6 +525,8 @@ async function main() {
           ok: true,
           envName,
           transport: 'standalone',
+          browserMode: launch.browserMode,
+          launchFallbackUsed: launch.fallbackUsed,
           url: activePage.url(),
           command,
           durationMs: Date.now() - startedAt,

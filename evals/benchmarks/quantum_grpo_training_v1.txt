@@ -1,0 +1,16 @@
+# GRPO training task set — all 13 quantum tasks.
+# This is the TRAINING benchmark. Do NOT use for evaluation/generalization testing.
+# For held-out generalization eval, use quantum_generalization_holdout_v1.txt instead.
+quantum_bell_pair_construction
+quantum_circuit_depth_optimization
+quantum_circuit_phase_repair
+quantum_error_detection_bit_flip
+quantum_gate_alias_normalization
+quantum_measurement_bug_repair
+quantum_phase_estimation_circuit
+quantum_qaoa_maxcut
+quantum_qft_phase_pattern
+quantum_stabilizer_tableau_update_repair
+quantum_superdense_coding
+quantum_teleportation_corrections
+quantum_vqe_energy_minimization
