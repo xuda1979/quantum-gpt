@@ -1,13 +1,19 @@
 const { chromium } = require('playwright');
+const { launchPersistentContext } = require('./huanxin_browser_launch');
 
 async function main() {
-  const context = await chromium.launchPersistentContext(
-    process.env.HUANXIN_PROFILE_DIR || 'browser-automation/profile',
-    {
-    headless: true,
-    viewport: { width: 1600, height: 1000 },
-    }
-  );
+  const profileDir = process.env.HUANXIN_PROFILE_DIR || 'browser-automation/profile';
+  const headless = process.env.HUANXIN_HEADLESS !== '0';
+  const launch = headless
+    ? await launchPersistentContext(profileDir)
+    : {
+        context: await chromium.launchPersistentContext(profileDir, {
+          headless: false,
+          executablePath: chromium.executablePath(),
+          viewport: { width: 1600, height: 1000 },
+        }),
+      };
+  const context = launch.context;
 
   const page = context.pages()[0] || (await context.newPage());
   await page.goto(

@@ -6,12 +6,12 @@ S3_ROOT="nm-aihuanxin:jtdlp-3ed7854b946a47b1a49ad754baa76cd3/quantum-qwen25-code
 
 cd "$ROOT_DIR"
 
-RCLONE_CMD="rclone sync $S3_ROOT /root/root/work/quantum-gpt --exclude 'outputs/**' --progress"
+RCLONE_CMD="rclone sync $S3_ROOT /root/root/work/quantum-gpt --exclude 'outputs/**' --exclude 'models/**' --exclude 'artifacts/**' --exclude 'memory/**' --exclude 'logs/**' --exclude 'browser-automation/profile/**' --exclude 'browser-automation/*.png' --exclude 'browser-automation/*.html' --exclude 'browser-automation/*.json' --progress"
 if [[ "${1:-}" == "--dry-run" ]]; then
   RCLONE_CMD+=" --dry-run"
 fi
 
-JSON_OUT="$(scripts/ai2_shell.sh "$RCLONE_CMD")"
+JSON_OUT="$(bash scripts/ai2_shell.sh "$RCLONE_CMD")"
 
 python3 - <<'PY' "$JSON_OUT"
 import json

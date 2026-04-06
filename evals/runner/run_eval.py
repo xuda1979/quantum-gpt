@@ -11,6 +11,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+try:
+    from evals.runner.task_metadata import resolve_test_path
+except ModuleNotFoundError:  # pragma: no cover - script execution path
+    from task_metadata import resolve_test_path
+
 ROOT = Path(__file__).resolve().parents[2]
 TASKS_ROOT = ROOT / "evals" / "tasks"
 
@@ -104,10 +109,12 @@ def run_task(task_json_path: Path, candidate_overrides: dict[str, Path] | None =
     task_dir = task_json_path.parent
     metadata = load_json(task_json_path)
     override_path = (candidate_overrides or {}).get(metadata["id"])
-    test_path = task_dir / metadata["test_file"]
-    candidate_paths, source = resolve_candidate_paths(metadata, task_dir, override_path)
+    candidate_paths: dict[str, Path] = {}
+    source = "override" if override_path else "reference"
 
     try:
+        test_path = resolve_test_path(task_dir, metadata)
+        candidate_paths, source = resolve_candidate_paths(metadata, task_dir, override_path)
         module = load_test_module(test_path)
         if metadata.get("candidate_files"):
             result = run_workspace_task(module, task_dir, metadata, candidate_paths)
@@ -133,7 +140,7 @@ def run_task(task_json_path: Path, candidate_overrides: dict[str, Path] | None =
         "name": metadata["name"],
         "passed": passed,
         "details": details,
-        "candidate_path": str(next(iter(candidate_paths.values()))),
+        "candidate_path": str(next(iter(candidate_paths.values()))) if candidate_paths else str(override_path or ""),
         "candidate_paths": {relative: str(path) for relative, path in candidate_paths.items()},
         "workspace_mode": bool(metadata.get("candidate_files")),
         "source": source,

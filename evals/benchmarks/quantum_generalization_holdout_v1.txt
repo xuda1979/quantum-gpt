@@ -1,0 +1,9 @@
+# Strict unseen quantum generalization benchmark.
+# These tasks are held out of the training split used by
+# data/generated/omnicoder-quantum-generalization-holdout-v1.
+# Use this file when measuring task-level generalization to the unseen
+# quantum holdout rather than training-distribution recall.
+quantum_gate_alias_normalization
+quantum_phase_estimation_circuit
+quantum_qaoa_maxcut
+quantum_superdense_coding

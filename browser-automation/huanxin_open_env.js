@@ -1,5 +1,5 @@
-const { chromium } = require('playwright');
 const { ensureProfileDir } = require('./huanxin_profile');
+const { launchPersistentContext } = require('./huanxin_browser_launch');
 
 function usage() {
   console.error('Usage: node huanxin_open_env.js <envName> [--click-text <text>]');
@@ -42,15 +42,19 @@ async function clickByVisibleText(page, text) {
 async function main() {
   const { envName, clickText } = parseArgs(process.argv.slice(2));
 
-  const headless = process.env.HUANXIN_HEADLESS === '1';
+  const headless = process.env.HUANXIN_HEADLESS !== '0';
   const holdOpen = process.env.HUANXIN_HOLD_OPEN === '1';
 
   const { profileDir } = ensureProfileDir();
-  const context = await chromium.launchPersistentContext(profileDir, {
-    headless,
-    viewport: { width: 1600, height: 1000 },
-    slowMo: 50,
-  });
+  const launch = headless
+    ? await launchPersistentContext(profileDir)
+    : { context: await require('playwright').chromium.launchPersistentContext(profileDir, {
+        headless,
+        executablePath: require('playwright').chromium.executablePath(),
+        viewport: { width: 1600, height: 1000 },
+        slowMo: 50,
+      }) };
+  const context = launch.context;
 
   const page = context.pages()[0] || (await context.newPage());
   page.setDefaultTimeout(30000);

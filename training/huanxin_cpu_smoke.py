@@ -36,6 +36,94 @@ def load_model_config_metadata(model_name: str) -> dict:
     return config_dict
 
 
+def load_tokenizer_config_metadata(model_name: str) -> dict:
+    tokenizer_config_path = Path(model_name) / "tokenizer_config.json"
+    if not tokenizer_config_path.exists():
+        return {}
+    return json.loads(tokenizer_config_path.read_text(encoding="utf-8"))
+
+
+def runtime_requires_qwen35_upgrade(model_name: str, auto_config_cls: object) -> tuple[dict, Exception | None]:
+    config_dict = load_model_config_metadata(model_name)
+    model_type = config_dict.get("model_type")
+    architectures = config_dict.get("architectures")
+    summary = {
+        "config_model_type": model_type,
+        "config_architectures": architectures,
+        "runtime_autoconfig_ok": False,
+    }
+    runtime_error: Exception | None = None
+    try:
+        runtime_config = auto_config_cls.from_pretrained(model_name, trust_remote_code=True)
+        summary["runtime_autoconfig_ok"] = True
+        summary["runtime_config_class"] = runtime_config.__class__.__name__
+    except Exception as exc:  # noqa: BLE001
+        runtime_error = exc
+        summary["runtime_autoconfig_error_type"] = type(exc).__name__
+        summary["runtime_autoconfig_error"] = str(exc)
+    return summary, runtime_error
+
+
+def load_text_backend(
+    model_name: str,
+    auto_tokenizer_cls: object,
+    auto_processor_cls: object,
+    pretrained_tokenizer_fast_cls: object,
+) -> tuple[object, dict[str, object]]:
+    processor_error: Exception | None = None
+    try:
+        processor = auto_processor_cls.from_pretrained(model_name, trust_remote_code=True)
+        tokenizer = getattr(processor, "tokenizer", None)
+        if tokenizer is not None:
+            return tokenizer, {
+                "tokenizer_loader": "AutoProcessor.tokenizer",
+                "processor_class": processor.__class__.__name__,
+                "tokenizer_class": tokenizer.__class__.__name__,
+            }
+    except Exception as exc:  # noqa: BLE001
+        processor_error = exc
+
+    try:
+        tokenizer = auto_tokenizer_cls.from_pretrained(model_name, trust_remote_code=True)
+        return tokenizer, {
+            "tokenizer_loader": "AutoTokenizer",
+            "tokenizer_class": tokenizer.__class__.__name__,
+        }
+    except Exception as exc:  # noqa: BLE001
+        tokenizer_config = load_tokenizer_config_metadata(model_name)
+        tokenizer_path = Path(model_name) / "tokenizer.json"
+        if tokenizer_config.get("tokenizer_class") == "TokenizersBackend" and tokenizer_path.exists():
+            additional_special_tokens = []
+            for key in (
+                "image_token",
+                "video_token",
+                "vision_bos_token",
+                "vision_eos_token",
+                "audio_bos_token",
+                "audio_eos_token",
+                "audio_token",
+            ):
+                value = tokenizer_config.get(key)
+                if value and value not in additional_special_tokens:
+                    additional_special_tokens.append(value)
+            tokenizer = pretrained_tokenizer_fast_cls(
+                tokenizer_file=str(tokenizer_path),
+                pad_token=tokenizer_config.get("pad_token"),
+                eos_token=tokenizer_config.get("eos_token"),
+                additional_special_tokens=additional_special_tokens or None,
+                clean_up_tokenization_spaces=bool(tokenizer_config.get("clean_up_tokenization_spaces", False)),
+                model_max_length=int(tokenizer_config.get("model_max_length", 262144)),
+            )
+            return tokenizer, {
+                "tokenizer_loader": "PreTrainedTokenizerFast",
+                "tokenizer_class": tokenizer.__class__.__name__,
+            }
+        error_parts = [f"AutoTokenizer failed: {type(exc).__name__}: {exc}"]
+        if processor_error is not None:
+            error_parts.append(f"AutoProcessor fallback failed: {type(processor_error).__name__}: {processor_error}")
+        raise RuntimeError("Unable to load a text tokenizer backend. " + " | ".join(error_parts)) from exc
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--model-name", required=True, help="HF model id or local path")
@@ -145,7 +233,7 @@ def main() -> int:
 
     try:
         import torch
-        from transformers import AutoModelForCausalLM, AutoTokenizer
+        from transformers import AutoConfig, AutoModelForCausalLM, AutoProcessor, AutoTokenizer, PreTrainedTokenizerFast
     except Exception as exc:
         summary["stage"] = "runtime_imports"
         summary["status"] = "error"
@@ -165,19 +253,16 @@ def main() -> int:
         return 1
 
     try:
-        config_dict = load_model_config_metadata(args.model_name)
-        summary["config_model_type"] = config_dict.get("model_type")
-        summary["config_architectures"] = config_dict.get("architectures")
-        if summary["config_model_type"] == "qwen3_5" or any(
-            "ConditionalGeneration" in str(item) for item in (summary["config_architectures"] or [])
-        ):
+        runtime_summary, runtime_error = runtime_requires_qwen35_upgrade(args.model_name, AutoConfig)
+        summary.update(runtime_summary)
+        if summary["config_model_type"] == "qwen3_5" and runtime_error is not None:
             summary["stage"] = "runtime_compat"
             summary["status"] = "error"
-            summary["error_type"] = "UnsupportedModelArchitecture"
+            summary["error_type"] = type(runtime_error).__name__
             summary["error"] = (
-                "Current smoke path only supports text-only AutoTokenizer + AutoModelForCausalLM checkpoints. "
-                "This target exposes a qwen3_5 conditional-generation architecture and needs a newer "
-                "Transformers runtime plus a processor-aware path before remote fine-tuning."
+                "The active Transformers runtime is too old for this Qwen3.5-family checkpoint. "
+                "Upgrade the bootstrap stack to a Qwen3.5-capable Transformers build before remote fine-tuning. "
+                f"Underlying error: {runtime_error}"
             )
             print(json.dumps(summary, indent=2, ensure_ascii=False))
             return 1
@@ -190,8 +275,10 @@ def main() -> int:
         return 1
 
     try:
-        tokenizer = AutoTokenizer.from_pretrained(args.model_name, trust_remote_code=True)
-        summary["tokenizer_class"] = tokenizer.__class__.__name__
+        tokenizer, tokenizer_summary = load_text_backend(
+            args.model_name, AutoTokenizer, AutoProcessor, PreTrainedTokenizerFast
+        )
+        summary.update(tokenizer_summary)
         summary["tokenizer_vocab_size"] = getattr(tokenizer, "vocab_size", None)
         if tokenizer.pad_token is None and tokenizer.eos_token is not None:
             tokenizer.pad_token = tokenizer.eos_token

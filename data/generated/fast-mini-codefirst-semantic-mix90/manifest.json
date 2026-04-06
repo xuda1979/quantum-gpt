@@ -1,0 +1,47 @@
+{
+  "manifest_version": "fast-mini-mix-v1",
+  "codefirst_dir": "data/generated/fast-mini-codefirst",
+  "semantic_dir": "data/generated/fast-mini-interface-prefix-semantic-v4",
+  "out_dir": "data/generated/fast-mini-codefirst-semantic-mix90",
+  "semantic_ratio": 0.9,
+  "seed_tag": "mix-v1",
+  "prompt_variant": "codefirst-semantic-mix-r90-v1",
+  "splits": {
+    "train": {
+      "count": 160,
+      "sources": {
+        "codefirst": 18,
+        "semantic": 142
+      },
+      "domains_by_source": {
+        "codefirst": {
+          "quantum": 9,
+          "software": 9
+        },
+        "semantic": {
+          "quantum": 81,
+          "software": 61
+        }
+      },
+      "path": "data/generated/fast-mini-codefirst-semantic-mix90/train.jsonl"
+    },
+    "eval": {
+      "count": 32,
+      "sources": {
+        "codefirst": 5,
+        "semantic": 27
+      },
+      "domains_by_source": {
+        "codefirst": {
+          "software": 2,
+          "quantum": 3
+        },
+        "semantic": {
+          "software": 15,
+          "quantum": 12
+        }
+      },
+      "path": "data/generated/fast-mini-codefirst-semantic-mix90/eval.jsonl"
+    }
+  }
+}

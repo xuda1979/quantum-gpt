@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import copy
 from dataclasses import dataclass
 import hashlib
 import json
@@ -24,6 +25,8 @@ try:
 except Exception:  # noqa: BLE001
     def elastic_record(function: Any) -> Any:
         return function
+
+from training.research_plugins import load_research_methods, summarize_methods
 
 
 @dataclass
@@ -105,6 +108,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--lora-dropout", type=float, default=0.05)
     parser.add_argument("--load-in-8bit", action="store_true")
     parser.add_argument("--train-on-completions-only", action="store_true")
+    parser.add_argument("--research-methods", nargs="*", default=[])
     parser.add_argument("--overwrite-output-dir", action="store_true")
     parser.add_argument("--allow-output-dir-reuse", action="store_true")
     parser.add_argument(
@@ -275,11 +279,23 @@ def render_messages(render_backend: Any, record: dict) -> str:
 
 
 class ChatSftDataset:
-    def __init__(self, path: Path, backend: TextPreprocessorBackend, max_length: int, train_on_completions_only: bool = False) -> None:
+    def __init__(
+        self,
+        path: Path,
+        backend: TextPreprocessorBackend,
+        max_length: int,
+        train_on_completions_only: bool = False,
+        research_methods: list[Any] | None = None,
+        stage: str = "sft",
+    ) -> None:
         rows = load_jsonl(path)
         self.examples = []
+        research_methods = research_methods or []
         for record in rows:
-            full_text = render_messages(backend.render_backend, record)
+            working_record = copy.deepcopy(record)
+            for method in research_methods:
+                working_record = method.augment_sft_record(working_record, stage=stage)
+            full_text = render_messages(backend.render_backend, working_record)
             encoded = backend.text_backend(
                 full_text,
                 truncation=True,
@@ -290,10 +306,10 @@ class ChatSftDataset:
             example = {
                 "input_ids": encoded["input_ids"],
                 "attention_mask": encoded["attention_mask"],
-                "example_id": record.get("example_id"),
+                "example_id": working_record.get("example_id"),
             }
             if train_on_completions_only:
-                messages = record.get("messages", [])
+                messages = working_record.get("messages", [])
                 if len(messages) >= 2 and messages[-1].get("role") == "assistant":
                     prompt_text = render_messages(backend.render_backend, {"messages": messages[:-1]})
                     prompt_ids = backend.text_backend(
@@ -368,6 +384,7 @@ def build_run_signature(args: argparse.Namespace) -> dict[str, Any]:
         "lora_dropout": args.lora_dropout,
         "load_in_8bit": args.load_in_8bit,
         "train_on_completions_only": args.train_on_completions_only,
+        "research_methods": list(args.research_methods),
         "target_modules": list(args.target_modules),
     }
     signature_json = json.dumps(signature, sort_keys=True)
@@ -407,7 +424,9 @@ def main() -> int:
     args.output_dir.mkdir(parents=True, exist_ok=True)
     run_signature = build_run_signature(args)
     validate_output_dir(args, run_signature)
+    research_methods = load_research_methods(args.research_methods)
     print(json.dumps({"stage": "args_parsed", "output_dir": str(args.output_dir), "train_file": str(args.train_file), "eval_file": str(args.eval_file) if args.eval_file else None}, ensure_ascii=False), flush=True)
+    print(json.dumps({"stage": "research_methods_loaded", "methods": summarize_methods(research_methods)}, ensure_ascii=False), flush=True)
 
     (
         torch,
@@ -478,8 +497,22 @@ def main() -> int:
     tokenizer.padding_side = "right"
     print(json.dumps({"stage": "tokenizer_loaded", "pad_token": tokenizer.pad_token, "padding_side": tokenizer.padding_side}, ensure_ascii=False), flush=True)
 
-    train_dataset = ChatSftDataset(args.train_file, text_preprocessor, args.max_length, train_on_completions_only=args.train_on_completions_only)
-    eval_dataset = ChatSftDataset(args.eval_file, text_preprocessor, args.max_length, train_on_completions_only=args.train_on_completions_only) if args.eval_file else None
+    train_dataset = ChatSftDataset(
+        args.train_file,
+        text_preprocessor,
+        args.max_length,
+        train_on_completions_only=args.train_on_completions_only,
+        research_methods=research_methods,
+        stage="sft_train",
+    )
+    eval_dataset = ChatSftDataset(
+        args.eval_file,
+        text_preprocessor,
+        args.max_length,
+        train_on_completions_only=args.train_on_completions_only,
+        research_methods=research_methods,
+        stage="sft_eval",
+    ) if args.eval_file else None
     print(json.dumps({"stage": "datasets_ready", "train_examples": len(train_dataset), "eval_examples": len(eval_dataset) if eval_dataset is not None else 0, "max_length": args.max_length}, ensure_ascii=False), flush=True)
 
     collator = PaddingCollator(text_preprocessor.text_backend)
@@ -675,6 +708,7 @@ def main() -> int:
             "requested_max_steps": args.max_steps,
             "completed_steps": global_step,
             "max_steps": global_step,
+            "research_methods": summarize_methods(research_methods),
             "final_eval": final_eval,
             "metrics": metrics,
         }

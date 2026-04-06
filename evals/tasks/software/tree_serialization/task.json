@@ -1,0 +1,8 @@
+{
+  "id": "software_tree_serialization",
+  "name": "N-ary tree serialization and deserialization",
+  "domain": "software",
+  "category": "data_structures",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

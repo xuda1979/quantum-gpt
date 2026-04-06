@@ -45,6 +45,7 @@ from training.grpo_utils import (  # noqa: E402
     build_grpo_step_record,
     build_reward_breakdown,
     estimate_detail_budget,
+    extract_behavior_hints_from_test_source,
     load_grpo_step_metrics_jsonl,
     reward_signal_stats,
     stable_grpo_loss,
@@ -181,36 +182,7 @@ def load_test_harness(tests_py: Path):
 def extract_behavior_hints(tests_path: Path) -> list[str]:
     if not tests_path.exists():
         return []
-    hints: list[str] = []
-    for raw_line in tests_path.read_text(encoding="utf-8").splitlines():
-        line = raw_line.strip()
-        if not line:
-            continue
-        if line.startswith("# Test "):
-            comment = line.lstrip("#").strip()
-            if len(comment) >= 12:
-                hints.append(comment)
-            continue
-        marker = None
-        if "failures.append(" in line:
-            marker = "failures.append("
-        elif "details.append(" in line:
-            marker = "details.append("
-        if marker is None:
-            continue
-        expr = line.split(marker, 1)[1].rstrip(")")
-        try:
-            value = eval(expr, {"__builtins__": {}}, {})
-        except Exception:
-            continue
-        if not isinstance(value, str) or not value:
-            continue
-        normalized = " ".join(value.split())
-        if normalized not in hints:
-            hints.append(normalized)
-        if len(hints) >= 6:
-            break
-    return hints
+    return extract_behavior_hints_from_test_source(tests_path.read_text(encoding="utf-8"), cap=6)
 
 
 def summarize_candidate_interface(candidate_path: Path) -> list[str]:

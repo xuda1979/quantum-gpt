@@ -63,7 +63,7 @@ print(base64.b64encode(data).decode("ascii"))
 print("__HX_FETCH_END__")
 """
 print(
-    "cd /root/root/work/quantum-gpt && python3 -c "
+    "python3 -c "
     + shlex.quote(code)
     + " "
     + shlex.quote(remote_path)
@@ -73,16 +73,10 @@ print(
 PY
 )"
 
-if ! JSON_OUT="$(
+JSON_OUT="$(
   HUANXIN_USE_DAEMON=1 HUANXIN_WAIT_MS="$WAIT_MS" \
     "$ROOT_DIR/scripts/huanxin_shell.sh" "$ENV_NAME" "$REMOTE_CMD"
-)"; then
-  echo "[huanxin_fetch_small_file] daemon fetch failed; retrying once with standalone transport" >&2
-  JSON_OUT="$(
-    HUANXIN_USE_DAEMON=0 HUANXIN_WAIT_MS="$WAIT_MS" \
-      "$ROOT_DIR/scripts/huanxin_shell.sh" "$ENV_NAME" "$REMOTE_CMD"
-  )"
-fi
+)"
 
 python3 - <<'PY' "$JSON_OUT" "$ENV_NAME" "$REMOTE_PATH" "$LOCAL_PATH" "$MAX_BYTES"
 import base64
@@ -102,22 +96,17 @@ if not payload.get("ok"):
     raise SystemExit(f"Huanxin shell command failed: {payload}")
 
 combined = "\n".join(str(payload.get(key, "")) for key in ("output", "after", "before"))
-lines = [line.strip() for line in combined.splitlines()]
-
-def has_exact_line(marker: str) -> bool:
-    return any(line == marker for line in lines)
-
-if has_exact_line("__HX_FETCH_MISSING__"):
+if "__HX_FETCH_MISSING__" in combined:
     raise SystemExit(f"Remote file does not exist on {env_name}: {remote_path}")
-if has_exact_line("__HX_FETCH_TOO_LARGE__"):
-    size_match = re.search(r"^__HX_FETCH_SIZE__ (\d+)$", combined, re.M)
+if "__HX_FETCH_TOO_LARGE__" in combined:
+    size_match = re.search(r"__HX_FETCH_SIZE__ (\d+)", combined)
     size_text = size_match.group(1) if size_match else "unknown"
     raise SystemExit(
         f"Remote file exceeds limit on {env_name}: {remote_path} (size={size_text}, max_bytes={max_bytes})"
     )
 
-size_match = re.search(r"^__HX_FETCH_SIZE__ (\d+)$", combined, re.M)
-sha_match = re.search(r"^__HX_FETCH_SHA256__ ([0-9a-f]{64})$", combined, re.M)
+size_match = re.search(r"__HX_FETCH_SIZE__ (\d+)", combined)
+sha_match = re.search(r"__HX_FETCH_SHA256__ ([0-9a-f]{64})", combined)
 blob_match = re.search(r"__HX_FETCH_BEGIN__\n(.*?)\n__HX_FETCH_END__", combined, re.S)
 if size_match is None or sha_match is None or blob_match is None:
     raise SystemExit(f"Did not observe complete fetch markers for {remote_path} on {env_name}")

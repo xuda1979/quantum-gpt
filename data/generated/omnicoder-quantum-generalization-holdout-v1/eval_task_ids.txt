@@ -1,0 +1,4 @@
+quantum_gate_alias_normalization
+quantum_phase_estimation_circuit
+quantum_qaoa_maxcut
+quantum_superdense_coding

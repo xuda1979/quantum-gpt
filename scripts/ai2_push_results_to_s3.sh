@@ -14,16 +14,26 @@ fi
 
 REMOTE_PATHS=("$@")
 if [[ ${#REMOTE_PATHS[@]} -eq 0 ]]; then
-  REMOTE_PATHS=(outputs models)
+  REMOTE_PATHS=(outputs)
 fi
 
 for remote_path in "${REMOTE_PATHS[@]}"; do
-  REMOTE_CMD="cd /root/root/work/quantum-gpt && if [[ -e '$remote_path' ]]; then rclone copy '$remote_path' '$S3_ROOT/$remote_path' --s3-no-check-bucket --progress"
+  remote_parent="$(dirname "$remote_path")"
+  if [[ "$remote_parent" == "." ]]; then
+    remote_file_dest="$S3_ROOT"
+  else
+    remote_file_dest="$S3_ROOT/$remote_parent"
+  fi
+  REMOTE_CMD="cd /root/root/work/quantum-gpt && if [[ -d '$remote_path' ]]; then rclone copy '$remote_path' '$S3_ROOT/$remote_path' --s3-no-check-bucket --progress"
+  if [[ $DRY_RUN -eq 1 ]]; then
+    REMOTE_CMD+=" --dry-run"
+  fi
+  REMOTE_CMD+="; elif [[ -f '$remote_path' ]]; then rclone copy '$remote_path' '$remote_file_dest' --s3-no-check-bucket --progress"
   if [[ $DRY_RUN -eq 1 ]]; then
     REMOTE_CMD+=" --dry-run"
   fi
   REMOTE_CMD+="; else echo 'skip missing: $remote_path'; fi"
-  JSON_OUT="$(scripts/ai2_shell.sh "$REMOTE_CMD")"
+  JSON_OUT="$(bash scripts/ai2_shell.sh "$REMOTE_CMD")"
   python3 - <<'PY' "$JSON_OUT"
 import json
 import sys

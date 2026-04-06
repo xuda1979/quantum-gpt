@@ -1,7 +1,8 @@
 const { execFileSync } = require('child_process');
 const path = require('path');
-const { chromium } = require('playwright');
 const { ensureProfileDir } = require('./huanxin_profile');
+const { chromium } = require('playwright');
+const { launchPersistentContext } = require('./huanxin_browser_launch');
 const { openShell, readTerminalText, sendCommand } = require('./huanxin_shell_exec');
 
 function usage() {
@@ -72,11 +73,16 @@ async function main() {
   const remoteBaseName = '/tmp/huanxin-quantum-gpt-upload';
 
   const { profileDir } = ensureProfileDir();
-  const context = await chromium.launchPersistentContext(profileDir, {
-    headless: process.env.HUANXIN_HEADLESS === '1',
-    viewport: { width: 1600, height: 1000 },
-    slowMo: 50,
-  });
+  const headless = process.env.HUANXIN_HEADLESS !== '0';
+  const launch = headless
+    ? await launchPersistentContext(profileDir)
+    : { context: await chromium.launchPersistentContext(profileDir, {
+        headless: false,
+        executablePath: chromium.executablePath(),
+        viewport: { width: 1600, height: 1000 },
+        slowMo: 50,
+      }) };
+  const context = launch.context;
 
   try {
     const page = context.pages()[0] || (await context.newPage());

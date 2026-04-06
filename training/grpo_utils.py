@@ -247,6 +247,64 @@ def estimate_detail_budget(test_source: str, cap: int = 8) -> int:
     return max(1, min(cap, count or 1))
 
 
+def _append_message_template(node: ast.AST) -> str | None:
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return node.value
+    if isinstance(node, ast.JoinedStr):
+        parts: list[str] = []
+        for value in node.values:
+            if isinstance(value, ast.Constant) and isinstance(value.value, str):
+                parts.append(value.value)
+            elif isinstance(value, ast.FormattedValue):
+                parts.append("{value}")
+        return "".join(parts)
+    return None
+
+
+def extract_behavior_hints_from_test_source(test_source: str, cap: int = 8) -> list[str]:
+    if not test_source.strip():
+        return []
+
+    hints: list[str] = []
+
+    for raw_line in test_source.splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        if line.startswith("# Test "):
+            comment = line.lstrip("#").strip()
+            if len(comment) >= 12 and comment not in hints:
+                hints.append(comment)
+
+    try:
+        tree = ast.parse(test_source)
+    except Exception:
+        tree = None
+
+    if tree is not None:
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+            if not isinstance(node.func, ast.Attribute) or node.func.attr != "append":
+                continue
+            if not isinstance(node.func.value, ast.Name):
+                continue
+            if node.func.value.id not in {"failures", "details", "error_failures"}:
+                continue
+            if not node.args:
+                continue
+            template = _append_message_template(node.args[0])
+            if not template:
+                continue
+            normalized = " ".join(template.split())
+            if normalized and normalized not in hints:
+                hints.append(normalized)
+            if len(hints) >= cap:
+                break
+
+    return hints[:cap]
+
+
 def _normalize_signature(signature: str) -> str:
     return re.sub(r"\s+", "", signature.strip().lower())
 

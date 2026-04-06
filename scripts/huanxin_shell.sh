@@ -66,7 +66,6 @@ daemon_port_file_ready() {
 }
 
 start_daemon_if_needed() {
-  local launch_pid=""
   if daemon_health_ok; then
     if ! daemon_port_file_ready; then
       printf '%s' "$DEFAULT_PORT" > "$DAEMON_PORT_FILE"
@@ -77,7 +76,6 @@ start_daemon_if_needed() {
   echo "[huanxin_shell:$ENV_NAME] Starting browser daemon..." >&2
   HUANXIN_PROFILE_COPY_NAME="$PROFILE_COPY_NAME" HUANXIN_HEADLESS="${HUANXIN_HEADLESS}" \
     nohup node browser-automation/huanxin_browser_daemon.js "$ENV_NAME" > "$DAEMON_LOG_FILE" 2>&1 &
-  launch_pid="$!"
 
   for _ in $(seq 1 30); do
     if daemon_health_ok; then
@@ -90,13 +88,6 @@ start_daemon_if_needed() {
         echo "[huanxin_shell:$ENV_NAME] Daemon ready" >&2
       fi
       return 0
-    fi
-    if [[ -n "$launch_pid" ]] && ! kill -0 "$launch_pid" 2>/dev/null; then
-      echo "[huanxin_shell:$ENV_NAME] Daemon exited before becoming healthy; falling back to standalone browser execution." >&2
-      if [[ -f "$DAEMON_LOG_FILE" ]]; then
-        tail -n 40 "$DAEMON_LOG_FILE" >&2 || true
-      fi
-      return 1
     fi
     sleep 2
   done
@@ -117,7 +108,7 @@ else
   else
     echo "[huanxin_shell:$ENV_NAME] Using standalone transport." >&2
   fi
-  JSON_OUT="$(node browser-automation/huanxin_shell_exec.js "$ENV_NAME" --skip-daemon --wait-ms "$WAIT_MS" --command "$REMOTE_CMD")"
+  JSON_OUT="$(node browser-automation/huanxin_shell_exec.js "$ENV_NAME" --wait-ms "$WAIT_MS" --command "$REMOTE_CMD")"
 fi
 
 python3 - <<'PY' "$JSON_OUT" "$ENV_NAME" "$*" "$RUN_MARKER"

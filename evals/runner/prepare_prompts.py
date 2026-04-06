@@ -6,6 +6,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+try:
+    from evals.runner.task_metadata import resolve_test_path
+except ModuleNotFoundError:  # pragma: no cover - script execution path
+    from task_metadata import resolve_test_path
+
 ROOT = Path(__file__).resolve().parents[2]
 TASKS_ROOT = ROOT / "evals" / "tasks"
 RUNS_ROOT = ROOT / "evals" / "runs"
@@ -49,6 +54,18 @@ def discover_tasks() -> list[Path]:
     return sorted(TASKS_ROOT.glob("*/*/task.json"))
 
 
+def load_task_id_file(path: Path | None) -> list[str]:
+    if path is None:
+        return []
+    task_ids: list[str] = []
+    for raw_line in path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+        task_ids.append(line)
+    return task_ids
+
+
 def load_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text())
 
@@ -59,7 +76,7 @@ def sanitize_text(text: str) -> str:
 
 def build_user_prompt(task_dir: Path, metadata: dict[str, Any], prompt_style: str) -> str:
     reference_candidate = sanitize_text((task_dir / metadata["candidate_file"]).read_text())
-    tests_source = sanitize_text((task_dir / metadata["test_file"]).read_text())
+    tests_source = sanitize_text(resolve_test_path(task_dir, metadata).read_text())
     style = PROMPT_STYLES[prompt_style]
 
     return (
@@ -79,6 +96,22 @@ def build_user_prompt(task_dir: Path, metadata: dict[str, Any], prompt_style: st
     )
 
 
+def select_task_files(task_files: list[Path], requested_task_ids: list[str]) -> list[Path]:
+    if not requested_task_ids:
+        return task_files
+
+    task_by_id: dict[str, Path] = {}
+    for task_json in task_files:
+        metadata = load_json(task_json)
+        task_by_id[metadata["id"]] = task_json
+
+    missing = [task_id for task_id in requested_task_ids if task_id not in task_by_id]
+    if missing:
+        raise SystemExit(f"Unknown task ids requested: {missing}")
+
+    return [task_by_id[task_id] for task_id in requested_task_ids]
+
+
 def create_run_dir(run_name: str | None) -> Path:
     if run_name:
         run_id = run_name
@@ -89,7 +122,7 @@ def create_run_dir(run_name: str | None) -> Path:
     return run_dir
 
 
-def write_run_artifacts(run_dir: Path, prompt_style: str, notes: str | None) -> None:
+def write_run_artifacts(run_dir: Path, prompt_style: str, notes: str | None, task_files: list[Path]) -> None:
     prompts_dir = run_dir / "prompts"
     candidates_dir = run_dir / "candidates"
     prompts_dir.mkdir(parents=True, exist_ok=True)
@@ -106,7 +139,7 @@ def write_run_artifacts(run_dir: Path, prompt_style: str, notes: str | None) -> 
         "tasks": [],
     }
 
-    for task_json in discover_tasks():
+    for task_json in task_files:
         task_dir = task_json.parent
         metadata = load_json(task_json)
         prompt_text = build_user_prompt(task_dir, metadata, prompt_style)
@@ -153,11 +186,25 @@ def parse_args() -> argparse.Namespace:
         help="Prompt style variant to materialize for this run.",
     )
     parser.add_argument("--notes", default=None, help="Optional free-text note recorded in manifest.json.")
+    parser.add_argument(
+        "--task-id",
+        action="append",
+        default=[],
+        help="Repeat to materialize only a fixed subset of task ids, in the order provided.",
+    )
+    parser.add_argument(
+        "--task-id-file",
+        type=Path,
+        default=None,
+        help="Optional newline-delimited task id file. Comments starting with # are ignored.",
+    )
     return parser.parse_args()
 
 
 if __name__ == "__main__":
     args = parse_args()
+    requested_task_ids = [*load_task_id_file(args.task_id_file), *args.task_id]
+    task_files = select_task_files(discover_tasks(), requested_task_ids)
     run_dir = create_run_dir(args.run_name)
-    write_run_artifacts(run_dir, prompt_style=args.prompt_style, notes=args.notes)
+    write_run_artifacts(run_dir, prompt_style=args.prompt_style, notes=args.notes, task_files=task_files)
     print(run_dir.relative_to(ROOT))

@@ -1,0 +1,9 @@
+{
+  "id": "quantum_error_detection_bit_flip",
+  "name": "Quantum Bit-Flip Error Detection",
+  "domain": "quantum",
+  "category": "debug_repair",
+  "description": "Fix a broken 3-qubit bit-flip repetition code that should encode a logical qubit, apply a syndrome measurement, and return the syndrome bits and corrected logical state.",
+  "task_prompt": "The function `bit_flip_code(initial_state, error_qubit)` should implement a 3-qubit bit-flip repetition code. It receives `initial_state` (0 or 1) for the logical qubit and `error_qubit` (0, 1, or 2) indicating which physical qubit gets a bit-flip error. It must return a dict with keys 'syndrome' (a 2-element list of ints) and 'corrected_state' (0 or 1, the recovered logical value). The current implementation has bugs in the syndrome extraction and correction logic. Fix them.",
+  "candidate_file": "candidate.py"
+}

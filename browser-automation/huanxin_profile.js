@@ -36,6 +36,15 @@ function shouldSkipEntry(sourcePath) {
   ].includes(name);
 }
 
+function copyProfileDir(baseProfileDir, targetDir) {
+  fs.mkdirSync(path.dirname(targetDir), { recursive: true });
+  fs.cpSync(baseProfileDir, targetDir, {
+    recursive: true,
+    force: true,
+    filter: (sourcePath) => !shouldSkipEntry(sourcePath),
+  });
+}
+
 function ensureProfileDir() {
   const baseProfileDir = getBaseProfileDir();
   const resolvedProfileDir = getRequestedProfileDir();
@@ -49,15 +58,19 @@ function ensureProfileDir() {
     throw new Error(`Base Huanxin profile does not exist: ${baseProfileDir}`);
   }
 
-  fs.rmSync(resolvedProfileDir, { recursive: true, force: true });
-  fs.mkdirSync(path.dirname(resolvedProfileDir), { recursive: true });
-  fs.cpSync(baseProfileDir, resolvedProfileDir, {
-    recursive: true,
-    force: true,
-    filter: (sourcePath) => !shouldSkipEntry(sourcePath),
-  });
+  let profileDir = resolvedProfileDir;
+  try {
+    fs.rmSync(profileDir, { recursive: true, force: true });
+    copyProfileDir(baseProfileDir, profileDir);
+  } catch (error) {
+    if (!error || !['ENOTEMPTY', 'EBUSY', 'EPERM'].includes(error.code)) {
+      throw error;
+    }
+    profileDir = fs.mkdtempSync(path.join(os.tmpdir(), `${path.basename(resolvedProfileDir)}-retry-`));
+    copyProfileDir(baseProfileDir, profileDir);
+  }
 
-  return { profileDir: resolvedProfileDir, isolated: true, sourceDir: baseProfileDir };
+  return { profileDir, isolated: true, sourceDir: baseProfileDir };
 }
 
 module.exports = {

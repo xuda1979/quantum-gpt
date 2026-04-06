@@ -8,100 +8,120 @@
     "val": 0.17,
     "test": 0.16
   },
-  "balance_key": "domain",
-  "min_per_balance_group": 1,
+  "balance_key": null,
+  "min_per_balance_group": 0,
   "auto_policy": {
-    "policy": "domain_balanced",
-    "flags": [
-      "--balance-key",
-      "domain",
-      "--min-per-balance-group",
-      "1"
-    ],
-    "reason": "Corpus is still tiny relative to the three-way split, so explicit domain coverage matters more than preserving nominal ratios."
+    "policy": "plain_hash",
+    "flags": [],
+    "reason": "The corpus is no longer tiny, but some task types are still too sparse for forced coverage across all three splits. Plain deterministic hashing is the least distortive default until those groups grow."
   },
   "splits": {
     "train": {
       "path": "data/seed/splits/train.jsonl",
       "summary": {
-        "count": 4,
+        "count": 18,
         "domains": {
-          "quantum": 2,
-          "software": 2
+          "quantum": 10,
+          "software": 8
         },
         "task_types": {
+          "implementation": 14,
           "repair": 3,
-          "refactor": 1
+          "test_writing": 1
         },
         "categories": {
-          "debug_repair": 2,
-          "stateful_logic": 1,
-          "refactor": 1
+          "circuit_optimization": 1,
+          "debug_repair": 3,
+          "api_normalization": 1,
+          "algorithm_implementation": 3,
+          "reasoning": 1,
+          "protocol_logic": 1,
+          "data_transforms": 1,
+          "api_quality": 1,
+          "test_writing": 1,
+          "stateful_logic": 3,
+          "design_pattern": 1,
+          "data_structures": 1
         },
         "difficulties": {
-          "easy": 2,
-          "medium": 2
+          "medium": 11,
+          "easy": 7
         }
       },
       "example_ids": [
+        "quantum_circuit_depth_opt_001",
+        "quantum_circuit_phase_repair_001",
+        "quantum_gate_alias_normalization_001",
         "quantum_measurement_repair_001",
+        "quantum_phase_estimation_001",
+        "quantum_qaoa_maxcut_001",
         "quantum_stabilizer_tableau_repair_001",
+        "quantum_superdense_coding_001",
+        "quantum_teleportation_corrections_001",
+        "quantum_vqe_energy_001",
+        "software_config_merge_001",
+        "software_docstring_contract_001",
+        "software_parser_tests_001",
         "software_patch_conflict_resolver_001",
-        "software_refactor_duplicate_logic_001"
+        "software_retry_decorator_001",
+        "software_session_event_log_001",
+        "software_session_window_summary_001",
+        "software_tree_serialization_001"
       ],
-      "count_written": 4
+      "count_written": 18
     },
     "val": {
       "path": "data/seed/splits/val.jsonl",
       "summary": {
         "count": 2,
         "domains": {
-          "quantum": 1,
-          "software": 1
+          "software": 2
         },
         "task_types": {
-          "implementation": 1,
-          "repair": 1
+          "repair": 1,
+          "refactor": 1
         },
         "categories": {
-          "circuit_construction": 1,
-          "bugfix": 1
+          "bugfix": 1,
+          "refactor": 1
         },
         "difficulties": {
           "easy": 2
         }
       },
       "example_ids": [
-        "quantum_bell_pair_001",
-        "software_bugfix_off_by_one_001"
+        "software_bugfix_off_by_one_001",
+        "software_refactor_duplicate_logic_001"
       ],
       "count_written": 2
     },
     "test": {
       "path": "data/seed/splits/test.jsonl",
       "summary": {
-        "count": 2,
+        "count": 3,
         "domains": {
-          "quantum": 1,
+          "quantum": 2,
           "software": 1
         },
         "task_types": {
-          "implementation": 1,
-          "test_writing": 1
+          "implementation": 3
         },
         "categories": {
-          "reasoning": 1,
-          "test_writing": 1
+          "circuit_construction": 1,
+          "algorithm_reasoning": 1,
+          "multifile_repair": 1
         },
         "difficulties": {
-          "easy": 2
+          "easy": 1,
+          "medium": 2
         }
       },
       "example_ids": [
-        "quantum_superdense_coding_001",
-        "software_parser_tests_001"
+        "quantum_bell_pair_001",
+        "quantum_qft_phase_pattern_001",
+        "software_multifile_patch_conflict_repair_001"
       ],
-      "count_written": 2
+      "count_written": 3
     }
   }
 }

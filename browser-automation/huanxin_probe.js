@@ -1,7 +1,8 @@
-const { chromium } = require('playwright');
 const path = require('path');
 const fs = require('fs');
 const { ensureProfileDir } = require('./huanxin_profile');
+const { chromium } = require('playwright');
+const { launchPersistentContext } = require('./huanxin_browser_launch');
 
 const HUANXIN_URL =
   'https://aihuanxin.cn/kunlun/kl-web?poolId=1&projectId=3ed7854b946a47b1a49ad754baa76cd3#/train-dev';
@@ -51,8 +52,13 @@ function parseArgs(argv) {
 async function launchContext(args) {
   if (args.persistent) {
     const profileInfo = ensureProfileDir();
+    if (args.headless === wantsHeadlessEquivalent()) {
+      const launch = await launchPersistentContext(profileInfo.profileDir);
+      return launch.context;
+    }
     return chromium.launchPersistentContext(profileInfo.profileDir, {
       headless: args.headless,
+      executablePath: chromium.executablePath(),
       slowMo: args.headless ? 0 : 50,
       viewport: { width: 1440, height: 900 },
     });
@@ -60,6 +66,10 @@ async function launchContext(args) {
 
   const browser = await chromium.launch({ headless: args.headless, slowMo: args.headless ? 0 : 50 });
   return browser.newContext({ viewport: { width: 1440, height: 900 } });
+}
+
+function wantsHeadlessEquivalent() {
+  return process.env.HUANXIN_HEADLESS !== '0';
 }
 
 function cleanText(value) {
