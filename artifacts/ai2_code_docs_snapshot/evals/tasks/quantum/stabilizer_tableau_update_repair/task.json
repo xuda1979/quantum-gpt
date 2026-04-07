@@ -1,0 +1,8 @@
+{
+  "id": "quantum_stabilizer_tableau_update_repair",
+  "name": "Stabilizer tableau single-qubit update repair",
+  "domain": "quantum",
+  "category": "debug_repair",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

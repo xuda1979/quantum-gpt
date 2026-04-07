@@ -1,0 +1,38 @@
+{
+  "created_at_utc": "2026-03-19T03:27:57.156061+00:00",
+  "label": "manual",
+  "workspace_root": "/Users/daxu/.openclaw/workspace-quantum-rnd",
+  "remote_root": "/root/root/work/quantum-gpt",
+  "files": [
+    {
+      "path": "evals/runner/run_eval.py",
+      "bytes": 8055,
+      "sha256": "4e5af4b12662555c2e8a5bdc4bd614bcbff2742a620de5d232755f9f1e8bb94f"
+    },
+    {
+      "path": "evals/tasks/quantum/bell_pair_construction/candidate.py",
+      "bytes": 145,
+      "sha256": "341f54978e98093d565b781b6be60a32f4c6332651706d7f48aab394b57dc616"
+    },
+    {
+      "path": "evals/tasks/quantum/bell_pair_construction/task.json",
+      "bytes": 205,
+      "sha256": "ef647b58991a1814491670a8c356dae609054e00025fdd3f2215257b9d0f37d8"
+    },
+    {
+      "path": "evals/tasks/quantum/bell_pair_construction/tests.py",
+      "bytes": 719,
+      "sha256": "d5774cad8df62e3586ce016170369cd6e15ee4256fa7898a30c6746da8ed1d36"
+    },
+    {
+      "path": "training/requirements-huanxin-cpu.txt",
+      "bytes": 373,
+      "sha256": "19119d3982552ad4d5d7adb24e5d72380d012da25120485b81b547723e2cf4ed"
+    },
+    {
+      "path": "data/seed/train.jsonl",
+      "bytes": 29161,
+      "sha256": "c24b06193dda084f7e27fdfcbe766eba5d4bebac866ce60f1c2548bfbd51be77"
+    }
+  ]
+}

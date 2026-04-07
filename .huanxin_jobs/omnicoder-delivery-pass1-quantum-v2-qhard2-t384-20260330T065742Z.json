@@ -1,0 +1,12 @@
+{
+  "job_id": "omnicoder-delivery-pass1-quantum-v2-qhard2-t384-20260330T065742Z",
+  "name": "omnicoder-delivery-pass1-quantum-v2-qhard2-t384",
+  "pid": 191507,
+  "log_path": "/tmp/omnicoder_delivery_pass1_quantum_v2_qhard2_t384_20260330.log",
+  "remote_root": "/root/root/work/quantum-gpt",
+  "command": "cd /root/root/work/quantum-gpt && rm -rf evals/runs/omnicoder-delivery-pass1-quantum-v2-qhard2-t384 && cp -r evals/runs/omnicoder-delivery-pass1-quantum-v2 evals/runs/omnicoder-delivery-pass1-quantum-v2-qhard2-t384 && rm -f evals/runs/omnicoder-delivery-pass1-quantum-v2-qhard2-t384/candidates/*.py evals/runs/omnicoder-delivery-pass1-quantum-v2-qhard2-t384/hf-pass1-generation-log.json evals/runs/omnicoder-delivery-pass1-quantum-v2-qhard2-t384/scorecard.json && ASCEND_RT_VISIBLE_DEVICES=6 python3 scripts/run_hf_pass1_eval.py --run-dir evals/runs/omnicoder-delivery-pass1-quantum-v2-qhard2-t384 --base-model models/OmniCoder-9B --adapter outputs/omnicoder9b-quantum-hard-v1-continue-true40-e2-20260330T142009CST/adapter --device npu --max-new-tokens 384 --score",
+  "created_at": "2026-03-30T06:58:14.747484+00:00",
+  "transport": "standalone",
+  "duration_ms": 30164,
+  "meta_file": "/Users/daxu/software/quantum-gpt/.huanxin_jobs/omnicoder-delivery-pass1-quantum-v2-qhard2-t384-20260330T065742Z.json"
+}

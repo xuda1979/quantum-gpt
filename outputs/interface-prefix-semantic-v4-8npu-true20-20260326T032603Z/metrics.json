@@ -1,0 +1,105 @@
+{
+  "model_name": "models/Qwen2.5-1.5B-Instruct",
+  "signature": {
+    "model_name": "models/Qwen2.5-1.5B-Instruct",
+    "train_file": "data/generated/fast-mini-interface-prefix-semantic-v4/train.jsonl",
+    "eval_file": "data/generated/fast-mini-interface-prefix-semantic-v4/eval.jsonl",
+    "device": "npu",
+    "max_length": 512,
+    "per_device_batch_size": 1,
+    "gradient_accumulation_steps": 2,
+    "learning_rate": 0.0002,
+    "num_epochs": 1,
+    "max_steps": 20,
+    "eval_steps": 10,
+    "log_steps": 1,
+    "lora_rank": 16,
+    "lora_alpha": 32,
+    "lora_dropout": 0.05,
+    "load_in_8bit": false,
+    "train_on_completions_only": false,
+    "target_modules": [
+      "q_proj",
+      "k_proj",
+      "v_proj",
+      "o_proj",
+      "gate_proj",
+      "up_proj",
+      "down_proj"
+    ],
+    "signature_sha256": "5c2a4ae00735f641b89d01d8b198da1da1fe94e63b3340780dc2a2258de8a5ab"
+  },
+  "device": "npu:0",
+  "world_size": 8,
+  "train_examples": 160,
+  "eval_examples": 32,
+  "max_steps": 10,
+  "final_eval": {
+    "loss": 0.834037946537137,
+    "perplexity": 2.30259776021535
+  },
+  "metrics": [
+    {
+      "step": 1,
+      "epoch": 1,
+      "train_loss": 3.2799081802368164,
+      "lr": 0.00019876883405951377
+    },
+    {
+      "step": 2,
+      "epoch": 1,
+      "train_loss": 1.6740213632583618,
+      "lr": 0.00019510565162951537
+    },
+    {
+      "step": 3,
+      "epoch": 1,
+      "train_loss": 2.0824673175811768,
+      "lr": 0.0001891006524188368
+    },
+    {
+      "step": 4,
+      "epoch": 1,
+      "train_loss": 1.2650203704833984,
+      "lr": 0.00018090169943749476
+    },
+    {
+      "step": 5,
+      "epoch": 1,
+      "train_loss": 1.5431312322616577,
+      "lr": 0.00017071067811865476
+    },
+    {
+      "step": 6,
+      "epoch": 1,
+      "train_loss": 1.3466482162475586,
+      "lr": 0.00015877852522924732
+    },
+    {
+      "step": 7,
+      "epoch": 1,
+      "train_loss": 1.3537664413452148,
+      "lr": 0.00014539904997395468
+    },
+    {
+      "step": 8,
+      "epoch": 1,
+      "train_loss": 0.8383325934410095,
+      "lr": 0.00013090169943749476
+    },
+    {
+      "step": 9,
+      "epoch": 1,
+      "train_loss": 0.9636026620864868,
+      "lr": 0.00011564344650402312
+    },
+    {
+      "step": 10,
+      "epoch": 1,
+      "train_loss": 0.8266464471817017,
+      "lr": 0.00010000000000000002,
+      "eval_loss": 0.8340379521250725,
+      "eval_perplexity": 2.3025977730821174
+    }
+  ]
+}

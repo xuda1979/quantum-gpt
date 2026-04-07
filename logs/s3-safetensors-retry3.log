@@ -1,0 +1,86 @@
+Transferred:   	          0 B / 0 B, -, 0 B/s, ETA -
+Elapsed time:         0.0sTransferred:   	          0 B / 0 B, -, 0 B/s, ETA -
+Elapsed time:         0.4sTransferred:   	          0 B / 0 B, -, 0 B/s, ETA -
+Elapsed time:         0.9sTransferred:   	          0 B / 0 B, -, 0 B/s, ETA -
+Elapsed time:         1.4sTransferred:   	          0 B / 0 B, -, 0 B/s, ETA -
+Elapsed time:         1.9sTransferred:   	          0 B / 0 B, -, 0 B/s, ETA -
+Elapsed time:         2.4sTransferred:   	          0 B / 0 B, -, 0 B/s, ETA -
+Elapsed time:         2.9sTransferred:   	          0 B / 2.875 GiB, 0%, 0 B/s, ETA -
+Transferred:            0 / 1, 0%
+Elapsed time:         3.4s
+Transferring:
+ *                             model.safetensors:  0% /2.875Gi, 0/s, -
+2026/03/19 17:46:47 ERROR : model.safetensors: Failed to copy: multipart upload failed to initialise: failed to prepare upload: operation error S3: CreateBucket, https response error StatusCode: 403, RequestID: 189E3506FDDB4567, HostID: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855, api error AccessDenied: Access Denied.
+Transferred:   	          0 B / 2.875 GiB, 0%, 0 B/s, ETA -
+Errors:                 1 (retrying may help)
+Transferred:            0 / 1, 0%
+Elapsed time:         3.7s
+Transferring:
+ *                             model.safetensors:  0% /2.875Gi, 0/s, -
+2026/03/19 17:46:47 ERROR : Attempt 1/5 failed with 1 errors and: multipart upload failed to initialise: failed to prepare upload: operation error S3: CreateBucket, https response error StatusCode: 403, RequestID: 189E3506FDDB4567, HostID: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855, api error AccessDenied: Access Denied.
+Transferred:   	          0 B / 0 B, -, 0 B/s, ETA -
+Errors:                 1 (retrying may help)
+Elapsed time:         3.7sTransferred:   	          0 B / 0 B, -, 0 B/s, ETA -
+Elapsed time:         3.9sTransferred:   	          0 B / 2.875 GiB, 0%, 0 B/s, ETA -
+Transferred:            0 / 1, 0%
+Elapsed time:         4.4s
+Transferring:
+ *                             model.safetensors:  0% /2.875Gi, 0/s, -
+2026/03/19 17:46:48 ERROR : model.safetensors: Failed to copy: multipart upload failed to initialise: failed to prepare upload: operation error S3: CreateBucket, https response error StatusCode: 403, RequestID: 189E3507338EC5CB, HostID: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855, api error AccessDenied: Access Denied.
+Transferred:   	          0 B / 2.875 GiB, 0%, 0 B/s, ETA -
+Errors:                 1 (retrying may help)
+Transferred:            0 / 1, 0%
+Elapsed time:         4.6s
+Transferring:
+ *                             model.safetensors:  0% /2.875Gi, 0/s, -
+2026/03/19 17:46:48 ERROR : Attempt 2/5 failed with 1 errors and: multipart upload failed to initialise: failed to prepare upload: operation error S3: CreateBucket, https response error StatusCode: 403, RequestID: 189E3507338EC5CB, HostID: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855, api error AccessDenied: Access Denied.
+Transferred:   	          0 B / 0 B, -, 0 B/s, ETA -
+Errors:                 1 (retrying may help)
+Elapsed time:         4.6sTransferred:   	          0 B / 0 B, -, 0 B/s, ETA -
+Elapsed time:         4.9sTransferred:   	          0 B / 2.875 GiB, 0%, 0 B/s, ETA -
+Transferred:            0 / 1, 0%
+Elapsed time:         5.4s
+Transferring:
+ *                             model.safetensors:  0% /2.875Gi, 0/s, -
+2026/03/19 17:46:49 ERROR : model.safetensors: Failed to copy: multipart upload failed to initialise: failed to prepare upload: operation error S3: CreateBucket, https response error StatusCode: 403, RequestID: 189E35076D61E4E5, HostID: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855, api error AccessDenied: Access Denied.
+Transferred:   	          0 B / 2.875 GiB, 0%, 0 B/s, ETA -
+Errors:                 1 (retrying may help)
+Transferred:            0 / 1, 0%
+Elapsed time:         5.5s
+Transferring:
+ *                             model.safetensors:  0% /2.875Gi, 0/s, -
+2026/03/19 17:46:49 ERROR : Attempt 3/5 failed with 1 errors and: multipart upload failed to initialise: failed to prepare upload: operation error S3: CreateBucket, https response error StatusCode: 403, RequestID: 189E35076D61E4E5, HostID: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855, api error AccessDenied: Access Denied.
+Transferred:   	          0 B / 0 B, -, 0 B/s, ETA -
+Errors:                 1 (retrying may help)
+Elapsed time:         5.5sTransferred:   	          0 B / 0 B, -, 0 B/s, ETA -
+Elapsed time:         5.9s
+2026/03/19 17:46:50 ERROR : model.safetensors: Failed to copy: multipart upload failed to initialise: failed to prepare upload: operation error S3: CreateBucket, https response error StatusCode: 403, RequestID: 189E3507A29B5ABD, HostID: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855, api error AccessDenied: Access Denied.
+Transferred:   	          0 B / 2.875 GiB, 0%, 0 B/s, ETA -
+Errors:                 1 (retrying may help)
+Transferred:            0 / 1, 0%
+Elapsed time:         6.4s
+Transferring:
+ *                             model.safetensors:  0% /2.875Gi, 0/s, -
+2026/03/19 17:46:50 ERROR : Attempt 4/5 failed with 1 errors and: multipart upload failed to initialise: failed to prepare upload: operation error S3: CreateBucket, https response error StatusCode: 403, RequestID: 189E3507A29B5ABD, HostID: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855, api error AccessDenied: Access Denied.
+Transferred:   	          0 B / 0 B, -, 0 B/s, ETA -
+Errors:                 1 (retrying may help)
+Elapsed time:         6.4sTransferred:   	          0 B / 0 B, -, 0 B/s, ETA -
+Elapsed time:         6.4sTransferred:   	          0 B / 2.875 GiB, 0%, 0 B/s, ETA -
+Transferred:            0 / 1, 0%
+Elapsed time:         6.9s
+Transferring:
+ *                             model.safetensors:  0% /2.875Gi, 0/s, -
+2026/03/19 17:46:51 ERROR : model.safetensors: Failed to copy: multipart upload failed to initialise: failed to prepare upload: operation error S3: CreateBucket, https response error StatusCode: 403, RequestID: 189E3507D6CAA1E4, HostID: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855, api error AccessDenied: Access Denied.
+Transferred:   	          0 B / 2.875 GiB, 0%, 0 B/s, ETA -
+Errors:                 1 (retrying may help)
+Transferred:            0 / 1, 0%
+Elapsed time:         7.3s
+Transferring:
+ *                             model.safetensors:  0% /2.875Gi, 0/s, -
+2026/03/19 17:46:51 ERROR : Attempt 5/5 failed with 1 errors and: multipart upload failed to initialise: failed to prepare upload: operation error S3: CreateBucket, https response error StatusCode: 403, RequestID: 189E3507D6CAA1E4, HostID: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855, api error AccessDenied: Access Denied.
+Transferred:   	          0 B / 0 B, -, 0 B/s, ETA -
+Errors:                 1 (retrying may help)
+Elapsed time:         7.3sTransferred:   	          0 B / 0 B, -, 0 B/s, ETA -
+Errors:                 1 (retrying may help)
+Elapsed time:         7.3s
+2026/03/19 17:46:51 NOTICE: Failed to copyto: multipart upload failed to initialise: failed to prepare upload: operation error S3: CreateBucket, https response error StatusCode: 403, RequestID: 189E3507D6CAA1E4, HostID: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855, api error AccessDenied: Access Denied.

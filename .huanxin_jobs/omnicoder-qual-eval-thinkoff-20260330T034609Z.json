@@ -1,0 +1,12 @@
+{
+  "job_id": "omnicoder-qual-eval-thinkoff-20260330T034609Z",
+  "name": "omnicoder-qual-eval-thinkoff",
+  "pid": 174368,
+  "log_path": "/tmp/omnicoder_qual_eval_thinkoff_20260330.log",
+  "remote_root": "/root/root/work/quantum-gpt",
+  "command": "ASCEND_RT_VISIBLE_DEVICES=6 python3 scripts/run_base_vs_adapter_eval.py --slice-json reports/base_vs_adapter_eval_slice_interface_prefix.json --base-model models/OmniCoder-9B --adapter outputs/interface-prefix-omnicoder9b-semantic-v4-2npu-true20-20260329T2219CST/adapter --output reports/base_vs_adapter_outputs_omnicoder9b_smoke1_thinkoff_20260330.json --limit 1 --max-new-tokens 192 --device npu",
+  "created_at": "2026-03-30T03:46:41.011169+00:00",
+  "transport": "standalone",
+  "duration_ms": 29955,
+  "meta_file": "/Users/daxu/software/quantum-gpt/.huanxin_jobs/omnicoder-qual-eval-thinkoff-20260330T034609Z.json"
+}

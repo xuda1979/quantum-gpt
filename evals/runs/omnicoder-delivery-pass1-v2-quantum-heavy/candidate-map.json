@@ -1,0 +1,12 @@
+{
+  "quantum_phase_estimation_circuit": "candidates/quantum_phase_estimation_circuit.py",
+  "quantum_qaoa_maxcut": "candidates/quantum_qaoa_maxcut.py",
+  "quantum_qft_phase_pattern": "candidates/quantum_qft_phase_pattern.py",
+  "quantum_stabilizer_tableau_update_repair": "candidates/quantum_stabilizer_tableau_update_repair.py",
+  "quantum_circuit_depth_optimization": "candidates/quantum_circuit_depth_optimization.py",
+  "quantum_circuit_phase_repair": "candidates/quantum_circuit_phase_repair.py",
+  "quantum_superdense_coding": "candidates/quantum_superdense_coding.py",
+  "quantum_teleportation_corrections": "candidates/quantum_teleportation_corrections.py",
+  "quantum_measurement_bug_repair": "candidates/quantum_measurement_bug_repair.py",
+  "quantum_vqe_energy_minimization": "candidates/quantum_vqe_energy_minimization.py"
+}

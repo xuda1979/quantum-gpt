@@ -1,0 +1,13 @@
+# Minimal Huanxin CPU bootstrap stack for remote Qwen training-readiness work.
+# Keep this intentionally narrow: only packages needed for tokenizer/model import,
+# JSONL dataset loading, and the PEFT smoke path in training/qwen_sft_peft.py.
+# OmniCoder-9B / Qwen3.5 requires a newer Transformers runtime than the original
+# Qwen2.5 bootstrap used.
+transformers==4.57.1
+accelerate==1.4.0
+datasets==3.3.2
+peft==0.14.0
+sentencepiece==0.2.0
+safetensors==0.5.3
+huggingface-hub==0.34.4
+tokenizers==0.22.1

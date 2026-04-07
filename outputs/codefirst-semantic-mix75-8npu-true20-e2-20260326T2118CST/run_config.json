@@ -1,0 +1,31 @@
+{
+  "signature": {
+    "model_name": "models/Qwen2.5-1.5B-Instruct",
+    "train_file": "data/generated/fast-mini-codefirst-semantic-mix75/train.jsonl",
+    "eval_file": "data/generated/fast-mini-codefirst-semantic-mix75/eval.jsonl",
+    "device": "npu",
+    "max_length": 512,
+    "per_device_batch_size": 1,
+    "gradient_accumulation_steps": 2,
+    "learning_rate": 0.0002,
+    "num_epochs": 2,
+    "max_steps": 20,
+    "eval_steps": 10,
+    "log_steps": 1,
+    "lora_rank": 16,
+    "lora_alpha": 32,
+    "lora_dropout": 0.05,
+    "load_in_8bit": false,
+    "train_on_completions_only": false,
+    "target_modules": [
+      "q_proj",
+      "k_proj",
+      "v_proj",
+      "o_proj",
+      "gate_proj",
+      "up_proj",
+      "down_proj"
+    ],
+    "signature_sha256": "b5e6a122e415ba2b983c417d7f3efc205fa3a5e8a40a367cf508af8b1bf2bbb5"
+  }
+}

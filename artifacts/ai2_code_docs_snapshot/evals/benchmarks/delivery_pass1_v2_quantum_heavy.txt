@@ -1,0 +1,15 @@
+# Quantum-heavy delivery gate v2 for pass@1 tracking.
+# Goal: stress algorithmic quantum programming, circuit reasoning, and quantum-state/state-machine logic.
+# Selection rule: prefer quantum circuit synthesis, simulation, and protocol reasoning over trivial normalization tasks.
+# Pass threshold: >= 4 / 10 on first generation with no manual repair.
+# Keep this gate fixed across iterations so pass@1 comparisons stay apples-to-apples.
+quantum_phase_estimation_circuit
+quantum_qaoa_maxcut
+quantum_qft_phase_pattern
+quantum_stabilizer_tableau_update_repair
+quantum_circuit_depth_optimization
+quantum_circuit_phase_repair
+quantum_superdense_coding
+quantum_teleportation_corrections
+quantum_measurement_bug_repair
+quantum_vqe_energy_minimization

@@ -1,0 +1,126 @@
+{
+  "scored_at_utc": "2026-03-13T02:04:14.020995+00:00",
+  "candidate_map": "/Users/daxu/.openclaw/workspace-quantum-rnd/evals/runs/exec-smoke/candidate-map.json",
+  "results": [
+    {
+      "id": "quantum_bell_pair_construction",
+      "domain": "quantum",
+      "category": "circuit_construction",
+      "name": "Bell pair construction",
+      "passed": false,
+      "details": [
+        "runner_exception: AttributeError: module 'candidate' has no attribute 'bell_pair_state'",
+        "traceback:",
+        "Traceback (most recent call last):",
+        "  File \"/Users/daxu/.openclaw/workspace-quantum-rnd/evals/runner/run_eval.py\", line 59, in run_task",
+        "    result = module.run_tests(str(candidate_path))",
+        "  File \"/Users/daxu/.openclaw/workspace-quantum-rnd/evals/tasks/quantum/bell_pair_construction/tests.py\", line 15, in run_tests",
+        "    state = module.bell_pair_state()",
+        "AttributeError: module 'candidate' has no attribute 'bell_pair_state'"
+      ],
+      "candidate_path": "/Users/daxu/.openclaw/workspace-quantum-rnd/evals/runs/exec-smoke/candidates/quantum_bell_pair_construction.py",
+      "source": "override",
+      "error_type": "AttributeError"
+    },
+    {
+      "id": "quantum_measurement_bug_repair",
+      "domain": "quantum",
+      "category": "debug_repair",
+      "name": "Measurement mapping bug repair",
+      "passed": false,
+      "details": [
+        "runner_exception: AttributeError: module 'candidate' has no attribute 'measurement_mapping'",
+        "traceback:",
+        "Traceback (most recent call last):",
+        "  File \"/Users/daxu/.openclaw/workspace-quantum-rnd/evals/runner/run_eval.py\", line 59, in run_task",
+        "    result = module.run_tests(str(candidate_path))",
+        "  File \"/Users/daxu/.openclaw/workspace-quantum-rnd/evals/tasks/quantum/measurement_bug_repair/tests.py\", line 17, in run_tests",
+        "    if module.measurement_mapping(\"10\") != {\"q0\": 0, \"q1\": 1}:",
+        "AttributeError: module 'candidate' has no attribute 'measurement_mapping'"
+      ],
+      "candidate_path": "/Users/daxu/.openclaw/workspace-quantum-rnd/evals/runs/exec-smoke/candidates/quantum_measurement_bug_repair.py",
+      "source": "override",
+      "error_type": "AttributeError"
+    },
+    {
+      "id": "quantum_superdense_coding",
+      "domain": "quantum",
+      "category": "reasoning",
+      "name": "Superdense coding encode/decode",
+      "passed": false,
+      "details": [
+        "runner_exception: AttributeError: module 'candidate' has no attribute 'encode_message'",
+        "traceback:",
+        "Traceback (most recent call last):",
+        "  File \"/Users/daxu/.openclaw/workspace-quantum-rnd/evals/runner/run_eval.py\", line 59, in run_task",
+        "    result = module.run_tests(str(candidate_path))",
+        "  File \"/Users/daxu/.openclaw/workspace-quantum-rnd/evals/tasks/quantum/superdense_coding/tests.py\", line 19, in run_tests",
+        "    if module.encode_message(bits) != op:",
+        "AttributeError: module 'candidate' has no attribute 'encode_message'"
+      ],
+      "candidate_path": "/Users/daxu/.openclaw/workspace-quantum-rnd/evals/runs/exec-smoke/candidates/quantum_superdense_coding.py",
+      "source": "override",
+      "error_type": "AttributeError"
+    },
+    {
+      "id": "software_duplicate_logic_refactor",
+      "domain": "software",
+      "category": "refactor",
+      "name": "Duplicate logic refactor",
+      "passed": false,
+      "details": [
+        "runner_exception: AttributeError: module 'candidate' has no attribute 'build_user_record'",
+        "traceback:",
+        "Traceback (most recent call last):",
+        "  File \"/Users/daxu/.openclaw/workspace-quantum-rnd/evals/runner/run_eval.py\", line 59, in run_task",
+        "    result = module.run_tests(str(candidate_path))",
+        "  File \"/Users/daxu/.openclaw/workspace-quantum-rnd/evals/tasks/software/duplicate_logic_refactor/tests.py\", line 16, in run_tests",
+        "    user = module.build_user_record(\" Ada Lovelace \", \" ADA@EXAMPLE.COM \")",
+        "AttributeError: module 'candidate' has no attribute 'build_user_record'"
+      ],
+      "candidate_path": "/Users/daxu/.openclaw/workspace-quantum-rnd/evals/runs/exec-smoke/candidates/software_duplicate_logic_refactor.py",
+      "source": "override",
+      "error_type": "AttributeError"
+    },
+    {
+      "id": "software_off_by_one_bugfix",
+      "domain": "software",
+      "category": "bugfix",
+      "name": "Off-by-one bug fix",
+      "passed": false,
+      "details": [
+        "runner_exception: AttributeError: module 'candidate' has no attribute 'inclusive_range_sum'",
+        "traceback:",
+        "Traceback (most recent call last):",
+        "  File \"/Users/daxu/.openclaw/workspace-quantum-rnd/evals/runner/run_eval.py\", line 59, in run_task",
+        "    result = module.run_tests(str(candidate_path))",
+        "  File \"/Users/daxu/.openclaw/workspace-quantum-rnd/evals/tasks/software/off_by_one_bugfix/tests.py\", line 21, in run_tests",
+        "    actual = module.inclusive_range_sum(*args)",
+        "AttributeError: module 'candidate' has no attribute 'inclusive_range_sum'"
+      ],
+      "candidate_path": "/Users/daxu/.openclaw/workspace-quantum-rnd/evals/runs/exec-smoke/candidates/software_off_by_one_bugfix.py",
+      "source": "override",
+      "error_type": "AttributeError"
+    },
+    {
+      "id": "software_parser_regression_tests",
+      "domain": "software",
+      "category": "test_writing",
+      "name": "Parser regression tests",
+      "passed": false,
+      "details": [
+        "runner_exception: AttributeError: module 'candidate' has no attribute 'regression_cases'",
+        "traceback:",
+        "Traceback (most recent call last):",
+        "  File \"/Users/daxu/.openclaw/workspace-quantum-rnd/evals/runner/run_eval.py\", line 59, in run_task",
+        "    result = module.run_tests(str(candidate_path))",
+        "  File \"/Users/daxu/.openclaw/workspace-quantum-rnd/evals/tasks/software/parser_regression_tests/tests.py\", line 14, in run_tests",
+        "    cases = module.regression_cases()",
+        "AttributeError: module 'candidate' has no attribute 'regression_cases'"
+      ],
+      "candidate_path": "/Users/daxu/.openclaw/workspace-quantum-rnd/evals/runs/exec-smoke/candidates/software_parser_regression_tests.py",
+      "source": "override",
+      "error_type": "AttributeError"
+    }
+  ]
+}

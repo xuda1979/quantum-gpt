@@ -1,0 +1,65 @@
+{
+  "status": "dry_run",
+  "target": "qwen3-1.7b",
+  "model_id": "Qwen/Qwen3-1.7B",
+  "audit_out": "artifacts/model-source-audit-qwen3-1p7b.json",
+  "handoff_note": "research/qwen3-public-alternative-handoff.md",
+  "remote_model_dir": "/root/root/work/quantum-gpt/models/Qwen3-1.7B",
+  "handoff_manifest": "artifacts/qwen3-1p7b-local-snapshot-handoff.json",
+  "preflight_manifest": "artifacts/qwen3-1p7b-local-snapshot-preflight.json",
+  "next_step_hint": "If this target is approved for execution, rerun without --dry-run and continue with research/qwen3-public-alternative-handoff.md",
+  "audit_summary": {
+    "timestamp_utc": "2026-03-19T05:36:49.628003+00:00",
+    "python": "3.9.6",
+    "platform": "macOS-26.3-arm64-arm-64bit",
+    "model_id": "Qwen/Qwen3-1.7B",
+    "status": "ok",
+    "resolved_id": "Qwen/Qwen3-1.7B",
+    "private": false,
+    "disabled": false,
+    "gated": false,
+    "downloads": 6961041,
+    "likes": 428,
+    "pipeline_tag": "text-generation",
+    "library_name": "transformers",
+    "tags_sample": [
+      "transformers",
+      "safetensors",
+      "qwen3",
+      "text-generation",
+      "conversational",
+      "arxiv:2505.09388",
+      "base_model:Qwen/Qwen3-1.7B-Base",
+      "base_model:finetune:Qwen/Qwen3-1.7B-Base",
+      "license:apache-2.0",
+      "text-generation-inference",
+      "endpoints_compatible",
+      "deploy:azure",
+      "region:us"
+    ],
+    "file_count": 12,
+    "config_model_type": "qwen3",
+    "config_architectures": [
+      "Qwen3ForCausalLM"
+    ],
+    "family_evidence": {
+      "expected_family_substring": "qwen",
+      "matched": true,
+      "hits": [
+        "Qwen/Qwen3-1.7B",
+        "Qwen",
+        "qwen3",
+        "qwen3",
+        "base_model:Qwen/Qwen3-1.7B-Base",
+        "base_model:finetune:Qwen/Qwen3-1.7B-Base",
+        "Qwen3ForCausalLM"
+      ]
+    }
+  },
+  "bootstrap_bundle": "/Users/daxu/.openclaw/workspace-quantum-rnd/artifacts/huanxin-bootstrap/20260316T143522Z",
+  "remote_commands": "/Users/daxu/.openclaw/workspace-quantum-rnd/artifacts/huanxin-bootstrap/20260316T143522Z/REMOTE_BOOTSTRAP_COMMANDS-Qwen3-1.7B.sh",
+  "remote_commands_render": {
+    "bundle": "/Users/daxu/.openclaw/workspace-quantum-rnd/artifacts/huanxin-bootstrap/20260316T143522Z",
+    "output": "/Users/daxu/.openclaw/workspace-quantum-rnd/artifacts/huanxin-bootstrap/20260316T143522Z/REMOTE_BOOTSTRAP_COMMANDS-Qwen3-1.7B.sh"
+  }
+}

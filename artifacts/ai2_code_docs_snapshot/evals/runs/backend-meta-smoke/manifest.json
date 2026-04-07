@@ -1,0 +1,64 @@
+{
+  "prompt_version": "v2",
+  "prompt_style": "direct",
+  "created_at_utc": "2026-03-13T07:05:06.027751+00:00",
+  "system_prompt": "You are solving a single evaluation task. Produce only the full contents of the requested Python candidate file. Do not add markdown fences, explanations, or surrounding commentary unless the task explicitly asks for it.",
+  "notes": null,
+  "tasks": [
+    {
+      "id": "quantum_bell_pair_construction",
+      "name": "Bell pair construction",
+      "domain": "quantum",
+      "category": "circuit_construction",
+      "prompt_file": "prompts/quantum_bell_pair_construction.txt",
+      "candidate_file": "candidates/quantum_bell_pair_construction.py"
+    },
+    {
+      "id": "quantum_measurement_bug_repair",
+      "name": "Measurement mapping bug repair",
+      "domain": "quantum",
+      "category": "debug_repair",
+      "prompt_file": "prompts/quantum_measurement_bug_repair.txt",
+      "candidate_file": "candidates/quantum_measurement_bug_repair.py"
+    },
+    {
+      "id": "quantum_superdense_coding",
+      "name": "Superdense coding encode/decode",
+      "domain": "quantum",
+      "category": "reasoning",
+      "prompt_file": "prompts/quantum_superdense_coding.txt",
+      "candidate_file": "candidates/quantum_superdense_coding.py"
+    },
+    {
+      "id": "software_duplicate_logic_refactor",
+      "name": "Duplicate logic refactor",
+      "domain": "software",
+      "category": "refactor",
+      "prompt_file": "prompts/software_duplicate_logic_refactor.txt",
+      "candidate_file": "candidates/software_duplicate_logic_refactor.py"
+    },
+    {
+      "id": "software_off_by_one_bugfix",
+      "name": "Off-by-one bug fix",
+      "domain": "software",
+      "category": "bugfix",
+      "prompt_file": "prompts/software_off_by_one_bugfix.txt",
+      "candidate_file": "candidates/software_off_by_one_bugfix.py"
+    },
+    {
+      "id": "software_parser_regression_tests",
+      "name": "Parser regression tests",
+      "domain": "software",
+      "category": "test_writing",
+      "prompt_file": "prompts/software_parser_regression_tests.txt",
+      "candidate_file": "candidates/software_parser_regression_tests.py"
+    }
+  ],
+  "backend": {
+    "name": "mock",
+    "model": "reference-copy",
+    "settings": {
+      "mode": "reference-copy"
+    }
+  }
+}

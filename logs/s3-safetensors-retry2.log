@@ -1,0 +1,93 @@
+Transferred:   	          0 B / 0 B, -, 0 B/s, ETA -
+Elapsed time:         0.0sTransferred:   	          0 B / 0 B, -, 0 B/s, ETA -
+Elapsed time:         0.5sTransferred:   	          0 B / 0 B, -, 0 B/s, ETA -
+Elapsed time:         0.9sTransferred:   	          0 B / 0 B, -, 0 B/s, ETA -
+Elapsed time:         1.5sTransferred:   	          0 B / 0 B, -, 0 B/s, ETA -
+Elapsed time:         2.0sTransferred:   	          0 B / 0 B, -, 0 B/s, ETA -
+Elapsed time:         2.5sTransferred:   	          0 B / 0 B, -, 0 B/s, ETA -
+Elapsed time:         2.9sTransferred:   	          0 B / 0 B, -, 0 B/s, ETA -
+Transferred:            0 / 1, 0%
+Elapsed time:         3.4s
+Transferring:
+ *                             model.safetensors: transferringTransferred:   	          0 B / 0 B, -, 0 B/s, ETA -
+Transferred:            0 / 1, 0%
+Elapsed time:         4.0s
+Transferring:
+ *                             model.safetensors: transferring
+2026/03/19 17:46:22 ERROR : model.safetensors: Failed to copy: multi-thread copy: failed to open chunk writer: failed to prepare upload: operation error S3: CreateBucket, https response error StatusCode: 403, RequestID: 189E350110260A7A, HostID: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855, api error AccessDenied: Access Denied.
+Transferred:   	          0 B / 0 B, -, 0 B/s, ETA -
+Errors:                 1 (retrying may help)
+Transferred:            0 / 1, 0%
+Elapsed time:         4.1s
+Transferring:
+ *                             model.safetensors: transferring
+2026/03/19 17:46:22 ERROR : Attempt 1/5 failed with 1 errors and: multi-thread copy: failed to open chunk writer: failed to prepare upload: operation error S3: CreateBucket, https response error StatusCode: 403, RequestID: 189E350110260A7A, HostID: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855, api error AccessDenied: Access Denied.
+Transferred:   	          0 B / 0 B, -, 0 B/s, ETA -
+Errors:                 1 (retrying may help)
+Elapsed time:         4.1sTransferred:   	          0 B / 0 B, -, 0 B/s, ETA -
+Elapsed time:         4.5sTransferred:   	          0 B / 0 B, -, 0 B/s, ETA -
+Transferred:            0 / 1, 0%
+Elapsed time:         5.0s
+Transferring:
+ *                             model.safetensors: transferring
+2026/03/19 17:46:23 ERROR : model.safetensors: Failed to copy: multi-thread copy: failed to open chunk writer: failed to prepare upload: operation error S3: CreateBucket, https response error StatusCode: 403, RequestID: 189E35015237D4E9, HostID: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855, api error AccessDenied: Access Denied.
+Transferred:   	          0 B / 0 B, -, 0 B/s, ETA -
+Errors:                 1 (retrying may help)
+Transferred:            0 / 1, 0%
+Elapsed time:         5.1s
+Transferring:
+ *                             model.safetensors: transferring
+2026/03/19 17:46:23 ERROR : Attempt 2/5 failed with 1 errors and: multi-thread copy: failed to open chunk writer: failed to prepare upload: operation error S3: CreateBucket, https response error StatusCode: 403, RequestID: 189E35015237D4E9, HostID: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855, api error AccessDenied: Access Denied.
+Transferred:   	          0 B / 0 B, -, 0 B/s, ETA -
+Errors:                 1 (retrying may help)
+Elapsed time:         5.1sTransferred:   	          0 B / 0 B, -, 0 B/s, ETA -
+Elapsed time:         5.4sTransferred:   	          0 B / 0 B, -, 0 B/s, ETA -
+Transferred:            0 / 1, 0%
+Elapsed time:         6.0s
+Transferring:
+ *                             model.safetensors: transferring
+2026/03/19 17:46:24 ERROR : model.safetensors: Failed to copy: multi-thread copy: failed to open chunk writer: failed to prepare upload: operation error S3: CreateBucket, https response error StatusCode: 403, RequestID: 189E350189F2DCB9, HostID: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855, api error AccessDenied: Access Denied.
+Transferred:   	          0 B / 0 B, -, 0 B/s, ETA -
+Errors:                 1 (retrying may help)
+Transferred:            0 / 1, 0%
+Elapsed time:         6.0s
+Transferring:
+ *                             model.safetensors: transferring
+2026/03/19 17:46:24 ERROR : Attempt 3/5 failed with 1 errors and: multi-thread copy: failed to open chunk writer: failed to prepare upload: operation error S3: CreateBucket, https response error StatusCode: 403, RequestID: 189E350189F2DCB9, HostID: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855, api error AccessDenied: Access Denied.
+Transferred:   	          0 B / 0 B, -, 0 B/s, ETA -
+Errors:                 1 (retrying may help)
+Elapsed time:         6.0sTransferred:   	          0 B / 0 B, -, 0 B/s, ETA -
+Elapsed time:         6.4sTransferred:   	          0 B / 0 B, -, 0 B/s, ETA -
+Transferred:            0 / 1, 0%
+Elapsed time:         7.0s
+Transferring:
+ *                             model.safetensors: transferring
+2026/03/19 17:46:25 ERROR : model.safetensors: Failed to copy: multi-thread copy: failed to open chunk writer: failed to prepare upload: operation error S3: CreateBucket, https response error StatusCode: 403, RequestID: 189E3501C25330A1, HostID: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855, api error AccessDenied: Access Denied.
+Transferred:   	          0 B / 0 B, -, 0 B/s, ETA -
+Errors:                 1 (retrying may help)
+Transferred:            0 / 1, 0%
+Elapsed time:         7.0s
+Transferring:
+ *                             model.safetensors: transferring
+2026/03/19 17:46:25 ERROR : Attempt 4/5 failed with 1 errors and: multi-thread copy: failed to open chunk writer: failed to prepare upload: operation error S3: CreateBucket, https response error StatusCode: 403, RequestID: 189E3501C25330A1, HostID: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855, api error AccessDenied: Access Denied.
+Transferred:   	          0 B / 0 B, -, 0 B/s, ETA -
+Errors:                 1 (retrying may help)
+Elapsed time:         7.0sTransferred:   	          0 B / 0 B, -, 0 B/s, ETA -
+Transferred:            0 / 1, 0%
+Elapsed time:         7.5s
+Transferring:
+ *                             model.safetensors: transferring
+2026/03/19 17:46:26 ERROR : model.safetensors: Failed to copy: multi-thread copy: failed to open chunk writer: failed to prepare upload: operation error S3: CreateBucket, https response error StatusCode: 403, RequestID: 189E3501F928F8DC, HostID: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855, api error AccessDenied: Access Denied.
+Transferred:   	          0 B / 0 B, -, 0 B/s, ETA -
+Errors:                 1 (retrying may help)
+Transferred:            0 / 1, 0%
+Elapsed time:         7.9s
+Transferring:
+ *                             model.safetensors: transferring
+2026/03/19 17:46:26 ERROR : Attempt 5/5 failed with 1 errors and: multi-thread copy: failed to open chunk writer: failed to prepare upload: operation error S3: CreateBucket, https response error StatusCode: 403, RequestID: 189E3501F928F8DC, HostID: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855, api error AccessDenied: Access Denied.
+Transferred:   	          0 B / 0 B, -, 0 B/s, ETA -
+Errors:                 1 (retrying may help)
+Elapsed time:         7.9sTransferred:   	          0 B / 0 B, -, 0 B/s, ETA -
+Errors:                 1 (retrying may help)
+Elapsed time:         7.9s
+2026/03/19 17:46:26 NOTICE: Failed to copyto: multi-thread copy: failed to open chunk writer: failed to prepare upload: operation error S3: CreateBucket, https response error StatusCode: 403, RequestID: 189E3501F928F8DC, HostID: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855, api error AccessDenied: Access Denied.

@@ -1,0 +1,56 @@
+{
+  "model_name": "models/Qwen2.5-1.5B-Instruct",
+  "signature": {
+    "model_name": "models/Qwen2.5-1.5B-Instruct",
+    "adapter_init": null,
+    "train_file": "data/generated/omnicoder-quantum-generalization-holdout-v1/train.jsonl",
+    "eval_file": "data/generated/omnicoder-quantum-generalization-holdout-v1/eval.jsonl",
+    "device": "cpu",
+    "max_length": 512,
+    "per_device_batch_size": 1,
+    "gradient_accumulation_steps": 1,
+    "learning_rate": 0.0002,
+    "num_epochs": 1,
+    "max_steps": 1,
+    "eval_steps": 1,
+    "log_steps": 1,
+    "lora_rank": 16,
+    "lora_alpha": 32,
+    "lora_dropout": 0.05,
+    "load_in_8bit": false,
+    "train_on_completions_only": true,
+    "target_modules": [
+      "q_proj",
+      "k_proj",
+      "v_proj",
+      "o_proj",
+      "gate_proj",
+      "up_proj",
+      "down_proj"
+    ],
+    "signature_sha256": "87a5df57c73bff6a6426e723f3bf3c5e6765ecf35e4318437faea1f6136afac3"
+  },
+  "device": "cpu",
+  "world_size": 1,
+  "train_examples": 1024,
+  "eval_examples": 504,
+  "optimizer_steps_per_epoch": 1024,
+  "max_available_steps": 1024,
+  "requested_max_steps": 1,
+  "completed_steps": 1,
+  "max_steps": 1,
+  "final_eval": {
+    "loss": 0.8162459832808328,
+    "perplexity": 2.261992321850608
+  },
+  "metrics": [
+    {
+      "step": 1,
+      "epoch": 1,
+      "train_loss": 1.9286314249038696,
+      "lr": 0.0,
+      "eval_loss": 0.8162459832808328,
+      "eval_perplexity": 2.261992321850608
+    }
+  ]
+}

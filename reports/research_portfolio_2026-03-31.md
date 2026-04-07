@@ -12,8 +12,8 @@
 
 新的研究材料统一收敛到以下目录：
 
-- [research/papers/README.md](/Users/daxu/software/quantum-gpt/research/papers/README.md)
-- [research/papers/index.json](/Users/daxu/software/quantum-gpt/research/papers/index.json)
+- [research/papers/README.md](../research/papers/README.md)
+- [research/papers/index.json](../research/papers/index.json)
 
 每个研究方向都有自己的论文子目录，目录内同时放置论文文档和与该方法直接对应的代码。这样做的目的，是让创新点、实现逻辑和实验接入方式保持一一对应，避免出现“汇报里说了一套，代码里又是另一套”的情况。
 
@@ -23,28 +23,28 @@
 
 第一条是修复式课程学习：
 
-- [paper.md](/Users/daxu/software/quantum-gpt/research/papers/verifier_guided_repair_curriculum/paper.md)
-- [plugin.py](/Users/daxu/software/quantum-gpt/research/papers/verifier_guided_repair_curriculum/code/plugin.py)
+- [paper.md](../research/papers/verifier_guided_repair_curriculum/paper.md)
+- [plugin.py](../research/papers/verifier_guided_repair_curriculum/code/plugin.py)
 
 第二条是子句感知奖励：
 
-- [paper.md](/Users/daxu/software/quantum-gpt/research/papers/clause_aware_verifier_reward/paper.md)
-- [plugin.py](/Users/daxu/software/quantum-gpt/research/papers/clause_aware_verifier_reward/code/plugin.py)
+- [paper.md](../research/papers/clause_aware_verifier_reward/paper.md)
+- [plugin.py](../research/papers/clause_aware_verifier_reward/code/plugin.py)
 
 第三条是接口锚定方法：
 
-- [paper.md](/Users/daxu/software/quantum-gpt/research/papers/ast_anchor_interface_grounding/paper.md)
-- [plugin.py](/Users/daxu/software/quantum-gpt/research/papers/ast_anchor_interface_grounding/code/plugin.py)
+- [paper.md](../research/papers/ast_anchor_interface_grounding/paper.md)
+- [plugin.py](../research/papers/ast_anchor_interface_grounding/code/plugin.py)
 
 第四条是自一致性路由：
 
-- [paper.md](/Users/daxu/software/quantum-gpt/research/papers/self_consistency_verifier_routing/paper.md)
-- [plugin.py](/Users/daxu/software/quantum-gpt/research/papers/self_consistency_verifier_routing/code/plugin.py)
+- [paper.md](../research/papers/self_consistency_verifier_routing/paper.md)
+- [plugin.py](../research/papers/self_consistency_verifier_routing/code/plugin.py)
 
 第五条是不确定性修复回放：
 
-- [paper.md](/Users/daxu/software/quantum-gpt/research/papers/uncertainty_triggered_repair_replay/paper.md)
-- [plugin.py](/Users/daxu/software/quantum-gpt/research/papers/uncertainty_triggered_repair_replay/code/plugin.py)
+- [paper.md](../research/papers/uncertainty_triggered_repair_replay/paper.md)
+- [plugin.py](../research/papers/uncertainty_triggered_repair_replay/code/plugin.py)
 
 这些方法都通过统一参数启用，例如：
 
@@ -60,12 +60,12 @@
 
 共享插件加载器位于：
 
-- [training/research_plugins.py](/Users/daxu/software/quantum-gpt/training/research_plugins.py)
+- [training/research_plugins.py](../training/research_plugins.py)
 
 已完成接入的训练入口位于：
 
-- [training/qwen_sft_peft.py](/Users/daxu/software/quantum-gpt/training/qwen_sft_peft.py)
-- [training/grpo_trainer.py](/Users/daxu/software/quantum-gpt/training/grpo_trainer.py)
+- [training/qwen_sft_peft.py](../training/qwen_sft_peft.py)
+- [training/grpo_trainer.py](../training/grpo_trainer.py)
 
 这意味着当前研究结构具备三个特点：
 
@@ -79,16 +79,16 @@
 
 对应的运行规划文档为：
 
-- [timeboxed_eight_npu_sft](/Users/daxu/software/quantum-gpt/research/papers/timeboxed_eight_npu_sft/paper.md)
-- [timeboxed_eight_npu_grpo](/Users/daxu/software/quantum-gpt/research/papers/timeboxed_eight_npu_grpo/paper.md)
+- [timeboxed_eight_npu_sft](../research/papers/timeboxed_eight_npu_sft/paper.md)
+- [timeboxed_eight_npu_grpo](../research/papers/timeboxed_eight_npu_grpo/paper.md)
 
 对应的命令清单位于：
 
-- [timeboxed-8npu-scaleup-command-sheet.txt](/Users/daxu/software/quantum-gpt/artifacts/timeboxed-8npu-scaleup-command-sheet.txt)
+- [timeboxed-8npu-scaleup-command-sheet.txt](../artifacts/timeboxed-8npu-scaleup-command-sheet.txt)
 
 对应的 ai2 监控与拉起脚本位于：
 
-- [timeboxed_8npu_watch_and_launch.sh](/Users/daxu/software/quantum-gpt/scripts/timeboxed_8npu_watch_and_launch.sh)
+- [timeboxed_8npu_watch_and_launch.sh](../scripts/timeboxed_8npu_watch_and_launch.sh)
 
 目前 ai2 上已经存在一个活跃的排队监控进程：
 

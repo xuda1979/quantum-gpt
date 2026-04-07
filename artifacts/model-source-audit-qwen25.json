@@ -1,11 +1,50 @@
 {
-  "timestamp_utc": "2026-03-18T11:45:30.025318+00:00",
+  "timestamp_utc": "2026-03-19T07:40:58.918883+00:00",
   "python": "3.9.6",
   "platform": "macOS-26.3-arm64-arm-64bit",
   "model_id": "Qwen/Qwen2.5-1.5B-Instruct",
-  "status": "error",
-  "stage": "fetch_model_info",
-  "error_type": "URLError",
-  "error": "<urlopen error [Errno 60] Operation timed out>",
-  "timeout_seconds": 90.0
+  "status": "ok",
+  "resolved_id": "Qwen/Qwen2.5-1.5B-Instruct",
+  "private": false,
+  "disabled": false,
+  "gated": false,
+  "downloads": 8923707,
+  "likes": 641,
+  "pipeline_tag": "text-generation",
+  "library_name": "transformers",
+  "tags_sample": [
+    "transformers",
+    "safetensors",
+    "qwen2",
+    "text-generation",
+    "chat",
+    "conversational",
+    "en",
+    "arxiv:2407.10671",
+    "base_model:Qwen/Qwen2.5-1.5B",
+    "base_model:finetune:Qwen/Qwen2.5-1.5B",
+    "license:apache-2.0",
+    "text-generation-inference",
+    "endpoints_compatible",
+    "deploy:azure",
+    "region:us"
+  ],
+  "file_count": 10,
+  "config_model_type": "qwen2",
+  "config_architectures": [
+    "Qwen2ForCausalLM"
+  ],
+  "family_evidence": {
+    "expected_family_substring": "qwen",
+    "matched": true,
+    "hits": [
+      "Qwen/Qwen2.5-1.5B-Instruct",
+      "Qwen",
+      "qwen2",
+      "qwen2",
+      "base_model:Qwen/Qwen2.5-1.5B",
+      "base_model:finetune:Qwen/Qwen2.5-1.5B",
+      "Qwen2ForCausalLM"
+    ]
+  }
 }

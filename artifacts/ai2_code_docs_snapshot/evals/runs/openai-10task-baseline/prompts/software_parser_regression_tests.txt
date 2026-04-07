@@ -1,0 +1,79 @@
+Task ID: software_parser_regression_tests
+Task name: Parser regression tests
+Domain: software
+Category: test_writing
+
+Write a Python file that passes the supplied tests.
+Return only the candidate file contents.
+
+Reference candidate style example (for format guidance, not for blind copying):
+--- BEGIN REFERENCE CANDIDATE ---
+def parse_assignment(line: str) -> tuple[str, str]:
+    if "=" not in line:
+        raise ValueError("missing '=' separator")
+    key, value = line.split("=", 1)
+    key = key.strip()
+    value = value.strip()
+    if not key:
+        raise ValueError("empty key")
+    return key, value
+
+
+def regression_cases() -> list[dict[str, object]]:
+    return [
+        {
+            "name": "trims surrounding whitespace",
+            "input": " answer = 42 ",
+            "expected": ("answer", "42"),
+        },
+        {
+            "name": "preserves embedded equals in value",
+            "input": "token=abc=def",
+            "expected": ("token", "abc=def"),
+        },
+        {
+            "name": "rejects empty keys",
+            "input": " = nope",
+            "raises": ValueError,
+        },
+    ]
+
+--- END REFERENCE CANDIDATE ---
+
+Tests the candidate must satisfy:
+--- BEGIN TESTS ---
+import importlib.util
+
+
+def _load(candidate_path: str):
+    spec = importlib.util.spec_from_file_location("candidate", candidate_path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
+def run_tests(candidate_path: str) -> dict:
+    module = _load(candidate_path)
+    cases = module.regression_cases()
+    failures = []
+
+    if len(cases) < 3:
+        failures.append("expected at least three regression cases")
+
+    for case in cases:
+        if "raises" in case:
+            try:
+                module.parse_assignment(case["input"])
+                failures.append(f"case '{case['name']}' should raise {case['raises'].__name__}")
+            except Exception as exc:
+                if not isinstance(exc, case["raises"]):
+                    failures.append(f"case '{case['name']}' raised {type(exc).__name__}, expected {case['raises'].__name__}")
+        else:
+            actual = module.parse_assignment(case["input"])
+            if actual != case["expected"]:
+                failures.append(f"case '{case['name']}' -> {actual}, expected {case['expected']}")
+
+    return {"passed": not failures, "details": failures or ["regression cases cover parser edge cases"]}
+
+--- END TESTS ---

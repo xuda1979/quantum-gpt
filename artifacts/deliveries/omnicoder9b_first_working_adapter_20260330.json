@@ -1,0 +1,17 @@
+{
+  "artifact": "artifacts/deliveries/omnicoder9b_first_working_adapter_20260330.tar.gz",
+  "sha256": "c9578763a3918935b0aa06b22c4ec83ec9582b4726694e4aff87422de996bfbd",
+  "size_human": "106M",
+  "base_model": "models/OmniCoder-9B",
+  "adapter_dir": "outputs/interface-prefix-omnicoder9b-semantic-v4-2npu-true20-20260329T2219CST/adapter",
+  "metrics_file": "outputs/interface-prefix-omnicoder9b-semantic-v4-2npu-true20-20260329T2219CST/metrics.json",
+  "report_file": "reports/omnicoder9b_semantic_v4_2npu_20260329.md",
+  "verified_run": {
+    "world_size": 2,
+    "train_examples": 160,
+    "eval_examples": 32,
+    "completed_steps": 20,
+    "final_eval_loss": 0.3727272283285856,
+    "final_eval_perplexity": 1.4516883063761739
+  }
+}

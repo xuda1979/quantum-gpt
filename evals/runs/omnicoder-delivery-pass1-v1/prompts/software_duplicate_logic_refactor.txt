@@ -1,0 +1,62 @@
+Task ID: software_duplicate_logic_refactor
+Task name: Duplicate logic refactor
+Domain: software
+Category: refactor
+
+Treat this as a minimal-edit repair or implementation task.
+Write the simplest Python file that satisfies the supplied tests and return only that file.
+
+Reference candidate style example (for format guidance, not for blind copying):
+--- BEGIN REFERENCE CANDIDATE ---
+def _normalize_username(name: str) -> str:
+    return name.strip().lower().replace(" ", "_")
+
+
+def build_user_record(name: str, email: str) -> dict[str, str]:
+    username = _normalize_username(name)
+    return {
+        "name": name.strip(),
+        "email": email.strip().lower(),
+        "username": username,
+    }
+
+
+def build_audit_record(name: str, action: str) -> dict[str, str]:
+    username = _normalize_username(name)
+    return {
+        "actor": username,
+        "action": action.strip().lower(),
+    }
+
+--- END REFERENCE CANDIDATE ---
+
+Tests the candidate must satisfy:
+--- BEGIN TESTS ---
+import importlib.util
+
+
+def _load(candidate_path: str):
+    spec = importlib.util.spec_from_file_location("candidate", candidate_path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
+def run_tests(candidate_path: str) -> dict:
+    module = _load(candidate_path)
+    failures = []
+
+    user = module.build_user_record(" Ada Lovelace ", " ADA@EXAMPLE.COM ")
+    audit = module.build_audit_record(" Ada Lovelace ", " LOGIN ")
+
+    if user["username"] != "ada_lovelace":
+        failures.append("user record username normalization failed")
+    if audit["actor"] != "ada_lovelace":
+        failures.append("audit record actor normalization failed")
+    if not hasattr(module, "_normalize_username"):
+        failures.append("expected shared helper _normalize_username to exist")
+
+    return {"passed": not failures, "details": failures or ["shared normalization helper is used consistently"]}
+
+--- END TESTS ---

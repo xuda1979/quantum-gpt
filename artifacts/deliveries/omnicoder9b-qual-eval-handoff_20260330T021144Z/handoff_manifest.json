@@ -1,0 +1,64 @@
+{
+  "label": "omnicoder9b-qual-eval-handoff",
+  "created_at_utc": "2026-03-30T02:11:44.560635+00:00",
+  "workspace_root": "/Users/daxu/software/quantum-gpt",
+  "blocker": {
+    "type": "outer-approval-layer",
+    "summary": "Direct networked file transfer remains blocked outside the workspace.",
+    "blocked_command": "/Users/daxu/homebrew/bin/rclone copy scripts/run_base_vs_adapter_eval.py \"nm-aihuanxin:jtdlp-3ed7854b946a47b1a49ad754baa76cd3/quantum-qwen25-coder-main/scripts\" --s3-no-check-bucket --progress"
+  },
+  "base_model": "models/OmniCoder-9B",
+  "adapter": {
+    "path": "outputs/interface-prefix-omnicoder9b-semantic-v4-2npu-true20-20260329T2219CST/adapter",
+    "readme": {
+      "path": "outputs/interface-prefix-omnicoder9b-semantic-v4-2npu-true20-20260329T2219CST/adapter/README.md",
+      "bytes": 1986,
+      "sha256": "9210607a148b4b10653316f6358f638182cc15e8782436cdb657e3fb3efc08cc"
+    },
+    "delivery_manifest": {
+      "artifact": "artifacts/deliveries/omnicoder9b_first_working_adapter_20260330.tar.gz",
+      "sha256": "c9578763a3918935b0aa06b22c4ec83ec9582b4726694e4aff87422de996bfbd",
+      "size_human": "106M",
+      "base_model": "models/OmniCoder-9B",
+      "adapter_dir": "outputs/interface-prefix-omnicoder9b-semantic-v4-2npu-true20-20260329T2219CST/adapter",
+      "metrics_file": "outputs/interface-prefix-omnicoder9b-semantic-v4-2npu-true20-20260329T2219CST/metrics.json",
+      "report_file": "reports/omnicoder9b_semantic_v4_2npu_20260329.md",
+      "verified_run": {
+        "world_size": 2,
+        "train_examples": 160,
+        "eval_examples": 32,
+        "completed_steps": 20,
+        "final_eval_loss": 0.3727272283285856,
+        "final_eval_perplexity": 1.4516883063761739
+      }
+    }
+  },
+  "eval_slice": {
+    "path": "reports/base_vs_adapter_eval_slice_interface_prefix.json",
+    "bytes": 13364,
+    "sha256": "3380991b8690eb77da7b9ab340104cca8234827051d1cc26bf1e0d1e62948dc8"
+  },
+  "script_inputs": [
+    {
+      "path": "scripts/run_base_vs_adapter_eval.py",
+      "bytes": 8009,
+      "sha256": "aa62f83b04c340691d90f973808b4a37f37cf496fc2b016eb89ce5fa29139e4a"
+    },
+    {
+      "path": "scripts/summarize_base_vs_adapter_report.py",
+      "bytes": 18576,
+      "sha256": "b9a56b8c842f8a48da8e3fb45bb947fd43ccaa9f1dbb2f89776142811b6ab362"
+    },
+    {
+      "path": "training/qwen_sft_peft.py",
+      "bytes": 29733,
+      "sha256": "6d4bcff8965d5e77887114be59f802ccb8dd0d387d68bc17828479bbd5c3fffb"
+    }
+  ],
+  "commands": {
+    "push_to_s3": "./scripts/push_to_s3.sh scripts/run_base_vs_adapter_eval.py scripts/summarize_base_vs_adapter_report.py training/qwen_sft_peft.py reports/base_vs_adapter_eval_slice_interface_prefix.json",
+    "sync_ai2_from_s3": "./scripts/ai2_sync_from_s3.sh",
+    "launch_eval_on_ai2": "./scripts/ai2_shell.sh \"cd /root/root/work/quantum-gpt && nohup env PYTHONPYCACHEPREFIX=/tmp/pycache TOKENIZERS_PARALLELISM=false python3 scripts/run_base_vs_adapter_eval.py --slice-json reports/base_vs_adapter_eval_slice_interface_prefix.json --base-model models/OmniCoder-9B --adapter outputs/interface-prefix-omnicoder9b-semantic-v4-2npu-true20-20260329T2219CST/adapter --output reports/base_vs_adapter_outputs_omnicoder9b_semantic_v4_true20.json --device npu --limit 5 --max-new-tokens 128 > /tmp/base-vs-adapter-omnicoder9b-semantic-v4-true20.log 2>&1 < /dev/null &\"",
+    "watch_report": "./scripts/watch_base_vs_adapter_report.sh ai2 reports/base_vs_adapter_outputs_omnicoder9b_semantic_v4_true20.json reports/base_vs_adapter_outputs_omnicoder9b_semantic_v4_true20.json /tmp/base-vs-adapter-omnicoder9b-semantic-v4-true20.log"
+  }
+}

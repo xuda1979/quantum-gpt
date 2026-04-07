@@ -35,6 +35,7 @@ if str(ROOT) not in sys.path:
 from training.qwen_sft_peft import (  # noqa: E402
     TextPreprocessorBackend,
     load_text_preprocessor_backend,
+    resolve_lora_target_modules,
 )
 from training.grpo_utils import (  # noqa: E402
     AdaptiveTemperatureState,
@@ -104,6 +105,12 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--log-steps", type=int, default=5)
     p.add_argument("--lora-rank", type=int, default=8)
     p.add_argument("--lora-alpha", type=int, default=16)
+    p.add_argument(
+        "--target-modules",
+        nargs="*",
+        default=None,
+        help="Optional explicit LoRA target module suffixes. Defaults to auto-discovery from the loaded model.",
+    )
     p.add_argument("--reward-pass-weight", type=float, default=0.6)
     p.add_argument("--reward-syntax-weight", type=float, default=0.1)
     p.add_argument("--reward-interface-weight", type=float, default=0.15)
@@ -474,13 +481,15 @@ def main() -> int:
     )
     if args.adapter_init:
         model = PeftModel.from_pretrained(model, str(args.adapter_init), is_trainable=True)
+        resolved_target_modules = None
     else:
+        resolved_target_modules = resolve_lora_target_modules(args.target_modules, model)
         lora_config = LoraConfig(
             task_type=TaskType.CAUSAL_LM,
             r=args.lora_rank,
             lora_alpha=args.lora_alpha,
             lora_dropout=0.05,
-            target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"],
+            target_modules=resolved_target_modules,
             bias="none",
         )
         model = get_peft_model(model, lora_config)
@@ -775,6 +784,8 @@ def main() -> int:
                     "quantum_priority": args.quantum_priority,
                     "research_methods": summarize_methods(research_methods),
                     "curriculum_state": curriculum.state,
+                    "target_modules": list(args.target_modules) if args.target_modules else None,
+                    "resolved_target_modules": resolved_target_modules,
                 },
                 indent=2,
             )

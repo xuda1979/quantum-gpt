@@ -1,0 +1,18 @@
+{"stage": "args_parsed", "output_dir": "outputs/fast-lora-qwen25-1p5b-interface-smoke8", "train_file": "data/generated/fast-mini-interface/train-smoke8.jsonl", "eval_file": "data/generated/fast-mini-interface/eval.jsonl"}
+/Users/daxu/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+{"stage": "deps_loaded"}
+{"stage": "device_resolved", "device": "cpu", "requested": "cpu"}
+{"stage": "ddp_ready", "distributed": false, "rank": 0, "world_size": 1, "device": "cpu"}
+{"stage": "tokenizer_loaded", "pad_token": "<|endoftext|>", "padding_side": "right"}
+{"stage": "datasets_ready", "train_examples": 8, "eval_examples": 32, "max_length": 512}
+{"stage": "model_load_start", "model_name": "models/Qwen2.5-1.5B-Instruct"}
+Sliding Window Attention is enabled but not implemented for `sdpa`; unexpected results may be encountered.
+{"stage": "model_loaded"}
+{"stage": "lora_wrapped"}
+{"stage": "model_on_device", "device": "cpu"}
+{"stage": "train_mode"}
+{"stage": "optimizer_ready", "max_steps": 1, "gradient_accumulation_steps": 1}
+{"stage": "epoch_start", "epoch": 1}
+You're using a Qwen2TokenizerFast tokenizer. Please note that with a fast tokenizer, using the `__call__` method is faster than using a method to encode the text followed by a call to the `pad` method to get a padded encoding.
+{"stage": "first_batch_loaded", "batch_index": 1, "input_shape": [1, 404]}

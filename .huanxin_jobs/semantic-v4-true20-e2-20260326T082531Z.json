@@ -1,0 +1,12 @@
+{
+  "job_id": "semantic-v4-true20-e2-20260326T082531Z",
+  "name": "semantic-v4-true20-e2",
+  "pid": 123615,
+  "log_path": "/tmp/semantic-v4-true20-e2-20260326T1627CST.log",
+  "remote_root": "/root/root/work/quantum-gpt",
+  "command": "ps aux | grep torchrun | grep -v grep && { echo '__BLOCKED_TORCHRUN__'; exit 1; } || true; PYTORCH_NPU_ALLOC_CONF=max_split_size_mb:256 torchrun --nproc_per_node=8 training/qwen_sft_peft.py --model-name models/Qwen2.5-1.5B-Instruct --train-file data/generated/fast-mini-interface-prefix-semantic-v4/train.jsonl --eval-file data/generated/fast-mini-interface-prefix-semantic-v4/eval.jsonl --output-dir outputs/interface-prefix-semantic-v4-8npu-true20-e2-20260326T1627CST --max-length 512 --max-steps 20 --num-epochs 2 --per-device-batch-size 1 --gradient-accumulation-steps 2 --eval-steps 10 --device npu",
+  "created_at": "2026-03-26T08:25:31+00:00",
+  "transport": "standalone",
+  "duration_ms": null,
+  "meta_file": "/Users/daxu/software/quantum-gpt/.huanxin_jobs/semantic-v4-true20-e2-20260326T082531Z.json"
+}

@@ -1,0 +1,11 @@
+{
+  "id": "software_workspace_patch_bundle_repair",
+  "name": "Workspace patch bundle repair",
+  "domain": "software",
+  "category": "workspace_repair",
+  "candidate_files": [
+    "pkg/patch_engine.py"
+  ],
+  "workspace_dir": "workspace",
+  "test_file": "tests.py"
+}

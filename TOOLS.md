@@ -42,16 +42,25 @@ Add whatever helps you do your job. This is your cheat sheet.
 ## Huanxin
 
 - Train-dev route: `https://aihuanxin.cn/kunlun/kl-web?poolId=1&projectId=3ed7854b946a47b1a49ad754baa76cd3#/train-dev`
+- User-required rule: use exactly the `#/train-dev` route above for Huanxin. Do not switch to alternate environment URLs or separate login pages unless explicitly instructed.
 - Preferred remote target: `/root/root/work/quantum-gpt`
-- Preferred environment: `ai2`
+- Available environments: `ai1`, `ai2`
+- Default environment: `ai2` unless `ai1` is a better fit for capacity or parallel work
 - Browser helpers live under `browser-automation/`
+- This repo is meant to be driven directly by Codex. Do not depend on OpenClaw-managed skills or `~/.openclaw` state for normal Huanxin or S3 operations.
 - If the live browser profile is locked, clone it first and automate against `/tmp/huanxin-profile-copy`
+- Do not kill the Huanxin browser daemon or otherwise discard the authenticated browser session unless explicitly instructed.
 
 Common commands:
 
 ```bash
 node browser-automation/huanxin_probe.js
+./scripts/huanxin_shell.sh ai1 "pwd && whoami"
+./scripts/ai2_shell.sh "pwd && whoami"
+./scripts/push_to_s3.sh --dry-run scripts skills
+./scripts/ai2_shell.sh "rclone lsd nm-aihuanxin:jtdlp-3ed7854b946a47b1a49ad754baa76cd3/ | head"
 node browser-automation/huanxin_inspect.js
+node browser-automation/huanxin_open_env.js ai1
 node browser-automation/huanxin_open_env.js ai2
 node browser-automation/huanxin_mouse_paste.js '<url>' --click-text '<visible text>' --paste-file '<file>' --replace
 ```

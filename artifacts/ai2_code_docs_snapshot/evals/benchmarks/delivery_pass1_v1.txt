@@ -1,0 +1,12 @@
+# Fixed 10-task delivery gate for code pass@1 tracking.
+# Pass threshold: >= 3 / 10 on first generation with no manual repair.
+quantum_bell_pair_construction
+quantum_measurement_bug_repair
+quantum_qft_phase_pattern
+quantum_superdense_coding
+quantum_teleportation_corrections
+software_config_merge
+software_docstring_contract
+software_duplicate_logic_refactor
+software_off_by_one_bugfix
+software_parser_regression_tests

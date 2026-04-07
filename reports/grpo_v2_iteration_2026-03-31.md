@@ -8,7 +8,7 @@
 
 ## 二、训练器改动
 
-本轮已经对 [training/grpo_trainer.py](/Users/daxu/software/quantum-gpt/training/grpo_trainer.py) 完成一批关键升级。
+本轮已经对 [training/grpo_trainer.py](../training/grpo_trainer.py) 完成一批关键升级。
 
 首先，训练更新从早期偏向加权 CE 的写法，进一步收敛到更真实的仅补全结果 GRPO 更新路径。这样做的意义，是让模型真正围绕候选补全结果的相对优劣来学习，而不是仅仅重复监督学习思路。
 
@@ -35,7 +35,7 @@
 
 同时，相关命令清单也已经重新生成：
 
-- [artifacts/quantum-generalization-command-sheet.txt](/Users/daxu/software/quantum-gpt/artifacts/quantum-generalization-command-sheet.txt)
+- [artifacts/quantum-generalization-command-sheet.txt](../artifacts/quantum-generalization-command-sheet.txt)
 
 ## 四、远端运行情况
 

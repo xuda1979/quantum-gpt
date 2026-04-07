@@ -1,0 +1,42 @@
+{
+  "prompt_version": "v2",
+  "prompt_style": "repair_focused",
+  "created_at_utc": "2026-03-30T14:19:16.402520+00:00",
+  "system_prompt": "You are solving a single evaluation task as a careful repair engineer. Produce only the final Python candidate file. Preserve simplicity, avoid unnecessary abstractions, and do not emit markdown or explanation text.",
+  "notes": "Local Qwen2.5 base baseline on strict unseen quantum generalization benchmark.",
+  "tasks": [
+    {
+      "id": "quantum_gate_alias_normalization",
+      "name": "Gate alias normalization repair",
+      "domain": "quantum",
+      "category": "api_normalization",
+      "prompt_file": "prompts/quantum_gate_alias_normalization.txt",
+      "candidate_file": "candidates/quantum_gate_alias_normalization.py"
+    },
+    {
+      "id": "quantum_phase_estimation_circuit",
+      "name": "Quantum phase estimation unitary eigenvalue extraction",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "prompt_file": "prompts/quantum_phase_estimation_circuit.txt",
+      "candidate_file": "candidates/quantum_phase_estimation_circuit.py"
+    },
+    {
+      "id": "quantum_qaoa_maxcut",
+      "name": "QAOA MaxCut cost function and classical simulation",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "prompt_file": "prompts/quantum_qaoa_maxcut.txt",
+      "candidate_file": "candidates/quantum_qaoa_maxcut.py"
+    },
+    {
+      "id": "quantum_superdense_coding",
+      "name": "Superdense coding encode/decode",
+      "domain": "quantum",
+      "category": "reasoning",
+      "prompt_file": "prompts/quantum_superdense_coding.txt",
+      "candidate_file": "candidates/quantum_superdense_coding.py"
+    }
+  ],
+  "token_budget_preset": "quantum_heavy"
+}

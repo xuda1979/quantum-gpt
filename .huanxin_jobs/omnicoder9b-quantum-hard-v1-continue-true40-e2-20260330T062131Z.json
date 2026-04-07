@@ -1,0 +1,12 @@
+{
+  "job_id": "omnicoder9b-quantum-hard-v1-continue-true40-e2-20260330T062131Z",
+  "name": "omnicoder9b-quantum-hard-v1-continue-true40-e2",
+  "pid": 188187,
+  "log_path": "/tmp/omnicoder_quantum_hard_v1_continue_true40_e2_20260330T142009CST.log",
+  "remote_root": "/root/root/work/quantum-gpt",
+  "command": "test -f data/generated/omnicoder-quantum-hard-v1/train.jsonl && test -f data/generated/omnicoder-quantum-hard-v1/eval.jsonl && test -f outputs/omnicoder9b-quantum-focus-v1-2npu-true40-20260330T1237CST/adapter/adapter_model.safetensors && PYTORCH_NPU_ALLOC_CONF=max_split_size_mb:256 ASCEND_RT_VISIBLE_DEVICES=6,7 torchrun --nproc_per_node=2 training/qwen_sft_peft.py --model-name models/OmniCoder-9B --adapter-init outputs/omnicoder9b-quantum-focus-v1-2npu-true40-20260330T1237CST/adapter --train-file data/generated/omnicoder-quantum-hard-v1/train.jsonl --eval-file data/generated/omnicoder-quantum-hard-v1/eval.jsonl --output-dir outputs/omnicoder9b-quantum-hard-v1-continue-true40-e2-20260330T142009CST --device npu --max-length 512 --max-steps 40 --num-epochs 2 --per-device-batch-size 1 --gradient-accumulation-steps 2 --eval-steps 10 --log-steps 1",
+  "created_at": "2026-03-30T06:22:03.740139+00:00",
+  "transport": "standalone",
+  "duration_ms": 29841,
+  "meta_file": "/Users/daxu/software/quantum-gpt/.huanxin_jobs/omnicoder9b-quantum-hard-v1-continue-true40-e2-20260330T062131Z.json"
+}

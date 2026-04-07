@@ -1,0 +1,141 @@
+Task ID: quantum_stabilizer_tableau_update_repair
+Task name: Stabilizer tableau single-qubit update repair
+Domain: quantum
+Category: debug_repair
+
+Treat this as a minimal-edit repair or implementation task.
+Write the simplest Python file that satisfies the supplied tests and return only that file.
+
+Reference candidate style example (for format guidance, not for blind copying):
+--- BEGIN REFERENCE CANDIDATE ---
+def _normalize_pauli(label: str) -> str:
+    normalized = label.strip().upper()
+    if normalized not in {"I", "X", "Y", "Z"}:
+        raise ValueError(f"unsupported Pauli operator: {label!r}")
+    return normalized
+
+
+_CONJUGATION_RULES = {
+    "H": {
+        "I": (1, "I"),
+        "X": (1, "Z"),
+        "Y": (-1, "Y"),
+        "Z": (1, "X"),
+    },
+    "S": {
+        "I": (1, "I"),
+        "X": (1, "Y"),
+        "Y": (-1, "X"),
+        "Z": (1, "Z"),
+    },
+    "SDG": {
+        "I": (1, "I"),
+        "X": (-1, "Y"),
+        "Y": (1, "X"),
+        "Z": (1, "Z"),
+    },
+}
+
+
+def apply_gate_sequence(pauli: str, gates: list[str]) -> tuple[int, str]:
+    """Update a signed single-qubit Pauli under Clifford conjugation."""
+    raw = pauli.strip()
+    sign = -1 if raw.startswith("-") else 1
+    label = raw[1:] if raw.startswith("-") else raw
+    label = _normalize_pauli(label)
+
+    for gate in gates:
+        gate_name = gate.strip().upper()
+        if gate_name not in _CONJUGATION_RULES:
+            raise ValueError(f"unsupported gate: {gate!r}")
+        gate_sign, next_label = _CONJUGATION_RULES[gate_name][label]
+        sign *= gate_sign
+        label = next_label
+
+    return sign, label
+
+--- END REFERENCE CANDIDATE ---
+
+Tests the candidate must satisfy:
+--- BEGIN TESTS ---
+import copy
+import importlib.util
+
+
+
+def _load(candidate_path: str):
+    spec = importlib.util.spec_from_file_location("candidate", candidate_path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
+CASES = [
+    ("X", ["H"], (1, "Z")),
+    ("Z", ["H", "H"], (1, "Z")),
+    ("Y", ["H"], (-1, "Y")),
+    ("X", ["S"], (1, "Y")),
+    ("Y", ["S"], (-1, "X")),
+    ("X", ["SDG"], (-1, "Y")),
+    ("Y", ["SDG"], (1, "X")),
+    ("-X", ["S", "H"], (1, "Y")),
+    (" z ", [" h ", " s ", " sdg "], (1, "X")),
+    ("I", ["H", "S", "SDG", "H"], (1, "I")),
+    ("-Y", ["H", "S", "H"], (-1, "Z")),
+    ("X", ["S", "S", "H"], (-1, "Z")),
+    ("Y", ["SDG", "H", "S", "H"], (1, "X")),
+]
+
+
+BAD_PAULIS = ["", "A", "-Q"]
+BAD_GATES = [["T"], ["H", "measure"], ["S", "CZ"]]
+
+
+
+def run_tests(candidate_path: str) -> dict:
+    module = _load(candidate_path)
+    failures = []
+
+    for pauli, gates, expected in CASES:
+        original_gates = copy.deepcopy(gates)
+        actual = module.apply_gate_sequence(pauli, gates)
+        if actual != expected:
+            failures.append(
+                f"apply_gate_sequence({pauli!r}, {gates!r}) -> {actual!r}, expected {expected!r}"
+            )
+        if gates != original_gates:
+            failures.append(f"apply_gate_sequence mutated gates input for {pauli!r}, {gates!r}")
+
+    for bad_pauli in BAD_PAULIS:
+        try:
+            module.apply_gate_sequence(bad_pauli, ["H"])
+        except ValueError:
+            pass
+        except Exception as exc:
+            failures.append(
+                f"apply_gate_sequence({bad_pauli!r}, ['H']) raised {type(exc).__name__}, expected ValueError"
+            )
+        else:
+            failures.append(f"apply_gate_sequence({bad_pauli!r}, ['H']) did not raise ValueError")
+
+    for bad_gates in BAD_GATES:
+        try:
+            module.apply_gate_sequence("X", bad_gates)
+        except ValueError:
+            pass
+        except Exception as exc:
+            failures.append(
+                f"apply_gate_sequence('X', {bad_gates!r}) raised {type(exc).__name__}, expected ValueError"
+            )
+        else:
+            failures.append(f"apply_gate_sequence('X', {bad_gates!r}) did not raise ValueError")
+
+    return {
+        "passed": not failures,
+        "details": failures or [
+            "Stabilizer tableau repair preserves sign and axis updates across H/S/SDG sequences"
+        ],
+    }
+
+--- END TESTS ---

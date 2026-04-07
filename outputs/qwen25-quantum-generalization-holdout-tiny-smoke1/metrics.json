@@ -1,0 +1,51 @@
+{
+  "model_name": "models/Qwen2.5-1.5B-Instruct",
+  "signature": {
+    "model_name": "models/Qwen2.5-1.5B-Instruct",
+    "adapter_init": null,
+    "train_file": "/tmp/omnicoder_quantum_generalization_train_smoke1.jsonl",
+    "eval_file": null,
+    "device": "cpu",
+    "max_length": 128,
+    "per_device_batch_size": 1,
+    "gradient_accumulation_steps": 1,
+    "learning_rate": 0.0002,
+    "num_epochs": 1,
+    "max_steps": 1,
+    "eval_steps": 1,
+    "log_steps": 1,
+    "lora_rank": 16,
+    "lora_alpha": 32,
+    "lora_dropout": 0.05,
+    "load_in_8bit": false,
+    "train_on_completions_only": true,
+    "target_modules": [
+      "q_proj",
+      "k_proj",
+      "v_proj",
+      "o_proj",
+      "gate_proj",
+      "up_proj",
+      "down_proj"
+    ],
+    "signature_sha256": "d8b213be8128c9d387bcbf972897a611fafa9b9525ca46e92d0e1f9c7086152f"
+  },
+  "device": "cpu",
+  "world_size": 1,
+  "train_examples": 1,
+  "eval_examples": 0,
+  "optimizer_steps_per_epoch": 1,
+  "max_available_steps": 1,
+  "requested_max_steps": 1,
+  "completed_steps": 1,
+  "max_steps": 1,
+  "final_eval": null,
+  "metrics": [
+    {
+      "step": 1,
+      "epoch": 1,
+      "train_loss": 2.415724754333496,
+      "lr": 0.0
+    }
+  ]
+}

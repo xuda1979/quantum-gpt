@@ -1,0 +1,240 @@
+{
+  "slice_json": "reports/base_vs_adapter_eval_slice_interface_prefix.json",
+  "base_model": "models/Qwen2.5-1.5B-Instruct",
+  "adapter": "outputs/interface-prefix-semantic-v4-8npu-true20-e2-20260326T1627CST/adapter",
+  "max_new_tokens": 192,
+  "temperature": 0.0,
+  "examples": [
+    {
+      "example_id": "template_session_window_summary_10_ab155b35",
+      "task_id": "software_session_window_summary",
+      "task_name": "Session window summary with ordered history",
+      "domain": "software",
+      "prompt": "Follow these interface requirements exactly:\n- Required function: def summarize_sessions(events: list
+[dict], *, active_window: int) -> dict\n- Output requirement: return only Python code.\n\nPlease solve this coding task
+ in Python:\n\nTask: Session window summary with ordered history\n",
+      "reference": "# Implementation\ndef summarize_sessions(events: list[dict], *, active_window: int) -> dict:\n    \
+"\"\"Summarize session activity without mutating the input event list.\n\n    Each event has keys: session_id, ts, kind
+.\n    Supported kinds: open, message, close.\n\n    Output format:\n    {\n        \"active_sessions\": [sorted sessio
+n ids whose latest event is within active_window of max ts and not closed],\n        \"closed_sessions\": [sorted sessi
+on ids that were explicitly closed],\n        \"message_counts\": {session_id: count_of_message_events},\n        \"tim
+eline\": [\"<ts>:<session_id>:<kind>\", ... in original order],\n    }\n\n    Rules:\n    - A message before open is in
+valid.\n    - Opening an already-open session is invalid.\n    - Closing a missing or already-closed session is invalid
+.\n    - Unsupported kinds are invalid.\n    \"\"\"\n    if active_window < 0:\n        raise ValueError(\"active_windo
+w must be non-negative\")\n\n    open_sessions = {}\n    closed_sessions = set()\n    message_counts = {}\n    timeline
+ = []\n    max_ts = None\n\n    for event in events:\n        session_id = event[\"session_id\"]\n        ts = event[\"
+ts\"]\n        kind = event[\"kind\"]\n        timeline.append(f\"{ts}:{session_id}:{kind}\")\n        max_ts = ts if m
+ax_ts is None else max(max_ts, ts)\n\n        if kind == \"open\":\n            if session_id in open_sessions:\n
+          raise ValueError(\"session already open\")\n            open_sessions[session_id] = ts\n            message_c
+ounts.setdefault(session_id, 0)\n            closed_sessions.discard(session_id)\n        elif kind == \"message\":\n
+          if session_id not in open_sessions:\n                raise ValueError(\"message for inactive session\")\n
+        message_counts[session_id] = message_counts.get(session_id, 0) + 1\n            open_sessions[session_id] = ts\
+n        elif kind == \"close\":\n            if session_id not in open_sessions:\n                raise ValueError(\"c
+lose for inactive session\")\n            del open_sessions[session_id]\n            closed_sessions.add(session_id)\n
+           message_counts.setdefault(session_id, 0)\n        else:\n            raise ValueError(\"unsupported event ki
+nd\")\n\n    if max_ts is None:\n        active = []\n    else:\n        active = sorted(\n            session_id\n
+        for session_id, last_seen in open_sessions.items()\n            if max_ts - last_seen <= active_window\n
+ )\n\n    return {\n        \"active_sessions\": active,\n        \"closed_sessions\": sorted(closed_sessions),\n
+  \"message_counts\": dict(sorted(message_counts.items())),\n        \"timeline\": timeline,\n    }",
+      "review_checklist": [
+        "required function/class names are present",
+        "output is code-only with no explanations",
+        "obvious validation behavior is present",
+        "solution shape is semantically close to the reference",
+        "no obvious likely test-breaking mistakes"
+      ],
+      "base_output": "```python\ndef summarize_sessions(events: list[dict], *, active_window: int) -> dict:\n    \"\"\"
+\n    Summarizes sessions based on the given events and returns a dictionary containing the session windows.\n    \n
+ Parameters:\n    - events (list of dicts): A list where each element is an event represented as a dictionary.\n    - a
+ctive_window (int): The length of the active window for summarizing sessions.\n    \n    Returns:\n    - dict: A dictio
+nary where keys are session IDs and values are lists of timestamps representing the start and end times of the session
+windows.\n    \"\"\"\n    # Initialize an empty dictionary to store session windows\n    session_windows = {}\n    \n
+  # Iterate over the events to identify unique session IDs\n    current_session_id = None\n    for event in events:\n
+      if 'sessionID' not in event or event['sessionID'] == current_session_id:\n            continue\n        \n
+ # Update the current session ID",
+      "adapter_output": "def summarize_sessions(events: list[dict], *, active_window: int) -> dict:\n    \"\"\"Return a
+ summary of sessions based on events and an active window size.\n    \n    Each event is expected to have the following
+ keys:\n    - \"timestamp\": datetime object representing when the session started or ended.\n    - \"type\": string in
+dicating what happened (e.g., \"start\", \"end\").\n    \"\"\"\n    result = {}\n    for event in sorted(events):\n
+    timestamp = event[\"timestamp\"]\n        if event[\"type\"] == \"start\":\n            key = str(timestamp.timesta
+mp())\n            if key not in result:\n                result[key] = {\"count\": 0}\n            result[key][\"count
+\"] += 1\n        elif event[\"type\"] == \"end\" and key in result:\n            count = result.pop(key)[\"count\"]\n
+           result[f\"{key}_total\"] = {\n                **result.get(f\"{key}_total\", {}),\n                \""
+    },
+    {
+      "example_id": "template_measurement_bug_repair_17_9fa09a1c",
+      "task_id": "quantum_measurement_bug_repair",
+      "task_name": "Measurement mapping bug repair",
+      "domain": "quantum",
+      "prompt": "Follow these interface requirements exactly:\n- Required function: def measurement_mapping(bitstring:
+str) -> dict[str, int]\n\nWrite a Python solution for the following task:\n\nTask: Measurement mapping bug repair\n\nRe
+turn the solution as Python code only.\n",
+      "reference": "# Solution\ndef measurement_mapping(bitstring: str) -> dict[str, int]:\n    \"\"\"Map q0/q1 to inte
+ger measurement results from a two-bit string.\n\n    Input ordering is q1q0, so the rightmost bit is q0.\n    \"\"\"\n
+    if len(bitstring) != 2 or any(ch not in \"01\" for ch in bitstring):\n        raise ValueError(\"expected a two-bit
+ measurement string\")\n    return {\"q0\": int(bitstring[1]), \"q1\": int(bitstring[0])}",
+      "review_checklist": [
+        "required function/class names are present",
+        "output is code-only with no explanations",
+        "obvious validation behavior is present",
+        "solution shape is semantically close to the reference",
+        "no obvious likely test-breaking mistakes"
+      ],
+      "base_output": "```python\ndef measurement_mapping(bitstring):\n    # Convert bitstring to integer\n    value = i
+nt(bitstring, 2)\n    \n    # Define mappings based on the value of the bitstring\n    if value == 0b10101010:\n
+ return {\"A\": \"X\", \"B\": \"Y\"}\n    elif value == 0b11001100:\n        return {\"C\": \"Z\", \"D\": \"W\"}\n    e
+lse:\n        return None\n\n# Example usage\nprint(measurement_mapping(\"10101010\"))  # Output: {'A': 'X', 'B': 'Y'}\
+nprint(measurement_mapping(\"11001100\"))  # Output: {'C': 'Z', 'D': 'W'}\n```",
+      "adapter_output": "def measurement_mapping(bitstring: str) -> dict[str, int]:\n    \"\"\"Converts a bitstring to
+a dictionary of measurement outcomes and counts.\n\n    Args:\n        bitstring (str): A string representing quantum m
+easurements in binary format.\n\n    Returns:\n        dict[str, int]: A dictionary where keys are outcome strings and
+values are counts.\n    \"\"\"\n    return {outcome: bin(int(bitstring)).count(\"1\") for outcome in \"01\"}"
+    },
+    {
+      "example_id": "template_stabilizer_tableau_update_repair_9_24ca0492",
+      "task_id": "quantum_stabilizer_tableau_update_repair",
+      "task_name": "Stabilizer tableau single-qubit update repair",
+      "domain": "quantum",
+ str\n- Required function: def apply_gate_sequence(pauli: str, gates: list[str]) -> tuple[int, str]\n- Output requireme
+nt: return only Python code.\n\nWrite a Python solution for the following task:\n\nTask: Stabilizer tableau single-qubi
+t update repair\n",
+      "reference": "# Solution\ndef _normalize_pauli(label: str) -> str:\n    normalized = label.strip().upper()\n    i
+f normalized not in {\"I\", \"X\", \"Y\", \"Z\"}:\n        raise ValueError(f\"unsupported Pauli operator: {label!r}\")
+\n    return normalized\n\n\n_CONJUGATION_RULES = {\n    \"H\": {\n        \"I\": (1, \"I\"),\n        \"X\": (1, \"Z\"
+),\n        \"Y\": (-1, \"Y\"),\n        \"Z\": (1, \"X\"),\n    },\n    \"S\": {\n        \"I\": (1, \"I\"),\n
+\"X\": (1, \"Y\"),\n        \"Y\": (-1, \"X\"),\n        \"Z\": (1, \"Z\"),\n    },\n    \"SDG\": {\n        \"I\": (1,
+ \"I\"),\n        \"X\": (-1, \"Y\"),\n        \"Y\": (1, \"X\"),\n        \"Z\": (1, \"Z\"),\n    },\n}\n\n\ndef apply
+_gate_sequence(pauli: str, gates: list[str]) -> tuple[int, str]:\n    \"\"\"Update a signed single-qubit Pauli under Cl
+ifford conjugation.\"\"\"\n    raw = pauli.strip()\n    sign = -1 if raw.startswith(\"-\") else 1\n    label = raw[1:]
+if raw.startswith(\"-\") else raw\n    label = _normalize_pauli(label)\n\n    for gate in gates:\n        gate_name = g
+ate.strip().upper()\n        if gate_name not in _CONJUGATION_RULES:\n            raise ValueError(f\"unsupported gate:
+ {gate!r}\")\n        gate_sign, next_label = _CONJUGATION_RULES[gate_name][label]\n        sign *= gate_sign\n
+label = next_label\n\n    return sign, label",
+      "review_checklist": [
+        "required function/class names are present",
+        "output is code-only with no explanations",
+        "obvious validation behavior is present",
+        "solution shape is semantically close to the reference",
+        "no obvious likely test-breaking mistakes"
+      ],
+      "base_output": "```python\ndef _normalize_pauli(label: str) -> str:\n    \"\"\"\n    Normalize Pauli label to sta
+ndard form.\n    \n    Args:\n        label (str): The Pauli label in string format.\n        \n    Returns:\n        s
+tr: Normalized Pauli label.\n    \"\"\"\n    if label == 'I':\n        return 'I'\n    elif label == 'X':\n        retu
+rn 'Y'\n    elif label == 'Y':\n        return 'Z'\n    elif label == 'Z':\n        return 'X'\n    else:\n        rais
+e ValueError(\"Invalid Pauli label\")\n\ndef apply_gate_sequence(pauli: str, gates: list[str]) -> tuple[int, str]:\n
+ \"\"\"\n    Apply a sequence of quantum gate operations on a stabilizer state represented as a Pauli word.\n    \n
+Args:\n        pauli (str): The initial Pauli word representing the stabilizer state.\n        gates (list[str]): A lis
+t of",
+      "adapter_output": "def _normalize_pauli(label: str) -> str:\n    \"\"\"Return normalized Pauli label.\"\"\"\n
+if label == \"I\":\n        return \"\"\n    elif label in {\"X\", \"Y\", \"Z\"}:\n        return f\"^{label}\"\n    ra
+ise ValueError(f\"Unknown Pauli label {repr(label)}\")\n\n\ndef apply_gate_sequence(pauli: str, gates: list[str]) -> tu
+ple[int, str]:\n    \"\"\"Apply gate sequence to stabilizer tableau and normalize result.\"\"\"\n    n = 0\n    pauli =
+ _normalize_pauli(pauli)\n    for gate in gates:\n        if not gate.startswith(\"H\"):\n            raise ValueError(
+f\"Invalid gate {gate!r}\")\n        n += int(gate[1:])\n    return (n % 2, pauli)\n\n\ndef repair_stabilizer_tableau(t
+ableau: dict[str, int], gates: list[str]) -> dict[str, int]:"
+    },
+    {
+      "example_id": "template_session_event_log_5_ba6d5385",
+      "task_id": "software_session_event_log",
+      "task_name": "Session event log state machine",
+      "domain": "software",
+      "prompt": "Follow these interface requirements exactly:\n- Required function: def apply_events(events)\n\nPlease
+solve this coding task in Python:\n\nTask: Session event log state machine\n\nReturn the solution as Python code only.\
+n",
+      "reference": "# Solution\ndef apply_events(events):\n    state = {\"active\": {}, \"history\": []}\n\n    for eve
+nt in events:\n        kind = event[\"type\"]\n        session_id = event[\"session_id\"]\n\n        if kind == \"start
+\":\n            if session_id in state[\"active\"]:\n                raise ValueError(f\"session already active: {sess
+ion_id}\")\n            state[\"active\"][session_id] = {\n                \"user\": event[\"user\"],\n
+\"started_at\": event[\"ts\"],\n                \"last_seen\": event[\"ts\"],\n                \"messages\": 0,\n
+      }\n            continue\n\n        if session_id not in state[\"active\"]:\n            raise ValueError(f\"sessi
+on not active: {session_id}\")\n\n        if kind == \"message\":\n            active = state[\"active\"][session_id]\n
+            active[\"messages\"] += 1\n            active[\"last_seen\"] = event[\"ts\"]\n            continue\n\n
+   if kind == \"end\":\n            active = state[\"active\"].pop(session_id)\n            state[\"history\"].append(\
+n                {\n                    \"session_id\": session_id,\n                    \"user\": active[\"user\"],\n
+                   \"started_at\": active[\"started_at\"],\n                    \"ended_at\": event[\"ts\"],\n
+           \"messages\": active[\"messages\"],\n                }\n            )\n            continue\n\n        raise
+ ValueError(f\"unknown event type: {kind}\")\n\n    state[\"history\"].sort(key=lambda item: (item[\"started_at\"], ite
+m[\"session_id\"]))\n    return state",
+      "review_checklist": [
+        "required function/class names are present",
+        "output is code-only with no explanations",
+        "obvious validation behavior is present",
+        "solution shape is semantically close to the reference",
+        "no obvious likely test-breaking mistakes"
+      ],
+      "base_output": "```python\ndef apply_events(events):\n    # Define the states and transitions of the session even
+t log state machine\n    states = {\n        'initial': {'event': 'start', 'next_state': 'active'},\n        'active':
+{'event': 'end', 'next_state': 'final'},\n        'final': {}\n    }\n    \n    current_state = 'initial'\n    \n    fo
+r event in events:\n        if event['state'] == 'start':\n            current_state = 'active'\n        elif event['st
+ate'] == 'end' and current_state != 'final':\n            current_state = 'final'\n    \n    return current_state\n```\
+n\nThis Python code defines a simple state machine that tracks the state of an event log based on the sequence of event
+s provided. The `apply_events` function takes a list of dictionaries representing the events and returns the final stat
+e of the event log.",
+      "adapter_output": "def apply_events(events):\n    \"\"\"Apply session events to the current state.\n\n    Args:\n
+        events (list[dict]): A list of events to process.\n    \"\"\"\n    for event in events:\n        if \"type\" no
+t in event or event[\"type\"] == \"start\":\n            continue  # Skip start events and empty events\n        action
+ = event.get(\"action\", None)\n        if action is None:\n            raise ValueError(f\"Missing required 'action' f
+ield in event {event}\")\n\n        if action == \"log_state_change\":\n            log_state_change(event)\n        el
+if action == \"set_session_attribute\":\n            set_session_attribute(event)\n        else:\n            raise Val
+ueError(f\"Unknown action type '{action}'\")\n    return events\n\n\ndef log_state_change(event):\n    \"\"\"Log a stat
+e change event.\"\"\"\n    print(f\"State changed from {event['previous_state']} to {event['current_state']}\")\n\n\nde
+f set_session_attribute(event):"
+    },
+    {
+      "example_id": "template_session_window_summary_18_3c89bcaf",
+      "task_id": "software_session_window_summary",
+      "task_name": "Session window summary with ordered history",
+      "domain": "software",
+      "prompt": "Follow these interface requirements exactly:\n- Required function: def summarize_sessions(events: list
+[dict], *, active_window: int) -> dict\n\nPlease solve this coding task in Python:\n\nTask: Session window summary with
+ ordered history\n\nReturn only the code, no explanations.\n",
+      "reference": "# Implementation\ndef summarize_sessions(events: list[dict], *, active_window: int) -> dict:\n    \
+"\"\"Summarize session activity without mutating the input event list.\n\n    Each event has keys: session_id, ts, kind
+.\n    Supported kinds: open, message, close.\n\n    Output format:\n    {\n        \"active_sessions\": [sorted sessio
+n ids whose latest event is within active_window of max ts and not closed],\n        \"closed_sessions\": [sorted sessi
+on ids that were explicitly closed],\n        \"message_counts\": {session_id: count_of_message_events},\n        \"tim
+eline\": [\"<ts>:<session_id>:<kind>\", ... in original order],\n    }\n\n    Rules:\n    - A message before open is in
+valid.\n    - Opening an already-open session is invalid.\n    - Closing a missing or already-closed session is invalid
+.\n    - Unsupported kinds are invalid.\n    \"\"\"\n    if active_window < 0:\n        raise ValueError(\"active_windo
+w must be non-negative\")\n\n    open_sessions = {}\n    closed_sessions = set()\n    message_counts = {}\n    timeline
+ = []\n    max_ts = None\n\n    for event in events:\n        session_id = event[\"session_id\"]\n        ts = event[\"
+ts\"]\n        kind = event[\"kind\"]\n        timeline.append(f\"{ts}:{session_id}:{kind}\")\n        max_ts = ts if m
+ax_ts is None else max(max_ts, ts)\n\n        if kind == \"open\":\n            if session_id in open_sessions:\n
+          raise ValueError(\"session already open\")\n            open_sessions[session_id] = ts\n            message_c
+ounts.setdefault(session_id, 0)\n            closed_sessions.discard(session_id)\n        elif kind == \"message\":\n
+          if session_id not in open_sessions:\n                raise ValueError(\"message for inactive session\")\n
+        message_counts[session_id] = message_counts.get(session_id, 0) + 1\n            open_sessions[session_id] = ts\
+n        elif kind == \"close\":\n            if session_id not in open_sessions:\n                raise ValueError(\"c
+lose for inactive session\")\n            del open_sessions[session_id]\n            closed_sessions.add(session_id)\n
+           message_counts.setdefault(session_id, 0)\n        else:\n            raise ValueError(\"unsupported event ki
+nd\")\n\n    if max_ts is None:\n        active = []\n    else:\n        active = sorted(\n            session_id\n
+        for session_id, last_seen in open_sessions.items()\n            if max_ts - last_seen <= active_window\n
+ )\n\n    return {\n        \"active_sessions\": active,\n        \"closed_sessions\": sorted(closed_sessions),\n
+  \"message_counts\": dict(sorted(message_counts.items())),\n        \"timeline\": timeline,\n    }",
+      "review_checklist": [
+        "required function/class names are present",
+        "output is code-only with no explanations",
+        "obvious validation behavior is present",
+        "solution shape is semantically close to the reference",
+        "no obvious likely test-breaking mistakes"
+      ],
+      "base_output": "```python\nfrom typing import List, Dict\n\ndef summarize_sessions(events: List[Dict[str, str]],
+active_window: int) -> Dict[str, List[str]]:\n    session_history = {}\n    for event in events:\n        if 'session_i
+d' not in event or 'history' not in event:\n            continue\n        session_id = event['session_id']\n        his
+tory = event['history']\n        \n        if session_id not in session_history:\n            session_history[session_i
+d] = []\n            \n        # Ensure the history is ordered and truncated to fit within the active window size\n
+    if len(session_history[session_id]) < active_window:\n            session_history[session_id].append(history)\n
+    else:\n            session_history[session_id][-1] += history\n    \n    return {session_id: sorted(hist, key=lambd
+a x: (len(x), x))[:active_window] for session_id, hist in session_history.items()}\n```",
+      "adapter_output": "def summarize_sessions(events: list[dict], *, active_window: int) -> dict:\n    \"\"\"Summariz
+e session windows from events.\n\n    Args:\n        events (list[dict]): A sequence of event dictionaries.\n        ac
+tive_window (int): The length of an active window.\n\n    Returns:\n        dict: A dictionary summarizing sessions and
+ their active windows.\n    \"\"\"\n    result = {}\n    for i, event in enumerate(events):\n        if \"session_id\"
+not in event or \"timestamp\" not in event:\n            continue\n        session_id = event[\"session_id\"]\n
+timestamp = event[\"timestamp\"]\n\n        # Skip incomplete sessions\n        if len(result.get(session_id, [])) < 2
+* active_window + 1:\n            continue\n\n        # Update the most recent entry\n        latest_entry = result.set
+default(session_id, [])\n        latest_entry.append(timestamp)\n\n        # Remove entries older than the active windo
+w\n        while latest_entry[-"
+    }
+  ]
+}

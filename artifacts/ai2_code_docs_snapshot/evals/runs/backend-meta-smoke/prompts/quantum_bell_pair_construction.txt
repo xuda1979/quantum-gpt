@@ -1,0 +1,42 @@
+Task ID: quantum_bell_pair_construction
+Task name: Bell pair construction
+Domain: quantum
+Category: circuit_construction
+
+Write a Python file that passes the supplied tests.
+Return only the candidate file contents.
+
+Reference candidate style example (for format guidance, not for blind copying):
+--- BEGIN REFERENCE CANDIDATE ---
+def bell_pair_state():
+    """Return the Bell state |Phi+> amplitudes as a length-4 list."""
+    amp = 2 ** -0.5
+    return [amp, 0.0, 0.0, amp]
+
+--- END REFERENCE CANDIDATE ---
+
+Tests the candidate must satisfy:
+--- BEGIN TESTS ---
+import importlib.util
+import math
+
+
+def _load(candidate_path: str):
+    spec = importlib.util.spec_from_file_location("candidate", candidate_path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
+def run_tests(candidate_path: str) -> dict:
+    module = _load(candidate_path)
+    state = module.bell_pair_state()
+    expected = [2 ** -0.5, 0.0, 0.0, 2 ** -0.5]
+    ok = len(state) == 4 and all(math.isclose(a, b, rel_tol=1e-9, abs_tol=1e-9) for a, b in zip(state, expected))
+    return {
+        "passed": ok,
+        "details": [f"state={state}"] if ok else ["Bell pair amplitudes did not match expected |Phi+> state"],
+    }
+
+--- END TESTS ---

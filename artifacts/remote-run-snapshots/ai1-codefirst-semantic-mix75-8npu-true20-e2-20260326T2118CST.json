@@ -1,0 +1,36 @@
+{
+  "captured_at": "2026-03-26",
+  "source": "ai1 remote shell readback",
+  "status": "completed_remote_run_snapshot_only",
+  "note": "This preserves the critical ai1 experiment record locally while full remote->S3 artifact sync is still unreliable.",
+  "output_dir": "outputs/codefirst-semantic-mix75-8npu-true20-e2-20260326T2118CST",
+  "model_name": "models/Qwen2.5-1.5B-Instruct",
+  "train_file": "data/generated/fast-mini-codefirst-semantic-mix75/train.jsonl",
+  "eval_file": "data/generated/fast-mini-codefirst-semantic-mix75/eval.jsonl",
+  "device": "npu",
+  "world_size": 8,
+  "optimizer_steps_per_epoch": 10,
+  "max_available_steps": 20,
+  "requested_max_steps": 20,
+  "completed_steps": 20,
+  "final_eval": {
+    "loss": 0.735347468405962,
+    "perplexity": 2.086206757517806
+  },
+  "signature": {
+    "max_length": 512,
+    "per_device_batch_size": 1,
+    "gradient_accumulation_steps": 2,
+    "learning_rate": 0.0002,
+    "num_epochs": 2,
+    "max_steps": 20,
+    "eval_steps": 10
+  },
+  "comparison_to_best_semantic_v4_true20_e2": {
+    "output_dir": "outputs/interface-prefix-semantic-v4-8npu-true20-e2-20260326T1627CST",
+    "best_eval_loss": 0.6986174695193768,
+    "best_eval_perplexity": 2.0109705566192857,
+    "delta_eval_loss": 0.036729998886585236,
+    "delta_eval_perplexity": 0.07523620089852034
+  }
+}

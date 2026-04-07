@@ -1,0 +1,43 @@
+{
+  "slice_json": "reports/base_vs_adapter_eval_slice.json",
+  "base_model": "models/Qwen2.5-1.5B-Instruct",
+  "adapter": "outputs/fast-lora-qwen25-1p5b-interface-prefix-smoke1/adapter",
+  "max_new_tokens": 192,
+  "temperature": 0.0,
+  "examples": [
+    {
+      "example_id": "template_session_window_summary_10_ab155b35",
+      "task_id": "software_session_window_summary",
+      "task_name": "Session window summary with ordered history",
+      "domain": "software",
+      "prompt": "Please solve this coding task in Python:\n\nTask: Session window summary with ordered history",
+      "reference": "# Implementation\ndef summarize_sessions(events: list[dict], *, active_window: int) -> dict:\n    \"\"\"Summarize session activity without mutating the input event list.\n\n    Each event has keys: session_id, ts, kind.\n    Supported kinds: open, message, close.\n\n    Output format:\n    {\n        \"active_sessions\": [sorted session ids whose latest event is within active_window of max ts and not closed],\n        \"closed_sessions\": [sorted session ids that were explicitly closed],\n        \"message_counts\": {session_id: count_of_message_events},\n        \"timeline\": [\"<ts>:<session_id>:<kind>\", ... in original order],\n    }\n\n    Rules:\n    - A message before open is invalid.\n    - Opening an already-open session is invalid.\n    - Closing a missing or already-closed session is invalid.\n    - Unsupported kinds are invalid.\n    \"\"\"\n    if active_window < 0:\n        raise ValueError(\"active_window must be non-negative\")\n\n    open_sessions = {}\n    closed_sessions = set()\n    message_counts = {}\n    timeline = []\n    max_ts = None\n\n    for event in events:\n        session_id = event[\"session_id\"]\n        ts = event[\"ts\"]\n        kind = event[\"kind\"]\n        timeline.append(f\"{ts}:{session_id}:{kind}\")\n        max_ts = ts if max_ts is None else max(max_ts, ts)\n\n        if kind == \"open\":\n            if session_id in open_sessions:\n                raise ValueError(\"session already open\")\n            open_sessions[session_id] = ts\n            message_counts.setdefault(session_id, 0)\n            closed_sessions.discard(session_id)\n        elif kind == \"message\":\n            if session_id not in open_sessions:\n                raise ValueError(\"message for inactive session\")\n            message_counts[session_id] = message_counts.get(session_id, 0) + 1\n            open_sessions[session_id] = ts\n        elif kind == \"close\":\n            if session_id not in open_sessions:\n                raise ValueError(\"close for inactive session\")\n            del open_sessions[session_id]\n            closed_sessions.add(session_id)\n            message_counts.setdefault(session_id, 0)\n        else:\n            raise ValueError(\"unsupported event kind\")\n\n    if max_ts is None:\n        active = []\n    else:\n        active = sorted(\n            session_id\n            for session_id, last_seen in open_sessions.items()\n            if max_ts - last_seen <= active_window\n        )\n\n    return {\n        \"active_sessions\": active,\n        \"closed_sessions\": sorted(closed_sessions),\n        \"message_counts\": dict(sorted(message_counts.items())),\n        \"timeline\": timeline,\n    }",
+      "review_checklist": [
+        "required function/class names are present",
+        "output is code-only with no explanations",
+        "obvious validation behavior is present",
+        "solution shape is semantically close to the reference",
+        "no obvious likely test-breaking mistakes"
+      ],
+      "base_output": "Certainly! To create a session window summary with an ordered history, we can use the `OrderedDict` from the `collections` module to maintain the order of elements as they were added. Here's how you could implement it:\n\n```python\nfrom collections import OrderedDict\n\ndef session_window_summary(history):\n    # Initialize an Ordered Dictionary to store the history\n    summary = OrderedDict()\n    \n    for item in history:\n        if item not in summary:\n            summary[item] = 1\n        else:\n            summary[item] += 1\n    \n    return summary\n\n# Example usage\nhistory = ['apple', 'banana', 'orange', 'apple', 'banana', 'grape']\nsummary = session_window_summary(history)\nprint(summary)  # Output will be {'apple': 2, 'banana': 2, 'orange': 1, 'grape': 1}\n```\n\nIn this code:\n- We define a function `session_window",
+      "adapter_output": "Certainly! To create a session window summary with an ordered history, we can use the `OrderedDict` from the `collections` module to maintain the order of elements as they were added. Here's how you could implement it:\n\n```python\nfrom collections import OrderedDict\n\ndef session_window_summary(history):\n    \"\"\"\n    Generates a session window summary based on the given history.\n\n    Parameters:\n    - history (list): A list of events or actions that occurred during a session.\n\n    Returns:\n    - str: A string representation of the session window summary.\n    \"\"\"\n    # Create an Ordered Dictionary to preserve the order of items\n    summary = OrderedDict()\n    \n    for event in history:\n        if event not in summary:\n            summary[event] = 1\n        else:\n            summary[event] += 1\n    \n    # Format and return the summary\n    result = \"\"\n    for event, count in summary.items():\n        result += f\"{event}:"
+    },
+    {
+      "example_id": "template_measurement_bug_repair_17_9fa09a1c",
+      "task_id": "quantum_measurement_bug_repair",
+      "task_name": "Measurement mapping bug repair",
+      "domain": "quantum",
+      "prompt": "Write a Python solution for the following task:\n\nTask: Measurement mapping bug repair\n\nReturn the solution as Python code only.",
+      "reference": "# Solution\ndef measurement_mapping(bitstring: str) -> dict[str, int]:\n    \"\"\"Map q0/q1 to integer measurement results from a two-bit string.\n\n    Input ordering is q1q0, so the rightmost bit is q0.\n    \"\"\"\n    if len(bitstring) != 2 or any(ch not in \"01\" for ch in bitstring):\n        raise ValueError(\"expected a two-bit measurement string\")\n    return {\"q0\": int(bitstring[1]), \"q1\": int(bitstring[0])}",
+      "review_checklist": [
+        "required function/class names are present",
+        "output is code-only with no explanations",
+        "obvious validation behavior is present",
+        "solution shape is semantically close to the reference",
+        "no obvious likely test-breaking mistakes"
+      ],
+      "base_output": "To solve this problem, we need to identify and fix a measurement mapping bug in a given dataset. The dataset is represented as a list of lists, where each inner list contains three elements: a name (string), an age (integer), and a height (float). We need to ensure that the heights are correctly mapped based on the names.\n\nHere's how you can approach this problem:\n\n1. Define a function `repair_measurement_mapping` that takes the dataset as input.\n2. Iterate through the dataset to find any discrepancies between the expected and actual heights.\n3. Correct these discrepancies by updating the heights accordingly.\n4. Return the modified dataset with corrected measurements.\n\nBelow is the Python code implementing the above steps:\n\n```python\ndef repair_measurement_mapping(dataset):\n    # Dictionary to store the correct height for each name\n    correct_heights = {}\n    \n    # Iterate through the dataset to collect correct heights\n    for entry in dataset:\n        if entry[",
+      "adapter_output": "To solve this problem, we need to identify and fix a measurement mapping bug in a given function. The function is supposed to map measurements from one unit to another based on predefined conversion factors. However, there seems to be an error in how the conversions are being handled.\n\nHere's a step-by-step approach to solving this problem:\n\n1. **Understand the Problem**: Identify the specific part of the code where the conversion logic might be incorrect.\n2. **Debugging**: Use print statements or logging to trace the flow of data through the function.\n3. **Fix the Bug**: Correct the conversion logic to ensure that it accurately maps the units without any errors.\n\nBelow is a sample Python code snippet that demonstrates how you might debug and fix such a bug. This example assumes that the original code has some form of conversion logic but contains a known issue.\n\n```python\n# Sample faulty code (replace with actual faulty code)\ndef faulty_measurement_conversion(measurement,"
+    }
+  ]
+}

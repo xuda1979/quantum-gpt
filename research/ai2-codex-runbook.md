@@ -28,18 +28,33 @@ Verified Codex version:
 
 ## Quick Start
 
-If the ai2 local model server is already running, the shortest usable pattern on ai2 is:
+If the ai2 local model server is already running, the default verified pattern on ai2 is:
 
 ```bash
 cd /root/root/work/quantum-gpt
-export LOCAL_CODEX_API_KEY=dummy
-/root/.local/bin/codex exec --skip-git-repo-check --color never -C /root/root/work/quantum-gpt -p local -m quantum-gpt-omnicoder9b.1 'Reply with exactly OK and nothing else.'
+source /root/.bashrc
+export PATH="/root/.local/bin:/usr/local/bin:$PATH"
+command -v codex
+codex exec --skip-git-repo-check --color never -C /root/root/work/quantum-gpt -p local -m quantum-gpt-omnicoder9b.1 'Reply with exactly OK and nothing else.'
 ```
 
-The key part is the profile/model selection:
+The key parts are:
+
+- profile/model selection: `-p local -m quantum-gpt-omnicoder9b.1`
+- reliable PATH bootstrap in shell: `export PATH="/root/.local/bin:/usr/local/bin:$PATH"`
+
+Recommended interactive launch on ai2:
 
 ```bash
+source /root/.bashrc
+export PATH="/root/.local/bin:$PATH"
 codex -p local -m quantum-gpt-omnicoder9b.1
+```
+
+Fallback if PATH is unexpectedly constrained:
+
+```bash
+/root/.local/bin/codex -p local -m quantum-gpt-omnicoder9b.1
 ```
 
 Fresh validated behavior:
@@ -47,6 +62,11 @@ Fresh validated behavior:
 - the `local` profile resolves to provider `quantum_local`
 - the selected model is `quantum-gpt-omnicoder9b.1`
 - a dedicated `codex exec -p local -m quantum-gpt-omnicoder9b.1 ...` smoke on `2026-04-01` returned `PROFILE_OK`
+- the ai2 shell startup now persists:
+  - `LOCAL_CODEX_API_KEY=dummy`
+  - `NO_PROXY=127.0.0.1,localhost`
+  - `no_proxy=127.0.0.1,localhost`
+  - `unset http_proxy https_proxy HTTP_PROXY HTTPS_PROXY ALL_PROXY`
 
 ## Required Remote Config
 
@@ -70,6 +90,7 @@ Important:
 
 - `wire_api` must be `responses`
 - `LOCAL_CODEX_API_KEY` can be any dummy value for this local provider path
+- the current ai2 shell startup already exports the dummy key, so `source /root/.bashrc` is enough in a fresh shell
 
 ## Start The Local Model Server
 
@@ -110,7 +131,7 @@ Fresh verified healthy response:
 
 ## Install Codex If Missing
 
-If ai2 does not have Codex installed:
+If ai2 does not yet have Codex installed at `/root/.local/bin/codex`:
 
 ```bash
 cd /root/root/work/quantum-gpt
@@ -135,7 +156,7 @@ The exact smoke test that succeeded on `2026-04-01` was:
 
 ```bash
 cd /root/root/work/quantum-gpt
-export LOCAL_CODEX_API_KEY=dummy
+source /root/.bashrc
 rm -f /tmp/codex_last.txt
 /root/.local/bin/codex exec \
   --skip-git-repo-check \
@@ -158,7 +179,7 @@ Additional profile/model-selection smoke verified on `2026-04-01`:
 
 ```bash
 cd /root/root/work/quantum-gpt
-export LOCAL_CODEX_API_KEY=dummy
+source /root/.bashrc
 /root/.local/bin/codex exec \
   --skip-git-repo-check \
   --color never \
@@ -189,7 +210,9 @@ What it does:
 - ensures Codex helper scripts are staged
 - refreshes `/root/.codex/config.toml`
 - starts the local model server if needed
-- runs Codex on ai2 against `quantum-gpt-omnicoder9b.1`
+- persists the dummy local-provider key and localhost proxy bypass in ai2 shell startup
+- ensures `codex` is on PATH (`/root/.local/bin:/usr/local/bin:$PATH`)
+- runs `codex` on ai2 against `quantum-gpt-omnicoder9b.1` without absolute-path invocation
 
 ## Reliable Control Plane
 
@@ -209,6 +232,7 @@ Reason:
 
 - the wrapper `scripts/ai2_shell.sh` can still fail on stale marker detection even when the underlying ai2 shell is healthy
 - direct `huanxin_shell_exec.js` bypasses that wrapper check
+- `scripts/ai2_codex_local_exec.sh` now defaults to this direct transport and only uses the wrapper when `--transport wrapper` is passed
 
 ## Working Defaults
 
@@ -216,6 +240,7 @@ Use these defaults unless there is a concrete reason to change them:
 
 - profile: `local`
 - model alias: `quantum-gpt-omnicoder9b.1`
+- Codex binary path on ai2: `/root/.local/bin/codex`
 - base URL: `http://127.0.0.1:8000/v1`
 - env key: `LOCAL_CODEX_API_KEY`
 - wire API: `responses`
@@ -225,7 +250,7 @@ Use these defaults unless there is a concrete reason to change them:
 
 The relevant local helper files are:
 
-- [ai2_codex_local_exec.sh](/Users/daxu/software/quantum-gpt/scripts/ai2_codex_local_exec.sh)
-- [install_codex_standalone.sh](/Users/daxu/software/quantum-gpt/scripts/install_codex_standalone.sh)
-- [render_codex_local_config.py](/Users/daxu/software/quantum-gpt/scripts/render_codex_local_config.py)
-- [serve_openai_chat_adapter.py](/Users/daxu/software/quantum-gpt/scripts/serve_openai_chat_adapter.py)
+- [`scripts/ai2_codex_local_exec.sh`](../scripts/ai2_codex_local_exec.sh)
+- [`scripts/install_codex_standalone.sh`](../scripts/install_codex_standalone.sh)
+- [`scripts/render_codex_local_config.py`](../scripts/render_codex_local_config.py)
+- [`scripts/serve_openai_chat_adapter.py`](../scripts/serve_openai_chat_adapter.py)

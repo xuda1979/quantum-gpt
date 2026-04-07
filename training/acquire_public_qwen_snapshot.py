@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Acquire and immediately verify a public Qwen snapshot for local->Huanxin handoff.
+"""Acquire and immediately verify a public execution-model snapshot for local->Huanxin handoff.
 
 This helper is intentionally narrow:
 - only supports the currently documented public execution checkpoints
@@ -57,6 +57,28 @@ PUBLIC_MODELS = {
         "remote_model_dir": "/root/root/work/quantum-gpt/models/OmniCoder-9B",
         "handoff_manifest": "artifacts/omnicoder9b-local-snapshot-handoff.json",
         "preflight_manifest": "artifacts/omnicoder9b-local-snapshot-preflight.json",
+    },
+    "gemma4-e2b-it": {
+        "model_id": "google/gemma-4-E2B-it",
+        "expected_substring": "gemma-4-E2B-it",
+        "expected_family_substring": "gemma",
+        "supports_generic_remote_commands": False,
+        "audit_out": "artifacts/model-source-audit-gemma4-e2b-it.json",
+        "handoff_note": "research/papers/gemma4_text_path_enablement/paper.md",
+        "remote_model_dir": "/root/root/work/quantum-gpt/models/gemma-4-E2B-it",
+        "handoff_manifest": "artifacts/gemma4-e2b-it-local-snapshot-handoff.json",
+        "preflight_manifest": "artifacts/gemma4-e2b-it-local-snapshot-preflight.json",
+    },
+    "gemma4-e4b-it": {
+        "model_id": "google/gemma-4-E4B-it",
+        "expected_substring": "gemma-4-E4B-it",
+        "expected_family_substring": "gemma",
+        "supports_generic_remote_commands": False,
+        "audit_out": "artifacts/model-source-audit-gemma4-e4b-it.json",
+        "handoff_note": "research/papers/gemma4_text_path_enablement/paper.md",
+        "remote_model_dir": "/root/root/work/quantum-gpt/models/gemma-4-E4B-it",
+        "handoff_manifest": "artifacts/gemma4-e4b-it-local-snapshot-handoff.json",
+        "preflight_manifest": "artifacts/gemma4-e4b-it-local-snapshot-preflight.json",
     },
 }
 
@@ -210,7 +232,7 @@ def main() -> int:
             result["render_remote_commands_warning"] = (
                 "Generic remote bootstrap command rendering is disabled for this target because the current "
                 "bootstrap path assumes a text-only AutoTokenizer + AutoModelForCausalLM stack. "
-                "OmniCoder-9B requires a newer Transformers runtime and a processor-aware path first."
+                "This target requires a newer runtime and/or a processor-aware conditional-generation path first."
             )
         preflight_manifest.write_text(json.dumps(result, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
         print(json.dumps(result, indent=2, ensure_ascii=False))
@@ -251,6 +273,8 @@ def main() -> int:
                 snapshot_dir,
                 "--expected-substring",
                 expected_substring,
+                "--expected-family-substring",
+                expected_family_substring,
             ]
         )
     except subprocess.CalledProcessError as exc:

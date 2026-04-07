@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Verify a local Qwen snapshot directory before Huanxin transfer.
+"""Verify a local model snapshot directory before Huanxin transfer.
 
 This is intentionally lightweight and offline-first. It does not try to fetch
 anything. It answers one narrow question:
 
 - does a provided local directory look like a real Hugging Face model snapshot
-  for the expected Qwen target, with enough files present to justify transfer
+  for the expected target family, with enough files present to justify transfer
   and remote smoke testing?
 
 Use it when the project blocker shifts from "no artifact source" to
@@ -57,6 +57,11 @@ def parse_args() -> argparse.Namespace:
         default="Qwen3.5-1.5B-Instruct",
         help="Substring expected in config metadata, path, or model identifiers",
     )
+    parser.add_argument(
+        "--expected-family-substring",
+        default="qwen",
+        help="Case-insensitive architecture family substring expected in config metadata",
+    )
     return parser.parse_args()
 
 
@@ -94,6 +99,21 @@ def requires_processor_artifacts(config: dict | None) -> bool:
     if config.get("vision_config") is not None:
         return True
     if config.get("image_token_id") is not None or config.get("video_token_id") is not None:
+        return True
+    return False
+
+
+def metadata_family_hit(
+    config_model_type: object,
+    config_architectures: object,
+    expected_family_substring: str,
+) -> bool:
+    expected = expected_family_substring.strip().lower()
+    if not expected:
+        return True
+    if isinstance(config_model_type, str) and expected in config_model_type.lower():
+        return True
+    if isinstance(config_architectures, list) and any(expected in str(item).lower() for item in config_architectures):
         return True
     return False
 
@@ -141,11 +161,11 @@ def main() -> int:
     expected_hit = any(args.expected_substring.lower() in text.lower() for text in candidate_strings)
     config_model_type = config.get("model_type") if isinstance(config, dict) else None
     config_architectures = config.get("architectures") if isinstance(config, dict) else None
-    qwen_metadata_hit = False
-    if isinstance(config_model_type, str) and "qwen" in config_model_type.lower():
-        qwen_metadata_hit = True
-    if isinstance(config_architectures, list) and any("qwen" in str(item).lower() for item in config_architectures):
-        qwen_metadata_hit = True
+    family_metadata_hit = metadata_family_hit(
+        config_model_type,
+        config_architectures,
+        args.expected_family_substring,
+    )
 
     summary["present_config_files"] = present_config
     summary["present_tokenizer_files"] = present_tokenizer
@@ -159,7 +179,8 @@ def main() -> int:
     summary["config_model_type"] = config_model_type
     summary["config_architectures"] = config_architectures
     summary["expected_substring_hit"] = expected_hit
-    summary["qwen_metadata_hit"] = qwen_metadata_hit
+    summary["expected_family_substring"] = args.expected_family_substring
+    summary["family_metadata_hit"] = family_metadata_hit
     summary["directory_file_count"] = sum(1 for _ in root.iterdir())
     summary["requires_processor_artifacts"] = requires_processor_artifacts(config)
 
@@ -177,8 +198,10 @@ def main() -> int:
             missing_reasons.append("missing chat template for conditional-generation snapshot")
     if not expected_hit:
         missing_reasons.append("expected model substring not found in path/config metadata")
-    if not qwen_metadata_hit:
-        missing_reasons.append("config metadata does not identify a Qwen-family architecture")
+    if not family_metadata_hit:
+        missing_reasons.append(
+            f"config metadata does not identify the expected '{args.expected_family_substring}' family"
+        )
 
     if missing_reasons:
         summary["status"] = "error"

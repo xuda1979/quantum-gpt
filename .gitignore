@@ -1,0 +1,9 @@
+.clawhub/
+.local/
+.openclaw/
+.pytest_cache/
+.tmp-rclone/
+.venv/
+browser-automation/node_modules/
+browser-automation/profile/
+page-shot.png

@@ -64,6 +64,18 @@ def runtime_requires_qwen35_upgrade(model_name: str, auto_config_cls: object) ->
     return summary, runtime_error
 
 
+def runtime_autoconfig_requires_upgrade(model_type: object, runtime_error: Exception | None) -> bool:
+    if runtime_error is None or not model_type:
+        return False
+    message = str(runtime_error).lower()
+    return (
+        "does not recognize this architecture" in message
+        or "does not recognize this model type" in message
+        or "unrecognized configuration class" in message
+        or "transformers does not recognize this architecture" in message
+    )
+
+
 def load_text_backend(
     model_name: str,
     auto_tokenizer_cls: object,
@@ -255,14 +267,21 @@ def main() -> int:
     try:
         runtime_summary, runtime_error = runtime_requires_qwen35_upgrade(args.model_name, AutoConfig)
         summary.update(runtime_summary)
-        if summary["config_model_type"] == "qwen3_5" and runtime_error is not None:
+        if runtime_autoconfig_requires_upgrade(summary.get("config_model_type"), runtime_error):
+            extra_hint = ""
+            if summary.get("config_model_type") == "gemma4":
+                extra_hint = (
+                    " Gemma 4 instruction checkpoints also advertise an any-to-any conditional-generation "
+                    "architecture, so the current text-only bootstrap may still need a processor-aware "
+                    "conditional-generation backend after the runtime upgrade."
+                )
             summary["stage"] = "runtime_compat"
             summary["status"] = "error"
             summary["error_type"] = type(runtime_error).__name__
             summary["error"] = (
-                "The active Transformers runtime is too old for this Qwen3.5-family checkpoint. "
-                "Upgrade the bootstrap stack to a Qwen3.5-capable Transformers build before remote fine-tuning. "
-                f"Underlying error: {runtime_error}"
+                "The active Transformers runtime is too old for this checkpoint family. "
+                "Upgrade the bootstrap stack to a model-family-capable Transformers build before remote fine-tuning. "
+                f"Underlying error: {runtime_error}.{extra_hint}"
             )
             print(json.dumps(summary, indent=2, ensure_ascii=False))
             return 1

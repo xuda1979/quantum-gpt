@@ -1,0 +1,12 @@
+{
+  "job_id": "omnicoder-stabilizer-single-t512-20260330T072759Z",
+  "name": "omnicoder-stabilizer-single-t512",
+  "pid": 192979,
+  "log_path": "/tmp/omnicoder_stabilizer_single_t512_20260330.log",
+  "remote_root": "/root/root/work/quantum-gpt",
+  "command": "cd /root/root/work/quantum-gpt && rm -rf evals/runs/omnicoder-stabilizer-single-t512 && cp -r evals/runs/omnicoder-delivery-pass1-quantum-v2-qhard2-t384 evals/runs/omnicoder-stabilizer-single-t512 && python3 -c \"import json, pathlib; root=pathlib.Path('evals/runs/omnicoder-stabilizer-single-t512'); manifest=json.loads((root/'manifest.json').read_text()); manifest['tasks']=[t for t in manifest['tasks'] if t['id']=='quantum_stabilizer_tableau_update_repair']; (root/'manifest.json').write_text(json.dumps(manifest, indent=2)+'\\n'); cmap=json.loads((root/'candidate-map.json').read_text()); cmap={k:v for k,v in cmap.items() if k=='quantum_stabilizer_tableau_update_repair'}; (root/'candidate-map.json').write_text(json.dumps(cmap, indent=2)+'\\n')\" && rm -f evals/runs/omnicoder-stabilizer-single-t512/candidates/*.py evals/runs/omnicoder-stabilizer-single-t512/hf-pass1-generation-log.json evals/runs/omnicoder-stabilizer-single-t512/scorecard.json && ASCEND_RT_VISIBLE_DEVICES=6 python3 scripts/run_hf_pass1_eval.py --run-dir evals/runs/omnicoder-stabilizer-single-t512 --base-model models/OmniCoder-9B --adapter outputs/omnicoder9b-quantum-hard-v1-continue-true40-e2-20260330T142009CST/adapter --device npu --max-new-tokens 512 --score",
+  "created_at": "2026-03-30T07:28:30.457556+00:00",
+  "transport": "standalone",
+  "duration_ms": 29597,
+  "meta_file": "/Users/daxu/software/quantum-gpt/.huanxin_jobs/omnicoder-stabilizer-single-t512-20260330T072759Z.json"
+}

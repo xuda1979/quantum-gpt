@@ -1,0 +1,12 @@
+{
+  "job_id": "codex-openai-adapter-20260331T050530Z",
+  "name": "codex-openai-adapter",
+  "pid": 209126,
+  "log_path": "/tmp/codex_openai_adapter_8000.log",
+  "remote_root": "/root/root/work/quantum-gpt",
+  "command": "PYTHONUNBUFFERED=1 ASCEND_RT_VISIBLE_DEVICES=6 python3 scripts/serve_openai_chat_adapter.py --base-model /root/root/work/quantum-gpt/models/OmniCoder-9B --adapter /root/root/work/quantum-gpt/outputs/interface-prefix-omnicoder9b-semantic-v4-2npu-true20-20260329T2219CST/adapter --model-name quantum-gpt-omnicoder9b.1 --host 127.0.0.1 --port 8000 --device npu",
+  "created_at": "2026-03-31T05:05:55.823513+00:00",
+  "transport": "standalone",
+  "duration_ms": 23720,
+  "meta_file": "/Users/daxu/software/quantum-gpt/.huanxin_jobs/codex-openai-adapter-20260331T050530Z.json"
+}

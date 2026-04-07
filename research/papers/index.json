@@ -1,0 +1,70 @@
+{
+  "papers": [
+    {
+      "paper_id": "pluginized_research_methods",
+      "title": "Pluginized Research Methods for Quantum Coding LLM Iteration",
+      "type": "architecture",
+      "has_plugin": false
+    },
+    {
+      "paper_id": "timeboxed_eight_npu_sft",
+      "title": "Timeboxed 8-NPU SFT Scaling Plan",
+      "type": "run-plan",
+      "has_plugin": false
+    },
+    {
+      "paper_id": "timeboxed_eight_npu_grpo",
+      "title": "Timeboxed 8-NPU GRPO Scaling Plan",
+      "type": "run-plan",
+      "has_plugin": false
+    },
+    {
+      "paper_id": "verifier_guided_repair_curriculum",
+      "title": "Verifier-Guided Near-Miss Repair Curriculum for Quantum Code Generalization",
+      "type": "method",
+      "has_plugin": true
+    },
+    {
+      "paper_id": "clause_aware_verifier_reward",
+      "title": "Clause-Aware Verifier Reward for Code RL",
+      "type": "method",
+      "has_plugin": true
+    },
+    {
+      "paper_id": "ast_anchor_interface_grounding",
+      "title": "AST-Anchor Reranking for Interface-Grounded Code Synthesis",
+      "type": "method",
+      "has_plugin": true
+    },
+    {
+      "paper_id": "self_consistency_verifier_routing",
+      "title": "Self-Consistency Verifier Routing for Code SFT and GRPO",
+      "type": "method",
+      "has_plugin": true
+    },
+    {
+      "paper_id": "uncertainty_triggered_repair_replay",
+      "title": "Uncertainty-Triggered Repair Replay for SFT and GRPO",
+      "type": "method",
+      "has_plugin": true
+    },
+    {
+      "paper_id": "behavior_anchor_coverage_reward",
+      "title": "Behavior-Anchor Coverage Reward for Low-Signal Code GRPO",
+      "type": "method",
+      "has_plugin": true
+    },
+    {
+      "paper_id": "turboquant",
+      "title": "TurboQuant-Style KV Cache Compression for Long-Context Inference",
+      "type": "method",
+      "has_plugin": false
+    },
+    {
+      "paper_id": "gemma4_text_path_enablement",
+      "title": "Gemma 4 Text-Path Enablement for Quantum R&D",
+      "type": "model-enablement",
+      "has_plugin": false
+    }
+  ]
+}

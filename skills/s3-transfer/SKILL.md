@@ -2,6 +2,8 @@
 
 Use this skill to transfer files between your **local machine**, **S3 storage**, and the **Huanxin remote server (ai2)** via rclone. S3 acts as the central hub — all transfers route through it.
 
+Treat this file as local reference documentation for Codex. The transfer flow is repo-local and does not depend on OpenClaw runtime state.
+
 ## Current Reality Check
 
 - Confirmed working: **local -> S3**, **ai2 -> read/list from S3**, and **ai2 -> S3 writes**.
@@ -11,8 +13,18 @@ Use this skill to transfer files between your **local machine**, **S3 storage**,
 ## Default Helper Entry Points
 
 - Local -> S3: `scripts/push_to_s3.sh`
+- S3 -> Local: `scripts/pull_from_s3.sh`
 - S3 -> ai2: `scripts/ai2_sync_from_s3.sh`
+- ai2 -> S3 (code-first workspace snapshot): `scripts/ai2_push_to_s3.sh`
 - ai2 -> S3: `scripts/ai2_push_results_to_s3.sh`
+
+The ai2 sync helpers are dual-mode:
+
+- local invocation from this Mac uses the Huanxin browser shell automatically
+- invocation from inside `/root/root/work/quantum-gpt` on ai2 runs `rclone` directly
+
+Current defaults are intentionally code-first and exclude bulky artifacts like `outputs/`, `models/`, screenshots, logs, and memory files unless you explicitly request them.
+Use `scripts/push_to_s3.sh --all` only when you really want a broad workspace copy.
 
 Each transfer helper should be treated as the default path before falling back to raw `rclone` or browser-shell copy/paste.
 
@@ -65,18 +77,20 @@ node browser-automation/huanxin_shell_exec.js ai2 --command "rclone lsd nm-aihua
 ```bash
 scripts/push_to_s3.sh
 scripts/push_to_s3.sh --dry-run
+scripts/push_to_s3.sh scripts training evals data reports
+scripts/push_to_s3.sh --all
 ```
 
 ### S3 → Local (Pull Results Down)
 
 ```bash
-# Pull specific folders
-rclone copy nm-aihuanxin:jtdlp-3ed7854b946a47b1a49ad754baa76cd3/quantum-qwen25-coder-main/outputs \
-    ./outputs --progress
+# Pull the current code-first workspace snapshot
+scripts/pull_from_s3.sh
+scripts/pull_from_s3.sh --dry-run
 
-# Pull models
-rclone copy nm-aihuanxin:jtdlp-3ed7854b946a47b1a49ad754baa76cd3/quantum-qwen25-coder-main/models \
-    ./models --progress
+# Pull selected folders
+scripts/pull_from_s3.sh outputs reports
+scripts/pull_from_s3.sh models
 ```
 
 ### S3 → Huanxin ai2 (Pull Code to Server)
@@ -96,6 +110,10 @@ scripts/ai2_sync_from_s3.sh --dry-run
 Status: supported, but keep `--s3-no-check-bucket` on remote write commands.
 
 ```bash
+# Push a code-first workspace snapshot back from ai2
+scripts/ai2_push_to_s3.sh
+scripts/ai2_push_to_s3.sh --dry-run
+
 # Default result sync
 scripts/ai2_push_results_to_s3.sh
 

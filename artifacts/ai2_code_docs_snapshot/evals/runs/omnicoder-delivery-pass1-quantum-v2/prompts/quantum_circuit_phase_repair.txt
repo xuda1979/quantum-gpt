@@ -1,0 +1,86 @@
+Task ID: quantum_circuit_phase_repair
+Task name: Circuit phase repair from noisy gate stream
+Domain: quantum
+Category: debug_repair
+
+Treat this as a minimal-edit repair or implementation task.
+Write the simplest Python file that satisfies the supplied tests and return only that file.
+
+Reference candidate style example (for format guidance, not for blind copying):
+--- BEGIN REFERENCE CANDIDATE ---
+def repair_phase_sequence(ops: list[str]) -> list[str]:
+    """Normalize a one-qubit gate stream and remove redundant phase cancellations.
+
+    Rules:
+    - Normalize tokens by stripping whitespace and uppercasing.
+    - Accept only H, X, Z, S, SDG.
+    - Cancel adjacent inverse phase pairs: S followed by SDG, or SDG followed by S.
+    - Cancel adjacent self-inverse pairs: H H, X X, Z Z.
+    - Preserve all other operations in order.
+    - Raise ValueError on unsupported operations.
+    """
+    normalized = []
+    for raw in ops:
+        token = raw.strip().upper()
+        if token not in {"H", "X", "Z", "S", "SDG"}:
+            raise ValueError(f"unsupported gate: {raw}")
+        if normalized:
+            prev = normalized[-1]
+            if (prev, token) in {("S", "SDG"), ("SDG", "S")}:
+                normalized.pop()
+                continue
+            if prev == token and token in {"H", "X", "Z"}:
+                normalized.pop()
+                continue
+        normalized.append(token)
+    return normalized
+
+--- END REFERENCE CANDIDATE ---
+
+Tests the candidate must satisfy:
+--- BEGIN TESTS ---
+import importlib.util
+
+
+
+def _load(candidate_path: str):
+    spec = importlib.util.spec_from_file_location("candidate", candidate_path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
+
+def run_tests(candidate_path: str) -> dict:
+    module = _load(candidate_path)
+    failures = []
+
+    cases = [
+        (["H", "H", "X", "Z"], ["X", "Z"]),
+        ([" s ", "sdg", "H", "x", "X"], ["H"]),
+        (["Z", "S", "SDG", "Z", "H"], ["H"]),
+        (["S", "H", "SDG"], ["S", "H", "SDG"]),
+        (["sdg", "s", "x", "x", "z"], ["Z"]),
+    ]
+    for raw, expected in cases:
+        actual = module.repair_phase_sequence(raw)
+        if actual != expected:
+            failures.append(f"repair_phase_sequence({raw!r}) -> {actual!r}, expected {expected!r}")
+
+    for bad in [["T"], ["H", " measure "]]:
+        try:
+            module.repair_phase_sequence(bad)
+        except ValueError:
+            continue
+        except Exception as exc:
+            failures.append(f"repair_phase_sequence({bad!r}) raised {type(exc).__name__}, expected ValueError")
+        else:
+            failures.append(f"repair_phase_sequence({bad!r}) did not raise ValueError")
+
+    return {
+        "passed": not failures,
+        "details": failures or ["Circuit phase repair handles normalization, cancellations, and unsupported gates"],
+    }
+
+--- END TESTS ---

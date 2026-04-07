@@ -1,0 +1,8 @@
+{
+  "id": "software_multifile_patch_conflict_repair",
+  "name": "Multifile patch conflict repair",
+  "domain": "software",
+  "category": "multifile_repair",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

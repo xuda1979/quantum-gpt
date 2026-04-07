@@ -1,0 +1,12 @@
+{
+  "job_id": "omnicoder9b-quantum-generalization-grpo-v2-20260331T082312Z",
+  "name": "omnicoder9b-quantum-generalization-grpo-v2",
+  "pid": 222312,
+  "log_path": "/tmp/omnicoder9b_quantum_generalization_grpo_v2_20260331.log",
+  "remote_root": "/root/root/work/quantum-gpt",
+  "command": "export ASCEND_RT_VISIBLE_DEVICES=6; export PYTHONPYCACHEPREFIX=/tmp/pycache; export TOKENIZERS_PARALLELISM=false; python3 training/grpo_trainer.py --model-name models/OmniCoder-9B --adapter-init outputs/interface-prefix-omnicoder9b-semantic-v4-2npu-true20-20260329T2219CST/adapter --benchmark-file evals/benchmarks/quantum_generalization_holdout_v1.txt --domain-filter quantum --output-dir outputs/omnicoder9b-quantum-generalization-grpo-v2-ai2run1 --device npu --group-size 2 --grpo-steps 8 --max-new-tokens 192 --max-seq-length 3072 --log-steps 1 --reward-pass-weight 0.6 --reward-syntax-weight 0.1 --reward-interface-weight 0.15 --reward-verifier-weight 0.15 --quantum-priority 1.5 --curriculum-uncertainty-bonus 0.35",
+  "created_at": "2026-03-31T08:23:37.468331+00:00",
+  "transport": "standalone",
+  "duration_ms": 22576,
+  "meta_file": "/Users/daxu/software/quantum-gpt/.huanxin_jobs/omnicoder9b-quantum-generalization-grpo-v2-20260331T082312Z.json"
+}

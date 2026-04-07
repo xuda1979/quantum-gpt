@@ -1,0 +1,12 @@
+{
+  "job_id": "omnicoder-delivery-pass1-v1-20260330T040324Z",
+  "name": "omnicoder-delivery-pass1-v1",
+  "pid": 176721,
+  "log_path": "/tmp/omnicoder_delivery_pass1_v1_20260330.log",
+  "remote_root": "/root/root/work/quantum-gpt",
+  "command": "ASCEND_RT_VISIBLE_DEVICES=7 python3 scripts/run_hf_pass1_eval.py --run-dir evals/runs/omnicoder-delivery-pass1-v1 --base-model models/OmniCoder-9B --adapter outputs/interface-prefix-omnicoder9b-semantic-v4-2npu-true20-20260329T2219CST/adapter --device npu --max-new-tokens 192 --score",
+  "created_at": "2026-03-30T04:03:56.090221+00:00",
+  "transport": "standalone",
+  "duration_ms": 29567,
+  "meta_file": "/Users/daxu/software/quantum-gpt/.huanxin_jobs/omnicoder-delivery-pass1-v1-20260330T040324Z.json"
+}

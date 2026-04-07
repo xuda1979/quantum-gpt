@@ -1,0 +1,34 @@
+{
+  "generated_at_utc": "2026-03-30T14:23:35Z",
+  "base_model": "models/Qwen2.5-1.5B-Instruct",
+  "adapter": null,
+  "device": "cpu",
+  "max_new_tokens": 512,
+  "temperature": 0.0,
+  "tasks": [
+    {
+      "task_id": "quantum_gate_alias_normalization",
+      "candidate_path": "candidates/quantum_gate_alias_normalization.py",
+      "output_chars": 414,
+      "started_at_sec": 40.731
+    },
+    {
+      "task_id": "quantum_phase_estimation_circuit",
+      "candidate_path": "candidates/quantum_phase_estimation_circuit.py",
+      "output_chars": 762,
+      "started_at_sec": 94.388
+    },
+    {
+      "task_id": "quantum_qaoa_maxcut",
+      "candidate_path": "candidates/quantum_qaoa_maxcut.py",
+      "output_chars": 871,
+      "started_at_sec": 184.694
+    },
+    {
+      "task_id": "quantum_superdense_coding",
+      "candidate_path": "candidates/quantum_superdense_coding.py",
+      "output_chars": 515,
+      "started_at_sec": 217.541
+    }
+  ]
+}

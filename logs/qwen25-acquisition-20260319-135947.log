@@ -1,0 +1,15 @@
+Error importing huggingface_hub._snapshot_download: invalid literal for int() with base 10: '30.0'
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+  File "<frozen importlib._bootstrap>", line 1055, in _handle_fromlist
+  File "/Users/daxu/Library/Python/3.9/lib/python/site-packages/huggingface_hub/__init__.py", line 1132, in __getattr__
+    submod = importlib.import_module(submod_path)
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/importlib/__init__.py", line 127, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "/Users/daxu/Library/Python/3.9/lib/python/site-packages/huggingface_hub/_snapshot_download.py", line 9, in <module>
+    from . import constants
+  File "/Users/daxu/Library/Python/3.9/lib/python/site-packages/huggingface_hub/constants.py", line 254, in <module>
+    HF_HUB_ETAG_TIMEOUT: int = _as_int(os.environ.get("HF_HUB_ETAG_TIMEOUT")) or DEFAULT_ETAG_TIMEOUT
+  File "/Users/daxu/Library/Python/3.9/lib/python/site-packages/huggingface_hub/constants.py", line 23, in _as_int
+    return int(value)
+ValueError: invalid literal for int() with base 10: '30.0'

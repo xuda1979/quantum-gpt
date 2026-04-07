@@ -28,6 +28,13 @@ except Exception:  # noqa: BLE001
 
 from training.research_plugins import load_research_methods, summarize_methods
 
+DEFAULT_LORA_TARGET_MODULES = ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]
+COMMON_LORA_TARGET_MODULE_GROUPS = [
+    DEFAULT_LORA_TARGET_MODULES,
+    ["query_proj", "key_proj", "value_proj", "o_proj", "gate_proj", "up_proj", "down_proj"],
+    ["q_proj", "k_proj", "v_proj", "o_proj"],
+]
+
 
 @dataclass
 class TextPreprocessorBackend:
@@ -71,15 +78,59 @@ def probe_model_runtime_compat(model_name: str, auto_config_cls: Any) -> dict[st
     except Exception as exc:  # noqa: BLE001
         summary["runtime_autoconfig_error_type"] = type(exc).__name__
         summary["runtime_autoconfig_error"] = str(exc)
-        if model_type == "qwen3_5":
+        if runtime_autoconfig_requires_upgrade(model_type, exc):
+            extra_hint = ""
+            if model_type == "gemma4":
+                extra_hint = (
+                    " Gemma 4 instruction checkpoints also advertise an any-to-any conditional-generation "
+                    "architecture, so the current text-only AutoModelForCausalLM path may still need a "
+                    "processor-aware conditional-generation backend after the runtime upgrade."
+                )
             raise SystemExit(
                 f"Transformers runtime is too old for '{model_name}' "
                 f"(model_type='{model_type}', architectures={architectures}). "
                 "This path now supports processor-aware text preprocessing, but the active "
-                "runtime still cannot resolve Qwen3.5 configs. Upgrade the bootstrap stack "
-                "to a Qwen3.5-capable Transformers build before launching this fine-tune."
+                "runtime still cannot resolve this config. Upgrade the bootstrap stack to a "
+                f"{model_type or 'model-family'}-capable Transformers build before launching this fine-tune."
+                f"{extra_hint}"
             ) from exc
     return summary
+
+
+def runtime_autoconfig_requires_upgrade(model_type: str, exc: Exception) -> bool:
+    if not model_type:
+        return False
+    message = str(exc).lower()
+    return (
+        "does not recognize this architecture" in message
+        or "does not recognize this model type" in message
+        or "unrecognized configuration class" in message
+        or "transformers does not recognize this architecture" in message
+    )
+
+
+def resolve_lora_target_modules(requested_target_modules: list[str] | None, model: Any) -> list[str]:
+    if requested_target_modules:
+        return list(requested_target_modules)
+
+    leaf_names = sorted(
+        {
+            module_name.rsplit(".", 1)[-1]
+            for module_name, _module in model.named_modules()
+            if module_name
+        }
+    )
+    for candidate_group in COMMON_LORA_TARGET_MODULE_GROUPS:
+        matches = [name for name in candidate_group if name in leaf_names]
+        if len(matches) >= 4:
+            return matches
+
+    sample = ", ".join(leaf_names[:20])
+    raise SystemExit(
+        "Unable to infer LoRA target modules automatically from the loaded model. "
+        "Pass --target-modules explicitly for this architecture. "
+        f"Sample discovered module suffixes: {sample}"
+    )
 
 
 def parse_args() -> argparse.Namespace:
@@ -114,7 +165,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--target-modules",
         nargs="*",
-        default=["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"],
+        default=None,
+        help="Optional explicit LoRA target module suffixes. Defaults to auto-discovery from the loaded model.",
     )
     return parser.parse_args()
 
@@ -385,7 +437,7 @@ def build_run_signature(args: argparse.Namespace) -> dict[str, Any]:
         "load_in_8bit": args.load_in_8bit,
         "train_on_completions_only": args.train_on_completions_only,
         "research_methods": list(args.research_methods),
-        "target_modules": list(args.target_modules),
+        "target_modules": list(args.target_modules) if args.target_modules else None,
     }
     signature_json = json.dumps(signature, sort_keys=True)
     signature["signature_sha256"] = hashlib.sha256(signature_json.encode("utf-8")).hexdigest()
@@ -593,16 +645,17 @@ def main() -> int:
             flush=True,
         )
     else:
+        resolved_target_modules = resolve_lora_target_modules(args.target_modules, model)
         lora_config = LoraConfig(
             task_type=TaskType.CAUSAL_LM,
             r=args.lora_rank,
             lora_alpha=args.lora_alpha,
             lora_dropout=args.lora_dropout,
-            target_modules=args.target_modules,
+            target_modules=resolved_target_modules,
             bias="none",
         )
         model = get_peft_model(model, lora_config)
-        print(json.dumps({"stage": "lora_wrapped"}, ensure_ascii=False), flush=True)
+        print(json.dumps({"stage": "lora_wrapped", "resolved_target_modules": resolved_target_modules}, ensure_ascii=False), flush=True)
     model.to(device)
     print(json.dumps({"stage": "model_on_device", "device": str(device)}, ensure_ascii=False), flush=True)
     if distributed:
@@ -699,6 +752,7 @@ def main() -> int:
         summary = {
             "model_name": args.model_name,
             "signature": run_signature,
+            "resolved_target_modules": resolved_target_modules if args.adapter_init is None else None,
             "device": str(device),
             "world_size": world_size,
             "train_examples": len(train_dataset),
@@ -712,7 +766,17 @@ def main() -> int:
             "final_eval": final_eval,
             "metrics": metrics,
         }
-        (args.output_dir / "run_config.json").write_text(json.dumps({"signature": run_signature}, indent=2) + "\n", encoding="utf-8")
+        (args.output_dir / "run_config.json").write_text(
+            json.dumps(
+                {
+                    "signature": run_signature,
+                    "resolved_target_modules": resolved_target_modules if args.adapter_init is None else None,
+                },
+                indent=2,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
         (args.output_dir / "metrics.json").write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
         print(json.dumps(summary, ensure_ascii=False, indent=2))
 

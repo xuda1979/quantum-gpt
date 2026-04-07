@@ -1,0 +1,74 @@
+Task ID: quantum_teleportation_corrections
+Task name: Teleportation correction mapping
+Domain: quantum
+Category: protocol_logic
+
+Treat this as a minimal-edit repair or implementation task.
+Write the simplest Python file that satisfies the supplied tests and return only that file.
+
+Reference candidate style example (for format guidance, not for blind copying):
+--- BEGIN REFERENCE CANDIDATE ---
+def teleportation_corrections(m0: int, m1: int) -> list[str]:
+    """Return the Pauli corrections to apply for teleportation measurement bits (m0, m1).
+
+    m0 controls the X correction and m1 controls the Z correction.
+    The returned list is ordered as operations to apply.
+    """
+    if m0 not in (0, 1) or m1 not in (0, 1):
+        raise ValueError("measurement bits must be 0 or 1")
+
+    ops: list[str] = []
+    if m1 == 1:
+        ops.append("Z")
+    if m0 == 1:
+        ops.append("X")
+    return ops
+
+--- END REFERENCE CANDIDATE ---
+
+Tests the candidate must satisfy:
+--- BEGIN TESTS ---
+import importlib.util
+
+
+EXPECTED = {
+    (0, 0): [],
+    (1, 0): ["X"],
+    (0, 1): ["Z"],
+    (1, 1): ["Z", "X"],
+}
+
+
+def _load(candidate_path: str):
+    spec = importlib.util.spec_from_file_location("candidate", candidate_path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
+def run_tests(candidate_path: str) -> dict:
+    module = _load(candidate_path)
+    failures = []
+
+    for bits, expected in EXPECTED.items():
+        actual = module.teleportation_corrections(*bits)
+        if actual != expected:
+            failures.append(f"teleportation_corrections{bits} -> {actual}, expected {expected}")
+
+    for bad_args in [(-1, 0), (0, 2), (2, 2)]:
+        try:
+            module.teleportation_corrections(*bad_args)
+        except ValueError:
+            continue
+        except Exception as exc:  # pragma: no cover - diagnostic path
+            failures.append(f"teleportation_corrections{bad_args} raised {type(exc).__name__}, expected ValueError")
+        else:
+            failures.append(f"teleportation_corrections{bad_args} did not raise ValueError")
+
+    return {
+        "passed": not failures,
+        "details": failures or ["Teleportation correction lookup matches standard X/Z rule"],
+    }
+
+--- END TESTS ---

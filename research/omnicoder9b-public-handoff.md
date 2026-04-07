@@ -16,34 +16,38 @@
 
 ## 当前已确认的真实阻塞
 
-截至 `2026-03-27` 的本地探测，阻塞已经不是“还没下载权重”这么简单，而是：
+截至 `2026-03-27` 的本地探测，阻塞已经不是“还没下载权重”这么简单，而是当前 bootstrap 运行时仍停在旧版本：
 
 1. `OmniCoder-9B` 暴露的是：
    - `model_type = qwen3_5`
    - `architectures = [Qwen3_5ForConditionalGeneration]`
-2. 当前训练器 `training/qwen_sft_peft.py` 走的是：
-   - `AutoTokenizer`
-   - `AutoModelForCausalLM`
-3. 当前 smoke 脚本 `training/huanxin_cpu_smoke.py` 也是同一条纯文本路径
+2. 当前工作区 / Huanxin bootstrap 仍固定在：
+   - `transformers == 4.49.0`
+3. 在这个版本上，本地已复现：
+   - `AutoConfig.from_pretrained('Tesslate/OmniCoder-9B')` 报 `Transformers does not recognize this architecture`
+   - `AutoTokenizer.from_pretrained(...)` 也不能正确构建 tokenizer
+4. 当前训练器 `training/qwen_sft_peft.py` 已经补上 processor-aware 文本预处理分支
+5. 当前 smoke 脚本 `training/huanxin_cpu_smoke.py` 也已经改成 capability probe：
+   - 不再因为看到 `qwen3_5` 就直接误判
+   - 而是明确报“当前 runtime 太旧，需要升级”
 
 所以当前的真实结论是：
 
-- `OmniCoder-9B` 不是“可以直接按 Qwen2.5 文本模型那样微调，只差下载”
-- 而是“需要更高版本的 Transformers/runtime，加上一条 processor-aware 的训练/加载路径”
+- `OmniCoder-9B` 不是“可以直接按当前 4.49.0 bootstrap 栈开训，只差下载”
+- 而是“需要先把 runtime 升到 Qwen3.5-capable 的 Transformers，再继续现有训练 / smoke 路径”
 
-补充一个已经做过的实测：
+补充两点当前已经确认的事实：
 
-- 在隔离虚拟环境里安装了公开发布版 `transformers 4.57.6`
-- 依然不能通过 `AutoConfig.from_pretrained('Tesslate/OmniCoder-9B')` 识别 `qwen3_5`
-- 但仓库文件侧已经确认存在：
-  - `processor_config.json`
-  - `preprocessor_config.json`
-  - `chat_template.jinja`
+1. 当前工作区固定环境 `transformers 4.49.0` 一定不行，这已经被本地直接复现。
+2. Hugging Face 当前文档 / 模型卡已经把 `Qwen3.5` / `OmniCoder-9B` 作为 `AutoTokenizer` + `AutoModelForCausalLM` 路径来展示。
+   - 这说明下一步最值得验证的不是“重写一整套全新训练器”
+   - 而是“先升级 bootstrap runtime，再做真实 smoke”
 
-所以当前不是“随便升到一个更新 release 就够了”，而是很可能需要：
+所以当前不该再把问题描述成泛泛的“架构太新”，而应该描述成：
 
-1. 更靠前的上游 runtime 支持
-2. 仓库内 processor-aware 文本子路径
+1. 现有 bootstrap 版本过旧
+2. 训练 / smoke 路径已经基本准备好
+3. 下一步是升级 runtime 后做真实加载验证
 
 为避免后面拿到本地 snapshot 后再误判，`training/verify_qwen_snapshot.py` 现在也已经升级：
 
@@ -106,12 +110,11 @@ python3 training/acquire_public_qwen_snapshot.py --target omnicoder9b
 
 ### 先跑 smoke
 
-在真正 smoke 之前，必须先补两件事：
+在真正 smoke 之前，先做一件事：
 
 1. 让远端/本地 `transformers` 运行时支持 `qwen3_5`
-2. 给训练链路补上 processor-aware 路径
 
-在这两件事补完之前，下面这类命令只应被视为“未来目标格式”，不应现在直接下发：
+当前训练链路里的 processor-aware 文本预处理已经补上，但 runtime 版本还没切过去。切过去之前，下面这类命令只应被视为“升级后要立即验证的目标格式”，不应现在直接下发：
 
 ```bash
 cd /root/root/work/quantum-gpt
@@ -175,15 +178,15 @@ python3 scripts/archive_model_run.py <output-dir> \
 - `OmniCoder-9B` 还没有被证明已经存在于当前本地 `models/` 目录
 - 也还没有被证明已经存在于 `ai2` 的远端 `models/` 目录
 - preflight/交接/归档链路已经准备好
-- 但当前运行时已经被证明确实不兼容 `qwen3_5` 这条模型路径
+- 但当前 bootstrap runtime 仍停在 `transformers 4.49.0`，已被证明确实不兼容 `qwen3_5`
 
 这意味着：
 
 - 当前不只是“模型本体还未正式落地”
-- 当前还存在“训练运行时路径不兼容”的明确工程阻塞
+- 当前还存在“bootstrap runtime 版本过旧”的明确工程阻塞
 
 下一步最小动作不再是直接发起远端训练，而是：
 
 1. 先升级并验证 `qwen3_5` 运行时
-2. 再实现 processor-aware smoke / SFT 路径
-3. 最后才是下载模型并发起真实 smoke
+2. 再对 `OmniCoder-9B` 跑真实 smoke
+3. smoke 通过后再发起真实训练

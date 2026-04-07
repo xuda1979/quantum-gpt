@@ -1,0 +1,12 @@
+{
+  "job_id": "omnicoder9b-quantum-focus-v1-2npu-true40-20260330T043758Z",
+  "name": "omnicoder9b-quantum-focus-v1-2npu-true40",
+  "pid": 183321,
+  "log_path": "/tmp/omnicoder_quantum_focus_v1_2npu_20260330T1237CST.log",
+  "remote_root": "/root/root/work/quantum-gpt",
+  "command": "cd /root/root/work/quantum-gpt && test -f data/generated/omnicoder-quantum-focus-v1/train.jsonl && test -f data/generated/omnicoder-quantum-focus-v1/eval.jsonl && test -f models/OmniCoder-9B/config.json && PYTORCH_NPU_ALLOC_CONF=max_split_size_mb:256 ASCEND_RT_VISIBLE_DEVICES=6,7 torchrun --nproc_per_node=2 training/qwen_sft_peft.py --model-name models/OmniCoder-9B --train-file data/generated/omnicoder-quantum-focus-v1/train.jsonl --eval-file data/generated/omnicoder-quantum-focus-v1/eval.jsonl --output-dir outputs/omnicoder9b-quantum-focus-v1-2npu-true40-20260330T1237CST --device npu --max-length 512 --max-steps 40 --num-epochs 1 --per-device-batch-size 1 --gradient-accumulation-steps 2 --eval-steps 10 --log-steps 1",
+  "created_at": "2026-03-30T04:38:28.562964+00:00",
+  "transport": "standalone",
+  "duration_ms": 28712,
+  "meta_file": "/Users/daxu/software/quantum-gpt/.huanxin_jobs/omnicoder9b-quantum-focus-v1-2npu-true40-20260330T043758Z.json"
+}

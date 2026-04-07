@@ -1,0 +1,82 @@
+# Strict unseen quantum generalization command sheet
+# dataset train: data/generated/omnicoder-quantum-generalization-holdout-v1/train.jsonl
+# dataset eval: data/generated/omnicoder-quantum-generalization-holdout-v1/eval.jsonl
+# benchmark: evals/benchmarks/quantum_generalization_holdout_v1.txt
+
+## SFT
+python3 training/qwen_sft_peft.py \
+  --model-name models/OmniCoder-9B \
+  --train-file data/generated/omnicoder-quantum-generalization-holdout-v1/train.jsonl \
+  --eval-file data/generated/omnicoder-quantum-generalization-holdout-v1/eval.jsonl \
+  --output-dir outputs/omnicoder9b-quantum-generalization-sft-v1 \
+  --device npu \
+  --max-steps 40 \
+  --num-epochs 2 \
+  --per-device-batch-size 1 \
+  --gradient-accumulation-steps 8 \
+  --learning-rate 2e-4 \
+  --train-on-completions-only
+
+## Unseen Eval
+python3 scripts/run_hf_pass1_eval.py \
+  --run-dir evals/runs/omnicoder-quantum-generalization-holdout-v1-clean \
+  --base-model models/OmniCoder-9B \
+  --adapter outputs/omnicoder9b-quantum-generalization-sft-v1/adapter \
+  --device npu \
+  --score
+
+## GRPO
+python3 training/grpo_trainer.py \
+  --model-name models/OmniCoder-9B \
+  --adapter-init outputs/omnicoder9b-quantum-generalization-sft-v1/adapter \
+  --benchmark-file evals/benchmarks/quantum_generalization_holdout_v1.txt \
+  --domain-filter quantum \
+  --output-dir outputs/omnicoder9b-quantum-generalization-grpo-v2 \
+  --device npu \
+  --group-size 4 \
+  --grpo-steps 16 \
+  --max-new-tokens 512 \
+  --max-seq-length 4096 \
+  --reward-pass-weight 0.6 \
+  --reward-syntax-weight 0.1 \
+  --reward-interface-weight 0.15 \
+  --reward-verifier-weight 0.15 \
+  --ratio-clip-log-delta 8.0 \
+  --logit-clip 50.0 \
+  --min-reward-std 0.05 \
+  --quantum-priority 1.5 \
+  --curriculum-uncertainty-bonus 0.35 \
+  --temperature 0.8
+
+## JSON
+{
+  "strict_dataset": {
+    "train_file": "data/generated/omnicoder-quantum-generalization-holdout-v1/train.jsonl",
+    "eval_file": "data/generated/omnicoder-quantum-generalization-holdout-v1/eval.jsonl"
+  },
+  "strict_benchmark": {
+    "run_dir": "evals/runs/omnicoder-quantum-generalization-holdout-v1-clean",
+    "benchmark_file": "evals/benchmarks/quantum_generalization_holdout_v1.txt"
+  },
+  "commands": {
+    "sft": "python3 training/qwen_sft_peft.py \\\n  --model-name models/OmniCoder-9B \\\n  --train-file data/generated/omnicoder-quantum-generalization-holdout-v1/train.jsonl \\\n  --eval-file data/generated/omnicoder-quantum-generalization-holdout-v1/eval.jsonl \\\n  --output-dir outputs/omnicoder9b-quantum-generalization-sft-v1 \\\n  --device npu \\\n  --max-steps 40 \\\n  --num-epochs 2 \\\n  --per-device-batch-size 1 \\\n  --gradient-accumulation-steps 8 \\\n  --learning-rate 2e-4 \\\n  --train-on-completions-only",
+    "unseen_eval": "python3 scripts/run_hf_pass1_eval.py \\\n  --run-dir evals/runs/omnicoder-quantum-generalization-holdout-v1-clean \\\n  --base-model models/OmniCoder-9B \\\n  --adapter outputs/omnicoder9b-quantum-generalization-sft-v1/adapter \\\n  --device npu \\\n  --score",
+    "grpo": "python3 training/grpo_trainer.py \\\n  --model-name models/OmniCoder-9B \\\n  --adapter-init outputs/omnicoder9b-quantum-generalization-sft-v1/adapter \\\n  --benchmark-file evals/benchmarks/quantum_generalization_holdout_v1.txt \\\n  --domain-filter quantum \\\n  --output-dir outputs/omnicoder9b-quantum-generalization-grpo-v2 \\\n  --device npu \\\n  --group-size 4 \\\n  --grpo-steps 16 \\\n  --max-new-tokens 512 \\\n  --max-seq-length 4096 \\\n  --reward-pass-weight 0.6 \\\n  --reward-syntax-weight 0.1 \\\n  --reward-interface-weight 0.15 \\\n  --reward-verifier-weight 0.15 \\\n  --ratio-clip-log-delta 8.0 \\\n  --logit-clip 50.0 \\\n  --min-reward-std 0.05 \\\n  --quantum-priority 1.5 \\\n  --curriculum-uncertainty-bonus 0.35 \\\n  --temperature 0.8"
+  },
+  "grpo_method": {
+    "policy_update": "completion_only_grpo_with_length_normalized_logprobs",
+    "reward": {
+      "pass_weight": 0.6,
+      "syntax_weight": 0.1,
+      "interface_weight": 0.15,
+      "verifier_weight": 0.15,
+      "ratio_clip_log_delta": 8.0,
+      "logit_clip": 50.0,
+      "min_reward_std": 0.05
+    },
+    "curriculum": {
+      "quantum_priority": 1.5,
+      "uncertainty_bonus": 0.35
+    }
+  }
+}

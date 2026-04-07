@@ -1,0 +1,12 @@
+{
+  "job_id": "omnicoder-delivery-pass1-v1-hard1-qheavy-20260330T074629Z",
+  "name": "omnicoder-delivery-pass1-v1-hard1-qheavy",
+  "pid": 194210,
+  "log_path": "/tmp/omnicoder_delivery_pass1_v1_hard1_qheavy_20260330.log",
+  "remote_root": "/root/root/work/quantum-gpt",
+  "command": "cd /root/root/work/quantum-gpt && rm -rf evals/runs/omnicoder-delivery-pass1-v1-hard1-qheavy && cp -r evals/runs/omnicoder-delivery-pass1-v1 evals/runs/omnicoder-delivery-pass1-v1-hard1-qheavy && rm -f evals/runs/omnicoder-delivery-pass1-v1-hard1-qheavy/candidates/*.py evals/runs/omnicoder-delivery-pass1-v1-hard1-qheavy/hf-pass1-generation-log.json evals/runs/omnicoder-delivery-pass1-v1-hard1-qheavy/scorecard.json && ASCEND_RT_VISIBLE_DEVICES=6 python3 scripts/run_hf_pass1_eval.py --run-dir evals/runs/omnicoder-delivery-pass1-v1-hard1-qheavy --base-model models/OmniCoder-9B --adapter outputs/omnicoder9b-quantum-hard-v1-continue-true40-e2-20260330T142009CST/adapter --device npu --token-budget-preset quantum_heavy --score",
+  "created_at": "2026-03-30T07:47:01.735037+00:00",
+  "transport": "standalone",
+  "duration_ms": 29892,
+  "meta_file": "/Users/daxu/software/quantum-gpt/.huanxin_jobs/omnicoder-delivery-pass1-v1-hard1-qheavy-20260330T074629Z.json"
+}

@@ -1,0 +1,85 @@
+{
+  "executed_at_utc": "2026-03-13T06:34:08.368663+00:00",
+  "command": "python3 evals/runner/openai_model_adapter.py",
+  "timeout_seconds": 180,
+  "results": [
+    {
+      "task_id": "quantum_bell_pair_construction",
+      "status": "ok",
+      "prompt_path": "/Users/daxu/.openclaw/workspace-quantum-rnd/evals/runs/openai-baseline-smoke/prompts/quantum_bell_pair_construction.txt",
+      "candidate_path": "/Users/daxu/.openclaw/workspace-quantum-rnd/evals/runs/openai-baseline-smoke/candidates/quantum_bell_pair_construction.py",
+      "started_at_utc": "2026-03-13T06:33:47.884624+00:00",
+      "finished_at_utc": "2026-03-13T06:33:50.920507+00:00",
+      "returncode": 0,
+      "stdout_path": "logs/quantum_bell_pair_construction.stdout.txt",
+      "stderr_path": "logs/quantum_bell_pair_construction.stderr.txt",
+      "stdout_bytes": 145,
+      "stderr_bytes": 132
+    },
+    {
+      "task_id": "quantum_measurement_bug_repair",
+      "status": "ok",
+      "prompt_path": "/Users/daxu/.openclaw/workspace-quantum-rnd/evals/runs/openai-baseline-smoke/prompts/quantum_measurement_bug_repair.txt",
+      "candidate_path": "/Users/daxu/.openclaw/workspace-quantum-rnd/evals/runs/openai-baseline-smoke/candidates/quantum_measurement_bug_repair.py",
+      "started_at_utc": "2026-03-13T06:33:50.921326+00:00",
+      "finished_at_utc": "2026-03-13T06:33:54.486687+00:00",
+      "returncode": 0,
+      "stdout_path": "logs/quantum_measurement_bug_repair.stdout.txt",
+      "stderr_path": "logs/quantum_measurement_bug_repair.stderr.txt",
+      "stdout_bytes": 465,
+      "stderr_bytes": 133
+    },
+    {
+      "task_id": "quantum_superdense_coding",
+      "status": "ok",
+      "prompt_path": "/Users/daxu/.openclaw/workspace-quantum-rnd/evals/runs/openai-baseline-smoke/prompts/quantum_superdense_coding.txt",
+      "candidate_path": "/Users/daxu/.openclaw/workspace-quantum-rnd/evals/runs/openai-baseline-smoke/candidates/quantum_superdense_coding.py",
+      "started_at_utc": "2026-03-13T06:33:54.487512+00:00",
+      "finished_at_utc": "2026-03-13T06:33:58.536779+00:00",
+      "returncode": 0,
+      "stdout_path": "logs/quantum_superdense_coding.stdout.txt",
+      "stderr_path": "logs/quantum_superdense_coding.stderr.txt",
+      "stdout_bytes": 571,
+      "stderr_bytes": 133
+    },
+    {
+      "task_id": "software_duplicate_logic_refactor",
+      "status": "ok",
+      "prompt_path": "/Users/daxu/.openclaw/workspace-quantum-rnd/evals/runs/openai-baseline-smoke/prompts/software_duplicate_logic_refactor.txt",
+      "candidate_path": "/Users/daxu/.openclaw/workspace-quantum-rnd/evals/runs/openai-baseline-smoke/candidates/software_duplicate_logic_refactor.py",
+      "started_at_utc": "2026-03-13T06:33:58.537418+00:00",
+      "finished_at_utc": "2026-03-13T06:34:01.586368+00:00",
+      "returncode": 0,
+      "stdout_path": "logs/software_duplicate_logic_refactor.stdout.txt",
+      "stderr_path": "logs/software_duplicate_logic_refactor.stderr.txt",
+      "stdout_bytes": 468,
+      "stderr_bytes": 133
+    },
+    {
+      "task_id": "software_off_by_one_bugfix",
+      "status": "ok",
+      "prompt_path": "/Users/daxu/.openclaw/workspace-quantum-rnd/evals/runs/openai-baseline-smoke/prompts/software_off_by_one_bugfix.txt",
+      "candidate_path": "/Users/daxu/.openclaw/workspace-quantum-rnd/evals/runs/openai-baseline-smoke/candidates/software_off_by_one_bugfix.py",
+      "started_at_utc": "2026-03-13T06:34:01.587151+00:00",
+      "finished_at_utc": "2026-03-13T06:34:03.945786+00:00",
+      "returncode": 0,
+      "stdout_path": "logs/software_off_by_one_bugfix.stdout.txt",
+      "stderr_path": "logs/software_off_by_one_bugfix.stderr.txt",
+      "stdout_bytes": 129,
+      "stderr_bytes": 132
+    },
+    {
+      "task_id": "software_parser_regression_tests",
+      "status": "ok",
+      "prompt_path": "/Users/daxu/.openclaw/workspace-quantum-rnd/evals/runs/openai-baseline-smoke/prompts/software_parser_regression_tests.txt",
+      "candidate_path": "/Users/daxu/.openclaw/workspace-quantum-rnd/evals/runs/openai-baseline-smoke/candidates/software_parser_regression_tests.py",
+      "started_at_utc": "2026-03-13T06:34:03.946502+00:00",
+      "finished_at_utc": "2026-03-13T06:34:08.368457+00:00",
+      "returncode": 0,
+      "stdout_path": "logs/software_parser_regression_tests.stdout.txt",
+      "stderr_path": "logs/software_parser_regression_tests.stderr.txt",
+      "stdout_bytes": 945,
+      "stderr_bytes": 133
+    }
+  ]
+}

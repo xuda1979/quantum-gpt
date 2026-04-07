@@ -7,7 +7,7 @@
 - Use local CPU only for designing experiments, running evals, and code changes.
 - Base model: **Qwen2.5-1.5B-Instruct** (located at `models/Qwen2.5-1.5B-Instruct` on ai2).
 - Fine-tune via SFT (LoRA) then GRPO. Keep software-engineering capability as a first-class goal.
-- Before any Huanxin training action, run `python3 evals/runner/run_eval.py` locally; only proceed if all 25 tests pass.
+- Before any Huanxin training action, run `python3 evals/runner/run_eval.py` locally; only proceed if the full current task suite passes.
 
 ## CRITICAL: Research Before Asking
 
@@ -31,24 +31,33 @@ Examples of what you should NEVER ask the user:
 - "How do I download a model?" → `web_search` for it
 - "What are good hyperparameters?" → `web_search` for recent papers/guides
 
-## Remote Execution — Huanxin AI2
+## Remote Execution — Huanxin AI1 / AI2
 
 - CRITICAL: Do NOT use ACP, sessions_spawn, or subagent for remote training. There are NO ACP subagents configured. ACP will never work.
+- **Train-dev route**:
+  ```
+  https://aihuanxin.cn/kunlun/kl-web?poolId=1&projectId=3ed7854b946a47b1a49ad754baa76cd3#/train-dev
+  ```
 - **Direct ai2 environment URL** (use this — never navigate via the general list):
   ```
   https://aihuanxin.cn/kunlun/kl-web?poolId=1&projectId=3ed7854b946a47b1a49ad754baa76cd3#/train-dev/environment/dl-332c4679dcf533b7b978d6df217292d4?name=ai2
   ```
+- Both `ai1` and `ai2` are valid R&D targets now. Default to `ai2` unless `ai1` is the better capacity/parallelism choice for the current step.
 - **NEVER kill the browser daemon** — killing it loses the auth session cookies. The daemon must stay running indefinitely.
-- Use `scripts/ai2_shell.sh` as your default shell entrypoint. It auto-starts the browser daemon.
+- Use the Huanxin environment regularly to keep the login session alive. Prefer lightweight non-destructive checks on the exact `#/train-dev` route instead of letting the session sit idle for long stretches.
+- Use `scripts/huanxin_shell.sh <ai1|ai2> "<cmd>"` as the generic shell entrypoint. Convenience wrappers remain available.
   ```
+  scripts/huanxin_shell.sh ai2 "your shell command here"
+  scripts/ai1_shell.sh "your shell command here"
   scripts/ai2_shell.sh "your shell command here"
   ```
 - Or call the Playwright script directly:
   ```
+  node browser-automation/huanxin_shell_exec.js ai1 --command "your shell command here"
   node browser-automation/huanxin_shell_exec.js ai2 --command "your shell command here"
   ```
 - Remote working dir: `/root/root/work/quantum-gpt`
-- Browser daemon: auto-started by `ai2_shell.sh`. Check with `curl -s http://127.0.0.1:19002/health`.
+- Browser daemon ports: ai1 → `19001`, ai2 → `19002`
 
 ## Verified GRPO Training Command (2026-04-02)
 
@@ -121,7 +130,7 @@ See `skills/s3-transfer/SKILL.md` for details. Remote writes need `--s3-no-check
 
 Each heartbeat cycle, follow this pattern:
 
-1. **Evaluate locally**: `python3 evals/runner/run_eval.py` — must be 25/25 green
+1. **Evaluate locally**: `python3 evals/runner/run_eval.py` — must be green on the full current suite
 2. **Push code to S3**: `scripts/push_to_s3.sh`
 3. **Sync S3 → ai2**: `scripts/ai2_sync_from_s3.sh`
 4. **Launch training** on ai2 with `nohup` (see command above)
