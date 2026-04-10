@@ -1,0 +1,40 @@
+# Autonomous R&D Cycle Command Sheet
+# target: google/gemma-4-26B-A4B-it
+
+local_eval_gate: python3 evals/runner/run_eval.py
+holdout_integrity: python3 scripts/verify_holdout_dataset.py --train-file data/generated/omnicoder-quantum-generalization-holdout-v1/train.jsonl --eval-file data/generated/omnicoder-quantum-generalization-holdout-v1/eval.jsonl --manifest data/generated/omnicoder-quantum-generalization-holdout-v1/manifest.json --min-eval-count 500 --require-task-disjoint --require-prompt-family-disjoint
+gemma_audit: python3 training/audit_model_source.py --model-id google/gemma-4-26B-A4B-it --expected-family-substring gemma
+gemma_snapshot_acquire: python3 training/acquire_public_qwen_snapshot.py --target gemma4-26b-a4b-it --local-dir models/gemma-4-26B-A4B-it
+gemma_snapshot_verify: python3 training/verify_qwen_snapshot.py models/gemma-4-26B-A4B-it --expected-substring gemma-4-26B-A4B-it --expected-family-substring gemma
+gemma_snapshot_relay: scripts/relay_model_snapshot_to_s3.sh gemma-4-26B-A4B-it
+paper_router_plan: python3 scripts/render_timeboxed_scaleup_commands.py --target gemma4-26b-a4b-it --output artifacts/gemma4-26b-a4b-it-paper-router-command-sheet.txt
+paper_dataset: python3 scripts/build_paper_sft_dataset.py \
+  paper \
+  --output-dir data/generated/quantum-paper-router-warmup-v1 \
+  --dataset-name quantum_paper_router_warmup
+paper_router_warmup: PYTORCH_NPU_ALLOC_CONF=max_split_size_mb:256 \
+TOKENIZERS_PARALLELISM=false \
+ASCEND_RT_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 \
+torchrun --nproc_per_node=8 training/qwen_sft_peft.py \
+  --model-name models/gemma-4-26B-A4B-it \
+  --train-file data/generated/quantum-paper-router-warmup-v1/messages/quantum_paper_router_warmup_messages_train.jsonl \
+  --eval-file data/generated/quantum-paper-router-warmup-v1/messages/quantum_paper_router_warmup_messages_valid.jsonl \
+  --output-dir outputs/gemma4-26b-a4b-it-quantum-paper-router-warmup \
+  --device npu \
+  --max-length 1024 \
+  --per-device-batch-size 1 \
+  --gradient-accumulation-steps 2 \
+  --learning-rate 1e-4 \
+  --num-epochs 1 \
+  --max-steps 20 \
+  --eval-steps 1000 \
+  --log-steps 5 \
+  --train-on-completions-only \
+  --target-module-regex '(?:^|\.)(?:router|gate)(?:$|\.)' \
+  --trainable-param-regex 'lora_'
+gemma_smoke: python3 training/huanxin_cpu_smoke.py --model-name models/gemma-4-26B-A4B-it --dataset data/seed/splits-auto-seed/train.jsonl --max-samples 1
+code_sync: scripts/push_to_s3.sh scripts training evals research data
+remote_code_sync: scripts/ai2_sync_from_s3.sh
+remote_model_sync: scripts/ai2_sync_model_from_s3.sh gemma-4-26B-A4B-it
+remote_job_queue: scripts/queue_ai2_timeboxed_pipeline.sh --stage-only
+fallback_remote_job_queue: scripts/queue_ai2_timeboxed_pipeline.sh --target omnicoder9b --stage-only

@@ -1,0 +1,142 @@
+\contentsline {section}{重点架构与执行概览 (Executive Summary)}{6}{section*.2}%
+\contentsline {section}{\numberline {1}实验体系总论 (System Overview)}{6}{section.1}%
+\contentsline {subsection}{\numberline {1.1}研究目标}{6}{subsection.1.1}%
+\contentsline {subsection}{\numberline {1.2}模型训练与进展概览}{6}{subsection.1.2}%
+\contentsline {section}{\numberline {2}高维数据链路与评价闭环 (Data \& Rigorous Evaluation Bounds)}{9}{section.2}%
+\contentsline {subsection}{\numberline {2.1}数据设计原则}{9}{subsection.2.1}%
+\contentsline {subsection}{\numberline {2.2}主要数据集概览}{9}{subsection.2.2}%
+\contentsline {subsection}{\numberline {2.3}混合域严格 holdout}{9}{subsection.2.3}%
+\contentsline {subsection}{\numberline {2.4}量子严格 holdout}{11}{subsection.2.4}%
+\contentsline {subsection}{\numberline {2.5}prompt family 划分}{11}{subsection.2.5}%
+\contentsline {subsection}{\numberline {2.6}样本配额}{11}{subsection.2.6}%
+\contentsline {subsection}{\numberline {2.7}Category 与 Prompt Family 细分}{12}{subsection.2.7}%
+\contentsline {subsection}{\numberline {2.8}快迭代子集与难例子集}{14}{subsection.2.8}%
+\contentsline {subsection}{\numberline {2.9}Gemma router warmup 数据}{14}{subsection.2.9}%
+\contentsline {subsection}{\numberline {2.10}Gemma 路由 Warmup 数据边界}{15}{subsection.2.10}%
+\contentsline {subsection}{\numberline {2.11}实验纪律}{15}{subsection.2.11}%
+\contentsline {subsection}{\numberline {2.12}小结}{15}{subsection.2.12}%
+\contentsline {section}{\numberline {3}模型后训练架构：预调与反馈纠正 (Post-training Methods)}{16}{section.3}%
+\contentsline {subsection}{\numberline {3.1}算法栈总览}{16}{subsection.3.1}%
+\contentsline {subsection}{\numberline {3.2}SFT 主干}{16}{subsection.3.2}%
+\contentsline {subsection}{\numberline {3.3}选择性训练控制}{17}{subsection.3.3}%
+\contentsline {subsection}{\numberline {3.4}Gemma MoE 微调策略}{17}{subsection.3.4}%
+\contentsline {subsection}{\numberline {3.5}SFT 默认参数}{17}{subsection.3.5}%
+\contentsline {subsection}{\numberline {3.6}GRPO 主干}{18}{subsection.3.6}%
+\contentsline {subsection}{\numberline {3.7}多路 reward 分解}{19}{subsection.3.7}%
+\contentsline {subsection}{\numberline {3.8}Curriculum 与自适应温度}{19}{subsection.3.8}%
+\contentsline {subsection}{\numberline {3.9}GRPO 默认参数}{19}{subsection.3.9}%
+\contentsline {subsection}{\numberline {3.10}GRPO 一句话概括}{20}{subsection.3.10}%
+\contentsline {subsection}{\numberline {3.11}研究方法插件机制}{21}{subsection.3.11}%
+\contentsline {subsection}{\numberline {3.12}已实现的六个插件}{21}{subsection.3.12}%
+\contentsline {subsection}{\numberline {3.13}插件 1：Verifier-Guided Repair Curriculum}{21}{subsection.3.13}%
+\contentsline {subsection}{\numberline {3.14}插件 2：Clause-Aware Verifier Reward}{22}{subsection.3.14}%
+\contentsline {subsection}{\numberline {3.15}插件 3：AST Anchor Interface Grounding}{22}{subsection.3.15}%
+\contentsline {subsection}{\numberline {3.16}插件 4：Behavior Anchor Coverage Reward}{22}{subsection.3.16}%
+\contentsline {subsection}{\numberline {3.17}插件 5：Self-Consistency Verifier Routing}{23}{subsection.3.17}%
+\contentsline {subsection}{\numberline {3.18}插件 6：Uncertainty-Triggered Repair Replay}{23}{subsection.3.18}%
+\contentsline {subsection}{\numberline {3.19}插件与 benchmark 的对应关系}{23}{subsection.3.19}%
+\contentsline {subsection}{\numberline {3.20}TurboQuant 推理优化}{23}{subsection.3.20}%
+\contentsline {subsection}{\numberline {3.21}小结}{24}{subsection.3.21}%
+\contentsline {section}{\numberline {4}云原生集群与工程验证 (Hardware \& Computing Clusters)}{25}{section.4}%
+\contentsline {subsection}{\numberline {4.1}算力组织方式}{25}{subsection.4.1}%
+\contentsline {subsection}{\numberline {4.2}已归档训练指标}{25}{subsection.4.2}%
+\contentsline {subsection}{\numberline {4.3}训练曲线关键节点}{26}{subsection.4.3}%
+\contentsline {subsection}{\numberline {4.4}8-NPU 快迭代工件}{27}{subsection.4.4}%
+\contentsline {subsection}{\numberline {4.5}Gemma 主线当前进展与下一步}{28}{subsection.4.5}%
+\contentsline {subsection}{\numberline {4.6}Timeboxed Pipeline}{29}{subsection.4.6}%
+\contentsline {subsection}{\numberline {4.7}小结}{29}{subsection.4.7}%
+\contentsline {section}{\numberline {5}研发架构（软件架构）}{30}{section.5}%
+\contentsline {subsection}{\numberline {5.1}Local-first 控制面}{30}{subsection.5.1}%
+\contentsline {subsection}{\numberline {5.2}ai2 远端工作目录与资产分布}{30}{subsection.5.2}%
+\contentsline {subsubsection}{\numberline {5.2.1}基座模型}{30}{subsubsection.5.2.1}%
+\contentsline {subsubsection}{\numberline {5.2.2}数据集}{30}{subsubsection.5.2.2}%
+\contentsline {subsubsection}{\numberline {5.2.3}微调产物（adapter）}{30}{subsubsection.5.2.3}%
+\contentsline {subsubsection}{\numberline {5.2.4}代码入口与控制面脚本}{30}{subsubsection.5.2.4}%
+\contentsline {subsection}{\numberline {5.3}控制面组件与职责边界}{32}{subsection.5.3}%
+\contentsline {subsection}{\numberline {5.4}自治研发循环}{32}{subsection.5.4}%
+\contentsline {subsection}{\numberline {5.5}训练器与插件的分层设计}{33}{subsection.5.5}%
+\contentsline {subsection}{\numberline {5.6}S3 Relay 同步机制}{34}{subsection.5.6}%
+\contentsline {subsection}{\numberline {5.7}唯一正式报告机制}{34}{subsection.5.7}%
+\contentsline {subsection}{\numberline {5.8}小结}{34}{subsection.5.8}%
+\contentsline {section}{\numberline {6}测试结果}{35}{section.6}%
+\contentsline {subsection}{\numberline {6.1}核心结果}{35}{subsection.6.1}%
+\contentsline {subsection}{\numberline {6.2}评测方法与可信度}{35}{subsection.6.2}%
+\contentsline {subsection}{\numberline {6.3}参考解健康度}{36}{subsection.6.3}%
+\contentsline {subsection}{\numberline {6.4}详细结果分析}{37}{subsection.6.4}%
+\contentsline {subsubsection}{\numberline {6.4.1}OmniCoder 8-NPU 评测工件}{37}{subsubsection.6.4.1}%
+\contentsline {subsubsection}{\numberline {6.4.2}Qwen 严格量子 holdout 基线}{37}{subsubsection.6.4.2}%
+\contentsline {subsubsection}{\numberline {6.4.3}接口层细节}{37}{subsubsection.6.4.3}%
+\contentsline {subsubsection}{\numberline {6.4.4}评测覆盖度}{38}{subsubsection.6.4.4}%
+\contentsline {subsection}{\numberline {6.5}训练指标}{38}{subsection.6.5}%
+\contentsline {subsection}{\numberline {6.6}口径说明}{39}{subsection.6.6}%
+\contentsline {subsubsection}{\numberline {6.6.1}24/26 整表数字}{39}{subsubsection.6.6.1}%
+\contentsline {subsubsection}{\numberline {6.6.2}Delivery Gate 口径}{39}{subsubsection.6.6.2}%
+\contentsline {subsubsection}{\numberline {6.6.3}8-NPU 快迭代工件完整度}{40}{subsubsection.6.6.3}%
+\contentsline {subsection}{\numberline {6.7}Gemma 测试状态}{40}{subsection.6.7}%
+\contentsline {subsection}{\numberline {6.8}小结}{40}{subsection.6.8}%
+\contentsline {section}{\numberline {7}总结与下一步}{41}{section.7}%
+\contentsline {subsection}{\numberline {7.1}当前进展总览}{41}{subsection.7.1}%
+\contentsline {subsection}{\numberline {7.2}核心结论}{41}{subsection.7.2}%
+\contentsline {subsection}{\numberline {7.3}下一步工作排序}{41}{subsection.7.3}%
+\contentsline {subsection}{\numberline {7.4}前沿方法储备}{42}{subsection.7.4}%
+\contentsline {subsection}{\numberline {7.5}业界前沿技术对标}{42}{subsection.7.5}%
+\contentsline {paragraph}{外部参考来源}{44}{section*.3}%
+\contentsline {subsection}{\numberline {7.6}展望}{44}{subsection.7.6}%
+\contentsline {section}{\numberline {A}附录 A：数据集与任务清单}{45}{appendix.A}%
+\contentsline {subsection}{\numberline {A.1}A.1 数据集清单与用途}{45}{subsection.A.1}%
+\contentsline {subsection}{\numberline {A.2}A.2 量子任务清单}{45}{subsection.A.2}%
+\contentsline {subsection}{\numberline {A.3}A.3 软件任务清单}{46}{subsection.A.3}%
+\contentsline {subsection}{\numberline {A.4}A.4 严格 holdout 的 task 划分}{46}{subsection.A.4}%
+\contentsline {subsection}{\numberline {A.5}A.5 量子任务逐项说明}{47}{subsection.A.5}%
+\contentsline {paragraph}{Bell pair construction}{47}{section*.4}%
+\contentsline {paragraph}{Greedy circuit depth optimization via ASAP scheduling}{47}{section*.5}%
+\contentsline {paragraph}{Circuit phase repair from noisy gate stream}{48}{section*.6}%
+\contentsline {paragraph}{Quantum Bit-Flip Error Detection}{48}{section*.7}%
+\contentsline {paragraph}{Gate alias normalization repair}{48}{section*.8}%
+\contentsline {paragraph}{Measurement mapping bug repair}{48}{section*.9}%
+\contentsline {paragraph}{Quantum phase estimation unitary eigenvalue extraction}{48}{section*.10}%
+\contentsline {paragraph}{QAOA MaxCut cost function and classical simulation}{48}{section*.11}%
+\contentsline {paragraph}{QFT phase pattern}{48}{section*.12}%
+\contentsline {paragraph}{Stabilizer tableau single-qubit update repair}{48}{section*.13}%
+\contentsline {paragraph}{Superdense coding encode/decode}{48}{section*.14}%
+\contentsline {paragraph}{Teleportation correction mapping}{48}{section*.15}%
+\contentsline {paragraph}{VQE energy expectation from parameterized ansatz}{48}{section*.16}%
+\contentsline {subsection}{\numberline {A.6}A.6 软件任务逐项说明}{49}{subsection.A.6}%
+\contentsline {paragraph}{Configuration merge semantics}{49}{section*.17}%
+\contentsline {paragraph}{Docstring contract preservation}{49}{section*.18}%
+\contentsline {paragraph}{Duplicate logic refactor}{49}{section*.19}%
+\contentsline {paragraph}{Multifile patch conflict repair}{49}{section*.20}%
+\contentsline {paragraph}{Off-by-one bug fix}{49}{section*.21}%
+\contentsline {paragraph}{Parser regression tests}{49}{section*.22}%
+\contentsline {paragraph}{Patch application conflict resolver}{49}{section*.23}%
+\contentsline {paragraph}{Configurable retry decorator with exponential backoff}{49}{section*.24}%
+\contentsline {paragraph}{Session event log state machine}{49}{section*.25}%
+\contentsline {paragraph}{Session window summary with ordered history}{49}{section*.26}%
+\contentsline {paragraph}{N-ary tree serialization and deserialization}{49}{section*.27}%
+\contentsline {paragraph}{Workspace patch bundle repair}{49}{section*.28}%
+\contentsline {paragraph}{Workspace runner smoke}{49}{section*.29}%
+\contentsline {subsection}{\numberline {A.7}A.7 核心数据集的 category 细表}{50}{subsection.A.7}%
+\contentsline {subsection}{\numberline {A.8}A.8 核心数据集的 prompt family 细表}{51}{subsection.A.8}%
+\contentsline {section}{\numberline {B}附录 B：研究方法插件逐项说明}{52}{appendix.B}%
+\contentsline {subsection}{\numberline {B.1}B.1 插件接口摘要}{52}{subsection.B.1}%
+\contentsline {subsection}{\numberline {B.2}B.2 Verifier-Guided Repair Curriculum}{52}{subsection.B.2}%
+\contentsline {subsection}{\numberline {B.3}B.3 Clause-Aware Verifier Reward}{52}{subsection.B.3}%
+\contentsline {subsection}{\numberline {B.4}B.4 AST Anchor Interface Grounding}{52}{subsection.B.4}%
+\contentsline {subsection}{\numberline {B.5}B.5 Behavior Anchor Coverage Reward}{52}{subsection.B.5}%
+\contentsline {subsection}{\numberline {B.6}B.6 Self-Consistency Verifier Routing}{53}{subsection.B.6}%
+\contentsline {subsection}{\numberline {B.7}B.7 Uncertainty-Triggered Repair Replay}{53}{subsection.B.7}%
+\contentsline {subsection}{\numberline {B.8}B.8 TurboQuant}{53}{subsection.B.8}%
+\contentsline {section}{\numberline {C}附录 C：工件索引与引用口径}{54}{appendix.C}%
+\contentsline {subsection}{\numberline {C.1}C.2 数字引用矩阵}{55}{subsection.C.1}%
+\contentsline {subsection}{\numberline {C.2}C.3 训练与测试 provenance 的最小引用单元}{57}{subsection.C.2}%
+\contentsline {section}{\numberline {D}附录 D：关键命令与复现实验}{59}{appendix.D}%
+\contentsline {subsection}{\numberline {D.1}D.1 参考解健康度复现命令}{59}{subsection.D.1}%
+\contentsline {subsection}{\numberline {D.2}D.2 严格 holdout 诚信校验命令}{59}{subsection.D.2}%
+\contentsline {subsection}{\numberline {D.3}D.3 当前 8-NPU 快迭代作业的核心命令形态}{59}{subsection.D.3}%
+\contentsline {subsection}{\numberline {D.4}D.4 Gemma 本地最小下一步实验}{60}{subsection.D.4}%
+\contentsline {subsection}{\numberline {D.5}D.5 报告编译命令}{60}{subsection.D.5}%
+\contentsline {section}{\numberline {E}附录 E：训练运行逐步指标摘录}{61}{appendix.E}%
+\contentsline {subsection}{\numberline {E.1}E.1 Qwen 8 NPU interface-prefix true20-e2 逐步指标}{61}{subsection.E.1}%
+\contentsline {subsection}{\numberline {E.2}E.2 Qwen 8 NPU codefirst-semantic mix75 true20-e2 逐步指标}{61}{subsection.E.2}%
+\contentsline {subsection}{\numberline {E.3}E.3 OmniCoder 9B 2 NPU continuation true20 逐步指标}{62}{subsection.E.3}%
+\contentsline {subsection}{\numberline {E.4}E.4 OmniCoder 9B 8 NPU strict-quantum fastiter 逐步指标}{62}{subsection.E.4}%

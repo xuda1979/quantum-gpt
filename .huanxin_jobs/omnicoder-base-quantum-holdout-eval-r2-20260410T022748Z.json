@@ -1,0 +1,12 @@
+{
+  "job_id": "omnicoder-base-quantum-holdout-eval-r2-20260410T022748Z",
+  "name": "omnicoder-base-quantum-holdout-eval-r2",
+  "pid": 4099,
+  "log_path": "/tmp/omnicoder_base_strict_holdout_eval_r2_20260410.log",
+  "remote_root": "/root/root/work/quantum-gpt",
+  "command": "cd /root/root/work/quantum-gpt && test -d models/OmniCoder-9B && test -d evals/runs/omnicoder-quantum-generalization-holdout-v1-clean && rm -rf evals/runs/omnicoder-quantum-generalization-holdout-base-ai2-20260410T022718Z && cp -R evals/runs/omnicoder-quantum-generalization-holdout-v1-clean evals/runs/omnicoder-quantum-generalization-holdout-base-ai2-20260410T022718Z && PYTHONPYCACHEPREFIX=/tmp/pycache TOKENIZERS_PARALLELISM=false ASCEND_RT_VISIBLE_DEVICES=6 python3 scripts/run_hf_pass1_eval.py --run-dir evals/runs/omnicoder-quantum-generalization-holdout-base-ai2-20260410T022718Z --base-model models/OmniCoder-9B --device npu --score && python3 scripts/summarize_override_scorecard.py --scorecard evals/runs/omnicoder-quantum-generalization-holdout-base-ai2-20260410T022718Z/scorecard.json --output reports/omnicoder9b_quantum_generalization_holdout_base_ai2_20260410T022718Z_override_summary.json",
+  "created_at": "2026-04-10T02:28:15.250905+00:00",
+  "transport": "daemon",
+  "duration_ms": 6888,
+  "meta_file": "/Users/daxu/software/quantum-gpt/.huanxin_jobs/omnicoder-base-quantum-holdout-eval-r2-20260410T022748Z.json"
+}

@@ -13,6 +13,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+from training.runtime_python import detect_python_version, resolve_python_interpreter
 
 WORKSPACE_ROOT = Path(__file__).resolve().parents[1]
 ALPHAQUBIT_ROOT = Path("/Users/daxu/software/ALPHAQUBIT")
@@ -64,33 +65,15 @@ def resolve_node_binary() -> str:
     return node
 
 
-def detect_python_version(python_bin: str) -> tuple[int, int] | None:
-    completed = subprocess.run(
-        [python_bin, "-c", "import sys; print(f'{sys.version_info[0]}.{sys.version_info[1]}')"],
-        capture_output=True,
-        text=True,
-    )
-    if completed.returncode != 0:
-        return None
-    raw = completed.stdout.strip().split(".")
-    if len(raw) != 2:
-        return None
-    return int(raw[0]), int(raw[1])
-
-
 def resolve_alphaqubit_base_python() -> str:
-    candidates = ["python3.11", "python3.10", "python3"]
-    for candidate in candidates:
-        binary = shutil.which(candidate)
-        if not binary:
-            continue
-        version = detect_python_version(binary)
-        if version and version >= (3, 10):
-          return binary
+    resolution = resolve_python_interpreter()
+    selected_path = resolution.get("selected_path")
+    if selected_path:
+        return str(selected_path)
 
-    brew = shutil.which("brew") or "/Users/daxu/homebrew/bin/brew"
+    brew = resolution.get("brew_binary") or shutil.which("brew") or "/Users/daxu/homebrew/bin/brew"
     if Path(brew).exists():
-        install_result = run_local_command([brew, "install", "python@3.11"], WORKSPACE_ROOT)
+        install_result = run_local_command([str(brew), "install", "python@3.11"], WORKSPACE_ROOT)
         if install_result["ok"]:
             for prefix in [Path("/Users/daxu/homebrew/bin"), Path("/opt/homebrew/bin")]:
                 binary = prefix / "python3.11"

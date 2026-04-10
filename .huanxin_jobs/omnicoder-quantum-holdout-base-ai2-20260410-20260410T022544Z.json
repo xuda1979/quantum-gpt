@@ -1,0 +1,12 @@
+{
+  "job_id": "omnicoder-quantum-holdout-base-ai2-20260410-20260410T022544Z",
+  "name": "omnicoder-quantum-holdout-base-ai2-20260410",
+  "pid": 3497,
+  "log_path": "/tmp/omnicoder_quantum_holdout_base_ai2_20260410.log",
+  "remote_root": "/root/root/work/quantum-gpt",
+  "command": "cd /root/root/work/quantum-gpt && test ! -e 'evals/runs/omnicoder-quantum-generalization-holdout-base-ai2-20260410' && cp -R 'evals/runs/omnicoder-quantum-generalization-holdout-v1-clean' 'evals/runs/omnicoder-quantum-generalization-holdout-base-ai2-20260410' && rm -f evals/runs/omnicoder-quantum-generalization-holdout-base-ai2-20260410/candidates/*.py evals/runs/omnicoder-quantum-generalization-holdout-base-ai2-20260410/hf-pass1-generation-log.json evals/runs/omnicoder-quantum-generalization-holdout-base-ai2-20260410/scorecard.json && PYTHONPYCACHEPREFIX=/tmp/pycache TOKENIZERS_PARALLELISM=false ASCEND_RT_VISIBLE_DEVICES=6 python3 scripts/run_hf_pass1_eval.py --run-dir 'evals/runs/omnicoder-quantum-generalization-holdout-base-ai2-20260410' --base-model models/OmniCoder-9B --device npu --token-budget-preset quantum_heavy --score",
+  "created_at": "2026-04-10T02:25:48.602208+00:00",
+  "transport": "daemon",
+  "duration_ms": 2868,
+  "meta_file": "/Users/daxu/software/quantum-gpt/.huanxin_jobs/omnicoder-quantum-holdout-base-ai2-20260410-20260410T022544Z.json"
+}

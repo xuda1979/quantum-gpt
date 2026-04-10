@@ -1,0 +1,12 @@
+{
+  "job_id": "fastpath-verify-20260409T095753Z",
+  "name": "fastpath-verify",
+  "pid": 297203,
+  "log_path": "/tmp/ai2_fastpath_verify.log",
+  "remote_root": "/root/root/work/quantum-gpt",
+  "command": "cd /root/root/work/quantum-gpt && echo __FASTPATH_VERIFY_BEGIN__ && sleep 10 && echo __FASTPATH_VERIFY_END__",
+  "created_at": "2026-04-09T09:57:56.926139+00:00",
+  "transport": "daemon",
+  "duration_ms": 2873,
+  "meta_file": "/Users/daxu/software/quantum-gpt/.huanxin_jobs/fastpath-verify-20260409T095753Z.json"
+}

@@ -1,0 +1,12 @@
+{
+  "model_name": "/Users/daxu/software/quantum-gpt/models/OmniCoder-9B",
+  "runtime_src": "/Users/daxu/software/quantum-gpt/artifacts/runtime-bundles/omnicoder-qwen35-runtime-c585eea/transformers-src/src",
+  "compat_hub_version": "1.8.0",
+  "status": "ok",
+  "runtime_config_class": "Qwen3_5Config",
+  "model_type": "qwen3_5",
+  "text_preprocessor_backend_kind": "tokenizer",
+  "render_backend_class": "TokenizersBackend",
+  "text_backend_class": "TokenizersBackend",
+  "save_backend_class": "TokenizersBackend"
+}

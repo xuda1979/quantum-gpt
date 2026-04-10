@@ -1,0 +1,12 @@
+{
+  "job_id": "omnicoder-8npu-fastiter-eval-retry2-20260409T122456Z",
+  "name": "omnicoder-8npu-fastiter-eval-retry2",
+  "pid": 298657,
+  "log_path": "/tmp/omnicoder_8npu_fastiter_eval_retry2_20260409.log",
+  "remote_root": "/root/root/work/quantum-gpt",
+  "command": "cd /root/root/work/quantum-gpt && rclone copy 'nm-aihuanxin:jtdlp-3ed7854b946a47b1a49ad754baa76cd3/quantum-qwen25-coder-main/scripts' '/root/root/work/quantum-gpt/scripts' --include 'run_hf_pass1_eval.py' --include 'run_base_vs_adapter_eval.py' --ignore-times --fast-list --transfers 2 --checkers 4 && rclone copy 'nm-aihuanxin:jtdlp-3ed7854b946a47b1a49ad754baa76cd3/quantum-qwen25-coder-main/evals/runner' '/root/root/work/quantum-gpt/evals/runner' --include 'run_eval.py' --include 'candidate_sanitize.py' --ignore-times --fast-list --transfers 2 --checkers 4 && if test -e 'evals/runs/omnicoder-quantum-generalization-holdout-8npu-fastiter-eval-20260409T122347Z'; then exit 9; fi && cp -R 'evals/runs/omnicoder-quantum-generalization-holdout-v1-clean' 'evals/runs/omnicoder-quantum-generalization-holdout-8npu-fastiter-eval-20260409T122347Z' && test -f 'outputs/omnicoder9b-quantum-generalization-sft-8npu-fastiter-20260409T1451CST/adapter/adapter_model.safetensors' && PYTHONPYCACHEPREFIX=/tmp/pycache TOKENIZERS_PARALLELISM=false ASCEND_RT_VISIBLE_DEVICES=6 python3 scripts/run_hf_pass1_eval.py --run-dir 'evals/runs/omnicoder-quantum-generalization-holdout-8npu-fastiter-eval-20260409T122347Z' --base-model models/OmniCoder-9B --adapter 'outputs/omnicoder9b-quantum-generalization-sft-8npu-fastiter-20260409T1451CST/adapter' --device npu --score",
+  "created_at": "2026-04-09T12:24:59.778174+00:00",
+  "transport": "daemon",
+  "duration_ms": 2874,
+  "meta_file": "/Users/daxu/software/quantum-gpt/.huanxin_jobs/omnicoder-8npu-fastiter-eval-retry2-20260409T122456Z.json"
+}

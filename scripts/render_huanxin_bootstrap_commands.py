@@ -30,6 +30,7 @@ DEFAULT_DATASET = "data/seed/splits-auto-seed/train.jsonl"
 DEFAULT_TRAIN = "data/seed/splits-auto-seed/train.jsonl"
 DEFAULT_VAL = "data/seed/splits-auto-seed/val.jsonl"
 DEFAULT_REQS = "training/requirements-huanxin-cpu.txt"
+GEMMA_REQS = "training/requirements-gemma4-runtime.txt"
 DEFAULT_SMOKE = "training/huanxin_cpu_smoke.py"
 DEFAULT_TRAINING = "training/qwen_sft_peft.py"
 DEFAULT_PREFLIGHT_TARGETS = [
@@ -63,6 +64,13 @@ def existing_preflight(files: list[dict]) -> list[str]:
     return [rel_path for rel_path in DEFAULT_PREFLIGHT_TARGETS if find_file(files, rel_path)]
 
 
+def resolve_requirements_file(model_name: str) -> str:
+    lowered = model_name.lower()
+    if "gemma-4" in lowered or "gemma4" in lowered:
+        return GEMMA_REQS
+    return DEFAULT_REQS
+
+
 def build_text(
     manifest: dict,
     model_name: str,
@@ -79,6 +87,7 @@ def build_text(
     eval_file_q = shlex.quote(eval_file)
     output_dir_q = shlex.quote(output_dir)
     files = manifest["files"]
+    requirements_file = resolve_requirements_file(model_name)
     lines: list[str] = []
     lines.append("# Huanxin bootstrap command sheet")
     lines.append(f"# bundle_label: {manifest.get('label', 'unknown')}")
@@ -112,10 +121,14 @@ def build_text(
         lines.append("python3 -m py_compile " + " ".join(shlex.quote(path) for path in preflight_targets))
         lines.append("")
 
-    if find_file(files, DEFAULT_REQS):
+    if find_file(files, requirements_file):
         lines.append("# Install the minimal CPU bootstrap stack.")
         lines.append("python3 -m pip install --upgrade pip")
-        lines.append(f"python3 -m pip install -r {shlex.quote(DEFAULT_REQS)}")
+        lines.append(f"python3 -m pip install -r {shlex.quote(requirements_file)}")
+        lines.append("")
+    elif requirements_file == GEMMA_REQS:
+        lines.append("# Gemma 4 runtime upgrade file is not present in this bundle.")
+        lines.append(f"# Expected requirements file: {GEMMA_REQS}")
         lines.append("")
 
     if find_file(files, DEFAULT_SMOKE):

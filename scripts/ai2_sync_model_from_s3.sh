@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 S3_ROOT="nm-aihuanxin:jtdlp-3ed7854b946a47b1a49ad754baa76cd3/quantum-qwen25-coder-main"
-REMOTE_ROOT="/root/root/work/quantum-gpt"
+REMOTE_ROOT="${AI2_REMOTE_ROOT:-/root/root/work/quantum-gpt}"
 
 usage() {
   cat >&2 <<'EOF'
@@ -43,14 +43,20 @@ cd "$ROOT_DIR"
 
 S3_MODEL_DIR="$S3_ROOT/models/$MODEL_SUBDIR"
 REMOTE_MODEL_DIR="$REMOTE_ROOT/models/$MODEL_SUBDIR"
-RCLONE_CMD="mkdir -p '$REMOTE_MODEL_DIR' && rclone sync '$S3_MODEL_DIR' '$REMOTE_MODEL_DIR' --exclude '.cache/**' --exclude '__pycache__/**' --exclude '*.pyc' --fast-list --progress"
+REMOTE_INCOMING_DIR="${REMOTE_MODEL_DIR}.__incoming"
+REMOTE_PREVIOUS_SUFFIX="$(date +%s)"
+REMOTE_PREVIOUS_DIR="${REMOTE_MODEL_DIR}.__previous.${REMOTE_PREVIOUS_SUFFIX}"
+RCLONE_CMD="mkdir -p '$REMOTE_INCOMING_DIR' && rclone sync '$S3_MODEL_DIR' '$REMOTE_INCOMING_DIR' --exclude '.cache/**' --exclude '__pycache__/**' --exclude '*.pyc' --fast-list --progress"
+RCLONE_CMD+=" && python3 training/verify_qwen_snapshot.py '$REMOTE_INCOMING_DIR' --expected-substring '$MODEL_SUBDIR' --expected-family-substring ''"
+RCLONE_CMD+=" && if [ -e '$REMOTE_MODEL_DIR' ]; then mv '$REMOTE_MODEL_DIR' '$REMOTE_PREVIOUS_DIR'; fi"
+RCLONE_CMD+=" && mv '$REMOTE_INCOMING_DIR' '$REMOTE_MODEL_DIR'"
 
 if [[ $DRY_RUN -eq 1 ]]; then
-  RCLONE_CMD+=" --dry-run"
+  RCLONE_CMD="mkdir -p '$REMOTE_INCOMING_DIR' && rclone sync '$S3_MODEL_DIR' '$REMOTE_INCOMING_DIR' --exclude '.cache/**' --exclude '__pycache__/**' --exclude '*.pyc' --fast-list --progress --dry-run"
 fi
 
 REMOTE_LOG="/tmp/ai2_sync_model_from_s3.log"
-JSON_OUT="$(HUANXIN_USE_DAEMON=1 bash scripts/ai2_shell.sh "log='$REMOTE_LOG'; { $RCLONE_CMD; } >\"\$log\" 2>&1; rc=\$?; echo __AI2_SYNC_MODEL_FROM_S3_RC__:\$rc; tail -n 40 \"\$log\"")"
+JSON_OUT="$(HUANXIN_USE_DAEMON=1 bash scripts/ai2_fast_path.sh exec "log='$REMOTE_LOG'; { $RCLONE_CMD; } >\"\$log\" 2>&1; rc=\$?; echo __AI2_SYNC_MODEL_FROM_S3_RC__:\$rc; tail -n 40 \"\$log\"")"
 
 python3 - <<'PY' "$JSON_OUT" "$MODEL_SUBDIR"
 import json

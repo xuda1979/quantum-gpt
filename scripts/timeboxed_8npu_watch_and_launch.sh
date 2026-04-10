@@ -4,9 +4,9 @@ set -euo pipefail
 usage() {
   cat >&2 <<'EOF'
 Usage:
-  scripts/timeboxed_8npu_watch_and_launch.sh --command "<cmd>" [--timeout-sec 7200] [--poll-sec 60] [--status-file <path>] [--launch-log <path>]
+  scripts/timeboxed_8npu_watch_and_launch.sh --command "<cmd>" [--timeout-sec 7200] [--poll-sec 60] [--required-idle-npus 8] [--status-file <path>] [--launch-log <path>]
 
-Waits until all 8 NPUs are idle, then launches the provided command.
+Waits until the requested number of NPUs are idle, then launches the provided command.
 Intended to run on ai2.
 EOF
   exit 1
@@ -15,6 +15,7 @@ EOF
 COMMAND=""
 TIMEOUT_SEC=7200
 POLL_SEC=60
+REQUIRED_IDLE_NPUS=8
 STATUS_FILE="/tmp/timeboxed_8npu_watch_status.log"
 LAUNCH_LOG="/tmp/timeboxed_8npu_launch.log"
 
@@ -30,6 +31,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --poll-sec)
       POLL_SEC="${2:-}"
+      shift 2
+      ;;
+    --required-idle-npus)
+      REQUIRED_IDLE_NPUS="${2:-}"
       shift 2
       ;;
     --status-file)
@@ -49,7 +54,7 @@ done
 [[ -n "$COMMAND" ]] || usage
 
 start_ts="$(date +%s)"
-echo "$(date -Iseconds) waiting_for_8_idle_npus" >> "$STATUS_FILE"
+echo "$(date -Iseconds) waiting_for_idle_npus required=${REQUIRED_IDLE_NPUS}" >> "$STATUS_FILE"
 
 while true; do
   now_ts="$(date +%s)"
@@ -60,14 +65,14 @@ while true; do
   fi
 
   idle_count="$(npu-smi info | grep -c 'No running processes found in NPU' || true)"
-  if [[ "$idle_count" -ge 8 ]]; then
-    echo "$(date -Iseconds) launch_start idle_count=${idle_count}" >> "$STATUS_FILE"
+  if [[ "$idle_count" -ge "$REQUIRED_IDLE_NPUS" ]]; then
+    echo "$(date -Iseconds) launch_start idle_count=${idle_count} required=${REQUIRED_IDLE_NPUS}" >> "$STATUS_FILE"
     nohup bash -lc "$COMMAND" > "$LAUNCH_LOG" 2>&1 < /dev/null &
     launch_pid="$!"
     echo "$(date -Iseconds) launch_pid=${launch_pid} launch_log=${LAUNCH_LOG}" >> "$STATUS_FILE"
     exit 0
   fi
 
-  echo "$(date -Iseconds) still_waiting idle_count=${idle_count}" >> "$STATUS_FILE"
+  echo "$(date -Iseconds) still_waiting idle_count=${idle_count} required=${REQUIRED_IDLE_NPUS}" >> "$STATUS_FILE"
   sleep "$POLL_SEC"
 done

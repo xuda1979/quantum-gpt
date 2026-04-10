@@ -1,0 +1,41 @@
+{
+  "timestamp_utc": "2026-04-07T13:57:12.447706+00:00",
+  "python": "3.9.6",
+  "platform": "macOS-26.3-arm64-arm-64bit",
+  "model_id": "google/gemma-4-E2B-it",
+  "status": "ok",
+  "resolved_id": "google/gemma-4-E2B-it",
+  "private": false,
+  "disabled": false,
+  "gated": false,
+  "downloads": 321237,
+  "likes": 312,
+  "pipeline_tag": "any-to-any",
+  "library_name": "transformers",
+  "tags_sample": [
+    "transformers",
+    "safetensors",
+    "gemma4",
+    "image-text-to-text",
+    "any-to-any",
+    "license:apache-2.0",
+    "eval-results",
+    "endpoints_compatible",
+    "region:us"
+  ],
+  "file_count": 9,
+  "config_model_type": "gemma4",
+  "config_architectures": [
+    "Gemma4ForConditionalGeneration"
+  ],
+  "family_evidence": {
+    "expected_family_substring": "gemma",
+    "matched": true,
+    "hits": [
+      "google/gemma-4-E2B-it",
+      "gemma4",
+      "gemma4",
+      "Gemma4ForConditionalGeneration"
+    ]
+  }
+}

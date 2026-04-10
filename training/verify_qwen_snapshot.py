@@ -24,6 +24,7 @@ REQUIRED_CONFIG_FILES = [
 
 TOKENIZER_CANDIDATES = [
     "tokenizer.json",
+    "tokenizer.model",
     "tokenizer_config.json",
     "vocab.json",
     "merges.txt",
@@ -90,6 +91,24 @@ def collect_weight_files(root: Path) -> list[str]:
     return found
 
 
+def collect_indexed_weight_shards(root: Path) -> tuple[list[str], list[str]]:
+    needed_shards: list[str] = []
+    missing_shards: list[str] = []
+    for index_name in ("model.safetensors.index.json", "pytorch_model.bin.index.json"):
+        payload = load_json(root / index_name)
+        if not isinstance(payload, dict):
+            continue
+        weight_map = payload.get("weight_map")
+        if not isinstance(weight_map, dict):
+            continue
+        for shard_name in sorted({str(value) for value in weight_map.values()}):
+            if shard_name not in needed_shards:
+                needed_shards.append(shard_name)
+            if not (root / shard_name).exists():
+                missing_shards.append(shard_name)
+    return needed_shards, missing_shards
+
+
 def requires_processor_artifacts(config: dict | None) -> bool:
     if not isinstance(config, dict):
         return False
@@ -139,6 +158,7 @@ def main() -> int:
     present_config = find_present(root, REQUIRED_CONFIG_FILES)
     present_tokenizer = find_present(root, TOKENIZER_CANDIDATES)
     present_weights = collect_weight_files(root)
+    indexed_weight_shards, missing_indexed_weight_shards = collect_indexed_weight_shards(root)
     present_processor = find_present(root, PROCESSOR_CANDIDATES)
     present_chat_template = find_present(root, CHAT_TEMPLATE_CANDIDATES)
 
@@ -170,6 +190,8 @@ def main() -> int:
     summary["present_config_files"] = present_config
     summary["present_tokenizer_files"] = present_tokenizer
     summary["present_weight_files"] = present_weights
+    summary["indexed_weight_shards"] = indexed_weight_shards
+    summary["missing_indexed_weight_shards"] = missing_indexed_weight_shards
     summary["present_processor_files"] = present_processor
     summary["present_chat_template_files"] = present_chat_template
     summary["accepted_tokenizer_evidence"] = present_tokenizer[:]
@@ -191,6 +213,11 @@ def main() -> int:
         missing_reasons.append("missing tokenizer files")
     if not present_weights:
         missing_reasons.append("missing model weight files")
+    if missing_indexed_weight_shards:
+        missing_reasons.append(
+            "missing shard files referenced by model weight index: "
+            + ", ".join(missing_indexed_weight_shards)
+        )
     if summary["requires_processor_artifacts"]:
         if not present_processor:
             missing_reasons.append("missing processor/preprocessor config files for conditional-generation snapshot")

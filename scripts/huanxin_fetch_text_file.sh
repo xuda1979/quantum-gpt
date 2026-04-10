@@ -40,13 +40,38 @@ cleanup() {
 }
 trap cleanup EXIT
 
-read_meta() {
+json_is_valid() {
+  python3 - <<'PY' "$1"
+import json
+import sys
+
+raw = sys.argv[1]
+try:
+    json.loads(raw)
+except Exception:
+    raise SystemExit(1)
+raise SystemExit(0)
+PY
+}
+
+run_shell_json() {
+  local remote_cmd="$1"
   local json_out
   json_out="$(
     HUANXIN_USE_DAEMON=1 HUANXIN_WAIT_MS="$WAIT_MS" \
-      "$ROOT_DIR/scripts/huanxin_shell.sh" "$ENV_NAME" \
-      "cd /root/root/work/quantum-gpt && if [ -f \"$REMOTE_PATH\" ]; then echo __HX_TEXT_EXISTS__ && wc -l \"$REMOTE_PATH\"; else echo __HX_TEXT_MISSING__; fi"
+      bash "$ROOT_DIR/scripts/huanxin_shell.sh" "$ENV_NAME" "$remote_cmd"
   )"
+  if json_is_valid "$json_out"; then
+    printf '%s' "$json_out"
+    return 0
+  fi
+  HUANXIN_USE_DAEMON=0 HUANXIN_WAIT_MS="$WAIT_MS" \
+    bash "$ROOT_DIR/scripts/huanxin_shell.sh" "$ENV_NAME" "$remote_cmd"
+}
+
+read_meta() {
+  local json_out
+  json_out="$(run_shell_json "cd /root/root/work/quantum-gpt && if [ -f \"$REMOTE_PATH\" ]; then echo __HX_TEXT_EXISTS__ && wc -l \"$REMOTE_PATH\"; else echo __HX_TEXT_MISSING__; fi")"
 
   python3 - <<'PY' "$json_out"
 import json
@@ -91,11 +116,7 @@ else
     marker_begin="__HX_TEXT_BEGIN_${start}_${end}__"
     marker_end="__HX_TEXT_END_${start}_${end}__"
 
-    json_out="$(
-      HUANXIN_USE_DAEMON=1 HUANXIN_WAIT_MS="$WAIT_MS" \
-        "$ROOT_DIR/scripts/huanxin_shell.sh" "$ENV_NAME" \
-        "cd /root/root/work/quantum-gpt && echo $marker_begin && sed -n '${start},${end}p' \"$REMOTE_PATH\" && echo $marker_end"
-    )"
+    json_out="$(run_shell_json "cd /root/root/work/quantum-gpt && echo $marker_begin && sed -n '${start},${end}p' \"$REMOTE_PATH\" && echo $marker_end")"
 
     python3 - <<'PY' "$json_out" "$marker_begin" "$marker_end" "$LOCAL_TMP"
 import json

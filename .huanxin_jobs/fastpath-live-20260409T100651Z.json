@@ -1,0 +1,12 @@
+{
+  "job_id": "fastpath-live-20260409T100651Z",
+  "name": "fastpath-live",
+  "pid": 297725,
+  "log_path": "/tmp/ai2_fastpath_live.log",
+  "remote_root": "/root/root/work/quantum-gpt",
+  "command": "cd /root/root/work/quantum-gpt && echo __FASTPATH_LIVE_BEGIN__ && sleep 90 && echo __FASTPATH_LIVE_END__",
+  "created_at": "2026-04-09T10:06:54.286428+00:00",
+  "transport": "daemon",
+  "duration_ms": 2355,
+  "meta_file": "/Users/daxu/software/quantum-gpt/.huanxin_jobs/fastpath-live-20260409T100651Z.json"
+}

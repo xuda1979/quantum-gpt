@@ -1,0 +1,27 @@
+# Gemma 4 runtime bootstrap stack.
+#
+# This is intentionally separate from training/requirements-huanxin-cpu.txt:
+# - OmniCoder / Qwen can stay on the narrower stable bootstrap path.
+# - Gemma 4 checkpoints advertise model_type=gemma4 and checkpoint metadata
+#   that points at a much newer Transformers runtime.
+# - The current repo still requires additional processor-aware
+#   conditional-generation backend work after this runtime upgrade.
+#
+# The source install is deliberate here. The local verified blocker is that the
+# old runtime cannot even recognize gemma4, so pinning to the older stable line
+# would be misleading for Gemma-targeted work.
+# Verified local caveats:
+# - 2026-04-09: Python 3.9 can install transformers==4.57.1, but Gemma 4 still
+#   stays at runtime_compat / unrecognized gemma4 on that stack.
+# - 2026-04-10: Python 3.11 can also install the stable 4.57.1 wheel stack, but
+#   Gemma 4 still fails runtime_compat there as well.
+# - The remaining runtime path therefore still needs a newer source/dev
+#   Transformers build, and that source-build upgrade path requires Python >=3.10.
+git+https://github.com/huggingface/transformers.git
+accelerate==1.4.0
+datasets==3.3.2
+peft==0.14.0
+sentencepiece==0.2.0
+safetensors==0.5.3
+huggingface-hub==0.34.4
+tokenizers==0.22.1

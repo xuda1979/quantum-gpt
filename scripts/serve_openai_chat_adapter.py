@@ -14,24 +14,35 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 
-import torch
-from transformers import AutoModelForCausalLM, AutoProcessor, AutoTokenizer, PreTrainedTokenizerFast
-
 ROOT = Path(__file__).resolve().parents[1]
 REQUEST_LOG_PATH = Path("/tmp/quantum_codex_server_requests.log")
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from training.runtime_overlay import apply_transformers_peft_compat_shims, configure_runtime_overlay_from_env
+
+configure_runtime_overlay_from_env()
+
+import torch
+import transformers
+from transformers import AutoConfig, AutoModelForCausalLM, AutoProcessor, AutoTokenizer, PreTrainedTokenizerFast
+
+apply_transformers_peft_compat_shims(transformers)
+
 from evals.runner.candidate_sanitize import sanitize_candidate_text
-from peft import PeftModel
-from training.qwen_sft_peft import TextPreprocessorBackend, load_text_preprocessor_backend, resolve_device
+from training.model_backend import ensure_text_backend_preflight, load_causal_lm_with_text_backend_preflight
+from training.qwen_sft_peft import resolve_device
+from training.text_preprocessor_backend import TextPreprocessorBackend, load_text_preprocessor_backend
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--base-model", type=Path, required=True)
     parser.add_argument("--adapter", type=Path, default=None)
-    parser.add_argument("--model-name", default="quantum-gpt-omnicoder9b.1")
+    parser.add_argument(
+        "--model-name",
+        default="omnicoder9b-quantum-generalization-sft-8npu-fastiter-20260409T1451CST",
+    )
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8000)
     parser.add_argument("--device", choices=("auto", "cpu", "cuda", "npu"), default="auto")
@@ -123,15 +134,20 @@ def _build_turboquant_cache(args: argparse.Namespace, *, model: Any, device: Any
 
 
 def load_text_backend(model_path: Path) -> TextPreprocessorBackend:
+    ensure_text_backend_preflight(str(model_path), AutoConfig)
     return load_text_preprocessor_backend(str(model_path), AutoTokenizer, AutoProcessor, PreTrainedTokenizerFast)
 
 
 def load_model(model_path: Path, device: Any):
-    model = AutoModelForCausalLM.from_pretrained(
+    model = load_causal_lm_with_text_backend_preflight(
         str(model_path),
-        trust_remote_code=True,
-        low_cpu_mem_usage=True,
-        torch_dtype="auto",
+        auto_config_cls=AutoConfig,
+        auto_model_for_causal_lm_cls=AutoModelForCausalLM,
+        model_kwargs={
+            "trust_remote_code": True,
+            "low_cpu_mem_usage": True,
+            "torch_dtype": "auto",
+        },
     ).to(device)
     generation_config = getattr(model, "generation_config", None)
     if generation_config is not None:
@@ -213,6 +229,8 @@ class AdapterChatServer:
         tokenizer.padding_side = "right"
         self.model = load_model(args.base_model, self.device)
         if args.adapter is not None:
+            from peft import PeftModel
+
             self.model = PeftModel.from_pretrained(self.model, str(args.adapter))
             self.model.eval()
 

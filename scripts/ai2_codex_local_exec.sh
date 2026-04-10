@@ -3,11 +3,13 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 S3_SCRIPTS_ROOT="nm-aihuanxin:jtdlp-3ed7854b946a47b1a49ad754baa76cd3/quantum-qwen25-coder-main/scripts"
-REMOTE_ROOT="/root/root/work/quantum-gpt"
+S3_TRAINING_ROOT="nm-aihuanxin:jtdlp-3ed7854b946a47b1a49ad754baa76cd3/quantum-qwen25-coder-main/training"
+S3_EVALS_RUNNER_ROOT="nm-aihuanxin:jtdlp-3ed7854b946a47b1a49ad754baa76cd3/quantum-qwen25-coder-main/evals/runner"
+REMOTE_ROOT="${AI2_REMOTE_ROOT:-/root/root/work/quantum-gpt}"
 REMOTE_CODEX_BIN="/root/.local/bin/codex"
-MODEL_ALIAS="${MODEL_ALIAS:-quantum-gpt-omnicoder9b.1}"
+MODEL_ALIAS="${MODEL_ALIAS:-omnicoder9b-quantum-generalization-sft-8npu-fastiter-20260409T1451CST}"
 BASE_MODEL_PATH="${BASE_MODEL_PATH:-models/OmniCoder-9B}"
-ADAPTER_PATH="${ADAPTER_PATH:-outputs/interface-prefix-omnicoder9b-semantic-v4-2npu-true20-20260329T2219CST/adapter}"
+ADAPTER_PATH="${ADAPTER_PATH:-outputs/omnicoder9b-quantum-generalization-sft-8npu-fastiter-20260409T1451CST/adapter}"
 PROMPT="Reply with exactly OK and nothing else."
 WAIT_MS="${HUANXIN_WAIT_MS:-180000}"
 TRANSPORT="${AI2_CODEX_TRANSPORT:-direct}"
@@ -82,6 +84,11 @@ stage_paths=(
   scripts/install_codex_standalone.sh
   scripts/render_codex_local_config.py
   scripts/serve_openai_chat_adapter.py
+  training/model_backend.py
+  training/model_family_preflight.py
+  training/qwen_sft_peft.py
+  training/text_preprocessor_backend.py
+  evals/runner/candidate_sanitize.py
 )
 
 cd "$ROOT_DIR"
@@ -91,15 +98,19 @@ fi
 
 REMOTE_CMD="cd $(shell_quote "$REMOTE_ROOT"); "
 REMOTE_CMD+="grep -qxF 'export LOCAL_CODEX_API_KEY=dummy' /root/.bashrc || printf '\\nexport LOCAL_CODEX_API_KEY=dummy\\n' >> /root/.bashrc; "
+REMOTE_CMD+="grep -qxF 'export PATH=/root/.local/bin:/usr/local/bin:$PATH' /root/.bashrc || printf 'export PATH=/root/.local/bin:/usr/local/bin:$PATH\\n' >> /root/.bashrc; "
 REMOTE_CMD+="grep -qxF 'export NO_PROXY=127.0.0.1,localhost' /root/.bashrc || printf 'export NO_PROXY=127.0.0.1,localhost\\n' >> /root/.bashrc; "
 REMOTE_CMD+="grep -qxF 'export no_proxy=127.0.0.1,localhost' /root/.bashrc || printf 'export no_proxy=127.0.0.1,localhost\\n' >> /root/.bashrc; "
 REMOTE_CMD+="grep -qxF 'unset http_proxy https_proxy HTTP_PROXY HTTPS_PROXY ALL_PROXY' /root/.bashrc || printf 'unset http_proxy https_proxy HTTP_PROXY HTTPS_PROXY ALL_PROXY\\n' >> /root/.bashrc; "
 REMOTE_CMD+="if [[ ! -f /root/.bash_profile ]]; then printf 'source /root/.bashrc\\n' > /root/.bash_profile; elif ! grep -qxF 'source /root/.bashrc' /root/.bash_profile; then printf '\\nsource /root/.bashrc\\n' >> /root/.bash_profile; fi; "
 REMOTE_CMD+="export NO_PROXY=127.0.0.1,localhost; export no_proxy=127.0.0.1,localhost; "
 REMOTE_CMD+="unset http_proxy https_proxy HTTP_PROXY HTTPS_PROXY ALL_PROXY; "
-REMOTE_CMD+="rclone copy $(shell_quote "$S3_SCRIPTS_ROOT") $(shell_quote "$REMOTE_ROOT/scripts") --include 'install_codex_standalone.sh' --include 'render_codex_local_config.py' --include 'serve_openai_chat_adapter.py' --fast-list --transfers 4 --checkers 8; "
-REMOTE_CMD+="if [[ ! -x $(shell_quote "$REMOTE_CODEX_BIN") ]]; then bash scripts/install_codex_standalone.sh --shim-path /usr/local/bin/codex; fi; "
 REMOTE_CMD+="export PATH=/root/.local/bin:/usr/local/bin:\$PATH; "
+REMOTE_CMD+="rclone copy $(shell_quote "$S3_SCRIPTS_ROOT") $(shell_quote "$REMOTE_ROOT/scripts") --include 'install_codex_standalone.sh' --include 'render_codex_local_config.py' --include 'serve_openai_chat_adapter.py' --fast-list --transfers 4 --checkers 8; "
+REMOTE_CMD+="rclone copy $(shell_quote "$S3_TRAINING_ROOT") $(shell_quote "$REMOTE_ROOT/training") --include 'model_backend.py' --include 'model_family_preflight.py' --include 'qwen_sft_peft.py' --include 'text_preprocessor_backend.py' --fast-list --transfers 4 --checkers 8; "
+REMOTE_CMD+="rclone copy $(shell_quote "$S3_EVALS_RUNNER_ROOT") $(shell_quote "$REMOTE_ROOT/evals/runner") --include 'candidate_sanitize.py' --fast-list --transfers 4 --checkers 8; "
+REMOTE_CMD+="if [[ ! -x $(shell_quote "$REMOTE_CODEX_BIN") ]]; then bash scripts/install_codex_standalone.sh --shim-path /usr/local/bin/codex; fi; "
+REMOTE_CMD+="if [[ -x $(shell_quote "$REMOTE_CODEX_BIN") ]]; then ln -sf $(shell_quote "$REMOTE_CODEX_BIN") /usr/local/bin/codex 2>/dev/null || true; fi; "
 REMOTE_CMD+="CODEX_CMD=\$(command -v codex || true); "
 REMOTE_CMD+="if [[ -z \"\$CODEX_CMD\" && -x $(shell_quote "$REMOTE_CODEX_BIN") ]]; then CODEX_CMD=$(shell_quote "$REMOTE_CODEX_BIN"); fi; "
 REMOTE_CMD+="if [[ -z \"\$CODEX_CMD\" ]]; then echo 'Codex binary missing after setup. Expected codex on PATH or /root/.local/bin/codex.' >&2; exit 1; fi; "

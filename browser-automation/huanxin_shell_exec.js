@@ -1,7 +1,9 @@
 const http = require('http');
 const fs = require('fs');
+const path = require('path');
 const { ensureProfileDir } = require('./huanxin_profile');
 const { launchPersistentContext } = require('./huanxin_browser_launch');
+const { bridgePageViaSafariSso } = require('./huanxin_repair_profile_via_safari_sso');
 
 const ENV_PORTS = { ai1: 19001, ai2: 19002 };
 
@@ -55,6 +57,62 @@ function tryDaemon(envName, command, waitMs) {
     req.write(body);
     req.end();
   });
+}
+
+async function tryDaemonFileTransport(envName, command, waitMs) {
+  const dir = `/tmp/huanxin-daemon-${envName}.ipc`;
+  try {
+    if (!fs.existsSync(dir)) {
+      return null;
+    }
+  } catch {
+    return null;
+  }
+
+  const requestId = `${Date.now()}-${process.pid}-${Math.random().toString(36).slice(2, 8)}`;
+  const requestPath = path.join(dir, `${requestId}.request.json`);
+  const responsePath = path.join(dir, `${requestId}.response.json`);
+  fs.writeFileSync(requestPath, JSON.stringify({ command, waitMs }, null, 2));
+
+  // The daemon's terminal injection path retries up to 3 times, so a single
+  // request can legitimately outlive `waitMs` by a wide margin.
+  const waitMultiplierRaw = parseInt(process.env.HUANXIN_DAEMON_FILE_WAIT_MULTIPLIER || '3', 10);
+  const waitMultiplier = Number.isFinite(waitMultiplierRaw) && waitMultiplierRaw > 0 ? waitMultiplierRaw : 3;
+  const graceMsRaw = parseInt(process.env.HUANXIN_DAEMON_FILE_WAIT_GRACE_MS || '15000', 10);
+  const graceMs = Number.isFinite(graceMsRaw) && graceMsRaw >= 0 ? graceMsRaw : 15000;
+  const deadline = Date.now() + Math.max(waitMs * waitMultiplier + graceMs, 45000);
+  while (Date.now() < deadline) {
+    try {
+      if (fs.existsSync(responsePath)) {
+        const parsed = JSON.parse(fs.readFileSync(responsePath, 'utf8'));
+        try {
+          fs.unlinkSync(requestPath);
+        } catch {}
+        try {
+          fs.unlinkSync(responsePath);
+        } catch {}
+        return parsed;
+      }
+    } catch {
+      return null;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+
+  const processingPath = requestPath.replace(/\.request\.json$/, '.processing.json');
+  return {
+    ok: false,
+    error: fs.existsSync(processingPath) ? 'daemon_file_timeout_processing' : 'daemon_file_timeout_no_response',
+    envName,
+    requestId,
+    requestPath,
+    responsePath,
+    processingPath,
+  };
+}
+
+function allowStandaloneFallback() {
+  return process.env.HUANXIN_ALLOW_STANDALONE_FALLBACK === '1';
 }
 
 function parseArgs(argv) {
@@ -123,11 +181,15 @@ async function detectPageState(page) {
   };
 }
 
-// Direct environment URLs — skip the general list navigation entirely.
-// Add entries here whenever a new environment's direct link is known.
-const DIRECT_ENV_URLS = {
-  ai2: 'https://aihuanxin.cn/kunlun/kl-web?poolId=1&projectId=3ed7854b946a47b1a49ad754baa76cd3#/train-dev/environment/dl-332c4679dcf533b7b978d6df217292d4?name=ai2',
-};
+const DEFAULT_TRAIN_DEV_URL =
+  'https://aihuanxin.cn/kunlun/kl-web?poolId=1&projectId=3ed7854b946a47b1a49ad754baa76cd3#/train-dev';
+const TRAIN_DEV_URL = process.env.HUANXIN_TRAIN_DEV_URL || DEFAULT_TRAIN_DEV_URL;
+
+function getSafariSsoBridgeWaitMs() {
+  const raw = process.env.HUANXIN_SAFARI_SSO_BRIDGE_WAIT_MS || '10000';
+  const parsed = parseInt(raw, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 10000;
+}
 
 async function openShell(page, envName) {
   const findExistingEnvPage = () =>
@@ -139,10 +201,6 @@ async function openShell(page, envName) {
           candidate.url().includes('/train-dev/environment/') && candidate.url().includes(`name=${envName}`)
       );
 
-  // If we have a direct URL for this env, navigate straight to the terminal
-  // instead of going through the general list and clicking "打开".
-  const directUrl = DIRECT_ENV_URLS[envName];
-
   let lastError = null;
   for (let attempt = 1; attempt <= 3; attempt += 1) {
     try {
@@ -153,39 +211,37 @@ async function openShell(page, envName) {
         return existingPage;
       }
 
-      if (directUrl) {
-        // Fast path: navigate directly to the environment terminal page.
-        await page.goto(directUrl, { waitUntil: 'networkidle', timeout: 180000 });
-        await page.waitForTimeout(3000);
-        const pageState = await detectPageState(page);
-        if (pageState.state === 'login_required') {
+      // Always start from the canonical train-dev route for this workspace.
+      await page.goto(TRAIN_DEV_URL, { waitUntil: 'networkidle', timeout: 180000 });
+      await page.waitForTimeout(3000);
+      let pageState = await detectPageState(page);
+      if (pageState.state === 'login_required') {
+        const repair = await bridgePageViaSafariSso(page, {
+          authUrl: pageState.url,
+          waitMs: getSafariSsoBridgeWaitMs(),
+          resultPath: `/tmp/huanxin-${envName}-daemon-safari-sso-bridge.json`,
+        });
+        if (!repair.ok) {
           throw new Error(
-            `Huanxin auth expired before opening ${envName}; login_required at ${pageState.url}. Body preview: ${pageState.bodyPreview}`
+            `Huanxin auth expired before opening ${envName}; Safari SSO bridge failed at ${pageState.url}. Final state=${repair.finalUrlState}. Body preview: ${repair.bodyPreview}`
           );
         }
-        // Direct URL lands straight on the terminal page — no button click needed.
-        lastError = null;
-        break;
-      }
-
-      // Fallback: navigate to the general list and click "打开".
-      await page.goto(
-        'https://aihuanxin.cn/kunlun/kl-web?poolId=1&projectId=3ed7854b946a47b1a49ad754baa76cd3#/train-dev',
-        { waitUntil: 'networkidle', timeout: 180000 }
-      );
-      await page.waitForTimeout(3000);
-      const pageState = await detectPageState(page);
-      if (pageState.state === 'login_required') {
-        throw new Error(
-          `Huanxin auth expired before opening ${envName}; login_required at ${pageState.url}. Body preview: ${pageState.bodyPreview}`
-        );
+        await page.waitForTimeout(3000);
+        pageState = await detectPageState(page);
+        if (pageState.state === 'login_required') {
+          throw new Error(
+            `Huanxin auth repair did not stick for ${envName}; login_required still visible at ${pageState.url}. Body preview: ${pageState.bodyPreview}`
+          );
+        }
       }
 
       const row = page.locator('tr', { hasText: envName }).first();
       await row.waitFor({ state: 'visible', timeout: 60000 });
       const openButton = row.getByRole('button', { name: '打开' }).first();
+      const startButton = row.getByRole('button', { name: '运行' }).first();
 
       let clicked = false;
+      let startTriggered = false;
       for (let poll = 0; poll < 20; poll += 1) {
         const existingAfterLoad = findExistingEnvPage();
         if (existingAfterLoad) {
@@ -195,7 +251,16 @@ async function openShell(page, envName) {
         }
 
         const enabled = await openButton.isEnabled().catch(() => false);
+        const rowText = ((await row.textContent().catch(() => '')) || '').replace(/\s+/g, ' ').trim();
+        const startVisible = await startButton.isVisible().catch(() => false);
+        const startEnabled = await startButton.isEnabled().catch(() => false);
         const spinning = await page.locator('.ant-spin-spinning, .ant-spin-blur').count().catch(() => 0);
+        if (!startTriggered && rowText.includes('已停止') && startVisible && startEnabled && spinning === 0) {
+          await startButton.click({ timeout: 15000 });
+          startTriggered = true;
+          await page.waitForTimeout(8000);
+          continue;
+        }
         if (enabled && spinning === 0) {
           await openButton.click({ timeout: 15000 });
           clicked = true;
@@ -339,6 +404,13 @@ async function readTerminalText(activePage) {
 
 async function sendCommand(activePage, command, waitMs = 10000) {
   const terminalInput = activePage.locator('.xterm-helper-textarea').first();
+  const sendInterrupt = async () => {
+    await terminalInput.evaluate((element) => {
+      element.value = '';
+    }).catch(() => {});
+    await activePage.keyboard.insertText('\u0003').catch(() => {});
+    await activePage.waitForTimeout(250);
+  };
   const clearTerminal = async () => {
     await activePage.keyboard.press('Control+L').catch(() => {});
     await activePage.waitForTimeout(250);
@@ -385,6 +457,10 @@ async function sendCommand(activePage, command, waitMs = 10000) {
   let lastAttemptError = null;
   for (let attempt = 1; attempt <= 3; attempt += 1) {
     await focusTerminal(activePage);
+
+    // Break out of any lingering heredoc / secondary prompt state before we
+    // try to inject fresh markers into the shell.
+    await sendInterrupt();
 
     // Flush prior prompt/output before issuing a new command.
     await waitForPrompt().catch(() => {});
@@ -488,6 +564,7 @@ async function sendCommand(activePage, command, waitMs = 10000) {
 
 async function main() {
   const { envName, command, waitMs, requireDaemon, skipDaemon } = parseArgs(process.argv.slice(2));
+  const standaloneAllowed = allowStandaloneFallback();
 
   // Try the persistent daemon first — avoids launching a new browser
   if (!skipDaemon) {
@@ -499,10 +576,27 @@ async function main() {
       console.log(JSON.stringify(daemonResult, null, 2));
       return;
     }
+    const fileResult = await tryDaemonFileTransport(envName, command, waitMs);
+    if (fileResult) {
+      fileResult.transport = 'daemon_file';
+      fileResult.durationMs = fileResult.durationMs ?? (Date.now() - daemonStartedAt);
+      console.log(JSON.stringify(fileResult, null, 2));
+      if (fileResult.ok === false) {
+        process.exitCode = 1;
+      }
+      return;
+    }
   }
 
   if (requireDaemon) {
     throw new Error(`Huanxin daemon for ${envName} is not available`);
+  }
+
+  if (!standaloneAllowed) {
+    throw new Error(
+      `Huanxin daemon transport for ${envName} is unavailable and standalone fallback is disabled. ` +
+        `Set HUANXIN_ALLOW_STANDALONE_FALLBACK=1 only for explicit recovery/debugging.`
+    );
   }
 
   // No daemon running — fall back to standalone browser (headless by default)
@@ -545,6 +639,8 @@ async function main() {
 }
 
 module.exports = {
+  DEFAULT_TRAIN_DEV_URL,
+  TRAIN_DEV_URL,
   focusTerminal,
   openShell,
   readTerminalText,

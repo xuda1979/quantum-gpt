@@ -19,6 +19,29 @@ import importlib
 import json
 import platform
 from pathlib import Path
+import sys
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from training.runtime_overlay import configure_runtime_overlay_from_env
+
+configure_runtime_overlay_from_env()
+
+from training.model_backend import (
+    build_runtime_upgrade_message,
+    probe_model_runtime_compat,
+    run_text_forward_preflight,
+    runtime_autoconfig_requires_upgrade,
+)
+from training.model_family_preflight import trainer_backend_preflight_block
+from training.text_preprocessor_backend import (
+    TextPreprocessorBackend,
+    build_supervised_text_example,
+    load_text_preprocessor_backend,
+    pad_supervised_text_batch,
+)
 
 REQUIRED_MODULES = [
     "torch",
@@ -27,114 +50,6 @@ REQUIRED_MODULES = [
     "datasets",
     "peft",
 ]
-
-
-def load_model_config_metadata(model_name: str) -> dict:
-    from transformers import PretrainedConfig
-
-    config_dict, _unused_kwargs = PretrainedConfig.get_config_dict(model_name, trust_remote_code=True)
-    return config_dict
-
-
-def load_tokenizer_config_metadata(model_name: str) -> dict:
-    tokenizer_config_path = Path(model_name) / "tokenizer_config.json"
-    if not tokenizer_config_path.exists():
-        return {}
-    return json.loads(tokenizer_config_path.read_text(encoding="utf-8"))
-
-
-def runtime_requires_qwen35_upgrade(model_name: str, auto_config_cls: object) -> tuple[dict, Exception | None]:
-    config_dict = load_model_config_metadata(model_name)
-    model_type = config_dict.get("model_type")
-    architectures = config_dict.get("architectures")
-    summary = {
-        "config_model_type": model_type,
-        "config_architectures": architectures,
-        "runtime_autoconfig_ok": False,
-    }
-    runtime_error: Exception | None = None
-    try:
-        runtime_config = auto_config_cls.from_pretrained(model_name, trust_remote_code=True)
-        summary["runtime_autoconfig_ok"] = True
-        summary["runtime_config_class"] = runtime_config.__class__.__name__
-    except Exception as exc:  # noqa: BLE001
-        runtime_error = exc
-        summary["runtime_autoconfig_error_type"] = type(exc).__name__
-        summary["runtime_autoconfig_error"] = str(exc)
-    return summary, runtime_error
-
-
-def runtime_autoconfig_requires_upgrade(model_type: object, runtime_error: Exception | None) -> bool:
-    if runtime_error is None or not model_type:
-        return False
-    message = str(runtime_error).lower()
-    return (
-        "does not recognize this architecture" in message
-        or "does not recognize this model type" in message
-        or "unrecognized configuration class" in message
-        or "transformers does not recognize this architecture" in message
-    )
-
-
-def load_text_backend(
-    model_name: str,
-    auto_tokenizer_cls: object,
-    auto_processor_cls: object,
-    pretrained_tokenizer_fast_cls: object,
-) -> tuple[object, dict[str, object]]:
-    processor_error: Exception | None = None
-    try:
-        processor = auto_processor_cls.from_pretrained(model_name, trust_remote_code=True)
-        tokenizer = getattr(processor, "tokenizer", None)
-        if tokenizer is not None:
-            return tokenizer, {
-                "tokenizer_loader": "AutoProcessor.tokenizer",
-                "processor_class": processor.__class__.__name__,
-                "tokenizer_class": tokenizer.__class__.__name__,
-            }
-    except Exception as exc:  # noqa: BLE001
-        processor_error = exc
-
-    try:
-        tokenizer = auto_tokenizer_cls.from_pretrained(model_name, trust_remote_code=True)
-        return tokenizer, {
-            "tokenizer_loader": "AutoTokenizer",
-            "tokenizer_class": tokenizer.__class__.__name__,
-        }
-    except Exception as exc:  # noqa: BLE001
-        tokenizer_config = load_tokenizer_config_metadata(model_name)
-        tokenizer_path = Path(model_name) / "tokenizer.json"
-        if tokenizer_config.get("tokenizer_class") == "TokenizersBackend" and tokenizer_path.exists():
-            additional_special_tokens = []
-            for key in (
-                "image_token",
-                "video_token",
-                "vision_bos_token",
-                "vision_eos_token",
-                "audio_bos_token",
-                "audio_eos_token",
-                "audio_token",
-            ):
-                value = tokenizer_config.get(key)
-                if value and value not in additional_special_tokens:
-                    additional_special_tokens.append(value)
-            tokenizer = pretrained_tokenizer_fast_cls(
-                tokenizer_file=str(tokenizer_path),
-                pad_token=tokenizer_config.get("pad_token"),
-                eos_token=tokenizer_config.get("eos_token"),
-                additional_special_tokens=additional_special_tokens or None,
-                clean_up_tokenization_spaces=bool(tokenizer_config.get("clean_up_tokenization_spaces", False)),
-                model_max_length=int(tokenizer_config.get("model_max_length", 262144)),
-            )
-            return tokenizer, {
-                "tokenizer_loader": "PreTrainedTokenizerFast",
-                "tokenizer_class": tokenizer.__class__.__name__,
-            }
-        error_parts = [f"AutoTokenizer failed: {type(exc).__name__}: {exc}"]
-        if processor_error is not None:
-            error_parts.append(f"AutoProcessor fallback failed: {type(processor_error).__name__}: {processor_error}")
-        raise RuntimeError("Unable to load a text tokenizer backend. " + " | ".join(error_parts)) from exc
-
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -155,6 +70,12 @@ def parse_args() -> argparse.Namespace:
         "--load-model",
         action="store_true",
         help="Attempt full AutoModelForCausalLM load in addition to tokenizer load",
+    )
+    parser.add_argument(
+        "--max-length",
+        type=int,
+        default=2048,
+        help="Maximum sequence length used for text batch preflight",
     )
     return parser.parse_args()
 
@@ -212,6 +133,15 @@ def inspect_dataset(path: Path, max_samples: int) -> dict[str, object]:
     }
 
 
+def load_first_record(path: Path) -> dict[str, object]:
+    with path.open("r", encoding="utf-8") as handle:
+        for raw_line in handle:
+            line = raw_line.strip()
+            if line:
+                return json.loads(line)
+    raise ValueError(f"No rows found in {path}")
+
+
 def main() -> int:
     args = parse_args()
 
@@ -265,26 +195,25 @@ def main() -> int:
         return 1
 
     try:
-        runtime_summary, runtime_error = runtime_requires_qwen35_upgrade(args.model_name, AutoConfig)
+        runtime_summary = probe_model_runtime_compat(args.model_name, AutoConfig)
+        if runtime_summary is None:
+            raise RuntimeError(f"Unable to inspect model config metadata for {args.model_name}")
         summary.update(runtime_summary)
-        if runtime_autoconfig_requires_upgrade(summary.get("config_model_type"), runtime_error):
-            extra_hint = ""
-            if summary.get("config_model_type") == "gemma4":
-                extra_hint = (
-                    " Gemma 4 instruction checkpoints also advertise an any-to-any conditional-generation "
-                    "architecture, so the current text-only bootstrap may still need a processor-aware "
-                    "conditional-generation backend after the runtime upgrade."
-                )
+        runtime_error = runtime_summary.get("runtime_autoconfig_error")
+        if runtime_error is not None and runtime_autoconfig_requires_upgrade(
+            str(summary.get("config_model_type") or ""),
+            Exception(str(runtime_error)),
+        ):
             summary["stage"] = "runtime_compat"
             summary["status"] = "error"
-            summary["error_type"] = type(runtime_error).__name__
-            summary["error"] = (
-                "The active Transformers runtime is too old for this checkpoint family. "
-                "Upgrade the bootstrap stack to a model-family-capable Transformers build before remote fine-tuning. "
-                f"Underlying error: {runtime_error}.{extra_hint}"
-            )
+            summary["error_type"] = str(runtime_summary.get("runtime_autoconfig_error_type") or "RuntimeError")
+            summary["error"] = build_runtime_upgrade_message(args.model_name, summary)
             print(json.dumps(summary, indent=2, ensure_ascii=False))
             return 1
+        backend_blocker = trainer_backend_preflight_block(
+            str(summary.get("config_model_type") or ""),
+            [str(item) for item in (summary.get("config_architectures") or [])],
+        )
     except Exception as exc:
         summary["stage"] = "config_probe"
         summary["status"] = "error"
@@ -294,10 +223,14 @@ def main() -> int:
         return 1
 
     try:
-        tokenizer, tokenizer_summary = load_text_backend(
+        text_preprocessor = load_text_preprocessor_backend(
             args.model_name, AutoTokenizer, AutoProcessor, PreTrainedTokenizerFast
         )
-        summary.update(tokenizer_summary)
+        summary["text_preprocessor_backend_kind"] = text_preprocessor.backend_kind
+        summary["render_backend_class"] = text_preprocessor.render_backend.__class__.__name__
+        summary["text_backend_class"] = text_preprocessor.text_backend.__class__.__name__
+        summary["save_backend_class"] = text_preprocessor.save_backend.__class__.__name__
+        tokenizer = text_preprocessor.text_backend
         summary["tokenizer_vocab_size"] = getattr(tokenizer, "vocab_size", None)
         if tokenizer.pad_token is None and tokenizer.eos_token is not None:
             tokenizer.pad_token = tokenizer.eos_token
@@ -312,15 +245,61 @@ def main() -> int:
         print(json.dumps(summary, indent=2, ensure_ascii=False))
         return 1
 
+    try:
+        sample_record = load_first_record(args.dataset)
+        preflight_example = build_supervised_text_example(
+            sample_record,
+            text_preprocessor,
+            args.max_length,
+            train_on_completions_only=True,
+        )
+        preflight_batch = pad_supervised_text_batch([preflight_example], text_preprocessor.text_backend, torch)
+        summary["text_batch_preflight"] = {
+            "example_id": preflight_example.get("example_id"),
+            "input_token_count": len(preflight_example["input_ids"]),
+            "attention_token_count": len(preflight_example["attention_mask"]),
+            "prompt_token_count": int(preflight_example.get("prompt_token_count") or 0),
+            "batch_input_shape": list(preflight_batch["input_ids"].shape),
+            "batch_label_shape": list(preflight_batch["labels"].shape),
+            "masked_label_tokens": int((preflight_batch["labels"] == -100).sum().item()),
+        }
+    except Exception as exc:
+        summary["stage"] = "text_batch_preflight"
+        summary["status"] = "error"
+        summary["error_type"] = type(exc).__name__
+        summary["error"] = str(exc)
+        print(json.dumps(summary, indent=2, ensure_ascii=False))
+        return 1
+
+    if backend_blocker is not None:
+        summary["stage"] = "trainer_backend_preflight"
+        summary["status"] = "error"
+        summary["error"] = backend_blocker
+        print(json.dumps(summary, indent=2, ensure_ascii=False))
+        return 1
+
     if args.load_model:
         try:
             model = AutoModelForCausalLM.from_pretrained(args.model_name, trust_remote_code=True)
+        except Exception as exc:
+            summary["stage"] = "model_load"
+            summary["status"] = "error"
+            summary["error_type"] = type(exc).__name__
+            summary["error"] = str(exc)
+            print(json.dumps(summary, indent=2, ensure_ascii=False))
+            return 1
+        try:
             parameter_count = sum(param.numel() for param in model.parameters())
             summary["model_class"] = model.__class__.__name__
             summary["parameter_count"] = int(parameter_count)
             summary["dtype"] = str(next(model.parameters()).dtype)
+            summary["text_forward_preflight"] = run_text_forward_preflight(
+                model,
+                preflight_batch,
+                torch_module=torch,
+            )
         except Exception as exc:
-            summary["stage"] = "model_load"
+            summary["stage"] = "text_forward_preflight"
             summary["status"] = "error"
             summary["error_type"] = type(exc).__name__
             summary["error"] = str(exc)

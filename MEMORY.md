@@ -31,6 +31,10 @@
   - metric: pass@1 on 10 tasks, single generation, no manual repair
   - confirmed result: `9/10` passed (`90%`)
   - remaining known miss: `software_parser_regression_tests` due generated `SyntaxError`
+- ai2 workspace path rule:
+  - the only valid work folder for this project on ai2 is `/root/root/work/quantum-gpt`
+  - default all ai2 shell commands, sync targets, provider launches, eval runs, and training paths to that directory
+  - do not drift to other similar-looking paths such as `/root/work/...`
 - Quantum-gate evaluation changed again on `2026-03-30`:
   - the hard OmniCoder continuation adapter looked flat at `6/12` only under `--max-new-tokens 192`
   - the dominant blocker was inference truncation on the harder quantum tasks, not SFT quality alone
@@ -70,7 +74,23 @@
     - `reports/omnicoder_quantum_generalization_holdout_v1_integrity.json`
     - `reports/omnicoder_generalization_holdout_v1_integrity.json`
   - both reports pass the `>=500 eval rows` requirement and confirm zero train/eval overlap at the `example_id`, `task_id`, and `prompt_family` levels
+  - protocol fairness for the current strict quantum headline is now explicit: the Qwen clean baseline and the OmniCoder 8-NPU adapter run use the same 4 override tasks, `prompt_version=v2`, `prompt_style=repair_focused`, `include_reference_candidate=false`, and manifest-driven `token_budget_preset: "quantum_heavy"`
+  - as of `2026-04-10`, the missing OmniCoder 9B base result on that same strict protocol is no longer a vague TODO; a fresh ai2 base-eval attempt proved the remaining blocker is model restoration plus Huanxin transport stability
+  - later on `2026-04-10`, the blocker moved forward again: direct ai2 daemon probes confirmed `models/OmniCoder-9B` is now restored on ai2 with `model.safetensors`, `config.json`, and about `18G` of payload
+  - the fresh base strict-holdout rerun still failed, but now for a more precise reason: ai2 is evaluating with `/usr/bin/python3` and `transformers==4.44.0`, which is too old to recognize `qwen3_5`; the next needed step is a Qwen3.5-capable runtime upgrade on ai2, not another snapshot restore
+  - do not describe the current `0/4 -> 2/4` report headline as a full same-model base-vs-adapter comparison yet; it is a protocol-matched clean-baseline-vs-adapter result, with the same-model OmniCoder base line still blocked on ai2 runtime compatibility
   - ai2 browser-shell transport was fixed on `2026-03-31`; the old diagnosis of “generic browser unreliability” is now too weak
   - the real launcher fix is in `browser-automation/huanxin_browser_launch.js`: use the full Chrome-for-Testing binary and support Darwin fallback away from the crashing Playwright headless-shell path
   - `browser-automation/huanxin_shell_exec.js` now reports `login_required` explicitly and retries `Shell终端` activation through transient Huanxin spinner overlays
   - a real end-to-end ai2 shell command now succeeds again through `./scripts/ai2_shell.sh`
+- Gemma local runtime gating changed on `2026-04-09`:
+  - the canonical local interpreter probe is now `python3 scripts/resolve_python_interpreter.py --min-version 3.10`
+  - `scripts/run_autonomous_rd_cycle.py` now records a concrete `gemma_local_python_gate` with candidate interpreter evidence and an install command when no suitable interpreter exists
+  - the current local machine still only exposes `/usr/bin/python3` at `3.9.6`; no `python3.10+` was found in the standard Homebrew prefixes
+  - Homebrew itself is present at `/Users/daxu/homebrew/bin/brew`, so the next local runtime step is concretely `brew install python@3.11` before retrying Gemma smoke
+- Gemma local runtime gating changed again on `2026-04-10`:
+  - the repo-local offline bootstrap path now works: `.local-python/cpython-3.11.15/bin/python3.11` is a verified CPython 3.11.15 + OpenSSL 3.6.1 interpreter built from cached local artifacts
+  - `scripts/run_autonomous_rd_cycle.py` now exposes a separate `gemma_runtime_bootstrap` stage before `gemma_smoke`, so the controller distinguishes runtime install failures from backend preflight failures
+  - the fresh `reports/autonomous_rd_cycle_gemma4-26b-a4b-it_2026-04-10_state.json` state shows `local_eval_gate` and `holdout_integrity` passed, `gemma_local_python_gate` passed, and the current blocker moved forward to `gemma_runtime_bootstrap`
+  - a second 2026-04-10 experiment narrowed this further: the stable wheel stack from `training/requirements-huanxin-cpu.txt` installs successfully on the py311 environment, but `transformers==4.57.1` still fails Gemma at `runtime_compat`
+  - the current precise Gemma blocker is therefore no longer “missing Python >=3.10” or “generic py311 wheel bootstrap”; it is obtaining a newer-than-4.57.1 Transformers source/runtime that actually recognizes `gemma4`, and that source-fetch path is still failing on the local machine/network path

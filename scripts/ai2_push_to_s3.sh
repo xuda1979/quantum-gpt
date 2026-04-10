@@ -86,7 +86,7 @@ run_local_or_remote() {
   fi
 
   local json_out
-  json_out="$(bash scripts/ai2_shell.sh "$remote_cmd")"
+  json_out="$(bash scripts/ai2_fast_path.sh exec "$remote_cmd")"
   python3 - <<'PY' "$json_out"
 import json
 import re

@@ -1,0 +1,143 @@
+{
+  "status": "blocked",
+  "current_stage": "gemma_snapshot_acquire",
+  "last_completed_stage": "remote_launcher_gate",
+  "next_action": "python3 training/acquire_public_qwen_snapshot.py --target gemma4-31b-it --local-dir models/gemma-4-31B-it",
+  "stop_reason": "Local Gemma snapshot acquisition is in flight with recent shard activity, but model weights are not fully present or verified yet. Observed indexed-weight progress is 48.0%.",
+  "ready_for_remote_finetune": false,
+  "stages": [
+    {
+      "stage": "local_eval_gate",
+      "status": "passed",
+      "blocking": false,
+      "command": "python3 evals/runner/run_eval.py",
+      "result": {
+        "ok": true,
+        "exit_code": 0,
+        "stdout_preview": "[PASS] quantum_bell_pair_construction - Bell pair construction (reference)\n    candidate: /Users/daxu/software/quantum-gpt/evals/tasks/quantum/bell_pair_construction/candidate.py\n    - state=[0.7071067811865476, 0.0, 0.0, 0.7071067811865476"
+      },
+      "reason": "Local eval gate passed in this iteration."
+    },
+    {
+      "stage": "holdout_integrity",
+      "status": "passed",
+      "blocking": false,
+      "command": "python3 scripts/verify_holdout_dataset.py --train-file data/generated/omnicoder-quantum-generalization-holdout-v1/train.jsonl --eval-file data/generated/omnicoder-quantum-generalization-holdout-v1/eval.jsonl --manifest data/generated/omnicoder-quantum-generalization-holdout-v1/manifest.json --min-eval-count 500 --require-task-disjoint --require-prompt-family-disjoint",
+      "result": {
+        "ok": true,
+        "exit_code": 0,
+        "stdout_preview": "{\n  \"train_file\": \"/Users/daxu/software/quantum-gpt/data/generated/omnicoder-quantum-generalization-holdout-v1/train.jsonl\",\n  \"eval_file\": \"/Users/daxu/software/quantum-gpt/data/generated/omnicoder-quantum-generalization-holdout-v1/eval.js"
+      },
+      "reason": "Holdout integrity was verified for this iteration."
+    },
+    {
+      "stage": "gemma_audit",
+      "status": "passed",
+      "blocking": false,
+      "command": "python3 training/audit_model_source.py --model-id google/gemma-4-31B-it --expected-family-substring gemma",
+      "reason": "Gemma source audit is satisfied by a cached verified local artifact for this target; the live refresh path failed in this iteration.",
+      "evidence": {
+        "audit_artifact": "artifacts/model-source-audit-gemma4-31b-it.json",
+        "timestamp_utc": "2026-04-08T02:34:23.487364+00:00",
+        "model_id": "google/gemma-4-31B-it",
+        "config_model_type": "gemma4",
+        "config_architectures": [
+          "Gemma4ForConditionalGeneration"
+        ],
+        "pipeline_tag": "image-text-to-text"
+      },
+      "result": {
+        "ok": false,
+        "exit_code": 1,
+        "stdout_preview": "{\n  \"timestamp_utc\": \"2026-04-08T05:00:49.320072+00:00\",\n  \"python\": \"3.9.6\",\n  \"platform\": \"macOS-26.3-arm64-arm-64bit\",\n  \"model_id\": \"google/gemma-4-31B-it\",\n  \"status\": \"error\",\n  \"stage\": \"fetch_model_info\",\n  \"error_type\": \"URLError\","
+      }
+    },
+    {
+      "stage": "gemma_snapshot_acquire",
+      "status": "blocked",
+      "blocking": true,
+      "command": "python3 training/acquire_public_qwen_snapshot.py --target gemma4-31b-it --local-dir models/gemma-4-31B-it",
+      "next_action": "python3 training/acquire_public_qwen_snapshot.py --target gemma4-31b-it --local-dir models/gemma-4-31B-it",
+      "reason": "Local Gemma snapshot acquisition is in flight with recent shard activity, but model weights are not fully present or verified yet. Observed indexed-weight progress is 48.0%.",
+      "evidence": {
+        "exists": true,
+        "has_any_files": true,
+        "has_weight_files": false,
+        "has_incomplete_weight_files": true,
+        "present_files": [
+          ".gitattributes",
+          "README.md",
+          "chat_template.jinja",
+          "config.json",
+          "generation_config.json",
+          "model.safetensors.index.json",
+          "processor_config.json",
+          "tokenizer.json",
+          "tokenizer_config.json"
+        ],
+        "weight_files": [],
+        "incomplete_weight_files": [
+          {
+            "path": ".cache/huggingface/download/Dr_lZJDwE1cnGAQMwA77jJEQIk8=.018912220f559f7025d60333e0996183cd538aa77ad6f4988a89ce47be681f10.incomplete",
+            "size_bytes": 11523850240,
+            "size_human": "10.7GB",
+            "modified_at_utc": "2026-04-08T04:36:52.969906+00:00"
+          },
+          {
+            "path": ".cache/huggingface/download/aoe4E07IMh7reFyUkVoVk040mQk=.eeef8791537bc04f110967c513149e037d2a9ae97d49add7291ebfa62806bbfa.incomplete",
+            "size_bytes": 18517852160,
+            "size_human": "17.2GB",
+            "modified_at_utc": "2026-04-08T05:00:51.213819+00:00"
+          }
+        ],
+        "snapshot_dir": "models/gemma-4-31B-it",
+        "total_file_count": 32,
+        "total_size_bytes": 30074042219,
+        "total_size_human": "28.0GB",
+        "incomplete_total_bytes": 30041702400,
+        "incomplete_total_human": "28.0GB",
+        "indexed_weight_total_bytes": 62546177752,
+        "indexed_weight_total_human": "58.3GB",
+        "observed_weight_bytes": 30041702400,
+        "observed_weight_human": "28.0GB",
+        "observed_weight_progress_ratio": 0.4803123624774877,
+        "observed_weight_progress_percent": "48.0%",
+        "recent_download_activity": true,
+        "latest_incomplete_age_seconds": 1.4693267345428467
+      },
+      "parallel_action": "scripts/relay_model_snapshot_to_s3.sh gemma-4-31B-it"
+    },
+    {
+      "stage": "gemma_smoke",
+      "status": "blocked",
+      "blocking": true,
+      "command": "python3 training/huanxin_cpu_smoke.py --model-name models/gemma-4-31B-it --dataset data/seed/splits-auto-seed/train.jsonl --max-samples 1",
+      "result": {
+        "ok": false,
+        "exit_code": 1,
+        "stdout_preview": "{\n  \"python\": \"3.9.6\",\n  \"platform\": \"macOS-26.3-arm64-arm-64bit\",\n  \"machine\": \"arm64\",\n  \"target_model\": \"models/gemma-4-31B-it\",\n  \"load_model_requested\": false,\n  \"modules\": {\n    \"torch\": \"2.8.0\",\n    \"transformers\": \"4.49.0\",\n    \"acc",
+        "stderr_preview": "/Users/daxu/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib"
+      },
+      "next_action": "python3 training/huanxin_cpu_smoke.py --model-name models/gemma-4-31B-it --dataset data/seed/splits-auto-seed/train.jsonl --max-samples 1",
+      "reason": "Gemma trainer/backend preflight has not yet passed on the local stack."
+    },
+    {
+      "stage": "remote_launcher_gate",
+      "status": "passed",
+      "blocking": false,
+      "command": "scripts/queue_ai2_timeboxed_pipeline.sh --stage-only",
+      "reason": "Remote launcher is target-aware for Gemma and now exits early with a concrete preflight blocker instead of pretending launch readiness.",
+      "evidence": {
+        "launcher_path": "scripts/queue_ai2_timeboxed_pipeline.sh",
+        "gemma_guard_present": true
+      }
+    }
+  ],
+  "fallback_ready": true,
+  "fallback_target": {
+    "target_id": "omnicoder9b",
+    "model_id": "Tesslate/OmniCoder-9B"
+  },
+  "fallback_next_action": "scripts/queue_ai2_timeboxed_pipeline.sh --target omnicoder9b --stage-only",
+  "fallback_reason": "google/gemma-4-31B-it remains blocked at gemma_snapshot_acquire, but the verified Tesslate/OmniCoder-9B lane can keep ai2 iteration moving in parallel."
+}

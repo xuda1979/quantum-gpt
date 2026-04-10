@@ -34,9 +34,15 @@ if str(ROOT) not in sys.path:
 
 from training.qwen_sft_peft import (  # noqa: E402
     TextPreprocessorBackend,
+    apply_selective_training_controls,
+    collect_trainable_parameters,
     load_text_preprocessor_backend,
+    probe_model_runtime_compat,
     resolve_lora_target_modules,
 )
+from training.model_backend import run_text_forward_preflight  # noqa: E402
+from training.model_family_preflight import trainer_backend_preflight_block  # noqa: E402
+from training.text_preprocessor_backend import build_supervised_text_example, pad_supervised_text_batch  # noqa: E402
 from training.grpo_utils import (  # noqa: E402
     AdaptiveTemperatureState,
     TaskCurriculum,
@@ -110,6 +116,24 @@ def parse_args() -> argparse.Namespace:
         nargs="*",
         default=None,
         help="Optional explicit LoRA target module suffixes. Defaults to auto-discovery from the loaded model.",
+    )
+    p.add_argument(
+        "--target-module-regex",
+        nargs="*",
+        default=None,
+        help="Optional regex patterns matched against full module names for router-only or expert-specific LoRA targeting.",
+    )
+    p.add_argument(
+        "--trainable-param-regex",
+        nargs="*",
+        default=None,
+        help="Optional regex allowlist for trainable parameter names. Non-matching trainable params are frozen.",
+    )
+    p.add_argument(
+        "--freeze-param-regex",
+        nargs="*",
+        default=None,
+        help="Optional regex denylist for parameter names to freeze after allowlist filtering.",
     )
     p.add_argument("--reward-pass-weight", type=float, default=0.6)
     p.add_argument("--reward-syntax-weight", type=float, default=0.1)
@@ -464,14 +488,67 @@ def main() -> int:
         )
 
     # Load model with LoRA
-    from transformers import AutoModelForCausalLM, AutoProcessor, AutoTokenizer, PreTrainedTokenizerFast
+    from transformers import AutoConfig, AutoModelForCausalLM, AutoProcessor, AutoTokenizer, PreTrainedTokenizerFast
     from peft import LoraConfig, PeftModel, TaskType, get_peft_model
+
+    runtime_compat = probe_model_runtime_compat(args.model_name, AutoConfig)
+    if runtime_compat is not None:
+        backend_blocker = trainer_backend_preflight_block(
+            str(runtime_compat.get("config_model_type") or ""),
+            [str(item) for item in (runtime_compat.get("config_architectures") or [])],
+        )
+        if backend_blocker is not None:
+            print(
+                json.dumps(
+                    {
+                        "stage": "trainer_backend_preflight",
+                        "state": "blocked",
+                        "model_type": runtime_compat.get("config_model_type"),
+                        "architectures": runtime_compat.get("config_architectures"),
+                        "error": backend_blocker,
+                    },
+                    ensure_ascii=False,
+                ),
+                flush=True,
+            )
+            raise SystemExit(backend_blocker)
 
     text_preprocessor = load_text_preprocessor_backend(args.model_name, AutoTokenizer, AutoProcessor, PreTrainedTokenizerFast)
     tokenizer = text_preprocessor.text_backend
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
     tokenizer.padding_side = "left"
+    if rank == 0:
+        print(
+            json.dumps(
+                {
+                    "stage": "text_preprocessor_loaded",
+                    "backend_kind": text_preprocessor.backend_kind,
+                    "render_backend_class": text_preprocessor.render_backend.__class__.__name__,
+                    "text_backend_class": text_preprocessor.text_backend.__class__.__name__,
+                    "save_backend_class": text_preprocessor.save_backend.__class__.__name__,
+                },
+                ensure_ascii=False,
+            )
+        )
+
+    preflight_task = tasks[0]
+    preflight_task_id = preflight_task["meta"].get("id", preflight_task["task_dir"].name)
+    preflight_record = {
+        "example_id": f"grpo-preflight-{preflight_task_id}",
+        "messages": [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": build_prompt(preflight_task, research_methods=research_methods)},
+            {"role": "assistant", "content": "pass"},
+        ],
+    }
+    preflight_example = build_supervised_text_example(
+        preflight_record,
+        text_preprocessor,
+        args.max_seq_length,
+        train_on_completions_only=True,
+    )
+    preflight_batch = pad_supervised_text_batch([preflight_example], text_preprocessor.text_backend, torch)
 
     model = AutoModelForCausalLM.from_pretrained(
         args.model_name,
@@ -479,11 +556,17 @@ def main() -> int:
         low_cpu_mem_usage=True,
         torch_dtype="auto",
     )
+    if rank == 0:
+        print(json.dumps({"stage": "model_loaded", "model_class": model.__class__.__name__}, ensure_ascii=False))
     if args.adapter_init:
         model = PeftModel.from_pretrained(model, str(args.adapter_init), is_trainable=True)
         resolved_target_modules = None
     else:
-        resolved_target_modules = resolve_lora_target_modules(args.target_modules, model)
+        resolved_target_modules = resolve_lora_target_modules(
+            args.target_modules,
+            model,
+            args.target_module_regex,
+        )
         lora_config = LoraConfig(
             task_type=TaskType.CAUSAL_LM,
             r=args.lora_rank,
@@ -493,12 +576,42 @@ def main() -> int:
             bias="none",
         )
         model = get_peft_model(model, lora_config)
+    selective_training = apply_selective_training_controls(
+        model,
+        trainable_param_regex=getattr(args, "trainable_param_regex", None),
+        freeze_param_regex=getattr(args, "freeze_param_regex", None),
+    )
+    trainable_param_tensors, trainable_param_names, trainable_param_count = collect_trainable_parameters(model)
+    if rank == 0:
+        print(
+            json.dumps(
+                {
+                    "stage": "selective_training_applied",
+                    **selective_training,
+                    "trainable_parameter_count": trainable_param_count,
+                    "trainable_parameter_sample": trainable_param_names[:12],
+                },
+                ensure_ascii=False,
+            )
+        )
     model.to(device)
+    if rank == 0:
+        print(json.dumps({"stage": "model_on_device", "device": str(device)}, ensure_ascii=False))
+    text_forward_preflight = run_text_forward_preflight(
+        model,
+        preflight_batch,
+        torch_module=torch,
+        device=device,
+    )
+    if rank == 0:
+        print(json.dumps({"stage": "text_forward_preflight", **text_forward_preflight}, ensure_ascii=False))
 
     if distributed:
         model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[local_rank])
+        if rank == 0:
+            print(json.dumps({"stage": "ddp_wrapped"}, ensure_ascii=False))
 
-    optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr)
+    optimizer = torch.optim.AdamW(trainable_param_tensors, lr=args.lr)
     metrics = list(resume_metrics)
     curriculum = TaskCurriculum(
         ema_decay=args.curriculum_ema_decay,
@@ -711,7 +824,7 @@ def main() -> int:
             continue
         optimizer.zero_grad()
         total_loss.backward()
-        torch.nn.utils.clip_grad_norm_(active_model.parameters(), 1.0)
+        torch.nn.utils.clip_grad_norm_(trainable_param_tensors, 1.0)
         optimizer.step()
         adaptive_temp.record_update()
 
@@ -742,7 +855,7 @@ def main() -> int:
         save_model = model.module if distributed else model
         adapter_dir = output_dir / "adapter"
         save_model.save_pretrained(adapter_dir)
-        tokenizer.save_pretrained(adapter_dir)
+        text_preprocessor.save_backend.save_pretrained(adapter_dir)
         (output_dir / "grpo_metrics.json").write_text(
             json.dumps(build_grpo_metrics_payload(metrics, planned_steps=args.grpo_steps), indent=2) + "\n"
         )
@@ -785,7 +898,14 @@ def main() -> int:
                     "research_methods": summarize_methods(research_methods),
                     "curriculum_state": curriculum.state,
                     "target_modules": list(args.target_modules) if args.target_modules else None,
+                    "target_module_regex": list(args.target_module_regex) if args.target_module_regex else None,
                     "resolved_target_modules": resolved_target_modules,
+                    "trainable_param_regex": list(getattr(args, "trainable_param_regex", []) or []) or None,
+                    "freeze_param_regex": list(getattr(args, "freeze_param_regex", []) or []) or None,
+                    "selective_training": selective_training,
+                    "trainable_parameter_count": trainable_param_count,
+                    "trainable_parameter_sample": trainable_param_names[:12],
+                    "text_forward_preflight": text_forward_preflight,
                 },
                 indent=2,
             )

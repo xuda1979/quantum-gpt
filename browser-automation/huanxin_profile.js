@@ -36,13 +36,52 @@ function shouldSkipEntry(sourcePath) {
   ].includes(name);
 }
 
-function copyProfileDir(baseProfileDir, targetDir) {
+function removeDirRobust(targetDir) {
+  if (!fs.existsSync(targetDir)) {
+    return;
+  }
+
+  for (let attempt = 1; attempt <= 5; attempt += 1) {
+    try {
+      fs.rmSync(targetDir, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
+      return;
+    } catch (err) {
+      if (attempt === 5) {
+        throw err;
+      }
+      const fallbackDir = `${targetDir}.stale-${Date.now()}-${process.pid}-${attempt}`;
+      try {
+        fs.renameSync(targetDir, fallbackDir);
+        fs.rmSync(fallbackDir, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
+        return;
+      } catch (_) {
+        Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 100 * attempt);
+      }
+    }
+  }
+}
+
+function copyProfileTree(sourceDir, targetDir) {
+  if (!fs.existsSync(sourceDir)) {
+    throw new Error(`Huanxin profile source does not exist: ${sourceDir}`);
+  }
+
+  removeDirRobust(targetDir);
   fs.mkdirSync(path.dirname(targetDir), { recursive: true });
-  fs.cpSync(baseProfileDir, targetDir, {
+  fs.cpSync(sourceDir, targetDir, {
     recursive: true,
     force: true,
     filter: (sourcePath) => !shouldSkipEntry(sourcePath),
   });
+}
+
+function syncProfileTree(sourceDir, targetDir) {
+  const backupDir = `${targetDir}.last-known-good`;
+  if (fs.existsSync(targetDir)) {
+    copyProfileTree(targetDir, backupDir);
+  }
+  copyProfileTree(sourceDir, targetDir);
+  return { backupDir };
 }
 
 function ensureProfileDir() {
@@ -58,24 +97,17 @@ function ensureProfileDir() {
     throw new Error(`Base Huanxin profile does not exist: ${baseProfileDir}`);
   }
 
-  let profileDir = resolvedProfileDir;
-  try {
-    fs.rmSync(profileDir, { recursive: true, force: true });
-    copyProfileDir(baseProfileDir, profileDir);
-  } catch (error) {
-    if (!error || !['ENOTEMPTY', 'EBUSY', 'EPERM'].includes(error.code)) {
-      throw error;
-    }
-    profileDir = fs.mkdtempSync(path.join(os.tmpdir(), `${path.basename(resolvedProfileDir)}-retry-`));
-    copyProfileDir(baseProfileDir, profileDir);
-  }
+  copyProfileTree(baseProfileDir, resolvedProfileDir);
 
-  return { profileDir, isolated: true, sourceDir: baseProfileDir };
+  return { profileDir: resolvedProfileDir, isolated: true, sourceDir: baseProfileDir };
 }
 
 module.exports = {
+  copyProfileTree,
   ensureProfileDir,
   getBaseProfileDir,
   getRequestedProfileDir,
+  removeDirRobust,
   sanitizeName,
+  syncProfileTree,
 };

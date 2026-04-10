@@ -1,0 +1,345 @@
+\relax 
+\providecommand\hyper@newdestlabel[2]{}
+\providecommand*\HyPL@Entry[1]{}
+\HyPL@Entry{0<</S/D>>}
+\HyPL@Entry{1<</S/D>>}
+\@writefile{toc}{\contentsline {section}{\numberline {1}引言}{5}{section.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.1}研究目标}{5}{subsection.1.1}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces 量子编码大模型研发闭环的六层结构。每一层的输出是下一层的输入，报告层的结论反馈指导下一轮数据与训练决策。}}{5}{figure.1}\protected@file@percent }
+\newlabel{fig:rd-six-layers}{{1}{5}{量子编码大模型研发闭环的六层结构。每一层的输出是下一层的输入，报告层的结论反馈指导下一轮数据与训练决策。}{figure.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.2}重点架构与执行概览}{5}{subsection.1.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces 报告结构导览 (Report Structure)}}{5}{table.1}\protected@file@percent }
+\newlabel{tab:reading-guide}{{1}{5}{报告结构导览 (Report Structure)}{table.1}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces 本报告核心术语速查表。}}{6}{table.2}\protected@file@percent }
+\newlabel{tab:glossary}{{2}{6}{本报告核心术语速查表。}{table.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.3}模型训练与进展概览}{6}{subsection.1.3}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces 本轮核心可引用数字一览。详细证据见附录 C。}}{7}{table.3}\protected@file@percent }
+\newlabel{tab:executive-summary}{{3}{7}{本轮核心可引用数字一览。详细证据见附录 C。}{table.3}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {2}数据}{8}{section.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.1}数据设计原则}{8}{subsection.2.1}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces 数据的三种角色及其流转关系。}}{8}{figure.2}\protected@file@percent }
+\newlabel{fig:data-roles}{{2}{8}{数据的三种角色及其流转关系。}{figure.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.2}主要数据集概览}{8}{subsection.2.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces 当前主要数据集的规模与角色。}}{8}{table.4}\protected@file@percent }
+\newlabel{tab:dataset-inventory}{{4}{8}{当前主要数据集的规模与角色。}{table.4}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces 六个主要监督数据集的训练/验证规模对比。}}{9}{figure.3}\protected@file@percent }
+\newlabel{fig:dataset-scale}{{3}{9}{六个主要监督数据集的训练/验证规模对比。}{figure.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.3}混合域严格 holdout}{10}{subsection.2.3}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces 混合域严格 holdout 的可信度要点。}}{10}{table.5}\protected@file@percent }
+\newlabel{tab:mixed-holdout}{{5}{10}{混合域严格 holdout 的可信度要点。}{table.5}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces 混合域严格 holdout 的训练/验证领域分布。}}{10}{figure.4}\protected@file@percent }
+\newlabel{fig:mixed-domain-balance}{{4}{10}{混合域严格 holdout 的训练/验证领域分布。}{figure.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.4}量子严格 holdout}{10}{subsection.2.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.5}prompt family 划分}{10}{subsection.2.5}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces 量子严格 holdout 的核心性质。}}{11}{table.6}\protected@file@percent }
+\newlabel{tab:quantum-holdout}{{6}{11}{量子严格 holdout 的核心性质。}{table.6}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.6}样本配额}{11}{subsection.2.6}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {7}{\ignorespaces 两个严格 holdout 在 task 粒度上的样本配额。}}{11}{table.7}\protected@file@percent }
+\newlabel{tab:task-quota}{{7}{11}{两个严格 holdout 在 task 粒度上的样本配额。}{table.7}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {8}{\ignorespaces prompt family 的数量与配额。}}{11}{table.8}\protected@file@percent }
+\newlabel{tab:family-quota}{{8}{11}{prompt family 的数量与配额。}{table.8}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {9}{\ignorespaces 混合 holdout 中最重要的类别迁移信号。}}{12}{table.9}\protected@file@percent }
+\newlabel{tab:mixed-category-shift}{{9}{12}{混合 holdout 中最重要的类别迁移信号。}{table.9}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.7}Category 与 Prompt Family 细分}{12}{subsection.2.7}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {10}{\ignorespaces 四个核心监督数据集的 domain 分布。}}{12}{table.10}\protected@file@percent }
+\newlabel{tab:core-dataset-domains}{{10}{12}{四个核心监督数据集的 domain 分布。}{table.10}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.8}快迭代子集与难例子集}{12}{subsection.2.8}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {11}{\ignorespaces 四个核心监督数据集的 category 结构摘要。}}{13}{table.11}\protected@file@percent }
+\newlabel{tab:core-dataset-categories}{{11}{13}{四个核心监督数据集的 category 结构摘要。}{table.11}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {12}{\ignorespaces 四个核心监督数据集的 prompt family 分布。}}{13}{table.12}\protected@file@percent }
+\newlabel{tab:core-dataset-prompts}{{12}{13}{四个核心监督数据集的 prompt family 分布。}{table.12}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {13}{\ignorespaces 两个快迭代专题子集的规模与定位。}}{13}{table.13}\protected@file@percent }
+\newlabel{tab:fast-iteration-subsets}{{13}{13}{两个快迭代专题子集的规模与定位。}{table.13}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {14}{\ignorespaces 两个专题子集的任务组成摘要。}}{14}{table.14}\protected@file@percent }
+\newlabel{tab:subset-task-summary}{{14}{14}{两个专题子集的任务组成摘要。}{table.14}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.9}Gemma router warmup 数据}{14}{subsection.2.9}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {15}{\ignorespaces Gemma paper-router warmup 消息数据的 source 分布。}}{14}{table.15}\protected@file@percent }
+\newlabel{tab:paper-router-sources}{{15}{14}{Gemma paper-router warmup 消息数据的 source 分布。}{table.15}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.10}Gemma 路由 Warmup 数据边界}{14}{subsection.2.10}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {16}{\ignorespaces Gemma 路由 warmup 数据的真实当前状态。}}{14}{table.16}\protected@file@percent }
+\newlabel{tab:paper-router}{{16}{14}{Gemma 路由 warmup 数据的真实当前状态。}{table.16}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.11}实验纪律}{15}{subsection.2.11}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.12}小结}{15}{subsection.2.12}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {3}算法}{16}{section.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}算法栈总览}{16}{subsection.3.1}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces 四层算法栈结构。SFT 与 GRPO 是稳定主干，插件层注入研究方法，TurboQuant 服务推理优化。}}{16}{figure.5}\protected@file@percent }
+\newlabel{fig:algo-stack}{{5}{16}{四层算法栈结构。SFT 与 GRPO 是稳定主干，插件层注入研究方法，TurboQuant 服务推理优化。}{figure.5}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {17}{\ignorespaces 当前算法栈的四层结构。}}{16}{table.17}\protected@file@percent }
+\newlabel{tab:algo-stack}{{17}{16}{当前算法栈的四层结构。}{table.17}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}SFT 主干}{16}{subsection.3.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}选择性训练控制}{17}{subsection.3.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4}Gemma MoE 微调策略}{17}{subsection.3.4}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {18}{\ignorespaces Gemma 4 26B-A4B 的 MoE-aware 微调边界。}}{17}{table.18}\protected@file@percent }
+\newlabel{tab:gemma-moe-boundary}{{18}{17}{Gemma 4 26B-A4B 的 MoE-aware 微调边界。}{table.18}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.5}SFT 默认参数}{17}{subsection.3.5}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {19}{\ignorespaces SFT 主干中最关键的默认参数及其解释。}}{18}{table.19}\protected@file@percent }
+\newlabel{tab:sft-defaults}{{19}{18}{SFT 主干中最关键的默认参数及其解释。}{table.19}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.6}GRPO 主干}{18}{subsection.3.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.7}多路 reward 分解}{19}{subsection.3.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.8}Curriculum 与自适应温度}{19}{subsection.3.8}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.9}GRPO 默认参数}{19}{subsection.3.9}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {20}{\ignorespaces GRPO 主干的默认参数面板。}}{20}{table.20}\protected@file@percent }
+\newlabel{tab:grpo-defaults}{{20}{20}{GRPO 主干的默认参数面板。}{table.20}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.10}GRPO 一句话概括}{20}{subsection.3.10}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.11}研究方法插件机制}{21}{subsection.3.11}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces research plugin 在 SFT 与 GRPO 两条主干中的挂载位置。}}{21}{figure.6}\protected@file@percent }
+\newlabel{fig:plugin-hooks}{{6}{21}{research plugin 在 SFT 与 GRPO 两条主干中的挂载位置。}{figure.6}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.12}已实现的六个插件}{21}{subsection.3.12}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.13}插件 1：Verifier-Guided Repair Curriculum}{21}{subsection.3.13}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {21}{\ignorespaces 当前已经代码化的 research plugin。}}{22}{table.21}\protected@file@percent }
+\newlabel{tab:plugin-catalog}{{21}{22}{当前已经代码化的 research plugin。}{table.21}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.14}插件 2：Clause-Aware Verifier Reward}{22}{subsection.3.14}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.15}插件 3：AST Anchor Interface Grounding}{22}{subsection.3.15}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.16}插件 4：Behavior Anchor Coverage Reward}{22}{subsection.3.16}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.17}插件 5：Self-Consistency Verifier Routing}{22}{subsection.3.17}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.18}插件 6：Uncertainty-Triggered Repair Replay}{23}{subsection.3.18}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.19}插件与 benchmark 的对应关系}{23}{subsection.3.19}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {22}{\ignorespaces 基于 benchmark 分析推导出的 plugin 优先级矩阵。}}{23}{table.22}\protected@file@percent }
+\newlabel{tab:failure-to-method}{{22}{23}{基于 benchmark 分析推导出的 plugin 优先级矩阵。}{table.22}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.20}TurboQuant 推理优化}{23}{subsection.3.20}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.21}小结}{23}{subsection.3.21}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {4}算力与实验环境}{25}{section.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}算力组织方式}{25}{subsection.4.1}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces 双线并行策略。快线保持高频迭代，主线正在推进 runtime 适配。}}{25}{figure.7}\protected@file@percent }
+\newlabel{fig:dual-lane}{{7}{25}{双线并行策略。快线保持高频迭代，主线正在推进 runtime 适配。}{figure.7}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}已归档训练指标}{25}{subsection.4.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {23}{\ignorespaces 已经稳定归档、可直接对外引用的训练指标。}}{25}{table.23}\protected@file@percent }
+\newlabel{tab:stable-train-metrics}{{23}{25}{已经稳定归档、可直接对外引用的训练指标。}{table.23}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces 四组稳定归档训练工件的最终 eval loss 对比。}}{26}{figure.8}\protected@file@percent }
+\newlabel{fig:historical-loss}{{8}{26}{四组稳定归档训练工件的最终 eval loss 对比。}{figure.8}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}训练曲线关键节点}{26}{subsection.4.3}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {24}{\ignorespaces 四组已归档训练工件在关键 checkpoint 上的变化。}}{26}{table.24}\protected@file@percent }
+\newlabel{tab:curve-checkpoints}{{24}{26}{四组已归档训练工件在关键 checkpoint 上的变化。}{table.24}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces 四组归档训练工件在首次 eval 点与最终 eval 点的变化。}}{27}{figure.9}\protected@file@percent }
+\newlabel{fig:checkpoint-curves}{{9}{27}{四组归档训练工件在首次 eval 点与最终 eval 点的变化。}{figure.9}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}8-NPU 快迭代工件}{27}{subsection.4.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.5}Gemma 主线当前进展与下一步}{27}{subsection.4.5}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {25}{\ignorespaces 当前 8-NPU 快迭代归档工件能支撑的事实。}}{28}{table.25}\protected@file@percent }
+\newlabel{tab:live-8npu-meta}{{25}{28}{当前 8-NPU 快迭代归档工件能支撑的事实。}{table.25}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {26}{\ignorespaces Gemma 4 26B-A4B 主线各环节当前进展。}}{29}{table.26}\protected@file@percent }
+\newlabel{tab:gemma-progress}{{26}{29}{Gemma 4 26B-A4B 主线各环节当前进展。}{table.26}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.6}Timeboxed Pipeline}{29}{subsection.4.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.7}小结}{29}{subsection.4.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {5}研发架构（软件架构）}{30}{section.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}local-first 控制面}{30}{subsection.5.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}ai2 远端工作目录与资产分布}{30}{subsection.5.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.2.1}基座模型}{30}{subsubsection.5.2.1}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {27}{\ignorespaces ai2 上的基座模型。绝对路径为 \begingroup \ttfamily  \footnotesize  \nolinkurl  {/root/root/work/quantum-gpt/models/<model-name>}\endgroup 。}}{30}{table.27}\protected@file@percent }
+\newlabel{tab:ai2-base-models}{{27}{30}{ai2 上的基座模型。绝对路径为 \code {/root/root/work/quantum-gpt/models/<model-name>}。}{table.27}{}}
+\gdef \LT@i {\LT@entry 
+    {1}{67.75095pt}\LT@entry 
+    {1}{150.26378pt}\LT@entry 
+    {1}{70.59596pt}\LT@entry 
+    {1}{116.12054pt}}
+\@writefile{lot}{\contentsline {table}{\numberline {28}{\ignorespaces ai2 上的数据集。绝对路径前缀为 \begingroup \ttfamily  \footnotesize  \nolinkurl  {/root/root/work/quantum-gpt/data/generated/}\endgroup 。}}{31}{table.28}\protected@file@percent }
+\newlabel{tab:ai2-datasets}{{28}{31}{ai2 上的数据集。绝对路径前缀为 \code {/root/root/work/quantum-gpt/data/generated/}。}{table.28}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.2.2}数据集}{31}{subsubsection.5.2.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.2.3}微调产物（adapter）}{31}{subsubsection.5.2.3}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {29}{\ignorespaces ai2 上的微调产物。绝对路径前缀为 \begingroup \ttfamily  \footnotesize  \nolinkurl  {/root/root/work/quantum-gpt/outputs/}\endgroup 。每个目录下的 \begingroup \ttfamily  \footnotesize  \nolinkurl  {adapter/}\endgroup  子目录包含 LoRA 权重，\begingroup \ttfamily  \footnotesize  \nolinkurl  {metrics.json}\endgroup  包含训练指标。}}{31}{table.29}\protected@file@percent }
+\newlabel{tab:ai2-adapters}{{29}{31}{ai2 上的微调产物。绝对路径前缀为 \code {/root/root/work/quantum-gpt/outputs/}。每个目录下的 \code {adapter/} 子目录包含 LoRA 权重，\code {metrics.json} 包含训练指标。}{table.29}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.2.4}代码入口与控制面脚本}{31}{subsubsection.5.2.4}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {10}{\ignorespaces ai2 远端工作目录树。所有操作从此根目录执行。}}{32}{figure.10}\protected@file@percent }
+\newlabel{fig:ai2-directory-tree}{{10}{32}{ai2 远端工作目录树。所有操作从此根目录执行。}{figure.10}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.3}控制面组件与职责边界}{32}{subsection.5.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.4}自治研发循环脚本}{32}{subsection.5.4}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {31}{\ignorespaces 当前研发控制面的主要组件与故障定位边界。}}{33}{table.31}\protected@file@percent }
+\newlabel{tab:control-plane-components}{{31}{33}{当前研发控制面的主要组件与故障定位边界。}{table.31}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {11}{\ignorespaces 当前 local-first 研发闭环的控制面结构。}}{33}{figure.11}\protected@file@percent }
+\newlabel{fig:rd-loop}{{11}{33}{当前 local-first 研发闭环的控制面结构。}{figure.11}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.5}训练器与研究方法为什么要分层}{34}{subsection.5.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.6}Huanxin 控制面为什么不能依赖浏览器上传代码}{34}{subsection.5.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.7}唯一正式报告为什么是架构的一部分}{34}{subsection.5.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.8}软件架构章节小结}{34}{subsection.5.8}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {6}测试结果}{35}{section.6}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {12}{\ignorespaces 严格量子 holdout 上的 override-only 成绩对比。两根柱子对应的 run 共享相同的 4 个 task、\begingroup \ttfamily  \footnotesize  \nolinkurl  {prompt\_version=v2}\endgroup 、\begingroup \ttfamily  \footnotesize  \nolinkurl  {prompt\_style=repair\_focused}\endgroup 、\begingroup \ttfamily  \footnotesize  \nolinkurl  {include\_reference\_candidate=false}\endgroup  与 \begingroup \ttfamily  \footnotesize  \nolinkurl  {token\_budget\_preset=quantum\_heavy}\endgroup ；OmniCoder base 9B 的第三根柱子当前仍缺失，因为 2026-04-10 fresh ai2 回评先卡在模型快照恢复。}}{35}{figure.12}\protected@file@percent }
+\newlabel{fig:strict-override-progress}{{12}{35}{严格量子 holdout 上的 override-only 成绩对比。两根柱子对应的 run 共享相同的 4 个 task、\code {prompt\_version=v2}、\code {prompt\_style=repair\_focused}、\code {include\_reference\_candidate=false} 与 \code {token\_budget\_preset=quantum\_heavy}；OmniCoder base 9B 的第三根柱子当前仍缺失，因为 2026-04-10 fresh ai2 回评先卡在模型快照恢复。}{figure.12}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.1}测试结果的口径原则}{35}{subsection.6.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.2}测试结果到底是怎么测出来的}{35}{subsection.6.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.3}参考解健康度：26/26 通过}{36}{subsection.6.3}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {32}{\ignorespaces 参考解健康度结果。}}{36}{table.32}\protected@file@percent }
+\newlabel{tab:reference-eval}{{32}{36}{参考解健康度结果。}{table.32}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.4}Qwen 严格量子 holdout 基线}{36}{subsection.6.4}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {33}{\ignorespaces Qwen 基线在严格量子 holdout 上的逐任务分析。}}{36}{table.33}\protected@file@percent }
+\newlabel{tab:qwen-failures}{{33}{36}{Qwen 基线在严格量子 holdout 上的逐任务分析。}{table.33}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {34}{\ignorespaces Qwen 严格量子 holdout override 的 category 级待提升分布。}}{37}{table.34}\protected@file@percent }
+\newlabel{tab:qwen-failure-categories}{{34}{37}{Qwen 严格量子 holdout override 的 category 级待提升分布。}{table.34}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.5}OmniCoder 8-NPU strict quantum benchmark：override 2/4}{37}{subsection.6.5}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {35}{\ignorespaces 严格量子 holdout 上的 override-only 对比。}}{38}{table.35}\protected@file@percent }
+\newlabel{tab:strict-override-compare}{{35}{38}{严格量子 holdout 上的 override-only 对比。}{table.35}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {36}{\ignorespaces 四个严格量子 override 任务的逐题对比。}}{38}{table.36}\protected@file@percent }
+\newlabel{tab:strict-task-by-task}{{36}{38}{四个严格量子 override 任务的逐题对比。}{table.36}{}}
+\gdef \LT@ii {\LT@entry 
+    {1}{90.51282pt}\LT@entry 
+    {1}{121.81102pt}\LT@entry 
+    {1}{59.21504pt}\LT@entry 
+    {1}{133.19194pt}}
+\@writefile{lot}{\contentsline {table}{\numberline {37}{\ignorespaces 同一份 strict benchmark scorecard 的三种统计口径。}}{39}{table.37}\protected@file@percent }
+\newlabel{tab:strict-scorecard-views}{{37}{39}{同一份 strict benchmark scorecard 的三种统计口径。}{table.37}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.6}Qwen baseline strict holdout 的接口层与测试层细分}{39}{subsection.6.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.7}从评测分析回推测试设计价值}{39}{subsection.6.7}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {39}{\ignorespaces 当前测试结果所暴露出的研发价值。}}{40}{table.39}\protected@file@percent }
+\newlabel{tab:test-value}{{39}{40}{当前测试结果所暴露出的研发价值。}{table.39}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.8}训练指标结果：四组稳定工件的含义}{40}{subsection.6.8}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.9}为什么不把 24/26 直接写成主结论}{41}{subsection.6.9}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.10}delivery gate 的 manifest 口径与 scorecard 口径必须分开}{41}{subsection.6.10}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {40}{\ignorespaces delivery gate 中 manifest 与 scorecard 两种统计口径的区别。}}{41}{table.40}\protected@file@percent }
+\newlabel{tab:delivery-filtering}{{40}{41}{delivery gate 中 manifest 与 scorecard 两种统计口径的区别。}{table.40}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {41}{\ignorespaces delivery gate 的真实任务分布与过滤后结果。}}{41}{table.41}\protected@file@percent }
+\newlabel{tab:delivery-gate-breakdown}{{41}{41}{delivery gate 的真实任务分布与过滤后结果。}{table.41}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.11}训练结果不仅是终点分数，也包括 step-wise 轨迹}{42}{subsection.6.11}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {42}{\ignorespaces 四组稳定训练工件的 step-wise 摘要。}}{42}{table.42}\protected@file@percent }
+\newlabel{tab:stepwise-train-summary}{{42}{42}{四组稳定训练工件的 step-wise 摘要。}{table.42}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.12}当前 8-NPU 快迭代该如何表述}{42}{subsection.6.12}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.13}Gemma 测试状态}{43}{subsection.6.13}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.14}测试结果章节小结}{43}{subsection.6.14}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {7}总结与下一步}{44}{section.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.1}当前进展总览}{44}{subsection.7.1}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {13}{\ignorespaces 当前项目进展总览：已完成、推进中、规划中三个层级。}}{44}{figure.13}\protected@file@percent }
+\newlabel{fig:progress-summary}{{13}{44}{当前项目进展总览：已完成、推进中、规划中三个层级。}{figure.13}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.2}核心结论}{44}{subsection.7.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.3}下一步工作排序}{44}{subsection.7.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.4}前沿方法储备}{45}{subsection.7.4}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {43}{\ignorespaces 规划中的前沿方法储备；这些条目均为后续计划。}}{45}{table.43}\protected@file@percent }
+\newlabel{tab:frontier-plan}{{43}{45}{规划中的前沿方法储备；这些条目均为后续计划。}{table.43}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.5}业界前沿技术对标}{45}{subsection.7.5}\protected@file@percent }
+\gdef \LT@iii {\LT@entry 
+    {1}{59.21504pt}\LT@entry 
+    {1}{93.35826pt}\LT@entry 
+    {1}{50.67912pt}\LT@entry 
+    {1}{201.47882pt}}
+\@writefile{lot}{\contentsline {table}{\numberline {44}{业界前沿技术进展与本项目对标。}}{46}{table.44}\protected@file@percent }
+\newlabel{tab:industry-advances}{{44}{46}{业界前沿技术进展与本项目对标。}{table.44}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {14}{\ignorespaces 业界前沿技术在本项目中的采纳状态分布：已实现 2 项、规划中 8 项、参考关注 6 项。}}{47}{figure.14}\protected@file@percent }
+\newlabel{fig:industry-status}{{14}{47}{业界前沿技术在本项目中的采纳状态分布：已实现 2 项、规划中 8 项、参考关注 6 项。}{figure.14}{}}
+\@writefile{toc}{\contentsline {paragraph}{外部参考来源}{47}{section*.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.6}展望}{47}{subsection.7.6}\protected@file@percent }
+\gdef \LT@iv {\LT@entry 
+    {1}{84.82234pt}\LT@entry 
+    {1}{42.14322pt}\LT@entry 
+    {1}{42.14322pt}\LT@entry 
+    {1}{64.9055pt}\LT@entry 
+    {1}{79.13188pt}\LT@entry 
+    {1}{138.88284pt}}
+\gdef \LT@v {\LT@entry 
+    {1}{90.51282pt}\LT@entry 
+    {1}{113.2751pt}\LT@entry 
+    {1}{110.43008pt}\LT@entry 
+    {1}{107.58464pt}}
+\@writefile{toc}{\contentsline {section}{\numberline {A}附录 A：数据集与任务清单}{48}{appendix.A}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {A.1}A.1 数据集清单与用途}{48}{subsection.A.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {A.2}A.2 量子任务清单}{48}{subsection.A.2}\protected@file@percent }
+\gdef \LT@vi {\LT@entry 
+    {1}{93.35826pt}\LT@entry 
+    {1}{121.81102pt}\LT@entry 
+    {1}{93.35826pt}\LT@entry 
+    {1}{116.12054pt}}
+\gdef \LT@vii {\LT@entry 
+    {1}{93.35826pt}\LT@entry 
+    {1}{67.75095pt}\LT@entry 
+    {1}{67.75095pt}\LT@entry 
+    {1}{170.18062pt}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {A.3}A.3 软件任务清单}{49}{subsection.A.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {A.4}A.4 严格 holdout 的 task 划分}{49}{subsection.A.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {A.5}A.5 量子任务逐项说明}{50}{subsection.A.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Bell pair construction}{50}{section*.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Greedy circuit depth optimization via ASAP scheduling}{50}{section*.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Circuit phase repair from noisy gate stream}{51}{section*.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Quantum Bit-Flip Error Detection}{51}{section*.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Gate alias normalization repair}{51}{section*.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Measurement mapping bug repair}{51}{section*.8}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Quantum phase estimation unitary eigenvalue extraction}{51}{section*.9}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{QAOA MaxCut cost function and classical simulation}{51}{section*.10}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{QFT phase pattern}{51}{section*.11}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Stabilizer tableau single-qubit update repair}{51}{section*.12}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Superdense coding encode/decode}{51}{section*.13}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Teleportation correction mapping}{51}{section*.14}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{VQE energy expectation from parameterized ansatz}{51}{section*.15}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {A.6}A.6 软件任务逐项说明}{52}{subsection.A.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Configuration merge semantics}{52}{section*.16}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Docstring contract preservation}{52}{section*.17}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Duplicate logic refactor}{52}{section*.18}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Multifile patch conflict repair}{52}{section*.19}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Off-by-one bug fix}{52}{section*.20}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Parser regression tests}{52}{section*.21}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Patch application conflict resolver}{52}{section*.22}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Configurable retry decorator with exponential backoff}{52}{section*.23}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Session event log state machine}{52}{section*.24}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Session window summary with ordered history}{52}{section*.25}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{N-ary tree serialization and deserialization}{52}{section*.26}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Workspace patch bundle repair}{52}{section*.27}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Workspace runner smoke}{52}{section*.28}\protected@file@percent }
+\gdef \LT@viii {\LT@entry 
+    {1}{90.51282pt}\LT@entry 
+    {1}{101.89418pt}\LT@entry 
+    {1}{44.98866pt}\LT@entry 
+    {1}{44.98866pt}\LT@entry 
+    {1}{147.41832pt}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {A.7}A.7 核心数据集的 category 细表}{53}{subsection.A.7}\protected@file@percent }
+\gdef \LT@ix {\LT@entry 
+    {1}{96.2037pt}\LT@entry 
+    {1}{90.51282pt}\LT@entry 
+    {1}{79.13188pt}\LT@entry 
+    {1}{144.5733pt}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {A.8}A.8 核心数据集的 prompt family 细表}{54}{subsection.A.8}\protected@file@percent }
+\gdef \LT@x {\LT@entry 
+    {1}{93.35826pt}\LT@entry 
+    {1}{73.44142pt}\LT@entry 
+    {1}{87.6678pt}\LT@entry 
+    {1}{155.95424pt}}
+\@writefile{toc}{\contentsline {section}{\numberline {B}附录 B：研究方法插件逐项说明}{55}{appendix.B}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {B.1}B.1 插件接口摘要}{55}{subsection.B.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {B.2}B.2 Verifier-Guided Repair Curriculum}{55}{subsection.B.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {B.3}B.3 Clause-Aware Verifier Reward}{55}{subsection.B.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {B.4}B.4 AST Anchor Interface Grounding}{55}{subsection.B.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {B.5}B.5 Behavior Anchor Coverage Reward}{55}{subsection.B.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {B.6}B.6 Self-Consistency Verifier Routing}{56}{subsection.B.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {B.7}B.7 Uncertainty-Triggered Repair Replay}{56}{subsection.B.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {B.8}B.8 TurboQuant}{56}{subsection.B.8}\protected@file@percent }
+\gdef \LT@xi {\LT@entry 
+    {1}{33.6073pt}\LT@entry 
+    {1}{153.10922pt}\LT@entry 
+    {1}{30.76228pt}\LT@entry 
+    {1}{53.52458pt}\LT@entry 
+    {1}{161.6447pt}}
+\@writefile{toc}{\contentsline {section}{\numberline {C}附录 C：工件索引与引用口径}{57}{appendix.C}\protected@file@percent }
+\gdef \LT@xii {\LT@entry 
+    {1}{116.12054pt}\LT@entry 
+    {1}{70.59596pt}\LT@entry 
+    {1}{47.83368pt}\LT@entry 
+    {1}{144.5733pt}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {C.1}C.2 数字引用矩阵}{59}{subsection.C.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {C.2}C.3 训练与测试 provenance 的最小引用单元}{60}{subsection.C.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {54}{\ignorespaces 本报告应优先使用的最小证据单元。}}{61}{table.54}\protected@file@percent }
+\newlabel{tab:minimum-evidence-unit}{{54}{61}{本报告应优先使用的最小证据单元。}{table.54}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {D}附录 D：关键命令与复现实验}{62}{appendix.D}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {D.1}D.1 参考解健康度复现命令}{62}{subsection.D.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {D.2}D.2 严格 holdout 诚信校验命令}{62}{subsection.D.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {D.3}D.3 当前 8-NPU 快迭代作业的核心命令形态}{62}{subsection.D.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {D.4}D.4 Gemma 本地最小下一步实验}{63}{subsection.D.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {D.5}D.5 报告编译命令}{63}{subsection.D.5}\protected@file@percent }
+\gdef \LT@xiii {\LT@entry 
+    {1}{28.01001pt}\LT@entry 
+    {1}{36.30002pt}\LT@entry 
+    {1}{50.58002pt}\LT@entry 
+    {1}{95.32002pt}}
+\gdef \LT@xiv {\LT@entry 
+    {1}{28.01001pt}\LT@entry 
+    {1}{36.30002pt}\LT@entry 
+    {1}{50.58002pt}\LT@entry 
+    {1}{95.32002pt}}
+\@writefile{toc}{\contentsline {section}{\numberline {E}附录 E：训练运行逐步指标摘录}{64}{appendix.E}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {E.1}E.1 Qwen 8 NPU interface-prefix true20-e2 逐步指标}{64}{subsection.E.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {E.2}E.2 Qwen 8 NPU codefirst-semantic mix75 true20-e2 逐步指标}{64}{subsection.E.2}\protected@file@percent }
+\gdef \LT@xv {\LT@entry 
+    {1}{28.01001pt}\LT@entry 
+    {1}{36.30002pt}\LT@entry 
+    {1}{50.58002pt}\LT@entry 
+    {1}{95.32002pt}}
+\gdef \LT@xvi {\LT@entry 
+    {1}{28.01001pt}\LT@entry 
+    {1}{36.30002pt}\LT@entry 
+    {1}{50.58002pt}\LT@entry 
+    {1}{95.32002pt}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {E.3}E.3 OmniCoder 9B 2 NPU continuation true20 逐步指标}{65}{subsection.E.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {E.4}E.4 OmniCoder 9B 8 NPU strict-quantum fastiter 逐步指标}{65}{subsection.E.4}\protected@file@percent }
+\gdef \@abspage@last{67}

@@ -38,14 +38,24 @@ Examples of what you should NEVER ask the user:
   ```
   https://aihuanxin.cn/kunlun/kl-web?poolId=1&projectId=3ed7854b946a47b1a49ad754baa76cd3#/train-dev
   ```
-- **Direct ai2 environment URL** (use this — never navigate via the general list):
-  ```
-  https://aihuanxin.cn/kunlun/kl-web?poolId=1&projectId=3ed7854b946a47b1a49ad754baa76cd3#/train-dev/environment/dl-332c4679dcf533b7b978d6df217292d4?name=ai2
-  ```
 - Both `ai1` and `ai2` are valid R&D targets now. Default to `ai2` unless `ai1` is the better capacity/parallelism choice for the current step.
 - **NEVER kill the browser daemon** — killing it loses the auth session cookies. The daemon must stay running indefinitely.
 - Use the Huanxin environment regularly to keep the login session alive. Prefer lightweight non-destructive checks on the exact `#/train-dev` route instead of letting the session sit idle for long stretches.
+- Treat the Safari `#/train-dev` session and the browser-automation profile as two separate states. Do not confuse “Safari is still logged in” with “Playwright/daemon auth is still valid.”
+- For a no-new-page keepalive on the already-open Safari Huanxin tab, use:
+  `bash scripts/huanxin_safari_keepalive.sh --refresh`
+- That helper only reuses the existing Safari `#/train-dev` tab; it does not create a new browser page.
+- For automatic periodic refresh, run:
+  `bash scripts/install_huanxin_safari_keepalive_agent.sh --install`
+- Check the installed keepalive agent with:
+  `bash scripts/install_huanxin_safari_keepalive_agent.sh --status`
+- For one-command diagnosis of keepalive vs automation-profile state, use:
+  `bash scripts/huanxin_status.sh`
+- The manual fallback loop still exists:
+  `bash scripts/huanxin_safari_keepalive_loop.sh`
 - Use `scripts/huanxin_shell.sh <ai1|ai2> "<cmd>"` as the generic shell entrypoint. Convenience wrappers remain available.
+- Treat the daemon-backed shell path as mandatory by default. Do not silently fall back to standalone browser launches because that churns session state and reintroduces login problems.
+- Only allow standalone shell fallback for explicit recovery/debugging by setting `HUANXIN_ALLOW_STANDALONE_FALLBACK=1`.
   ```
   scripts/huanxin_shell.sh ai2 "your shell command here"
   scripts/ai1_shell.sh "your shell command here"

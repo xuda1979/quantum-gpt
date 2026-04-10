@@ -5,17 +5,22 @@ from __future__ import annotations
 
 import argparse
 import copy
-from dataclasses import dataclass
 import hashlib
 import json
 import math
 import os
+import re
 import time
 from pathlib import Path
+import sys
 from typing import TYPE_CHECKING, Any
 
 import torch
 from torch.utils.data import DataLoader, Dataset
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 if TYPE_CHECKING:
     from transformers import AutoProcessor, AutoTokenizer
@@ -27,6 +32,19 @@ except Exception:  # noqa: BLE001
         return function
 
 from training.research_plugins import load_research_methods, summarize_methods
+from training.model_backend import (
+    build_runtime_upgrade_message,
+    probe_model_runtime_compat,
+    run_text_forward_preflight,
+    runtime_autoconfig_requires_upgrade,
+)
+from training.model_family_preflight import trainer_backend_preflight_block
+from training.text_preprocessor_backend import (
+    TextPreprocessorBackend,
+    build_supervised_text_example,
+    load_text_preprocessor_backend,
+    pad_supervised_text_batch,
+)
 
 DEFAULT_LORA_TARGET_MODULES = ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]
 COMMON_LORA_TARGET_MODULE_GROUPS = [
@@ -35,83 +53,27 @@ COMMON_LORA_TARGET_MODULE_GROUPS = [
     ["q_proj", "k_proj", "v_proj", "o_proj"],
 ]
 
-
-@dataclass
-class TextPreprocessorBackend:
-    render_backend: Any
-    text_backend: Any
-    save_backend: Any
-    backend_kind: str
-
-
-def load_model_config_metadata(model_name: str) -> dict[str, Any]:
-    from transformers import PretrainedConfig
-
-    config_dict, _unused_kwargs = PretrainedConfig.get_config_dict(model_name, trust_remote_code=True)
-    return config_dict
-
-
-def load_tokenizer_config_metadata(model_name: str) -> dict[str, Any]:
-    tokenizer_config_path = Path(model_name) / "tokenizer_config.json"
-    if not tokenizer_config_path.exists():
-        return {}
-    return json.loads(tokenizer_config_path.read_text(encoding="utf-8"))
-
-
-def probe_model_runtime_compat(model_name: str, auto_config_cls: Any) -> dict[str, Any] | None:
-    try:
-        config_dict = load_model_config_metadata(model_name)
-    except Exception:
-        return None
-
-    model_type = str(config_dict.get("model_type") or "")
-    architectures = [str(item) for item in (config_dict.get("architectures") or [])]
-    summary: dict[str, Any] = {
-        "config_model_type": model_type,
-        "config_architectures": architectures,
-        "runtime_autoconfig_ok": False,
-    }
-    try:
-        runtime_config = auto_config_cls.from_pretrained(model_name, trust_remote_code=True)
-        summary["runtime_autoconfig_ok"] = True
-        summary["runtime_config_class"] = runtime_config.__class__.__name__
-    except Exception as exc:  # noqa: BLE001
-        summary["runtime_autoconfig_error_type"] = type(exc).__name__
-        summary["runtime_autoconfig_error"] = str(exc)
-        if runtime_autoconfig_requires_upgrade(model_type, exc):
-            extra_hint = ""
-            if model_type == "gemma4":
-                extra_hint = (
-                    " Gemma 4 instruction checkpoints also advertise an any-to-any conditional-generation "
-                    "architecture, so the current text-only AutoModelForCausalLM path may still need a "
-                    "processor-aware conditional-generation backend after the runtime upgrade."
-                )
-            raise SystemExit(
-                f"Transformers runtime is too old for '{model_name}' "
-                f"(model_type='{model_type}', architectures={architectures}). "
-                "This path now supports processor-aware text preprocessing, but the active "
-                "runtime still cannot resolve this config. Upgrade the bootstrap stack to a "
-                f"{model_type or 'model-family'}-capable Transformers build before launching this fine-tune."
-                f"{extra_hint}"
-            ) from exc
-    return summary
-
-
-def runtime_autoconfig_requires_upgrade(model_type: str, exc: Exception) -> bool:
-    if not model_type:
-        return False
-    message = str(exc).lower()
-    return (
-        "does not recognize this architecture" in message
-        or "does not recognize this model type" in message
-        or "unrecognized configuration class" in message
-        or "transformers does not recognize this architecture" in message
-    )
-
-
-def resolve_lora_target_modules(requested_target_modules: list[str] | None, model: Any) -> list[str]:
+def resolve_lora_target_modules(
+    requested_target_modules: list[str] | None,
+    model: Any,
+    requested_target_module_regex: list[str] | None = None,
+) -> list[str]:
     if requested_target_modules:
         return list(requested_target_modules)
+
+    if requested_target_module_regex:
+        patterns = [re.compile(pattern) for pattern in requested_target_module_regex]
+        matched = [
+            module_name
+            for module_name, _module in model.named_modules()
+            if module_name and any(pattern.search(module_name) for pattern in patterns)
+        ]
+        if not matched:
+            raise SystemExit(
+                "Unable to resolve any LoRA target modules from --target-module-regex. "
+                f"Requested regexes: {requested_target_module_regex}"
+            )
+        return matched
 
     leaf_names = sorted(
         {
@@ -131,6 +93,81 @@ def resolve_lora_target_modules(requested_target_modules: list[str] | None, mode
         "Pass --target-modules explicitly for this architecture. "
         f"Sample discovered module suffixes: {sample}"
     )
+
+
+def _compile_name_patterns(patterns: list[str] | None, *, flag_name: str) -> list[re.Pattern[str]]:
+    if not patterns:
+        return []
+    compiled: list[re.Pattern[str]] = []
+    for pattern in patterns:
+        try:
+            compiled.append(re.compile(pattern))
+        except re.error as exc:
+            raise SystemExit(f"Invalid regex for {flag_name}: {pattern!r} ({exc})") from exc
+    return compiled
+
+
+def _matches_any_pattern(name: str, patterns: list[re.Pattern[str]]) -> bool:
+    return any(pattern.search(name) for pattern in patterns)
+
+
+def apply_selective_training_controls(
+    model: Any,
+    trainable_param_regex: list[str] | None = None,
+    freeze_param_regex: list[str] | None = None,
+) -> dict[str, Any]:
+    trainable_patterns = _compile_name_patterns(trainable_param_regex, flag_name="--trainable-param-regex")
+    freeze_patterns = _compile_name_patterns(freeze_param_regex, flag_name="--freeze-param-regex")
+
+    params = list(model.named_parameters())
+    initially_trainable_names = {name for name, parameter in params if parameter.requires_grad}
+
+    trainable_regex_matches: list[str] = []
+    if trainable_patterns:
+        for name, parameter in params:
+            if parameter.requires_grad and _matches_any_pattern(name, trainable_patterns):
+                trainable_regex_matches.append(name)
+            if parameter.requires_grad and not _matches_any_pattern(name, trainable_patterns):
+                parameter.requires_grad = False
+        if not trainable_regex_matches:
+            raise SystemExit(
+                "No trainable parameters matched --trainable-param-regex. "
+                f"Requested patterns: {trainable_param_regex}"
+            )
+
+    frozen_by_regex: list[str] = []
+    if freeze_patterns:
+        for name, parameter in params:
+            if parameter.requires_grad and _matches_any_pattern(name, freeze_patterns):
+                parameter.requires_grad = False
+                frozen_by_regex.append(name)
+
+    final_trainable_names = [name for name, parameter in params if parameter.requires_grad]
+    if not final_trainable_names:
+        raise SystemExit(
+            "Selective training controls froze all parameters. "
+            "Adjust --trainable-param-regex/--freeze-param-regex so at least one parameter stays trainable."
+        )
+
+    return {
+        "trainable_param_regex": list(trainable_param_regex) if trainable_param_regex else None,
+        "freeze_param_regex": list(freeze_param_regex) if freeze_param_regex else None,
+        "initial_trainable_count": len(initially_trainable_names),
+        "final_trainable_count": len(final_trainable_names),
+        "trainable_regex_match_count": len(trainable_regex_matches),
+        "frozen_by_regex_count": len(frozen_by_regex),
+        "final_trainable_sample": final_trainable_names[:12],
+    }
+
+
+def collect_trainable_parameters(model: Any) -> tuple[list[Any], list[str], int]:
+    named_trainable = [(name, parameter) for name, parameter in model.named_parameters() if parameter.requires_grad]
+    if not named_trainable:
+        raise SystemExit("No trainable parameters found after selective training controls.")
+    trainable_tensors = [parameter for _name, parameter in named_trainable]
+    trainable_names = [name for name, _parameter in named_trainable]
+    trainable_count = int(sum(parameter.numel() for parameter in trainable_tensors))
+    return trainable_tensors, trainable_names, trainable_count
 
 
 def parse_args() -> argparse.Namespace:
@@ -168,6 +205,24 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Optional explicit LoRA target module suffixes. Defaults to auto-discovery from the loaded model.",
     )
+    parser.add_argument(
+        "--target-module-regex",
+        nargs="*",
+        default=None,
+        help="Optional regex patterns matched against full module names for router-only or expert-specific LoRA targeting.",
+    )
+    parser.add_argument(
+        "--trainable-param-regex",
+        nargs="*",
+        default=None,
+        help="Optional regex allowlist for trainable parameter names. Non-matching trainable params are frozen.",
+    )
+    parser.add_argument(
+        "--freeze-param-regex",
+        nargs="*",
+        default=None,
+        help="Optional regex denylist for parameter names to freeze after allowlist filtering.",
+    )
     return parser.parse_args()
 
 
@@ -204,83 +259,6 @@ def require_training_dependencies() -> tuple[Any, Any, Any, Any, Any, Any, Any, 
     )
 
 
-def supports_text_backend(candidate: Any) -> bool:
-    return candidate is not None and hasattr(candidate, "__call__") and hasattr(candidate, "pad")
-
-
-def load_tokenizers_backend_fallback(model_name: str, pretrained_tokenizer_fast_cls: Any) -> TextPreprocessorBackend | None:
-    tokenizer_config = load_tokenizer_config_metadata(model_name)
-    if tokenizer_config.get("tokenizer_class") != "TokenizersBackend":
-        return None
-
-    tokenizer_path = Path(model_name) / "tokenizer.json"
-    if not tokenizer_path.exists():
-        return None
-
-    additional_special_tokens = []
-    for key in (
-        "image_token",
-        "video_token",
-        "vision_bos_token",
-        "vision_eos_token",
-        "audio_bos_token",
-        "audio_eos_token",
-        "audio_token",
-    ):
-        value = tokenizer_config.get(key)
-        if value and value not in additional_special_tokens:
-            additional_special_tokens.append(value)
-
-    tokenizer = pretrained_tokenizer_fast_cls(
-        tokenizer_file=str(tokenizer_path),
-        pad_token=tokenizer_config.get("pad_token"),
-        eos_token=tokenizer_config.get("eos_token"),
-        additional_special_tokens=additional_special_tokens or None,
-        clean_up_tokenization_spaces=bool(tokenizer_config.get("clean_up_tokenization_spaces", False)),
-        model_max_length=int(tokenizer_config.get("model_max_length", 262144)),
-    )
-    return TextPreprocessorBackend(
-        render_backend=tokenizer,
-        text_backend=tokenizer,
-        save_backend=tokenizer,
-        backend_kind="pretrained_tokenizer_fast_fallback",
-    )
-
-
-def load_text_preprocessor_backend(model_name: str, auto_tokenizer_cls: Any, auto_processor_cls: Any, pretrained_tokenizer_fast_cls: Any) -> TextPreprocessorBackend:
-    processor_error: Exception | None = None
-    try:
-        processor = auto_processor_cls.from_pretrained(model_name, trust_remote_code=True)
-        processor_tokenizer = getattr(processor, "tokenizer", None)
-        if supports_text_backend(processor_tokenizer):
-            render_backend = processor if hasattr(processor, "apply_chat_template") else processor_tokenizer
-            return TextPreprocessorBackend(
-                render_backend=render_backend,
-                text_backend=processor_tokenizer,
-                save_backend=processor,
-                backend_kind="processor.tokenizer",
-            )
-    except Exception as exc:  # noqa: BLE001
-        processor_error = exc
-
-    try:
-        tokenizer = auto_tokenizer_cls.from_pretrained(model_name, trust_remote_code=True)
-        return TextPreprocessorBackend(
-            render_backend=tokenizer,
-            text_backend=tokenizer,
-            save_backend=tokenizer,
-            backend_kind="tokenizer",
-        )
-    except Exception as exc:  # noqa: BLE001
-        fallback = load_tokenizers_backend_fallback(model_name, pretrained_tokenizer_fast_cls)
-        if fallback is not None:
-            return fallback
-        error_parts = [f"AutoTokenizer load failed: {type(exc).__name__}: {exc}"]
-        if processor_error is not None:
-            error_parts.append(f"AutoProcessor fallback also failed: {type(processor_error).__name__}: {processor_error}")
-        raise SystemExit("Unable to load a text preprocessing backend. " + " | ".join(error_parts)) from exc
-
-
 def resolve_device(torch: Any, choice: str) -> Any:
     if choice == "cpu":
         return torch.device("cpu")
@@ -315,21 +293,6 @@ def load_jsonl(path: Path) -> list[dict]:
     return rows
 
 
-def render_messages(render_backend: Any, record: dict) -> str:
-    messages = record.get("messages")
-    if not isinstance(messages, list) or not messages:
-        raise ValueError(f"Record {record.get('example_id')} has no messages")
-    if hasattr(render_backend, "apply_chat_template"):
-        return render_backend.apply_chat_template(messages, tokenize=False, add_generation_prompt=False)
-
-    parts = []
-    for message in messages:
-        role = str(message.get("role", "user")).upper()
-        content = str(message.get("content", ""))
-        parts.append(f"{role}: {content}")
-    return "\n\n".join(parts)
-
-
 class ChatSftDataset:
     def __init__(
         self,
@@ -347,32 +310,14 @@ class ChatSftDataset:
             working_record = copy.deepcopy(record)
             for method in research_methods:
                 working_record = method.augment_sft_record(working_record, stage=stage)
-            full_text = render_messages(backend.render_backend, working_record)
-            encoded = backend.text_backend(
-                full_text,
-                truncation=True,
-                max_length=max_length,
-                padding=False,
-                return_attention_mask=True,
+            self.examples.append(
+                build_supervised_text_example(
+                    working_record,
+                    backend,
+                    max_length,
+                    train_on_completions_only=train_on_completions_only,
+                )
             )
-            example = {
-                "input_ids": encoded["input_ids"],
-                "attention_mask": encoded["attention_mask"],
-                "example_id": working_record.get("example_id"),
-            }
-            if train_on_completions_only:
-                messages = working_record.get("messages", [])
-                if len(messages) >= 2 and messages[-1].get("role") == "assistant":
-                    prompt_text = render_messages(backend.render_backend, {"messages": messages[:-1]})
-                    prompt_ids = backend.text_backend(
-                        prompt_text,
-                        truncation=True,
-                        max_length=max_length,
-                        padding=False,
-                        return_attention_mask=False,
-                    )["input_ids"]
-                    example["prompt_token_count"] = min(len(prompt_ids), len(example["input_ids"]))
-            self.examples.append(example)
 
     def __len__(self) -> int:
         return len(self.examples)
@@ -386,19 +331,7 @@ class PaddingCollator:
         self.text_backend = text_backend
 
     def __call__(self, batch: list[dict]) -> dict[str, torch.Tensor]:
-        padded = self.text_backend.pad(
-            [{"input_ids": item["input_ids"], "attention_mask": item["attention_mask"]} for item in batch],
-            padding=True,
-            return_tensors="pt",
-        )
-        labels = padded["input_ids"].clone()
-        labels[padded["attention_mask"] == 0] = -100
-        for row_index, item in enumerate(batch):
-            prompt_token_count = item.get("prompt_token_count")
-            if prompt_token_count:
-                labels[row_index, :prompt_token_count] = -100
-        padded["labels"] = labels
-        return padded
+        return pad_supervised_text_batch(batch, self.text_backend, torch)
 
 
 def evaluate(model: Any, loader: Any, device: Any) -> dict[str, float]:
@@ -438,6 +371,9 @@ def build_run_signature(args: argparse.Namespace) -> dict[str, Any]:
         "train_on_completions_only": args.train_on_completions_only,
         "research_methods": list(args.research_methods),
         "target_modules": list(args.target_modules) if args.target_modules else None,
+        "target_module_regex": list(args.target_module_regex) if args.target_module_regex else None,
+        "trainable_param_regex": list(args.trainable_param_regex) if args.trainable_param_regex else None,
+        "freeze_param_regex": list(args.freeze_param_regex) if args.freeze_param_regex else None,
     }
     signature_json = json.dumps(signature, sort_keys=True)
     signature["signature_sha256"] = hashlib.sha256(signature_json.encode("utf-8")).hexdigest()
@@ -496,6 +432,7 @@ def main() -> int:
     ) = require_training_dependencies()
     print(json.dumps({"stage": "deps_loaded"}, ensure_ascii=False), flush=True)
 
+    backend_blocker: str | None = None
     runtime_compat = probe_model_runtime_compat(args.model_name, AutoConfig)
     if runtime_compat is not None:
         print(
@@ -507,6 +444,16 @@ def main() -> int:
                 ensure_ascii=False,
             ),
             flush=True,
+        )
+        runtime_error = runtime_compat.get("runtime_autoconfig_error")
+        if runtime_error and runtime_autoconfig_requires_upgrade(
+            str(runtime_compat.get("config_model_type") or ""),
+            Exception(str(runtime_error)),
+        ):
+            raise SystemExit(build_runtime_upgrade_message(args.model_name, runtime_compat))
+        backend_blocker = trainer_backend_preflight_block(
+            str(runtime_compat.get("config_model_type") or ""),
+            [str(item) for item in (runtime_compat.get("config_architectures") or [])],
         )
 
     text_preprocessor = load_text_preprocessor_backend(args.model_name, AutoTokenizer, AutoProcessor, PreTrainedTokenizerFast)
@@ -523,6 +470,22 @@ def main() -> int:
         ),
         flush=True,
     )
+
+    if backend_blocker is not None:
+        print(
+            json.dumps(
+                {
+                    "stage": "trainer_backend_preflight",
+                    "state": "blocked",
+                    "model_type": runtime_compat.get("config_model_type") if runtime_compat is not None else None,
+                    "architectures": runtime_compat.get("config_architectures") if runtime_compat is not None else None,
+                    "error": backend_blocker,
+                },
+                ensure_ascii=False,
+            ),
+            flush=True,
+        )
+        raise SystemExit(backend_blocker)
 
     device = resolve_device(torch, args.device)
     print(json.dumps({"stage": "device_resolved", "device": str(device), "requested": args.device}, ensure_ascii=False), flush=True)
@@ -573,6 +536,7 @@ def main() -> int:
     eval_loader = None
     if eval_dataset is not None:
         eval_loader = DataLoader(eval_dataset, batch_size=args.per_device_batch_size, shuffle=False, collate_fn=collator)
+    preflight_batch = collator([train_dataset[0]])
 
     optimizer_steps_per_epoch = len(train_loader) // args.gradient_accumulation_steps
     max_available_steps = optimizer_steps_per_epoch * args.num_epochs
@@ -634,6 +598,7 @@ def main() -> int:
     print(json.dumps({"stage": "model_loaded", "t": time.time(), "dt_model_load_sec": round(time.time() - model_load_started_at, 3)}, ensure_ascii=False), flush=True)
     if args.adapter_init is not None:
         model = PeftModel.from_pretrained(model, str(args.adapter_init), is_trainable=True)
+        resolved_target_modules = None
         print(
             json.dumps(
                 {
@@ -645,7 +610,11 @@ def main() -> int:
             flush=True,
         )
     else:
-        resolved_target_modules = resolve_lora_target_modules(args.target_modules, model)
+        resolved_target_modules = resolve_lora_target_modules(
+            args.target_modules,
+            model,
+            args.target_module_regex,
+        )
         lora_config = LoraConfig(
             task_type=TaskType.CAUSAL_LM,
             r=args.lora_rank,
@@ -656,22 +625,67 @@ def main() -> int:
         )
         model = get_peft_model(model, lora_config)
         print(json.dumps({"stage": "lora_wrapped", "resolved_target_modules": resolved_target_modules}, ensure_ascii=False), flush=True)
+    selective_training = apply_selective_training_controls(
+        model,
+        trainable_param_regex=getattr(args, "trainable_param_regex", None),
+        freeze_param_regex=getattr(args, "freeze_param_regex", None),
+    )
+    trainable_param_tensors, trainable_param_names, trainable_param_count = collect_trainable_parameters(model)
+    print(
+        json.dumps(
+            {
+                "stage": "selective_training_applied",
+                **selective_training,
+                "trainable_parameter_count": trainable_param_count,
+                "trainable_parameter_sample": trainable_param_names[:12],
+            },
+            ensure_ascii=False,
+        ),
+        flush=True,
+    )
     model.to(device)
     print(json.dumps({"stage": "model_on_device", "device": str(device)}, ensure_ascii=False), flush=True)
+    text_forward_preflight = run_text_forward_preflight(
+        model,
+        preflight_batch,
+        torch_module=torch,
+        device=device,
+    )
+    print(
+        json.dumps(
+            {
+                "stage": "text_forward_preflight",
+                **text_forward_preflight,
+            },
+            ensure_ascii=False,
+        ),
+        flush=True,
+    )
     if distributed:
         model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[local_rank])
         print(json.dumps({"stage": "ddp_wrapped"}, ensure_ascii=False), flush=True)
     model.train()
     print(json.dumps({"stage": "train_mode"}, ensure_ascii=False), flush=True)
 
-    optimizer = torch.optim.AdamW(model.parameters(), lr=args.learning_rate)
+    optimizer = torch.optim.AdamW(trainable_param_tensors, lr=args.learning_rate)
     total_train_steps = max(args.max_steps, 1)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=total_train_steps)
 
     metrics: list[dict[str, float | int]] = []
     global_step = 0
     optimizer.zero_grad(set_to_none=True)
-    print(json.dumps({"stage": "optimizer_ready", "max_steps": args.max_steps, "gradient_accumulation_steps": args.gradient_accumulation_steps}, ensure_ascii=False), flush=True)
+    print(
+        json.dumps(
+            {
+                "stage": "optimizer_ready",
+                "max_steps": args.max_steps,
+                "gradient_accumulation_steps": args.gradient_accumulation_steps,
+                "trainable_parameter_count": trainable_param_count,
+            },
+            ensure_ascii=False,
+        ),
+        flush=True,
+    )
 
     for epoch in range(args.num_epochs):
         if train_sampler is not None:
@@ -693,7 +707,7 @@ def main() -> int:
                 print(json.dumps({"stage": "first_backward_done", "batch_index": batch_index}, ensure_ascii=False), flush=True)
 
             if batch_index % args.gradient_accumulation_steps == 0:
-                torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+                torch.nn.utils.clip_grad_norm_(trainable_param_tensors, 1.0)
                 if batch_index == 1:
                     print(json.dumps({"stage": "first_clip_done", "batch_index": batch_index}, ensure_ascii=False), flush=True)
                 optimizer.step()
@@ -754,6 +768,10 @@ def main() -> int:
             "signature": run_signature,
             "resolved_target_modules": resolved_target_modules if args.adapter_init is None else None,
             "device": str(device),
+            "text_forward_preflight": text_forward_preflight,
+            "selective_training": selective_training,
+            "trainable_parameter_count": trainable_param_count,
+            "trainable_parameter_sample": trainable_param_names[:12],
             "world_size": world_size,
             "train_examples": len(train_dataset),
             "eval_examples": len(eval_dataset) if eval_dataset is not None else 0,
@@ -771,6 +789,9 @@ def main() -> int:
                 {
                     "signature": run_signature,
                     "resolved_target_modules": resolved_target_modules if args.adapter_init is None else None,
+                    "selective_training": selective_training,
+                    "trainable_parameter_count": trainable_param_count,
+                    "trainable_parameter_sample": trainable_param_names[:12],
                 },
                 indent=2,
             )

@@ -1,0 +1,354 @@
+{
+  "timestamp_utc": "2026-04-08T01:47:28.545815+00:00",
+  "target": {
+    "target_id": "gemma4-e2b-it",
+    "model_id": "google/gemma-4-E2B-it",
+    "local_model_dir": "models/gemma-4-E2B-it",
+    "readiness_note": "Gemma 4 is the next finetuning target, but remote training remains gated on runtime and conditional-generation backend readiness."
+  },
+  "cycle_state": {
+    "status": "blocked",
+    "current_stage": "gemma_audit",
+    "last_completed_stage": "remote_launcher_gate",
+    "next_action": "python3 training/audit_model_source.py --model-id google/gemma-4-E2B-it --expected-family-substring gemma",
+    "stop_reason": "Gemma source audit has not yet succeeded for this iteration.",
+    "ready_for_remote_finetune": false,
+    "stages": [
+      {
+        "stage": "local_eval_gate",
+        "status": "passed",
+        "blocking": false,
+        "command": "python3 evals/runner/run_eval.py",
+        "result": {
+          "ok": true,
+          "exit_code": 0,
+          "stdout_preview": "[PASS] quantum_bell_pair_construction - Bell pair construction (reference)\n    candidate: /Users/daxu/software/quantum-gpt/evals/tasks/quantum/bell_pair_construction/candidate.py\n    - state=[0.7071067811865476, 0.0, 0.0, 0.7071067811865476"
+        },
+        "reason": "Local eval gate passed in this iteration."
+      },
+      {
+        "stage": "holdout_integrity",
+        "status": "passed",
+        "blocking": false,
+        "command": "python3 scripts/verify_holdout_dataset.py --train-file data/generated/omnicoder-quantum-generalization-holdout-v1/train.jsonl --eval-file data/generated/omnicoder-quantum-generalization-holdout-v1/eval.jsonl --manifest data/generated/omnicoder-quantum-generalization-holdout-v1/manifest.json --min-eval-count 500 --require-task-disjoint --require-prompt-family-disjoint",
+        "result": {
+          "ok": true,
+          "exit_code": 0,
+          "stdout_preview": "{\n  \"train_file\": \"/Users/daxu/software/quantum-gpt/data/generated/omnicoder-quantum-generalization-holdout-v1/train.jsonl\",\n  \"eval_file\": \"/Users/daxu/software/quantum-gpt/data/generated/omnicoder-quantum-generalization-holdout-v1/eval.js"
+        },
+        "reason": "Holdout integrity was verified for this iteration."
+      },
+      {
+        "stage": "gemma_audit",
+        "status": "pending",
+        "blocking": true,
+        "command": "python3 training/audit_model_source.py --model-id google/gemma-4-E2B-it --expected-family-substring gemma",
+        "next_action": "python3 training/audit_model_source.py --model-id google/gemma-4-E2B-it --expected-family-substring gemma",
+        "reason": "Gemma source audit has not yet succeeded for this iteration."
+      },
+      {
+        "stage": "gemma_snapshot_verify",
+        "status": "pending",
+        "blocking": true,
+        "command": "python3 training/verify_qwen_snapshot.py models/gemma-4-E2B-it --expected-substring gemma-4-E2B-it --expected-family-substring gemma",
+        "next_action": "python3 training/verify_qwen_snapshot.py models/gemma-4-E2B-it --expected-substring gemma-4-E2B-it --expected-family-substring gemma",
+        "reason": "Local Gemma snapshot is present but still needs offline verification.",
+        "evidence": {
+          "exists": true,
+          "has_any_files": true,
+          "has_weight_files": true,
+          "has_incomplete_weight_files": false,
+          "present_files": [
+            ".gitattributes",
+            "README.md",
+            "chat_template.jinja",
+            "config.json",
+            "generation_config.json",
+            "model.safetensors",
+            "processor_config.json",
+            "tokenizer.json",
+            "tokenizer_config.json"
+          ],
+          "weight_files": [
+            "model.safetensors"
+          ],
+          "incomplete_weight_files": [],
+          "snapshot_dir": "models/gemma-4-E2B-it",
+          "total_file_count": 28,
+          "total_size_bytes": 10278841587,
+          "total_size_human": "9.6GB",
+          "incomplete_total_bytes": 0,
+          "incomplete_total_human": "0B"
+        }
+      },
+      {
+        "stage": "gemma_smoke",
+        "status": "blocked",
+        "blocking": true,
+        "command": "python3 training/huanxin_cpu_smoke.py --model-name models/gemma-4-E2B-it --dataset data/seed/splits-auto-seed/train.jsonl --max-samples 1",
+        "result": {
+          "ok": false,
+          "exit_code": 1,
+          "stdout_preview": "{\n  \"python\": \"3.9.6\",\n  \"platform\": \"macOS-26.3-arm64-arm-64bit\",\n  \"machine\": \"arm64\",\n  \"target_model\": \"models/gemma-4-E2B-it\",\n  \"load_model_requested\": false,\n  \"modules\": {\n    \"torch\": \"2.8.0\",\n    \"transformers\": \"4.49.0\",\n    \"acc",
+          "stderr_preview": "/Users/daxu/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib"
+        },
+        "next_action": "python3 training/huanxin_cpu_smoke.py --model-name models/gemma-4-E2B-it --dataset data/seed/splits-auto-seed/train.jsonl --max-samples 1",
+        "reason": "Gemma trainer/backend preflight has not yet passed on the local stack."
+      },
+      {
+        "stage": "remote_launcher_gate",
+        "status": "passed",
+        "blocking": false,
+        "command": "scripts/queue_ai2_timeboxed_pipeline.sh --stage-only",
+        "reason": "Remote launcher is target-aware for Gemma and now exits early with a concrete preflight blocker instead of pretending launch readiness.",
+        "evidence": {
+          "launcher_path": "scripts/queue_ai2_timeboxed_pipeline.sh",
+          "gemma_guard_present": true
+        }
+      }
+    ]
+  },
+  "subsystems": [
+    {
+      "name": "dataset_generation",
+      "ready": true,
+      "paths": [
+        "scripts/build_large_template_dataset.py",
+        "scripts/build_mixed_fast_mini.py"
+      ]
+    },
+    {
+      "name": "holdout_integrity",
+      "ready": true,
+      "paths": [
+        "data/generated/omnicoder-quantum-generalization-holdout-v1/train.jsonl",
+        "data/generated/omnicoder-quantum-generalization-holdout-v1/eval.jsonl",
+        "data/generated/omnicoder-quantum-generalization-holdout-v1/manifest.json",
+        "scripts/verify_holdout_dataset.py"
+      ]
+    },
+    {
+      "name": "local_eval_gate",
+      "ready": true,
+      "paths": [
+        "evals/runner/run_eval.py"
+      ]
+    },
+    {
+      "name": "remote_transport",
+      "ready": true,
+      "paths": [
+        "scripts/push_to_s3.sh",
+        "scripts/ai2_sync_from_s3.sh",
+        "scripts/ai2_push_results_to_s3.sh",
+        "scripts/pull_from_s3.sh",
+        "scripts/ai2_sync_model_from_s3.sh"
+      ]
+    },
+    {
+      "name": "remote_job_control",
+      "ready": true,
+      "paths": [
+        "scripts/ai2_job.sh",
+        "scripts/queue_ai2_timeboxed_pipeline.sh",
+        "scripts/timeboxed_8npu_pipeline.sh"
+      ]
+    },
+    {
+      "name": "research_papers",
+      "ready": true,
+      "paths": [
+        "research/papers/index.json",
+        "research/papers/README.md"
+      ]
+    },
+    {
+      "name": "gemma_targeting",
+      "ready": true,
+      "paths": [
+        "training/acquire_public_qwen_snapshot.py",
+        "training/verify_qwen_snapshot.py",
+        "research/papers/gemma4_text_path_enablement/paper.md"
+      ]
+    }
+  ],
+  "stakeholder_questions": [
+    {
+      "question": "How do we know the eval set is not leaking into training?",
+      "answer": "The cycle requires holdout-integrity verification on example_id, task_id, and prompt_family before any remote launch."
+    },
+    {
+      "question": "What exactly is the next model target?",
+      "answer": "The next target is google/gemma-4-E2B-it, but it is gated by runtime and backend readiness before remote finetuning."
+    },
+    {
+      "question": "Can the system explain why a direction was abandoned?",
+      "answer": "The control plane records explicit blocker, regression, and stop-condition sections in each iteration report."
+    },
+    {
+      "question": "Where is the evidence for claims made in papers or leadership reports?",
+      "answer": "The cycle emits a report, a command sheet, and references to run artifacts and paper files for each iteration."
+    },
+    {
+      "question": "What is the current blocker to Gemma 4 finetuning?",
+      "answer": "ai2 access is repaired, but the local stack still blocks Gemma 4 at trainer/backend preflight: the runtime must resolve Gemma 4 and the current text-only AutoModelForCausalLM path still needs a processor-aware conditional-generation backend."
+    }
+  ],
+  "commands": {
+    "local_eval_gate": "python3 evals/runner/run_eval.py",
+    "holdout_integrity": "python3 scripts/verify_holdout_dataset.py --train-file data/generated/omnicoder-quantum-generalization-holdout-v1/train.jsonl --eval-file data/generated/omnicoder-quantum-generalization-holdout-v1/eval.jsonl --manifest data/generated/omnicoder-quantum-generalization-holdout-v1/manifest.json --min-eval-count 500 --require-task-disjoint --require-prompt-family-disjoint",
+    "gemma_audit": "python3 training/audit_model_source.py --model-id google/gemma-4-E2B-it --expected-family-substring gemma",
+    "gemma_snapshot_acquire": "python3 training/acquire_public_qwen_snapshot.py --target gemma4-e2b-it --local-dir models/gemma-4-E2B-it",
+    "gemma_snapshot_verify": "python3 training/verify_qwen_snapshot.py models/gemma-4-E2B-it --expected-substring gemma-4-E2B-it --expected-family-substring gemma",
+    "gemma_smoke": "python3 training/huanxin_cpu_smoke.py --model-name models/gemma-4-E2B-it --dataset data/seed/splits-auto-seed/train.jsonl --max-samples 1",
+    "code_sync": "scripts/push_to_s3.sh scripts training evals research data",
+    "remote_code_sync": "scripts/ai2_sync_from_s3.sh",
+    "remote_model_sync": "scripts/ai2_sync_model_from_s3.sh gemma-4-E2B-it",
+    "remote_job_queue": "scripts/queue_ai2_timeboxed_pipeline.sh --stage-only"
+  },
+  "gates": [
+    {
+      "gate": "local_quality_gate",
+      "required": "local eval suite green before any remote training action",
+      "command_key": "local_eval_gate"
+    },
+    {
+      "gate": "dataset_integrity_gate",
+      "required": "train/eval disjointness and size thresholds verified",
+      "command_key": "holdout_integrity"
+    },
+    {
+      "gate": "gemma_source_gate",
+      "required": "google/gemma-4-E2B-it auditable from local machine",
+      "command_key": "gemma_audit"
+    },
+    {
+      "gate": "gemma_snapshot_gate",
+      "required": "Gemma local snapshot exists and is verified before any remote model sync",
+      "command_key": "gemma_snapshot_verify"
+    },
+    {
+      "gate": "gemma_trainer_backend_gate",
+      "required": "Gemma trainer/backend preflight passes locally before any Huanxin launch",
+      "command_key": "gemma_smoke"
+    },
+    {
+      "gate": "remote_launcher_gate",
+      "required": "Remote launcher is target-aware for the active Gemma target and guards against premature launch with a concrete preflight blocker",
+      "command_key": "remote_job_queue"
+    }
+  ],
+  "papers": [
+    {
+      "paper_id": "pluginized_research_methods",
+      "title": "Pluginized Research Methods for Quantum Coding LLM Iteration",
+      "type": "architecture",
+      "has_plugin": false
+    },
+    {
+      "paper_id": "timeboxed_eight_npu_sft",
+      "title": "Timeboxed 8-NPU SFT Scaling Plan",
+      "type": "run-plan",
+      "has_plugin": false
+    },
+    {
+      "paper_id": "timeboxed_eight_npu_grpo",
+      "title": "Timeboxed 8-NPU GRPO Scaling Plan",
+      "type": "run-plan",
+      "has_plugin": false
+    },
+    {
+      "paper_id": "verifier_guided_repair_curriculum",
+      "title": "Verifier-Guided Near-Miss Repair Curriculum for Quantum Code Generalization",
+      "type": "method",
+      "has_plugin": true
+    },
+    {
+      "paper_id": "clause_aware_verifier_reward",
+      "title": "Clause-Aware Verifier Reward for Code RL",
+      "type": "method",
+      "has_plugin": true
+    },
+    {
+      "paper_id": "ast_anchor_interface_grounding",
+      "title": "AST-Anchor Reranking for Interface-Grounded Code Synthesis",
+      "type": "method",
+      "has_plugin": true
+    },
+    {
+      "paper_id": "self_consistency_verifier_routing",
+      "title": "Self-Consistency Verifier Routing for Code SFT and GRPO",
+      "type": "method",
+      "has_plugin": true
+    },
+    {
+      "paper_id": "uncertainty_triggered_repair_replay",
+      "title": "Uncertainty-Triggered Repair Replay for SFT and GRPO",
+      "type": "method",
+      "has_plugin": true
+    },
+    {
+      "paper_id": "behavior_anchor_coverage_reward",
+      "title": "Behavior-Anchor Coverage Reward for Low-Signal Code GRPO",
+      "type": "method",
+      "has_plugin": true
+    },
+    {
+      "paper_id": "turboquant",
+      "title": "TurboQuant-Style KV Cache Compression for Long-Context Inference",
+      "type": "method",
+      "has_plugin": false
+    },
+    {
+      "paper_id": "gemma4_text_path_enablement",
+      "title": "Gemma 4 Text-Path Enablement for Quantum R&D",
+      "type": "model-enablement",
+      "has_plugin": false
+    },
+    {
+      "paper_id": "autonomous_rd_cycle_system",
+      "title": "Autonomous R&D Cycle System",
+      "type": "system",
+      "has_plugin": false
+    }
+  ],
+  "readiness": {
+    "target": "gemma4-e2b-it",
+    "ready_for_remote_finetune": false,
+    "status": "blocked",
+    "blocker": "Gemma source audit has not yet succeeded for this iteration.",
+    "current_stage": "gemma_audit",
+    "next_action": "python3 training/audit_model_source.py --model-id google/gemma-4-E2B-it --expected-family-substring gemma",
+    "evidence_paths": [
+      "research/papers/gemma4_text_path_enablement/paper.md",
+      "research/papers/autonomous_rd_cycle_system/paper.md",
+      "scripts/queue_ai2_timeboxed_pipeline.sh"
+    ]
+  },
+  "execution_results": [
+    {
+      "name": "local_eval_gate",
+      "command": "python3 evals/runner/run_eval.py",
+      "ok": true,
+      "exit_code": 0,
+      "stdout": "[PASS] quantum_bell_pair_construction - Bell pair construction (reference)\n    candidate: /Users/daxu/software/quantum-gpt/evals/tasks/quantum/bell_pair_construction/candidate.py\n    - state=[0.7071067811865476, 0.0, 0.0, 0.7071067811865476]\n[PASS] quantum_circuit_depth_optimization - Greedy circuit depth optimization via ASAP scheduling (reference)\n    candidate: /Users/daxu/software/quantum-gpt/evals/tasks/quantum/circuit_depth_optimization/candidate.py\n    - Circuit depth optimization correct for all test cases\n[PASS] quantum_circuit_phase_repair - Circuit phase repair from noisy gate stream (reference)\n    candidate: /Users/daxu/software/quantum-gpt/evals/tasks/quantum/circuit_phase_repair/candidate.py\n    - Circuit phase repair handles normalization, cancellations, and unsupported gates\n[PASS] quantum_error_detection_bit_flip - Quantum Bit-Flip Error Detection (reference)\n    candidate: /Users/daxu/software/quantum-gpt/evals/tasks/quantum/error_detection_bit_flip/candidate.py\n    - Bit-flip code correct for all initial states and error positions\n[PASS] quantum_gate_alias_normalization - Gate alias normalization repair (reference)\n    candidate: /Users/daxu/software/quantum-gpt/evals/tasks/quantum/gate_alias_normalization/candidate.py\n    - Gate alias normalization handles casing, whitespace, and invalid aliases\n[PASS] quantum_measurement_bug_repair - Measurement mapping bug repair (reference)\n    candidate: /Users/daxu/software/quantum-gpt/evals/tasks/quantum/measurement_bug_repair/candidate.py\n    - invalid input rejected correctly\n[PASS] quantum_phase_estimation_circuit - Quantum phase estimation unitary eigenvalue extraction (reference)\n    candidate: /Users/daxu/software/quantum-gpt/evals/tasks/quantum/phase_estimation_circuit/candidate.py\n    - Phase estimation simulation correct for all test cases\n[PASS] quantum_qaoa_maxcut - QAOA MaxCut cost function and classical simulation (reference)\n    candidate: /Users/daxu/software/quantum-gpt/evals/tasks/quantum/qaoa_maxcut/candidate.py\n    - QAOA MaxCut functions correct for all test cases\n[PASS] quantum_qft_phase_pattern - QFT phase pattern (reference)\n    candidate: /Users/daxu/software/quantum-gpt/evals/tasks/quantum/qft_phase_pattern/candidate.py\n    - QFT basis-state phase pattern matches exact formula\n[PASS] quantum_stabilizer_tableau_update_repair - Stabilizer tableau single-qubit update repair (reference)\n    candidate: /Users/daxu/software/quantum-gpt/evals/tasks/quantum/stabilizer_tableau_update_repair/candidate.py\n    - Stabilizer tableau repair preserves sign and axis updates across H/S/SDG sequences\n[PASS] quantum_superdense_coding - Superdense coding encode/decode (reference)\n    candidate: /Users/daxu/software/quantum-gpt/evals/tasks/quantum/superdense_coding/candidate.py\n    - all message mappings round-trip correctly\n[PASS] quantum_teleportation_corrections - Teleportation correction mapping (reference)\n    candidate: /Users/daxu/software/quantum-gpt/evals/tasks/quantum/teleportation_corrections/candidate.py\n    - Teleportation correction lookup matches standard X/Z rule\n[PASS] quantum_vqe_energy_minimization - VQE energy expectation from parameterized ansatz (reference)\n    candidate: /Users/daxu/software/quantum-gpt/evals/tasks/quantum/vqe_energy_minimization/candidate.py\n    - VQE energy minimization correct for all test cases\n[PASS] software_config_merge - Configuration merge semantics (reference)\n    candidate: /Users/daxu/software/quantum-gpt/evals/tasks/software/config_merge/candidate.py\n    - Recursive config merge preserves semantics and input immutability\n[PASS] software_docstring_contract - Docstring contract preservation (reference)\n    candidate: /Users/daxu/software/quantum-gpt/evals/tasks/software/docstring_contract/candidate.py\n    - Behavior and documented contract both preserved\n[PASS] software_duplicate_logic_refactor - Duplicate logic refactor (reference)\n    candidate: /Users/daxu/software/quantum-gpt/evals/tasks/software/duplicate_logic_refactor/candidate.py\n    - shared normalization helper is used consistently\n[PASS] software_multifile_patch_conflict_repair - Multifile patch conflict repair (reference)\n    candidate: /Users/daxu/software/quantum-gpt/evals/tasks/software/multifile_patch_conflict_repair/candidate.py\n    - Multifile patch repair preserves engine semantics and reporting contract across modules\n[PASS] software_off_by_one_bugfix - Off-by-one bug fix (reference)\n    candidate: /Users/daxu/software/quantum-gpt/evals/tasks/software/off_by_one_bugfix/candidate.py\n    - range sum behaves inclusively\n[PASS] software_parser_regression_tests - Parser regression tests (reference)\n    candidate: /Users/daxu/software/quantum-gpt/evals/tasks/software/parser_regression_tests/candidate.py\n    - regression cases cover parser edge cases\n[PASS] software_patch_application_conflict_resolver - Patch application conflict resolver (reference)\n    candidate: /Users/daxu/software/quantum-gpt/evals/tasks/software/patch_application_conflict_resolver/candidate.py\n    - Patch conflict resolver preserves ordering, duplicate suppression, conflict bookkeeping, and input immutability\n[PASS] software_retry_decorator - Configurable retry decorator with exponential backoff (reference)\n    candidate: /Users/daxu/software/quantum-gpt/evals/tasks/software/retry_decorator/candidate.py\n    - Retry decorator handles all cases correctly\n[PASS] software_session_event_log - Session event log state machine (reference)\n    candidate: /Users/daxu/software/quantum-gpt/evals/tasks/software/session_event_log/candidate.py\n    - Session event log preserves state transitions and error handling\n[PASS] software_session_window_summary - Session window summary with ordered history (reference)\n    candidate: /Users/daxu/software/quantum-gpt/evals/tasks/software/session_window_summary/candidate.py\n    - Session window summary preserves ordering, state transitions, and validation\n[PASS] software_tree_serialization - N-ary tree serialization and deserialization (reference)\n    candidate: /Users/daxu/software/quantum-gpt/evals/tasks/software/tree_serialization/candidate.py\n    - Tree serialization handles all cases correctly\n[PASS] software_workspace_patch_bundle_repair - Workspace patch bundle repair (reference)\n    candidate: /Users/daxu/software/quantum-gpt/evals/tasks/software/workspace_patch_bundle_repair/pkg/patch_engine.py\n    - Workspace patch bundle repair preserves engine semantics and reporting contract across module boundaries\n[PASS] software_workspace_runner_smoke - Workspace runner smoke (reference)\n    candidate: /Users/daxu/software/quantum-gpt/evals/tasks/software/workspace_runner_smoke/pkg/logic.py\n    - workspace-mode task passed\nOverall: 26/26 passed\n  quantum: 13/13 passed\n  software: 13/13 passed\n  algorithm_implementation: 3/3 passed\n  algorithm_reasoning: 1/1 passed\n  api_normalization: 1/1 passed\n  api_quality: 1/1 passed\n  bugfix: 1/1 passed\n  circuit_construction: 1/1 passed\n  circuit_optimization: 1/1 passed\n  data_structures: 1/1 passed\n  data_transforms: 1/1 passed\n  debug_repair: 4/4 passed\n  design_pattern: 1/1 passed\n  multifile_repair: 1/1 passed\n  protocol_logic: 1/1 passed\n  reasoning: 1/1 passed\n  refactor: 1/1 passed\n  stateful_logic: 3/3 passed\n  test_writing: 1/1 passed\n  workspace_repair: 1/1 passed\n  workspace_smoke: 1/1 passed\n",
+      "stderr": ""
+    },
+    {
+      "name": "holdout_integrity",
+      "command": "python3 scripts/verify_holdout_dataset.py --train-file data/generated/omnicoder-quantum-generalization-holdout-v1/train.jsonl --eval-file data/generated/omnicoder-quantum-generalization-holdout-v1/eval.jsonl --manifest data/generated/omnicoder-quantum-generalization-holdout-v1/manifest.json --min-eval-count 500 --require-task-disjoint --require-prompt-family-disjoint",
+      "ok": true,
+      "exit_code": 0,
+      "stdout": "{\n  \"train_file\": \"/Users/daxu/software/quantum-gpt/data/generated/omnicoder-quantum-generalization-holdout-v1/train.jsonl\",\n  \"eval_file\": \"/Users/daxu/software/quantum-gpt/data/generated/omnicoder-quantum-generalization-holdout-v1/eval.jsonl\",\n  \"manifest\": \"/Users/daxu/software/quantum-gpt/data/generated/omnicoder-quantum-generalization-holdout-v1/manifest.json\",\n  \"requirements\": {\n    \"min_train_count\": 0,\n    \"min_eval_count\": 500,\n    \"require_task_disjoint\": true,\n    \"require_prompt_family_disjoint\": true\n  },\n  \"train\": {\n    \"count\": 1024,\n    \"unique_example_ids\": 1024,\n    \"duplicate_example_ids\": [],\n    \"unique_task_ids\": [\n      \"quantum_bell_pair_construction\",\n      \"quantum_circuit_depth_optimization\",\n      \"quantum_circuit_phase_repair\",\n      \"quantum_measurement_bug_repair\",\n      \"quantum_qft_phase_pattern\",\n      \"quantum_stabilizer_tableau_update_repair\",\n      \"quantum_teleportation_corrections\",\n      \"quantum_vqe_energy_minimization\"\n    ],\n    \"unique_prompt_families\": [\n      \"behavior_first\",\n      \"deliverable_note\",\n      \"implementation_ticket\",\n      \"interface_contract\",\n      \"refactor_request\",\n      \"repo_handoff\"\n    ],\n    \"domain_counts\": {\n      \"quantum\": 1024\n    },\n    \"task_counts\": {\n      \"quantum_bell_pair_construction\": 128,\n      \"quantum_circuit_depth_optimization\": 128,\n      \"quantum_circuit_phase_repair\": 128,\n      \"quantum_measurement_bug_repair\": 128,\n      \"quantum_qft_phase_pattern\": 128,\n      \"quantum_stabilizer_tableau_update_repair\": 128,\n      \"quantum_teleportation_corrections\": 128,\n      \"quantum_vqe_energy_minimization\": 128\n    },\n    \"prompt_family_counts\": {\n      \"behavior_first\": 176,\n      \"deliverable_note\": 176,\n      \"implementation_ticket\": 168,\n      \"interface_contract\": 168,\n      \"refactor_request\": 168,\n      \"repo_handoff\": 168\n    }\n  },\n  \"eval\": {\n    \"count\": 504,\n    \"unique_example_ids\": 504,\n    \"duplicate_example_ids\": [],\n    \"unique_task_ids\": [\n      \"quantum_gate_alias_normalization\",\n      \"quantum_phase_estimation_circuit\",\n      \"quantum_qaoa_maxcut\",\n      \"quantum_superdense_coding\"\n    ],\n    \"unique_prompt_families\": [\n      \"acceptance_gate\",\n      \"audit_followup\",\n      \"maintainer_check\",\n      \"spec_translation\"\n    ],\n    \"domain_counts\": {\n      \"quantum\": 504\n    },\n    \"task_counts\": {\n      \"quantum_gate_alias_normalization\": 126,\n      \"quantum_phase_estimation_circuit\": 126,\n      \"quantum_qaoa_maxcut\": 126,\n      \"quantum_superdense_coding\": 126\n    },\n    \"prompt_family_counts\": {\n      \"acceptance_gate\": 128,\n      \"audit_followup\": 128,\n      \"maintainer_check\": 124,\n      \"spec_translation\": 124\n    }\n  },\n  \"cross_split\": {\n    \"example_id_overlap\": [],\n    \"task_id_overlap\": [],\n    \"prompt_family_overlap\": []\n  },\n  \"checks\": {\n    \"train_count_meets_min\": true,\n    \"eval_count_meets_min\": true,\n    \"train_example_ids_unique\": true,\n    \"eval_example_ids_unique\": true,\n    \"example_id_disjoint\": true,\n    \"task_id_disjoint\": true,\n    \"prompt_family_disjoint\": true,\n    \"manifest_claim_train_eval_example_id_overlap\": true,\n    \"manifest_claim_train_eval_task_id_overlap\": true,\n    \"manifest_claim_train_eval_prompt_family_overlap\": true,\n    \"required_task_disjoint_satisfied\": true,\n    \"required_prompt_family_disjoint_satisfied\": true\n  },\n  \"manifest_holdout_policy\": {\n    \"name\": \"task_disjoint_v1\",\n    \"shared_source_tasks\": false,\n    \"train_task_count\": 8,\n    \"eval_task_count\": 4,\n    \"task_overlap_count\": 0,\n    \"eval_task_id_file\": null,\n    \"eval_tasks_per_domain\": 4,\n    \"train_tasks\": [\n      {\n        \"task_id\": \"quantum_bell_pair_construction\",\n        \"task_dir\": \"evals/tasks/quantum/bell_pair_construction\",\n        \"domain\": \"quantum\",\n        \"category\": \"circuit_construction\"\n      },\n      {\n        \"task_id\": \"quantum_circuit_depth_optimization\",\n        \"task_dir\": \"evals/tasks/quantum/circuit_depth_optimization\",\n        \"domain\": \"quantum\",\n        \"category\": \"circuit_optimization\"\n      },\n      {\n        \"task_id\": \"quantum_circuit_phase_repair\",\n        \"task_dir\": \"evals/tasks/quantum/circuit_phase_repair\",\n        \"domain\": \"quantum\",\n        \"category\": \"debug_repair\"\n      },\n      {\n        \"task_id\": \"quantum_measurement_bug_repair\",\n        \"task_dir\": \"evals/tasks/quantum/measurement_bug_repair\",\n        \"domain\": \"quantum\",\n        \"category\": \"debug_repair\"\n      },\n      {\n        \"task_id\": \"quantum_qft_phase_pattern\",\n        \"task_dir\": \"evals/tasks/quantum/qft_phase_pattern\",\n        \"domain\": \"quantum\",\n        \"category\": \"algorithm_reasoning\"\n      },\n      {\n        \"task_id\": \"quantum_stabilizer_tableau_update_repair\",\n        \"task_dir\": \"evals/tasks/quantum/stabilizer_tableau_update_repair\",\n        \"domain\": \"quantum\",\n        \"category\": \"debug_repair\"\n      },\n      {\n        \"task_id\": \"quantum_teleportation_corrections\",\n        \"task_dir\": \"evals/tasks/quantum/teleportation_corrections\",\n        \"domain\": \"quantum\",\n        \"category\": \"protocol_logic\"\n      },\n      {\n        \"task_id\": \"quantum_vqe_energy_minimization\",\n        \"task_dir\": \"evals/tasks/quantum/vqe_energy_minimization\",\n        \"domain\": \"quantum\",\n        \"category\": \"algorithm_implementation\"\n      }\n    ],\n    \"eval_tasks\": [\n      {\n        \"task_id\": \"quantum_gate_alias_normalization\",\n        \"task_dir\": \"evals/tasks/quantum/gate_alias_normalization\",\n        \"domain\": \"quantum\",\n        \"category\": \"api_normalization\"\n      },\n      {\n        \"task_id\": \"quantum_phase_estimation_circuit\",\n        \"task_dir\": \"evals/tasks/quantum/phase_estimation_circuit\",\n        \"domain\": \"quantum\",\n        \"category\": \"algorithm_implementation\"\n      },\n      {\n        \"task_id\": \"quantum_qaoa_maxcut\",\n        \"task_dir\": \"evals/tasks/quantum/qaoa_maxcut\",\n        \"domain\": \"quantum\",\n        \"category\": \"algorithm_implementation\"\n      },\n      {\n        \"task_id\": \"quantum_superdense_coding\",\n        \"task_dir\": \"evals/tasks/quantum/superdense_coding\",\n        \"domain\": \"quantum\",\n        \"category\": \"reasoning\"\n      }\n    ],\n    \"train_prompt_families\": [\n      \"behavior_first\",\n      \"deliverable_note\",\n      \"implementation_ticket\",\n      \"interface_contract\",\n      \"refactor_request\",\n      \"repo_handoff\"\n    ],\n    \"eval_prompt_families\": [\n      \"acceptance_gate\",\n      \"audit_followup\",\n      \"maintainer_check\",\n      \"spec_translation\"\n    ],\n    \"train_eval_example_id_overlap\": false,\n    \"train_eval_prompt_family_overlap\": false,\n    \"train_eval_task_id_overlap\": false\n  },\n  \"train_matches_manifest_count\": true,\n  \"train_matches_manifest_tasks\": true,\n  \"train_matches_manifest_prompt_families\": true,\n  \"train_matches_manifest_domains\": true,\n  \"eval_matches_manifest_count\": true,\n  \"eval_matches_manifest_tasks\": true,\n  \"eval_matches_manifest_prompt_families\": true,\n  \"eval_matches_manifest_domains\": true,\n  \"ok\": true\n}\n",
+      "stderr": ""
+    },
+    {
+      "name": "gemma_smoke",
+      "command": "python3 training/huanxin_cpu_smoke.py --model-name models/gemma-4-E2B-it --dataset data/seed/splits-auto-seed/train.jsonl --max-samples 1",
+      "ok": false,
+      "exit_code": 1,
+      "stdout": "{\n  \"python\": \"3.9.6\",\n  \"platform\": \"macOS-26.3-arm64-arm-64bit\",\n  \"machine\": \"arm64\",\n  \"target_model\": \"models/gemma-4-E2B-it\",\n  \"load_model_requested\": false,\n  \"modules\": {\n    \"torch\": \"2.8.0\",\n    \"transformers\": \"4.49.0\",\n    \"accelerate\": \"1.4.0\",\n    \"datasets\": \"3.3.2\",\n    \"peft\": \"0.14.0\"\n  },\n  \"dataset\": {\n    \"path\": \"data/seed/splits-auto-seed/train.jsonl\",\n    \"rows\": 18,\n    \"sample_ids\": [\n      \"quantum_circuit_depth_opt_001\"\n    ],\n    \"sample_domains\": [\n      \"quantum\"\n    ],\n    \"sample_message_counts\": [\n      3\n    ],\n    \"role_histogram\": {\n      \"system\": 18,\n      \"user\": 18,\n      \"assistant\": 18\n    }\n  },\n  \"torch_cuda_available\": false,\n  \"config_model_type\": \"gemma4\",\n  \"config_architectures\": [\n    \"Gemma4ForConditionalGeneration\"\n  ],\n  \"runtime_autoconfig_ok\": false,\n  \"checkpoint_transformers_version\": \"5.5.0.dev0\",\n  \"runtime_autoconfig_error_type\": \"ValueError\",\n  \"runtime_autoconfig_error\": \"The checkpoint you are trying to load has model type `gemma4` but Transformers does not recognize this architecture. This could be because of an issue with the checkpoint, or because your version of Transformers is out of date.\\n\\nYou can update Transformers with the command `pip install --upgrade transformers`. If this does not work, and the checkpoint is very new, then there may not be a release version that supports this model yet. In this case, you can get the most up-to-date code by installing Transformers from source with the command `pip install git+https://github.com/huggingface/transformers.git`\",\n  \"stage\": \"runtime_compat\",\n  \"status\": \"error\",\n  \"error_type\": \"ValueError\",\n  \"error\": \"Transformers runtime is too old for 'models/gemma-4-E2B-it' (model_type='gemma4', architectures=['Gemma4ForConditionalGeneration']). Upgrade the bootstrap stack to a model-family-capable Transformers build before using this checkpoint. Checkpoint metadata advertises transformers_version=5.5.0.dev0. Gemma 4 instruction checkpoints also advertise an any-to-any conditional-generation architecture, so the current text-only AutoModelForCausalLM path may still need a processor-aware conditional-generation backend after the runtime upgrade. Underlying error: The checkpoint you are trying to load has model type `gemma4` but Transformers does not recognize this architecture. This could be because of an issue with the checkpoint, or because your version of Transformers is out of date.\\n\\nYou can update Transformers with the command `pip install --upgrade transformers`. If this does not work, and the checkpoint is very new, then there may not be a release version that supports this model yet. In this case, you can get the most up-to-date code by installing Transformers from source with the command `pip install git+https://github.com/huggingface/transformers.git`.\"\n}\n",
+      "stderr": "/Users/daxu/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020\n  warnings.warn(\nThe argument `trust_remote_code` is to be used with Auto classes. It has no effect here and is ignored.\n"
+    }
+  ]
+}

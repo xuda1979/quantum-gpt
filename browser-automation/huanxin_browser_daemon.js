@@ -48,19 +48,33 @@ function pidFile(env) {
 function portFile(env) {
   return `/tmp/huanxin-daemon-${env}.port`;
 }
+function fileTransportDir(env) {
+  return `/tmp/huanxin-daemon-${env}.ipc`;
+}
+function ensureFileTransportDir(env) {
+  const dir = fileTransportDir(env);
+  fs.mkdirSync(dir, { recursive: true });
+  return dir;
+}
 
 // Simple mutex so concurrent HTTP requests don't interleave terminal input
 let busy = false;
+let busySinceMs = null;
+let busyLabel = null;
 const waiting = [];
-async function withLock(fn) {
+async function withLock(fn, label = 'exec') {
   if (busy) {
     await new Promise((resolve) => waiting.push(resolve));
   }
   busy = true;
+  busySinceMs = Date.now();
+  busyLabel = label;
   try {
     return await fn();
   } finally {
     busy = false;
+    busySinceMs = null;
+    busyLabel = null;
     if (waiting.length > 0) waiting.shift()();
   }
 }
@@ -86,6 +100,7 @@ async function main() {
   const { profileDir } = ensureProfileDir();
   const launch = await launchPersistentContext(profileDir);
   const context = launch.context;
+  const ipcDir = ensureFileTransportDir(args.env);
 
   async function ensureLauncherPage() {
     let candidate = context.pages().find((page) => !page.isClosed()) || null;
@@ -96,14 +111,55 @@ async function main() {
     return candidate;
   }
 
-  let launcherPage = await ensureLauncherPage();
-  let activePage;
-  try {
-    activePage = await openShell(launcherPage, args.env);
-  } catch (err) {
-    console.error('Failed to open shell:', err.message);
-    await context.close();
-    process.exit(1);
+  let launcherPage = null;
+  let activePage = null;
+  let startupState = 'booting';
+  let startupError = null;
+  let startupPromise = null;
+
+  async function bootShell() {
+    startupState = 'booting';
+    startupError = null;
+    try {
+      launcherPage = await ensureLauncherPage();
+      activePage = await openShell(launcherPage, args.env);
+      startupState = 'ready';
+      startupError = null;
+      return activePage;
+    } catch (err) {
+      startupState = 'error';
+      startupError = err.message;
+      console.error('Failed to open shell:', err.message);
+      throw err;
+    } finally {
+      startupPromise = null;
+    }
+  }
+
+  function startBoot() {
+    if (!startupPromise) {
+      startupPromise = bootShell();
+    }
+    return startupPromise;
+  }
+
+  async function ensureReady() {
+    let lastError = null;
+    for (let attempt = 1; attempt <= 2; attempt += 1) {
+      if (startupState === 'ready' && activePage && !activePage.isClosed()) {
+        return;
+      }
+      try {
+        await startBoot();
+        return;
+      } catch (error) {
+        lastError = error;
+        if (attempt < 2) {
+          await new Promise((resolve) => setTimeout(resolve, 1500));
+        }
+      }
+    }
+    throw lastError || new Error(`Failed to initialize shell for ${args.env}`);
   }
 
   const startTime = Date.now();
@@ -114,33 +170,134 @@ async function main() {
   let lastCommandCompletedAt = null;
   let lastCommandDurationMs = null;
 
+  async function reopenShell(reason) {
+    console.error(reason);
+    try {
+      if (activePage && !activePage.isClosed()) {
+        await activePage.close().catch(() => {});
+      }
+    } catch {}
+    startupState = 'booting';
+    startupError = null;
+    launcherPage = await ensureLauncherPage();
+    activePage = await openShell(launcherPage, args.env);
+    startupState = 'ready';
+    startupError = null;
+  }
+
   // Attempt to re-open shell if the page went stale or disconnected
   async function ensureShell() {
+    await ensureReady();
     try {
       const text = (await readTerminalText(activePage)).text;
       const disconnected = text.includes('Terminal long time idle, disconnect') ||
         (text.includes('disconnect') && text.trim().endsWith('disconnect.'));
       if (disconnected) {
-        console.error('[daemon] Terminal disconnected (idle), re-opening shell...');
-        try {
-          await activePage.close().catch(() => {});
-        } catch {}
-        launcherPage = await ensureLauncherPage();
-        activePage = await openShell(launcherPage, args.env);
+        await reopenShell('[daemon] Terminal disconnected (idle), re-opening shell...');
       }
     } catch {
-      console.error('[daemon] Shell stale, re-opening...');
-      try {
-        await activePage.close().catch(() => {});
-      } catch {}
-      launcherPage = await ensureLauncherPage();
-      activePage = await openShell(launcherPage, args.env);
+      await reopenShell('[daemon] Shell stale, re-opening...');
     }
   }
 
   // Write state files
   fs.writeFileSync(pf, String(process.pid));
   fs.writeFileSync(portFile(args.env), String(args.port));
+  fs.writeFileSync(
+    path.join(ipcDir, 'daemon.json'),
+    JSON.stringify(
+      {
+        ok: true,
+        env: args.env,
+        pid: process.pid,
+        profileDir,
+        browserMode: launch.browserMode,
+        launchFallbackUsed: launch.fallbackUsed,
+        startedAt: new Date().toISOString(),
+      },
+      null,
+      2
+    )
+  );
+
+  async function runCommand(command, wait) {
+    const result = await withLock(async () => {
+      await ensureReady();
+      await ensureShell();
+      lastActivity = Date.now();
+      commandCount++;
+      lastCommand = command;
+      lastCommandStartedAt = new Date().toISOString();
+      const startedAtMs = Date.now();
+      const { before, after, output, debug } = await sendCommand(activePage, command, wait);
+      lastCommandCompletedAt = new Date().toISOString();
+      lastCommandDurationMs = Date.now() - startedAtMs;
+
+      await activePage
+        .screenshot({
+          path: path.resolve(__dirname, `huanxin-shell-${args.env}.png`),
+          fullPage: true,
+        })
+        .catch(() => {});
+
+      return {
+        ok: true,
+        envName: args.env,
+        browserMode: launch.browserMode,
+        launchFallbackUsed: launch.fallbackUsed,
+        url: activePage.url(),
+        command,
+        output: output || '',
+        before,
+        after,
+        debug,
+        durationMs: lastCommandDurationMs,
+        startedAt: lastCommandStartedAt,
+        completedAt: lastCommandCompletedAt,
+      };
+    }, 'exec');
+    return result;
+  }
+
+  let fileLoopBusy = false;
+  async function pollFileTransport() {
+    if (fileLoopBusy) return;
+    fileLoopBusy = true;
+    try {
+      const entries = fs
+        .readdirSync(ipcDir, { withFileTypes: true })
+        .filter((entry) => entry.isFile() && entry.name.endsWith('.request.json'))
+        .sort((a, b) => a.name.localeCompare(b.name));
+      for (const entry of entries) {
+        const requestPath = path.join(ipcDir, entry.name);
+        const claimPath = requestPath.replace(/\.request\.json$/, '.processing.json');
+        try {
+          fs.renameSync(requestPath, claimPath);
+        } catch {
+          continue;
+        }
+        const responsePath = claimPath.replace(/\.processing\.json$/, '.response.json');
+        try {
+          const raw = fs.readFileSync(claimPath, 'utf8');
+          const parsed = JSON.parse(raw);
+          const result = await runCommand(String(parsed.command || ''), Number(parsed.waitMs || 30000));
+          fs.writeFileSync(responsePath, JSON.stringify(result, null, 2));
+        } catch (err) {
+          fs.writeFileSync(responsePath, JSON.stringify({ ok: false, error: err.message }, null, 2));
+        } finally {
+          try {
+            fs.unlinkSync(claimPath);
+          } catch {}
+        }
+      }
+    } finally {
+      fileLoopBusy = false;
+    }
+  }
+
+  const fileLoop = setInterval(() => {
+    pollFileTransport().catch(() => {});
+  }, 500);
 
   function readBody(req) {
     return new Promise((resolve) => {
@@ -157,6 +314,9 @@ async function main() {
       res.end(
         JSON.stringify({
           ok: true,
+          ready: startupState === 'ready',
+          startupState,
+          startupError,
           env: args.env,
           pid: process.pid,
           port: args.port,
@@ -167,7 +327,16 @@ async function main() {
           lastCommandStartedAt,
           lastCommandCompletedAt,
           lastCommandDurationMs,
-          currentUrl: activePage && !activePage.isClosed() ? activePage.url() : null,
+          busy,
+          busyAgeMs: busySinceMs === null ? 0 : Math.max(0, Date.now() - busySinceMs),
+          busyLabel,
+          pendingRequestCount: waiting.length,
+          currentUrl:
+            activePage && !activePage.isClosed()
+              ? activePage.url()
+              : launcherPage && !launcherPage.isClosed()
+                ? launcherPage.url()
+                : null,
           browserMode: launch.browserMode,
           launchFallbackUsed: launch.fallbackUsed,
         })
@@ -195,40 +364,7 @@ async function main() {
       }
 
       try {
-        const result = await withLock(async () => {
-          await ensureShell();
-          lastActivity = Date.now();
-          commandCount++;
-          lastCommand = command;
-          lastCommandStartedAt = new Date().toISOString();
-          const startedAtMs = Date.now();
-          const { before, after, output, debug } = await sendCommand(activePage, command, wait);
-          lastCommandCompletedAt = new Date().toISOString();
-          lastCommandDurationMs = Date.now() - startedAtMs;
-
-          await activePage
-            .screenshot({
-              path: path.resolve(__dirname, `huanxin-shell-${args.env}.png`),
-              fullPage: true,
-            })
-            .catch(() => {});
-
-          return {
-            ok: true,
-            envName: args.env,
-            browserMode: launch.browserMode,
-            launchFallbackUsed: launch.fallbackUsed,
-            url: activePage.url(),
-            command,
-            output: output || '',
-            before,
-            after,
-            debug,
-            durationMs: lastCommandDurationMs,
-            startedAt: lastCommandStartedAt,
-            completedAt: lastCommandCompletedAt,
-          };
-        });
+        const result = await runCommand(command, wait);
         res.end(JSON.stringify(result, null, 2));
       } catch (err) {
         res.statusCode = 500;
@@ -246,7 +382,10 @@ async function main() {
 
     if (req.method === 'GET' && req.url === '/terminal') {
       try {
-        const text = await withLock(async () => (await readTerminalText(activePage)).text);
+        const text = await withLock(async () => {
+          await ensureReady();
+          return (await readTerminalText(activePage)).text;
+        }, 'terminal');
         res.end(JSON.stringify({ ok: true, terminal: text }));
       } catch (err) {
         res.statusCode = 500;
@@ -271,14 +410,19 @@ async function main() {
       launchFallbackUsed: launch.fallbackUsed,
     };
     console.log(JSON.stringify(info, null, 2));
+    startBoot().catch(() => {});
   });
 
   function cleanup() {
+    clearInterval(fileLoop);
     try {
       fs.unlinkSync(pf);
     } catch {}
     try {
       fs.unlinkSync(portFile(args.env));
+    } catch {}
+    try {
+      fs.rmSync(ipcDir, { recursive: true, force: true });
     } catch {}
     context.close().catch(() => {});
     server.close();

@@ -1,0 +1,12 @@
+{
+  "job_id": "omnicoder-fast-sft-20260409T055229Z",
+  "name": "omnicoder-fast-sft",
+  "pid": 283927,
+  "log_path": "/tmp/omnicoder_fast_sft_20260409.log",
+  "remote_root": "/root/root/work/quantum-gpt",
+  "command": "cd /root/root/work/quantum-gpt && test -f data/generated/omnicoder-quantum-generalization-holdout-v1/train.jsonl && test -f data/generated/omnicoder-quantum-generalization-holdout-v1/eval.jsonl && test -f outputs/interface-prefix-omnicoder9b-semantic-v4-2npu-true20-20260329T2219CST/adapter/adapter_model.safetensors && PYTORCH_NPU_ALLOC_CONF=max_split_size_mb:256 ASCEND_RT_VISIBLE_DEVICES=6,7 torchrun --nproc_per_node=2 training/qwen_sft_peft.py --model-name models/OmniCoder-9B --adapter-init outputs/interface-prefix-omnicoder9b-semantic-v4-2npu-true20-20260329T2219CST/adapter --train-file data/generated/omnicoder-quantum-generalization-holdout-v1/train.jsonl --eval-file data/generated/omnicoder-quantum-generalization-holdout-v1/eval.jsonl --output-dir outputs/omnicoder9b-quantum-generalization-sft-2npu-fastiter-20260409T1352CST --device npu --max-length 512 --max-steps 12 --num-epochs 1 --per-device-batch-size 1 --gradient-accumulation-steps 2 --eval-steps 6 --log-steps 1 --train-on-completions-only --research-methods verifier_guided_repair_curriculum ast_anchor_interface_grounding",
+  "created_at": "2026-04-09T05:52:33.723543+00:00",
+  "transport": "daemon",
+  "duration_ms": 2866,
+  "meta_file": "/Users/daxu/software/quantum-gpt/.huanxin_jobs/omnicoder-fast-sft-20260409T055229Z.json"
+}

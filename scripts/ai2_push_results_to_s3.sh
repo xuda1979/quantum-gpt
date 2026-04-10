@@ -33,7 +33,7 @@ for remote_path in "${REMOTE_PATHS[@]}"; do
     REMOTE_CMD+=" --dry-run"
   fi
   REMOTE_CMD+="; else echo 'skip missing: $remote_path'; fi"
-  JSON_OUT="$(bash scripts/ai2_shell.sh "$REMOTE_CMD")"
+  JSON_OUT="$(bash scripts/ai2_fast_path.sh exec "$REMOTE_CMD")"
   python3 - <<'PY' "$JSON_OUT"
 import json
 import sys

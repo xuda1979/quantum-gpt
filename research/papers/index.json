@@ -65,6 +65,18 @@
       "title": "Gemma 4 Text-Path Enablement for Quantum R&D",
       "type": "model-enablement",
       "has_plugin": false
+    },
+    {
+      "paper_id": "gemma4_26b_a4b_weekend_demo",
+      "title": "Gemma 4 26B-A4B MoE Weekend Demo Report",
+      "type": "system",
+      "has_plugin": false
+    },
+    {
+      "paper_id": "autonomous_rd_cycle_system",
+      "title": "Autonomous R&D Cycle System",
+      "type": "system",
+      "has_plugin": false
     }
   ]
 }

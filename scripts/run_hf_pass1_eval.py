@@ -13,16 +13,20 @@ import time
 from pathlib import Path
 from typing import Any
 
-import torch
-from transformers import AutoModelForCausalLM, AutoProcessor, AutoTokenizer, PreTrainedTokenizerFast
-
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from training.runtime_overlay import configure_runtime_overlay_from_env
+
+configure_runtime_overlay_from_env()
+
+import torch
+from transformers import AutoConfig, AutoModelForCausalLM, AutoProcessor, AutoTokenizer, PreTrainedTokenizerFast
+
 from evals.runner.candidate_sanitize import sanitize_candidate_text
-from peft import PeftModel
-from training.qwen_sft_peft import TextPreprocessorBackend, load_text_preprocessor_backend
+from training.model_backend import ensure_text_backend_preflight, load_causal_lm_with_text_backend_preflight
+from training.text_preprocessor_backend import TextPreprocessorBackend, load_text_preprocessor_backend
 
 TOKEN_BUDGET_PRESETS = {
     "default": 192,
@@ -101,15 +105,20 @@ def load_json(path: Path) -> dict[str, Any]:
 
 
 def load_text_backend(model_path: Path) -> TextPreprocessorBackend:
+    ensure_text_backend_preflight(str(model_path), AutoConfig)
     return load_text_preprocessor_backend(str(model_path), AutoTokenizer, AutoProcessor, PreTrainedTokenizerFast)
 
 
 def load_model(model_path: Path, device: str):
-    model = AutoModelForCausalLM.from_pretrained(
+    model = load_causal_lm_with_text_backend_preflight(
         str(model_path),
-        trust_remote_code=True,
-        low_cpu_mem_usage=True,
-        torch_dtype="auto",
+        auto_config_cls=AutoConfig,
+        auto_model_for_causal_lm_cls=AutoModelForCausalLM,
+        model_kwargs={
+            "trust_remote_code": True,
+            "low_cpu_mem_usage": True,
+            "torch_dtype": "auto",
+        },
     ).to(device)
     generation_config = getattr(model, "generation_config", None)
     if generation_config is not None:
@@ -300,6 +309,8 @@ def main() -> int:
     base_model = load_model(args.base_model, args.device)
     active_model = base_model
     if args.adapter is not None:
+        from peft import PeftModel
+
         print(json.dumps({"stage": "load_adapter_start", "adapter": str(args.adapter)}, ensure_ascii=False), flush=True)
         active_model = PeftModel.from_pretrained(base_model, str(args.adapter))
         active_model.eval()

@@ -1,14 +1,14 @@
 {
   "ok": true,
   "title": "焕新社区",
-  "url": "https://aihuanxin.cn/auth/realms/TechnicalMiddlePlatform/protocol/openid-connect/auth?client_id=kunlun-front&redirect_uri=https%3A%2F%2Faihuanxin.cn%2Fkunlun%2Fkl-web%3FpoolId%3D1%26projectId%3D3ed7854b946a47b1a49ad754baa76cd3%23%2Ftrain-dev&state=2a3ee756-8fe7-4ea0-83ac-79b69d064404&response_mode=fragment&response_type=code&scope=openid&nonce=63020666-fb07-42b0-8923-f1050e89c9a3",
+  "url": "https://aihuanxin.cn/auth/realms/TechnicalMiddlePlatform/protocol/openid-connect/auth?client_id=kunlun-front&redirect_uri=https%3A%2F%2Faihuanxin.cn%2Fkunlun%2Fkl-web%3FpoolId%3D1%26projectId%3D3ed7854b946a47b1a49ad754baa76cd3%23%2Ftrain-dev&state=becf4c14-b574-45eb-bf8f-3bed12758ae2&response_mode=fragment&response_type=code&scope=openid&nonce=8dda9737-9eab-4be6-8c91-0ab7f55c51d5",
   "state": "login_required",
   "bodyPreview": "焕新社区 短信登录 密码登录 获取验证码 下次自动登录 我已阅读并同意焕新社区 《服务协议及隐私政策》 登录 取消登录 没有账号？ 立即注册 ©2025 焕新社区 版权所有京ICP备05002571号-27",
   "attemptTrace": [
     {
       "attempt": 1,
       "title": "焕新社区",
-      "url": "https://aihuanxin.cn/auth/realms/TechnicalMiddlePlatform/protocol/openid-connect/auth?client_id=kunlun-front&redirect_uri=https%3A%2F%2Faihuanxin.cn%2Fkunlun%2Fkl-web%3FpoolId%3D1%26projectId%3D3ed7854b946a47b1a49ad754baa76cd3%23%2Ftrain-dev&state=2a3ee756-8fe7-4ea0-83ac-79b69d064404&response_mode=fragment&response_type=code&scope=openid&nonce=63020666-fb07-42b0-8923-f1050e89c9a3",
+      "url": "https://aihuanxin.cn/auth/realms/TechnicalMiddlePlatform/protocol/openid-connect/auth?client_id=kunlun-front&redirect_uri=https%3A%2F%2Faihuanxin.cn%2Fkunlun%2Fkl-web%3FpoolId%3D1%26projectId%3D3ed7854b946a47b1a49ad754baa76cd3%23%2Ftrain-dev&state=becf4c14-b574-45eb-bf8f-3bed12758ae2&response_mode=fragment&response_type=code&scope=openid&nonce=8dda9737-9eab-4be6-8c91-0ab7f55c51d5",
       "state": "login_required",
       "bodyPreview": "焕新社区 短信登录 密码登录 获取验证码 下次自动登录 我已阅读并同意焕新社区 《服务协议及隐私政策》 登录 取消登录 没有账号？ 立即注册 ©2025 焕新社区 版权所有京ICP备05002571号-27",
       "hasLikelyRemoteSurface": true
@@ -33,7 +33,7 @@
     },
     {
       "text": "立即注册",
-      "href": "/auth/realms/TechnicalMiddlePlatform/login-actions/registration?client_id=kunlun-front&tab_id=uoIKiTQr4LM&redirect_uri=https%3A%2F%2Faihuanxin.cn%2Fkunlun%2Fkl-web%3FpoolId%3D1%26projectId%3D3ed7854b946a47b1a49ad754baa76cd3%23%2Ftrain-dev"
+      "href": "/auth/realms/TechnicalMiddlePlatform/login-actions/registration?client_id=kunlun-front&tab_id=hg0eO9LD79Y&redirect_uri=https%3A%2F%2Faihuanxin.cn%2Fkunlun%2Fkl-web%3FpoolId%3D1%26projectId%3D3ed7854b946a47b1a49ad754baa76cd3%23%2Ftrain-dev"
     }
   ],
   "surfaceSummary": {
@@ -194,7 +194,7 @@
     ],
     "hasLikelyRemoteSurface": true
   },
-  "timestamp": "2026-04-04T09:05:39.484Z",
+  "timestamp": "2026-04-10T03:13:05.592Z",
   "usedPersistentProfile": true,
   "profileInfo": {
     "profileDir": "/Users/daxu/software/quantum-gpt/browser-automation/profile",

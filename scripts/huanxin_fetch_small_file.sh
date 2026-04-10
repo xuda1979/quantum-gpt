@@ -33,6 +33,35 @@ esac
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
+json_is_valid() {
+  python3 - <<'PY' "$1"
+import json
+import sys
+
+raw = sys.argv[1]
+try:
+    json.loads(raw)
+except Exception:
+    raise SystemExit(1)
+raise SystemExit(0)
+PY
+}
+
+run_shell_json() {
+  local remote_cmd="$1"
+  local json_out
+  json_out="$(
+    HUANXIN_USE_DAEMON=1 HUANXIN_WAIT_MS="$WAIT_MS" \
+      bash "$ROOT_DIR/scripts/huanxin_shell.sh" "$ENV_NAME" "$remote_cmd"
+  )"
+  if json_is_valid "$json_out"; then
+    printf '%s' "$json_out"
+    return 0
+  fi
+  HUANXIN_USE_DAEMON=0 HUANXIN_WAIT_MS="$WAIT_MS" \
+    bash "$ROOT_DIR/scripts/huanxin_shell.sh" "$ENV_NAME" "$remote_cmd"
+}
+
 REMOTE_CMD="$(python3 - <<'PY' "$REMOTE_PATH" "$MAX_BYTES"
 import shlex
 import sys
@@ -73,10 +102,7 @@ print(
 PY
 )"
 
-JSON_OUT="$(
-  HUANXIN_USE_DAEMON=1 HUANXIN_WAIT_MS="$WAIT_MS" \
-    "$ROOT_DIR/scripts/huanxin_shell.sh" "$ENV_NAME" "$REMOTE_CMD"
-)"
+JSON_OUT="$(run_shell_json "$REMOTE_CMD")"
 
 python3 - <<'PY' "$JSON_OUT" "$ENV_NAME" "$REMOTE_PATH" "$LOCAL_PATH" "$MAX_BYTES"
 import base64

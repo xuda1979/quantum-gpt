@@ -13,12 +13,26 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import platform
 import sys
 import urllib.error
 import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
+
+
+DEFAULT_HF_ENDPOINT = "https://huggingface.co"
+
+
+def normalize_hf_endpoint(endpoint: str | None) -> str:
+    value = (endpoint or os.environ.get("HF_ENDPOINT") or DEFAULT_HF_ENDPOINT).strip()
+    return value.rstrip("/")
+
+
+def resolve_model_info_url(model_id: str, endpoint: str | None = None) -> str:
+    encoded = urllib.parse.quote(model_id, safe="/")
+    return f"{normalize_hf_endpoint(endpoint)}/api/models/{encoded}"
 
 
 def parse_args() -> argparse.Namespace:
@@ -39,12 +53,15 @@ def parse_args() -> argparse.Namespace:
         default=20.0,
         help="HTTP timeout for the Hugging Face model metadata request",
     )
+    parser.add_argument(
+        "--hf-endpoint",
+        help="Optional Hugging Face-compatible endpoint, for example https://hf-mirror.com",
+    )
     return parser.parse_args()
 
 
-def fetch_model_info(model_id: str, timeout_seconds: float) -> dict:
-    encoded = urllib.parse.quote(model_id, safe="/")
-    url = f"https://huggingface.co/api/models/{encoded}"
+def fetch_model_info(model_id: str, timeout_seconds: float, endpoint: str | None = None) -> dict:
+    url = resolve_model_info_url(model_id, endpoint)
     request = urllib.request.Request(
         url,
         headers={
@@ -85,11 +102,12 @@ def main() -> int:
         "python": platform.python_version(),
         "platform": platform.platform(),
         "model_id": args.model_id,
+        "hf_endpoint": normalize_hf_endpoint(args.hf_endpoint),
         "status": "error",
     }
 
     try:
-        info = fetch_model_info(args.model_id, args.timeout_seconds)
+        info = fetch_model_info(args.model_id, args.timeout_seconds, args.hf_endpoint)
     except urllib.error.HTTPError as exc:
         summary.update(
             {

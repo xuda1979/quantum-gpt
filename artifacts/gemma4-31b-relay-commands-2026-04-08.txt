@@ -1,0 +1,30 @@
+# Gemma 4 31B Relay Command Sheet
+# Date: 2026-04-08
+# Use this path when direct ai2 download is blocked by remote public DNS resolution.
+
+local_snapshot_verify:
+python3 training/verify_qwen_snapshot.py models/gemma-4-31B-it --expected-substring gemma-4-31B-it --expected-family-substring gemma
+
+incremental_relay_to_s3_dry_run:
+bash scripts/relay_model_snapshot_to_s3.sh gemma-4-31B-it --dry-run
+
+incremental_relay_to_s3:
+bash scripts/relay_model_snapshot_to_s3.sh gemma-4-31B-it
+
+one_shot_model_push_dry_run:
+bash scripts/push_to_s3.sh --dry-run models/gemma-4-31B-it
+
+one_shot_model_push:
+bash scripts/push_to_s3.sh models/gemma-4-31B-it
+
+remote_model_sync_dry_run:
+bash scripts/ai2_sync_model_from_s3.sh gemma-4-31B-it --dry-run
+
+remote_model_sync:
+HUANXIN_WAIT_MS=43200000 bash scripts/ai2_sync_model_from_s3.sh gemma-4-31B-it
+
+remote_model_verify:
+bash scripts/ai2_shell.sh "cd /root/root/work/quantum-gpt && du -sh models/gemma-4-31B-it && python3 training/verify_qwen_snapshot.py models/gemma-4-31B-it --expected-substring gemma-4-31B-it --expected-family-substring gemma"
+
+remote_smoke_after_sync:
+bash scripts/ai2_shell.sh "cd /root/root/work/quantum-gpt && python3 training/huanxin_cpu_smoke.py --model-name models/gemma-4-31B-it --dataset data/seed/splits-auto-seed/train.jsonl --max-samples 1"

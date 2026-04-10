@@ -16,13 +16,14 @@ from pathlib import Path
 
 import torch
 from peft import PeftModel
-from transformers import AutoModelForCausalLM, AutoProcessor, AutoTokenizer, PreTrainedTokenizerFast
+from transformers import AutoConfig, AutoModelForCausalLM, AutoProcessor, AutoTokenizer, PreTrainedTokenizerFast
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
-from training.qwen_sft_peft import TextPreprocessorBackend, load_text_preprocessor_backend
+from training.model_backend import ensure_text_backend_preflight, load_causal_lm_with_text_backend_preflight
+from training.text_preprocessor_backend import TextPreprocessorBackend, load_text_preprocessor_backend
 
 
 def parse_args() -> argparse.Namespace:
@@ -58,9 +59,19 @@ def load_causal_lm(model_path: Path, device: str, offload_dir: Path):
         offload_dir.mkdir(parents=True, exist_ok=True)
         model_kwargs["device_map"] = "auto"
         model_kwargs["offload_folder"] = str(offload_dir)
-        model = AutoModelForCausalLM.from_pretrained(str(model_path), **model_kwargs)
+        model = load_causal_lm_with_text_backend_preflight(
+            str(model_path),
+            auto_config_cls=AutoConfig,
+            auto_model_for_causal_lm_cls=AutoModelForCausalLM,
+            model_kwargs=model_kwargs,
+        )
     else:
-        model = AutoModelForCausalLM.from_pretrained(str(model_path), **model_kwargs).to(device)
+        model = load_causal_lm_with_text_backend_preflight(
+            str(model_path),
+            auto_config_cls=AutoConfig,
+            auto_model_for_causal_lm_cls=AutoModelForCausalLM,
+            model_kwargs=model_kwargs,
+        ).to(device)
     generation_config = getattr(model, "generation_config", None)
     if generation_config is not None:
         # Keep deterministic runs quiet by neutralizing stale sampling defaults.
@@ -73,6 +84,7 @@ def load_causal_lm(model_path: Path, device: str, offload_dir: Path):
 
 
 def load_text_backend(model_path: Path) -> TextPreprocessorBackend:
+    ensure_text_backend_preflight(str(model_path), AutoConfig)
     return load_text_preprocessor_backend(str(model_path), AutoTokenizer, AutoProcessor, PreTrainedTokenizerFast)
 
 

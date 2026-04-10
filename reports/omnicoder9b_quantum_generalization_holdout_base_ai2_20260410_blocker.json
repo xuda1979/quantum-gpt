@@ -1,0 +1,206 @@
+{
+  "status": "blocked",
+  "target": "omnicoder9b_strict_quantum_holdout_base_ai2",
+  "protocol_match_reference_runs": {
+    "qwen_clean_baseline_manifest": "evals/runs/qwen25-quantum-generalization-holdout-clean-local/manifest.json",
+    "omnicoder_adapter_manifest": "evals/runs/omnicoder-quantum-generalization-holdout-8npu-fastiter-eval-20260409T122347Z/manifest.json",
+    "shared_prompt_version": "v2",
+    "shared_prompt_style": "repair_focused",
+    "shared_include_reference_candidate": false,
+    "shared_token_budget_preset": "quantum_heavy",
+    "shared_override_task_ids": [
+      "quantum_gate_alias_normalization",
+      "quantum_phase_estimation_circuit",
+      "quantum_qaoa_maxcut",
+      "quantum_superdense_coding"
+    ]
+  },
+  "initial_snapshot_missing_attempt": {
+    "attempted_at_utc": "2026-04-10T02:25:48.602208+00:00",
+    "attempt_job_id": "omnicoder-quantum-holdout-base-ai2-20260410-20260410T022544Z",
+    "attempt_meta_file": ".huanxin_jobs/omnicoder-quantum-holdout-base-ai2-20260410-20260410T022544Z.json",
+    "attempt_transport": "daemon",
+    "attempt_status": "exited",
+    "attempt_status_source": "status_markers",
+    "run_dir": "evals/runs/omnicoder-quantum-generalization-holdout-base-ai2-20260410",
+    "remote_failure": {
+      "stage": "model_snapshot_availability",
+      "summary": "The first ai2 base eval exited before generation because models/OmniCoder-9B on ai2 was not yet restored as a complete Hugging Face snapshot.",
+      "log_tail_excerpt": [
+        "Unable to load a text preprocessing backend.",
+        "AutoTokenizer load failed: OSError: We couldn't connect to 'https://huggingface.co' to load this file, couldn't find it in the cached files and it looks like models/OmniCoder-9B is not the path to a directory containing a file named config.json.",
+        "AutoProcessor fallback also failed with the same models/OmniCoder-9B snapshot error."
+      ]
+    }
+  },
+  "local_snapshot_probe_before_restore": {
+    "path": "models/OmniCoder-9B",
+    "total_size_bytes": 20074654,
+    "top_level_files": [
+      ".gitattributes",
+      "README.md",
+      "chat_template.jinja",
+      "config.json",
+      "generation_config.json",
+      "omnicoder-banner.png",
+      "preprocessor_config.json",
+      "processor_config.json",
+      "tokenizer.json",
+      "tokenizer_config.json"
+    ],
+    "has_weight_file": false
+  },
+  "s3_probe_before_restore": {
+    "command": "bash scripts/model_snapshot_s3_ready.sh OmniCoder-9B",
+    "status": "ready"
+  },
+  "transport_issues_while_restoring": [
+    {
+      "command": "bash scripts/ai2_sync_model_from_s3.sh OmniCoder-9B",
+      "result": "transport_failed",
+      "detail": "Detected stale Huanxin shell output: expected run marker was not observed."
+    },
+    {
+      "command": "bash scripts/ai2_shell.sh \"cd /root/root/work/quantum-gpt && rclone sync ... models/OmniCoder-9B.__incoming ...\"",
+      "result": "transport_failed",
+      "detail": "Huanxin daemon for ai2 is not available."
+    }
+  ],
+  "ai2_snapshot_probe_after_restore": {
+    "attempted_via": "direct daemon /exec",
+    "attempted_at_utc": "2026-04-10T03:41:00.111Z",
+    "path": "/root/root/work/quantum-gpt/models/OmniCoder-9B",
+    "weight_file_present": true,
+    "config_present": true,
+    "dir_size_human": "18G",
+    "terminal_excerpt": [
+      "__MODEL_WEIGHT__:YES",
+      "__MODEL_CONFIG__:YES",
+      "18G     models/OmniCoder-9B"
+    ]
+  },
+  "direct_base_eval_attempt_after_restore": {
+    "attempted_at_utc": "2026-04-10T03:27:47.942Z",
+    "transport": "direct daemon /exec",
+    "pid": 5302,
+    "run_dir": "evals/runs/omnicoder-quantum-generalization-holdout-base-ai2-20260410T0326Z",
+    "log_path": "/tmp/omnicoder_base_quantum_holdout_eval_direct_20260410T0326Z.log",
+    "status": "exited",
+    "remote_failure": {
+      "stage": "runtime_compat",
+      "summary": "The restored base model still cannot be evaluated on ai2 because the active runtime is too old to recognize qwen3_5.",
+      "log_tail_excerpt": [
+        "Transformers runtime is too old for 'models/OmniCoder-9B' (model_type='qwen3_5', architectures=['Qwen3_5ForConditionalGeneration']).",
+        "Checkpoint metadata advertises transformers_version=5.3.0.dev0.",
+        "The checkpoint you are trying to load has model type `qwen3_5` but Transformers does not recognize this architecture."
+      ]
+    }
+  },
+  "ai2_runtime_probe": {
+    "attempted_at_utc": "2026-04-10T03:30:06.988Z",
+    "python_executable": "/usr/bin/python3",
+    "transformers_version": "4.44.0",
+    "terminal_excerpt": [
+      "4.44.0",
+      "/usr/bin/python3",
+      "__RUNTIME_PROBE__"
+    ]
+  },
+  "ai2_cached_runtime_probe": {
+    "attempted_at_utc": "2026-04-10T03:41:00.111Z",
+    "result": "no_cached_transformers_source_or_wheel_found_under_root_maxdepth4"
+  },
+  "ai2_alt_runtime_probe": {
+    "attempted_at_utc": "2026-04-10T04:21:00.909Z",
+    "python_executable": "/root/ms_venv/bin/python3",
+    "transformers_version": "4.44.0",
+    "huggingface_hub_version": "0.25.1",
+    "transformers_path": "/usr/local/lib/python3.11/site-packages/transformers/__init__.py",
+    "result": "not_a_hidden_qwen35_capable_env"
+  },
+  "ai2_alt_inference_backend_probe": {
+    "attempted_at_utc": "2026-04-10T04:31:24.348Z",
+    "detected_modules": {
+      "vllm": false,
+      "sglang": false,
+      "lmdeploy": false,
+      "modelscope": false,
+      "swift": false,
+      "transformers": true
+    },
+    "result": "no_alternative_installed_qwen35_backend_found"
+  },
+  "checkpoint_text_structure_probe": {
+    "attempted_at_utc": "2026-04-10T04:31:24.348Z",
+    "terminal_excerpt": [
+      "lm_head.weight",
+      "model.language_model.embed_tokens.weight",
+      "model.language_model.layers.0.linear_attn.A_log",
+      "model.language_model.layers.0.linear_attn.conv1d.weight",
+      "model.language_model.layers.0.linear_attn.in_proj_a.weight",
+      "model.language_model.layers.0.linear_attn.in_proj_b.weight",
+      "model.language_model.layers.0.linear_attn.in_proj_qkv.weight",
+      "model.language_model.layers.0.linear_attn.in_proj_z.weight",
+      "model.language_model.layers.0.linear_attn.norm.weight",
+      "model.language_model.layers.0.linear_attn.out_proj.weight"
+    ],
+    "implication": "The restored checkpoint exposes a text backbone under model.language_model.* with split linear-attention projections, so the remaining recovery path can target a text-only qwen3_5-compatible loader instead of another model transfer."
+  },
+  "local_qwen35_fallback_scaffold": {
+    "implemented_files": [
+      "training/omnicoder_qwen35_fallback.py",
+      "tests/test_omnicoder_qwen35_fallback.py"
+    ],
+    "verified_locally": [
+      "python3 -m pytest -q tests/test_omnicoder_qwen35_fallback.py",
+      "PYTHONPYCACHEPREFIX=/tmp/pycache python3 -m py_compile training/omnicoder_qwen35_fallback.py"
+    ],
+    "summary": "The repo now contains tested config/state-dict conversion helpers for the closest qwen3_next-compatible fallback path."
+  },
+  "local_runtime_overlay_probe": {
+    "artifact": "reports/omnicoder9b_qwen35_runtime_overlay_local_probe_20260410.json",
+    "script": "training/qwen35_runtime_overlay_probe.py",
+    "runtime_src": "artifacts/runtime-bundles/omnicoder-qwen35-runtime-c585eea/transformers-src/src",
+    "verified_fields": {
+      "runtime_config_class": "Qwen3_5Config",
+      "model_type": "qwen3_5",
+      "text_preprocessor_backend_kind": "tokenizer",
+      "text_backend_class": "TokenizersBackend"
+    },
+    "summary": "A repo-local source overlay plus lightweight compatibility shims now reproduces qwen3_5 config resolution and text-backend tokenizer loading without downloading new packages.",
+    "scope_note": "This local probe validates the runtime overlay path for config and tokenizer/backend loading only. It does not replace the missing ai2 base benchmark because the local snapshot still lacks model weights."
+  },
+  "local_runtime_overlay_smoke": {
+    "artifact": "reports/omnicoder9b_qwen35_runtime_overlay_local_smoke_20260410.json",
+    "summary": "A Python 3.11 local smoke run now proves the repo-local overlay path beyond config/tokenizer discovery: import stack, qwen3_5 config resolution, tokenizer backend loading, and text-batch preflight all succeed without downloading packages."
+  },
+  "ai2_bundle_overlay_probe": {
+    "workspace": "/root/root/work/quantum-gpt",
+    "python_version": "3.11.6",
+    "bundle_paths_present": {
+      "overlay_site_packages": true,
+      "huggingface_hub_overlay": true,
+      "qwen35_transformers_src": true
+    },
+    "summary": "Fresh ai2 checks confirm the repo-local runtime bundle is present on the remote workspace, so the blocker is no longer asset discovery or transfer."
+  },
+  "ai2_overlay_runtime_attempts": {
+    "without_overlay_site_packages": {
+      "command_shape": "QUANTUM_TRANSFORMERS_RUNTIME_SRC=... QUANTUM_HF_HUB_COMPAT_VERSION=1.8.0 QUANTUM_RUNTIME_HTTPX_STUB=0 python3 training/huanxin_cpu_smoke.py ...",
+      "error_type": "ImportError",
+      "error": "cannot import name 'strict' from 'huggingface_hub.dataclasses' (unknown location)"
+    },
+    "with_overlay_site_packages": {
+      "command_shape": "PYTHONPATH=.../overlay-site-packages:.../transformers-src/src python3 training/huanxin_cpu_smoke.py ...",
+      "error_type": "ImportError",
+      "error": "cannot import name 'HybridCache' from 'transformers' (.../transformers/__init__.py)"
+    },
+    "base_only_runner_probe": {
+      "command_shape": "PYTHONPATH=.../overlay-site-packages:.../transformers-src/src with a base-only fake-peft wrapper around scripts/run_hf_pass1_eval.py",
+      "error_type": "Exception",
+      "error": "data did not match any variant of untagged enum ModelWrapper at line 1238743 column 3",
+      "stage": "tokenizer_json_parse"
+    }
+  },
+  "current_blocker": "A fair OmniCoder-9B base strict holdout comparison is still missing. The old 4.44.0 qwen3_5-recognition blocker has been narrowed materially: ai2 now has the repo-local qwen3_5 runtime bundle, and remote probes can move past missing-model-type errors. The remaining blocker is dependency skew inside the bundle path itself. Without bundled overlay-site-packages, ai2 fails on huggingface_hub.dataclasses.strict; with bundled overlay-site-packages, peft expects transformers.HybridCache; and after bypassing peft for a base-only runner, the remote tokenizers stack still cannot parse OmniCoder's tokenizer.json (ModelWrapper schema mismatch). The next required step is a Linux/aarch64-compatible runtime bundle that is internally consistent across transformers + huggingface_hub + tokenizers for OmniCoder, or a dedicated base-only eval entrypoint that also avoids the current tokenizer-json incompatibility."
+}
