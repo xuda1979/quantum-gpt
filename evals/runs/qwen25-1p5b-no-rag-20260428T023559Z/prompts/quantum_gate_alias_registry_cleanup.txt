@@ -1,0 +1,110 @@
+Task ID: quantum_gate_alias_registry_cleanup
+Task name: Gate alias registry cleanup
+Domain: quantum
+Category: api_normalization
+
+Write the simplest Python file that satisfies the supplied tests and return only that file.
+
+Reference candidate style example (for format guidance, not for blind copying):
+--- BEGIN REFERENCE CANDIDATE ---
+from typing import Dict, List, Optional
+
+
+_RAW_ALIAS_ENTRIES: Dict[str, str] = {
+    "h": "H",
+    "hadamard": "H",
+    "h_gate": "H",
+    "cnot": "CX",
+    "cx": "CX",
+    "controlled-x": "CX",
+    "x": "X",
+    "pauli_x": "X",
+    "paulix": "X",
+    "y": "Y",
+    "pauli_y": "Y",
+    "z": "Z",
+    "pauli_z": "Z",
+    "swap": "SWAP",
+    "swap_gate": "SWAP",
+}
+
+
+def _normalize_alias(alias: str) -> str:
+    return alias.strip().lower().replace(" ", "").replace("-", "").replace("_", "")
+
+
+_BASE_REGISTRY: Dict[str, str] = {
+    _normalize_alias(alias): canonical for alias, canonical in _RAW_ALIAS_ENTRIES.items()
+}
+
+
+def _lookup_canonical(alias: str, registry: dict[str, str]) -> str:
+    normalized = _normalize_alias(alias)
+    canonical = registry.get(normalized)
+    if canonical is None:
+        raise ValueError(f"unknown gate alias: {alias!r}")
+    return canonical
+
+
+def normalize_gate_sequence(
+    gates: List[str], *, alias_registry: Optional[Dict[str, str]] = None
+) -> List[str]:
+    """
+    Return the canonical gate names for a sequence of aliases.
+
+    Raises ValueError when an alias cannot be resolved.
+    """
+    registry = alias_registry or _BASE_REGISTRY
+    return [_lookup_canonical(gate, registry) for gate in gates]
+
+
+def canonical_registry() -> dict[str, str]:
+    """Expose a copy of the default alias registry for inspection."""
+    return dict(_BASE_REGISTRY)
+
+--- END REFERENCE CANDIDATE ---
+
+Tests the candidate must satisfy:
+--- BEGIN TESTS ---
+import importlib.util
+from types import ModuleType
+
+
+def _load(candidate_path: str) -> ModuleType:
+    spec = importlib.util.spec_from_file_location("candidate", candidate_path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
+def run_tests(candidate_path: str) -> dict:
+    module = _load(candidate_path)
+    failures = []
+
+    try:
+        normalized = module.normalize_gate_sequence(["  h", "Pauli_X", "controlled-X"])
+        if normalized != ["H", "X", "CX"]:
+            failures.append(f"normalized = {normalized}, expected ['H','X','CX']")
+    except Exception as exc:  # pragma: no cover - diagnostic
+        failures.append(f"normalize gate sequence raised {type(exc).__name__}: {exc}")
+
+    custom_registry = {"zz": "Z", "zzz": "Z"}
+    try:
+        normalized_custom = module.normalize_gate_sequence(
+            ["ZZ"], alias_registry={**module.canonical_registry(), "zz": "Z", "zzz": "Z"}
+        )
+        if normalized_custom != ["Z"]:
+            failures.append("custom registry did not resolve 'ZZ'")
+    except ValueError as exc:
+        failures.append(f"custom registry raised ValueError: {exc}")
+
+    try:
+        module.normalize_gate_sequence(["unknown"])
+        failures.append("unknown alias did not raise ValueError")
+    except ValueError:
+        pass
+
+    return {"passed": not failures, "details": failures or ["gate alias registry cleanup looks good"]}
+
+--- END TESTS ---
