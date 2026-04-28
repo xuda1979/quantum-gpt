@@ -1,0 +1,38 @@
+{
+  "kind": "rag_ab_comparison",
+  "generated_at_utc": "2026-04-28T02:36:59.841970+00:00",
+  "claim": "Qwen2.5-1.5B base model with docs-only RAG beats the same base model without RAG on the gate-alias cleanup task.",
+  "model_path": "/Users/daxu/.openclaw/workspace-quantum-rnd/models/Qwen2.5-1.5B-Instruct",
+  "task_ids": [
+    "quantum_gate_alias_registry_cleanup"
+  ],
+  "prompt_variant": "full",
+  "rag_profile": "quantum_docs",
+  "rag_index": "artifacts/quantum-rag/quantum-docs-only-index.pkl.gz",
+  "no_rag_report": "reports/qwen25_rag_compare_gate_alias_noragonly_full_20260428.json",
+  "with_rag_report": "reports/qwen25_rag_compare_gate_alias_ragonly_full_docs_20260428.json",
+  "no_rag": {
+    "passed": 0,
+    "total": 1,
+    "pass_rate": 0.0,
+    "run_dir": "evals/runs/qwen25-1p5b-no-rag-20260428T023559Z",
+    "failed_task_ids": [
+      "quantum_gate_alias_registry_cleanup"
+    ]
+  },
+  "with_rag": {
+    "passed": 1,
+    "total": 1,
+    "pass_rate": 1.0,
+    "run_dir": "evals/runs/qwen25-1p5b-with-rag-20260428T023455Z",
+    "failed_task_ids": []
+  },
+  "delta": {
+    "passes": 1,
+    "pass_rate": 1.0,
+    "rag_helped_ids": [
+      "quantum_gate_alias_registry_cleanup"
+    ]
+  },
+  "interpretation": "The no-RAG generation copied the reference-candidate delimiter and failed with SyntaxError; docs-only RAG retrieved the gate alias normalization reference and produced a passing module-level implementation."
+}

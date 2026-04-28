@@ -1,0 +1,11 @@
+{
+  "output": "artifacts/quantum-rag/quantum-docs-only-index.pkl.gz",
+  "profile": "quantum_docs",
+  "roots": [
+    "/Users/daxu/software/quantum-gpt/docs/quantum_libraries"
+  ],
+  "chunk_count": 51,
+  "source_count": 27,
+  "vectorizer_features": 7017,
+  "dense_dimensions": 7017
+}

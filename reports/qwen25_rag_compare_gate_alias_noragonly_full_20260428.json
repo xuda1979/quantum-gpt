@@ -1,0 +1,63 @@
+{
+  "generated_at_utc": "2026-04-28T02:36:23.374378+00:00",
+  "model_path": "/Users/daxu/.openclaw/workspace-quantum-rnd/models/Qwen2.5-1.5B-Instruct",
+  "index_path": "/Users/daxu/software/quantum-gpt/artifacts/quantum-rag/quantum-docs-only-index.pkl.gz",
+  "device": "mps",
+  "task_count": 1,
+  "max_new_tokens": 384,
+  "temperature": 0.0,
+  "rag": {
+    "top_k": 3,
+    "alpha": 0.55,
+    "max_doc_chars": 1200
+  },
+  "prompt_variant": "full",
+  "requested_task_ids": [
+    "quantum_gate_alias_registry_cleanup"
+  ],
+  "summaries": {
+    "no_rag": {
+      "total": 1,
+      "passed": 0,
+      "pass_rate": 0.0,
+      "by_category": {
+        "api_normalization": {
+          "pass_rate": 0.0,
+          "pass": 0,
+          "total": 1
+        }
+      },
+      "per_task": {
+        "quantum_gate_alias_registry_cleanup": false
+      },
+      "failures": [
+        {
+          "id": "quantum_gate_alias_registry_cleanup",
+          "details": [
+            "runner_exception: SyntaxError: invalid syntax (quantum_gate_alias_registry_cleanup.py, line 1)",
+            "traceback:",
+            "Traceback (most recent call last):",
+            "  File \"/Users/daxu/software/quantum-gpt/evals/runner/run_eval.py\", line 171, in run_task",
+            "    result = run_single_file_task(module, only_candidate_path)",
+            "  File \"/Users/daxu/software/quantum-gpt/evals/runner/run_eval.py\", line 125, in run_single_file_task",
+            "    return module.run_tests(str(candidate_path))",
+            "  File \"/Users/daxu/software/quantum-gpt/evals/tasks/quantum/gate_alias_registry_cleanup/tests.py\", line 14, in run_tests",
+            "    module = _load(candidate_path)",
+            "  File \"/Users/daxu/software/quantum-gpt/evals/tasks/quantum/gate_alias_registry_cleanup/tests.py\", line 9, in _load",
+            "    spec.loader.exec_module(module)",
+            "  File \"<frozen importlib._bootstrap_external>\", line 846, in exec_module",
+            "  File \"<frozen importlib._bootstrap_external>\", line 983, in get_code",
+            "  File \"<frozen importlib._bootstrap_external>\", line 913, in source_to_code",
+            "  File \"<frozen importlib._bootstrap>\", line 228, in _call_with_frames_removed",
+            "  File \"/Users/daxu/software/quantum-gpt/evals/runs/qwen25-1p5b-no-rag-20260428T023559Z/candidates/quantum_gate_alias_registry_cleanup.py\", line 1",
+            "    --- BEGIN REFERENCE CANDIDATE ---",
+            "              ^",
+            "SyntaxError: invalid syntax"
+          ]
+        }
+      ],
+      "run_dir": "evals/runs/qwen25-1p5b-no-rag-20260428T023559Z",
+      "generation_wall_seconds": 23.34
+    }
+  }
+}
