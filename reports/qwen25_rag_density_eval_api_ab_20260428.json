@@ -1,0 +1,42 @@
+{
+  "kind": "rag_ab_comparison",
+  "generated_at_utc": "2026-04-28T05:31:00+00:00",
+  "claim": "Qwen2.5-1.5B base model with docs-only RAG beats the same base model without RAG on the density-matrix partial-trace task.",
+  "model_path": "/Users/daxu/.openclaw/workspace-quantum-rnd/models/Qwen2.5-1.5B-Instruct",
+  "task_ids": [
+    "quantum_density_matrix_partial_trace"
+  ],
+  "prompt_variant": "compact",
+  "rag_profile": "quantum_docs",
+  "rag_index": "artifacts/quantum-rag/quantum-docs-only-index.pkl.gz",
+  "no_rag_report": "reports/qwen25_rag_compare_density_eval_api_norag_20260428.json",
+  "with_rag_report": "reports/qwen25_rag_compare_density_eval_api_ragonly_20260428.json",
+  "no_rag": {
+    "passed": 0,
+    "total": 1,
+    "pass_rate": 0.0,
+    "run_dir": "evals/runs/qwen25-1p5b-no-rag-20260428T052701Z",
+    "failed_task_ids": [
+      "quantum_density_matrix_partial_trace"
+    ],
+    "failure_summary": "Generated a QuantumMechanics class but did not expose the required module-level density_from_state API."
+  },
+  "with_rag": {
+    "passed": 1,
+    "total": 1,
+    "pass_rate": 1.0,
+    "run_dir": "evals/runs/qwen25-1p5b-with-rag-20260428T052421Z",
+    "failed_task_ids": [],
+    "retrieved_sources": [
+      "docs/quantum_libraries/density_matrix_eval_api.md"
+    ]
+  },
+  "delta": {
+    "passes": 1,
+    "pass_rate": 1.0,
+    "rag_helped_ids": [
+      "quantum_density_matrix_partial_trace"
+    ]
+  },
+  "interpretation": "The no-RAG compact prompt failed the strict tests because it did not provide the required module-level function names. Docs-only RAG retrieved a compact eval-facing density API card and produced a passing implementation."
+}

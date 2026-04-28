@@ -1,0 +1,38 @@
+{
+  "generated_at_utc": "2026-04-28T05:25:40.931301+00:00",
+  "model_path": "/Users/daxu/.openclaw/workspace-quantum-rnd/models/Qwen2.5-1.5B-Instruct",
+  "index_path": "/Users/daxu/software/quantum-gpt/artifacts/quantum-rag/quantum-docs-only-index.pkl.gz",
+  "device": "cpu",
+  "task_count": 1,
+  "max_new_tokens": 512,
+  "temperature": 0.0,
+  "rag": {
+    "top_k": 1,
+    "alpha": 0.55,
+    "max_doc_chars": 1800
+  },
+  "prompt_variant": "compact",
+  "requested_task_ids": [
+    "quantum_density_matrix_partial_trace"
+  ],
+  "summaries": {
+    "with_rag": {
+      "total": 1,
+      "passed": 1,
+      "pass_rate": 1.0,
+      "by_category": {
+        "algorithm_implementation": {
+          "pass_rate": 1.0,
+          "pass": 1,
+          "total": 1
+        }
+      },
+      "per_task": {
+        "quantum_density_matrix_partial_trace": true
+      },
+      "failures": [],
+      "run_dir": "evals/runs/qwen25-1p5b-with-rag-20260428T052421Z",
+      "generation_wall_seconds": 79.61
+    }
+  }
+}
