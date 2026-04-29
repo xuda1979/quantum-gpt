@@ -39,7 +39,7 @@
     "train-dev",
     "transformers"
   ],
-  "manual_extract_rule": "30-page reference-style Word manual; cover, catalog, headings, natural paragraphs, tables, three design diagrams, two software screenshots, header page numbers, final end",
+  "manual_extract_rule": "30-page reference-style Word manual; cover, continuous two-page catalog, headings, natural paragraphs, tables, three design diagrams, two software screenshots, and header page numbers",
   "manual_diagrams": [
     "software architecture diagram",
     "training and evaluation flowchart",
