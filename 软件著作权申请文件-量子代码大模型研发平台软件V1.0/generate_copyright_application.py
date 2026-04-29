@@ -129,6 +129,7 @@ def set_cell_text(cell, text: str, font_name="宋体", font_size=Pt(9)) -> None:
     run.font.name = font_name
     run._element.rPr.rFonts.set(qn("w:eastAsia"), font_name)
     run.font.size = font_size
+    run.font.color.rgb = RGBColor(0, 0, 0)
 
 
 def set_para_text(paragraph, text: str, font_name="宋体", font_size=Pt(10.5), bold=False) -> None:
@@ -225,11 +226,50 @@ def collect_source() -> SourceInventory:
 def build_application_form(inventory: SourceInventory) -> Path:
     doc = Document(APP_TEMPLATE)
     table = doc.tables[0]
+    label_values = {
+        (1, 0): "软件名称：",
+        (2, 0): "软件版本号：",
+        (3, 0): "软件简称：",
+        (4, 0): "核查项：",
+        (6, 0): "软件分类：只有这4项，4选一：应用软件、嵌入式软件、中间件、操作系统",
+        (7, 0): "硬件环境：",
+        (7, 1): "开发的硬件环境：",
+        (8, 0): "硬件环境：",
+        (8, 1): "运行的硬件环境：",
+        (9, 0): "软件环境：",
+        (9, 1): "开发该软件的操作系统：",
+        (10, 0): "软件环境：",
+        (10, 1): "软件开发环境 / 开发工具：",
+        (11, 0): "软件环境：",
+        (11, 1): "该软件的运行平台 / 操作系统：",
+        (12, 0): "软件环境：",
+        (12, 1): "软件运行支撑环境 / 支持软件：",
+        (13, 0): "源程序量：",
+        (14, 0): "编程语言：",
+        (15, 0): "开发方式：",
+        (16, 0): "软件说明：",
+        (17, 0): "权利范围：",
+        (18, 0): "功能特点：",
+        (18, 1): "开发目的：",
+        (19, 0): "功能特点：",
+        (19, 1): "面向领域 / 行业：",
+        (20, 0): "功能特点：",
+        (20, 1): "软件的主要功能：",
+        (21, 0): "功能特点：",
+        (21, 1): "软件的技术特点：",
+        (22, 0): "新增功能说明：",
+        (23, 0): "开发完成日期：",
+        (24, 0): "发表状态：",
+        (25, 0): "首次发表日期：",
+        (26, 0): "首次发表地点：",
+    }
+    for (row_idx, col_idx), value in label_values.items():
+        set_cell_text(table.rows[row_idx].cells[col_idx], value)
     values = {
         1: f"{SOFTWARE_NAME}",
         2: VERSION,
         3: SHORT_NAME,
-        4: "核查项（必填）：软件作品对应技术方案无需申请专利；不涉及保密内容；不涉及开源软件改进；不按独立模块登记；本申请保护范围为自研业务代码。",
+        4: "核查项：软件作品对应技术方案无需申请专利；不涉及保密内容；不涉及开源软件改进；不按独立模块登记；本申请保护范围为自研业务代码。",
         6: "应用软件",
         7: "通用PC机、笔记本电脑及训练服务器。",
         8: "通用PC机、服务器及训练加速设备。",
@@ -251,9 +291,9 @@ def build_application_form(inventory: SourceInventory) -> Path:
         24: PUBLICATION_STATUS,
         25: "",
         26: "",
-        27: f"著作权人/作者：{'、'.join(RIGHTHOLDERS)}",
-        28: f"联系人：{CONTACT_NAME}；电话：{CONTACT_PHONE}",
-        29: f"联系地址：{CONTACT_ADDRESS}",
+        27: "",
+        28: "",
+        29: "",
     }
     for row_idx, value in values.items():
         set_cell_text(table.rows[row_idx].cells[2], value)
@@ -776,6 +816,7 @@ def build_readme(inventory: SourceInventory, generated: list[Path]) -> Path:
 - 联系人：{CONTACT_NAME}
 - 联系电话：{CONTACT_PHONE}
 - 联系地址：{CONTACT_ADDRESS}
+- 申请表末尾三行：按正式附件清理要求保持空白；上述联系人信息仅作为系统录入参考
 - 发表状态：{PUBLICATION_STATUS}
 - 开发完成日期：{COMPLETION_DATE}
 - 源程序量：{inventory.line_count}行
@@ -793,6 +834,7 @@ def build_readme(inventory: SourceInventory, generated: list[Path]) -> Path:
 - 源程序文档：60页组织，每页60行源程序正文，第0001至3599行带四位可见行号，末页末行为单独的 `end` 结束标志。
 - 说明文档：按参考说明书风格组织为30页，含封面、连续两页目录、一级/二级标题、自然段正文、表格、结构图、流程图、逻辑框图和软件运行界面插图；不足60页按全部提交口径处理，页眉右侧为 `{HEADER}` 和页码。
 - 申请表、源程序、说明文档的软件名称和版本号已统一为 `{SOFTWARE_NAME}{VERSION}`。
+- 申请表正式DOCX已清理模板红色提示和括号说明，标签文字为黑色，末尾三行为空白。
 - 模板包内包含2个PDF参考文件：软件著作权登记知识产权管理系统操作手册V1.0、软件著作权登记指南V6.0；正式填写附件仍为DOCX。
 - 已使用 LibreOffice 将3个正式DOCX附件转为PDF，并用 PyMuPDF 渲染关键页检查版式；申请表为2页，源程序为60页，说明文档为30页参考风格整本提交。
 
@@ -823,6 +865,7 @@ def build_manifest(inventory: SourceInventory, generated: list[Path]) -> Path:
             "address": CONTACT_ADDRESS,
         },
         "publication_status": PUBLICATION_STATUS,
+        "application_form_rule": "formal application DOCX labels are black, template red hints/bracket notes are removed, and the last three rows are blank; contact details are retained only as system-entry reference notes",
         "completion_date": COMPLETION_DATE,
         "generated_at": date.today().isoformat(),
         "source_line_count": inventory.line_count,
@@ -874,6 +917,8 @@ def build_system_filing_notes() -> Path:
 - 联系人：{CONTACT_NAME}
 - 联系电话：{CONTACT_PHONE}
 - 联系地址：{CONTACT_ADDRESS}
+
+上述主体和联系信息用于系统录入时参考；正式申请表DOCX的末尾三行按本次清理要求保持空白。
 
 如系统要求自然人身份证件号码或证件材料，应按实际材料在系统中另行录入。
 """
@@ -929,8 +974,8 @@ def build_check_report(inventory: SourceInventory) -> Path:
 - 软件技术特点：已压缩到100字以内；技术特点选择“人工智能软件；大数据软件”，未超过3项
 - 开发完成日期：{COMPLETION_DATE}，已填写
 - 发表状态：{PUBLICATION_STATUS}，已填写；首次发表日期和地点按未发表要求留空
-- 著作权人：{'、'.join(RIGHTHOLDERS)}，已在申请表、说明文档封面、README和清单中同步
-- 作者和联系人：已在申请表、说明文档封面、README和清单中同步
+- 申请表标签：已去掉模板红色提示字和括号说明，正式表内文字统一为黑色
+- 申请表末尾三行：按要求保持空白，不填写著作权人、联系人和联系地址
 
 ## 特定场景逐项检查
 
@@ -973,7 +1018,7 @@ def build_check_report(inventory: SourceInventory) -> Path:
 
 - 已安装并使用 LibreOffice 执行DOCX到PDF转换
 - 已使用 PyMuPDF 读取PDF页数并渲染关键页面PNG
-- 申请表PDF为2页，无额外空白页
+- 申请表PDF为2页，无额外空白页，标签无红色提示字和括号说明，末尾三行为空
 - 说明文档PDF为30页参考风格完整说明书，第1页为封面，第2-3页为连续目录，正文包含5张图，末页不添加end标志
 - 源程序PDF为60页，每页60条正文；第0001至3599行带四位可见行号，第60页末尾为单独的“end”
 
@@ -1014,7 +1059,7 @@ def build_check_report(inventory: SourceInventory) -> Path:
 - 已扫描正式说明文档PDF，未发现占位、待修改、TODO、外部平台、外部模型或服务商标类噪音词。
 - 已同步核对申请表2页、说明文档不足60页整本提交、源程序60页，三份正式DOCX仍保持同一软件名称、版本号、页眉和页码口径。
 - 根据模板示例的版式重新调整说明文档，不再使用一行一句的短句排版；现采用标题样式、自然正文段落、简洁封面文字和图文说明。
-- 说明文档封面不再使用作者/联系人信息表格；联系人、电话、地址保留在申请表中。
+- 说明文档封面不再使用作者/联系人信息表格；申请表末尾三行按要求留空。
 - 说明文档全部文字和主题颜色均改为黑色，已清除蓝色/紫色字体及DOCX主题默认超链接蓝色。
 - 说明文档封面不使用作者/联系人信息表格；正文表格仅用于模块和接口说明，符合模板示例观感。
 - 重新渲染后的说明文档按不足60页全部提交口径组织，目录页和正文页采用自然段排版，图页按指南“有图除外”处理。
@@ -1026,11 +1071,11 @@ def build_check_report(inventory: SourceInventory) -> Path:
 - 参考PDF、升级版本差异说明样表、README、申请材料生成清单、知识产权系统填写建议和本检查报告不作为正式提交附件。
 - 重新解读模板包文件，确认模板包包含附件1申请表、附件1.1申请表样表、附件2说明文档模板、附件3源程序模板、附件4系统操作手册PDF、附件5登记指南PDF、附件6升级版本差异说明样表。
 - 重新用LibreOffice渲染3个正式DOCX，并用PyMuPDF和DOCX XML检查页数、行数、图页、页眉、页码、结束标志、字体颜色、表格、旧文件名和材料一致性。
-- 申请表PDF为2页，包含软件名称、版本、简称、著作权人/作者、联系人、电话、地址、未发表、独立开发和原创口径。
+- 申请表PDF为2页，包含软件名称、版本、简称、未发表、独立开发和原创口径；模板红色提示和括号说明已清理，末尾三行不填写。
 - 说明文档PDF为不足60页的完整说明书，包含封面、目录、正文、正文表格、三张图和图文说明；当前说明文档末页不添加单独的`end`标志。
 - 说明文档DOCX封面无表格，正文和主题颜色均无蓝色/紫色，页眉包含软件名称版本和Word PAGE页码域。
 - 源程序PDF为60页，每页为2条页眉/页码文本加60条源程序正文文本，第0001至3599行带四位可见行号，末页最后一行为`end`。
-- 三个正式文件的软件名称、版本号、著作权人/作者、发表状态、源程序量和文件名口径保持一致。
+- 三个正式文件的软件名称、版本号、发表状态、源程序量和文件名口径保持一致。
 - 最终提交前程序化复查已覆盖正式文件名、主体信息、页眉页码、图文内容、字体颜色、结束标志和材料一致性。
 
 ## 2026-04-28说明书参考版式重做
@@ -2353,7 +2398,7 @@ def build_manual_doc() -> Path:
 
 def scrub_docx_theme_colors(path: Path) -> None:
     """Remove default blue/purple hyperlink theme colors from the generated DOCX."""
-    bad_colors = ["4472C4", "2F5496", "1F4E79", "0070C0", "0563C1", "0000FF", "800080", "7030A0", "5B9BD5"]
+    bad_colors = ["4472C4", "2F5496", "1F4E79", "0070C0", "0563C1", "0000FF", "800080", "7030A0", "5B9BD5", "FF0000", "C00000"]
     tmp = path.with_suffix(".tmp.docx")
     with zipfile.ZipFile(path, "r") as zin, zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED) as zout:
         for item in zin.infolist():

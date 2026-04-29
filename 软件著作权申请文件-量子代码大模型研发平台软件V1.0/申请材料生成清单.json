@@ -18,6 +18,7 @@
     "address": "中国移动研究院未来院三室"
   },
   "publication_status": "未发表",
+  "application_form_rule": "formal application DOCX labels are black, template red hints/bracket notes are removed, and the last three rows are blank; contact details are retained only as system-entry reference notes",
   "completion_date": "2026年04月26日",
   "generated_at": "2026-04-29",
   "source_line_count": 13338,
