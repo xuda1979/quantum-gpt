@@ -447,6 +447,16 @@ class TestSourcePriorityMultiplier:
 
 
 class TestQueryAwareMultiplier:
+    def test_library_queries_boost_matching_doc_source(self) -> None:
+        assert query_aware_multiplier(
+            "How do I build a Bell pair in Qiskit?",
+            "/tmp/docs/external/quantum-sdk-docs-latest/qiskit/example.md",
+        ) > 1.0
+        assert query_aware_multiplier(
+            "How do I create and measure a circuit in Cirq?",
+            "/tmp/docs/external/quantum-sdk-docs-latest/cirq/example.md",
+        ) > 1.0
+
     def test_definition_query(self) -> None:
         assert query_aware_multiplier(
             "Where is this task defined?",

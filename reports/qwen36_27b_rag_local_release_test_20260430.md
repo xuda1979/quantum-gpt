@@ -84,7 +84,7 @@ python3 scripts/query_quantum_rag.py \
   --json
 ```
 
-结果：
+生成 A/B 结果：
 
 - top-1 source：
 
@@ -96,6 +96,47 @@ python3 scripts/query_quantum_rag.py \
 - RAG 注入上下文字符数：`14,157`
 
 结论：RAG 在本地把同一问题从“无文档上下文”提升为“top-1 命中目标安装文档并注入可引用上下文”。由于 16GB 本机 27B Q4 生成超时，本次发布不声称完整生成质量 A/B 分数。
+
+## 用户问题检索测试集
+
+测试集：
+
+```text
+evals/benchmarks/qwen36_27b_user_rag_questions_v1.json
+```
+
+共 `5` 题：
+
+1. `How do I install the Arclight ISQ language?`
+2. `How do I build a Bell pair in Qiskit and verify measurement counts?`
+3. `How do I run a simple VQE workflow in PennyLane?`
+4. `How do I create and measure a circuit in Cirq?`
+5. `How do I run a circuit on the Amazon Braket local simulator?`
+
+命令：
+
+```bash
+python3 scripts/score_quantum_rag_retrieval.py \
+  --index artifacts/quantum-rag/qwen36-quantum-docs-index.pkl.gz \
+  --benchmark evals/benchmarks/qwen36_27b_user_rag_questions_v1.json \
+  --top-k 3 \
+  --json \
+  --output reports/qwen36_27b_user_rag_retrieval_v1_20260430.json
+```
+
+结果：
+
+- hit@3：`5/5`
+- MRR：`1.0`
+- 5 题均 top-1 命中对应文档源
+
+逐题 top-1：
+
+- Arclight 安装题：Arclight ISQ install 文档
+- Qiskit Bell pair 题：Qiskit 文档源
+- PennyLane VQE 题：PennyLane 文档源
+- Cirq 测量题：Cirq 文档源
+- Braket local simulator 题：Amazon Braket local simulator 文档
 
 ## 测试套件
 
@@ -110,5 +151,5 @@ python3 -m pytest tests/test_qwen36_rag_local_check.py tests/test_fetch_quantum_
 结果：
 
 ```text
-123 passed
+124 passed
 ```

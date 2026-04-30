@@ -1,0 +1,32 @@
+[
+  {
+    "id": "arclight_install",
+    "query": "How do I install the Arclight ISQ language?",
+    "expected_source_substrings": ["arclight-isq", "install"],
+    "user_need": "Install the Arclight ISQ language and find the compiler command."
+  },
+  {
+    "id": "qiskit_bell_state",
+    "query": "How do I build a Bell pair in Qiskit and verify measurement counts?",
+    "expected_source_substrings": ["qiskit"],
+    "user_need": "Write a small Qiskit Bell-state example and verify measurements."
+  },
+  {
+    "id": "pennylane_vqe",
+    "query": "How do I run a simple VQE workflow in PennyLane?",
+    "expected_source_substrings": ["pennylane"],
+    "user_need": "Find PennyLane VQE guidance and API context."
+  },
+  {
+    "id": "cirq_measurement",
+    "query": "How do I create and measure a circuit in Cirq?",
+    "expected_source_substrings": ["cirq"],
+    "user_need": "Create and measure a basic Cirq circuit."
+  },
+  {
+    "id": "braket_local_simulator",
+    "query": "How do I run a circuit on the Amazon Braket local simulator?",
+    "expected_source_substrings": ["amazon-braket", "braket"],
+    "user_need": "Run a small circuit locally with Amazon Braket."
+  }
+]

@@ -42,6 +42,17 @@ SOURCE_PRIORITY_RULES: list[tuple[str, float]] = [
 ]
 
 QUERY_AWARE_RULES: list[tuple[tuple[str, ...], tuple[str, ...], float]] = [
+    (("qiskit", "quantumcircuit", "quantum circuit"), ("qiskit", "qiskit_basics"), 1.8),
+    (("cirq",), ("cirq", "cirq_basics"), 1.8),
+    (("pennylane", "qml"), ("pennylane", "pennylane_basics"), 1.8),
+    (("braket", "amazon braket"), ("amazon-braket", "braket_basics"), 1.8),
+    (("cuda-q", "cuda quantum"), ("cuda-quantum",), 1.8),
+    (("qutip",), ("qutip",), 1.8),
+    (("pyquil", "rigetti"), ("pyquil",), 1.8),
+    (("openfermion",), ("openfermion",), 1.8),
+    (("mitiq",), ("mitiq",), 1.8),
+    (("pyzx",), ("pyzx",), 1.8),
+    (("tket", "pytket", "quantinuum"), ("pytket",), 1.8),
     (("define", "defined", "definition", "task", "contract"), ("task.json",), 1.35),
     (("implement", "implementation", "reference", "candidate"), ("candidate.py",), 1.25),
     (("test", "tests", "verification"), ("tests.py",), 1.15),

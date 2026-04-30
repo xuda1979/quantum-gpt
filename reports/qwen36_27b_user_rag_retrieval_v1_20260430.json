@@ -1,0 +1,102 @@
+{
+  "benchmark": "evals/benchmarks/qwen36_27b_user_rag_questions_v1.json",
+  "index": "artifacts/quantum-rag/qwen36-quantum-docs-index.pkl.gz",
+  "top_k": 3,
+  "alpha": 0.55,
+  "query_expansion_enabled": true,
+  "max_chunks_per_source": 1,
+  "excluded_source_substrings": [
+    "evals/benchmarks/qwen36_27b_user_rag_questions_v1.json",
+    "reports/quantum_rag_retrieval_"
+  ],
+  "metrics": {
+    "hit@3": 1.0,
+    "mrr": 1.0,
+    "total_examples": 5,
+    "hit_count": 5
+  },
+  "examples": [
+    {
+      "id": "arclight_install",
+      "query": "How do I install the Arclight ISQ language?",
+      "expected_source_substrings": [
+        "arclight-isq",
+        "install"
+      ],
+      "top_k": 3,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/arclight-isq/www.arclightquantum.com-isq-docs-latest-install-f8d6bb8581.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/arclight-isq/www.arclightquantum.com-isq-docs-latest-examples-simulate-53d7b7b451.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/arclight-isq/www.arclightquantum.com-isq-docs-latest-examples-recursive-825e27a6eb.md"
+      ]
+    },
+    {
+      "id": "qiskit_bell_state",
+      "query": "How do I build a Bell pair in Qiskit and verify measurement counts?",
+      "expected_source_substrings": [
+        "qiskit"
+      ],
+      "top_k": 3,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/qiskit/quantum.cloud.ibm.com-docs-tutorials-quantum-kernel-training-ecf1c3f45a.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/qiskit/quantum.cloud.ibm.com-docs-tutorials-quantum-approximate-optimization-algorithm-368b9c7998.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/qiskit/quantum.cloud.ibm.com-docs-api-qiskit-quantum_info-4ba06ca61e.md"
+      ]
+    },
+    {
+      "id": "pennylane_vqe",
+      "query": "How do I run a simple VQE workflow in PennyLane?",
+      "expected_source_substrings": [
+        "pennylane"
+      ],
+      "top_k": 3,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/pennylane/docs.pennylane.ai-en-stable-introduction-importing_workflows.html-90475d4986.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/pennylane/docs.pennylane.ai-en-stable-introduction-templates.html-56c99008d3.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/pennylane/docs.pennylane.ai-en-stable-introduction-compiling_circuits.html-68eaf46682.md"
+      ]
+    },
+    {
+      "id": "cirq_measurement",
+      "query": "How do I create and measure a circuit in Cirq?",
+      "expected_source_substrings": [
+        "cirq"
+      ],
+      "top_k": 3,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/cirq/quantumai.google-cirq-simulate-state_histograms-2cf18bad71.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/cirq/quantumai.google-cirq-build-interop-a5fdd2dcca.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/cirq/quantumai.google-cirq-experiments-hidden_linear_function-7154390434.md"
+      ]
+    },
+    {
+      "id": "braket_local_simulator",
+      "query": "How do I run a circuit on the Amazon Braket local simulator?",
+      "expected_source_substrings": [
+        "amazon-braket",
+        "braket"
+      ],
+      "top_k": 3,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/amazon-braket/docs.aws.amazon.com-braket-latest-developerguide-braket-send-to-local-simulator.html-5f571c7d55.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/amazon-braket/docs.aws.amazon.com-braket-latest-developerguide-braket-pricing.html-b12b6b2078.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/amazon-braket/docs.aws.amazon.com-braket-latest-developerguide-braket-submit-tasks-simulators-b469abeac9.md"
+      ]
+    }
+  ]
+}
