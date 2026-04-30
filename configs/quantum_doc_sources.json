@@ -1,0 +1,167 @@
+{
+  "version": 1,
+  "description": "Latest/stable documentation roots for the Qwen3.6 local quantum RAG corpus.",
+  "sources": [
+    {
+      "id": "qiskit",
+      "name": "IBM Quantum and Qiskit documentation",
+      "seeds": [
+        "https://quantum.cloud.ibm.com/docs/en/",
+        "https://quantum.cloud.ibm.com/docs/api/qiskit"
+      ],
+      "allowed_prefixes": [
+        "https://quantum.cloud.ibm.com/docs/"
+      ]
+    },
+    {
+      "id": "cirq",
+      "name": "Cirq documentation",
+      "seeds": [
+        "https://quantumai.google/cirq"
+      ],
+      "allowed_prefixes": [
+        "https://quantumai.google/cirq"
+      ]
+    },
+    {
+      "id": "pennylane",
+      "name": "PennyLane documentation",
+      "seeds": [
+        "https://docs.pennylane.ai/en/stable/"
+      ],
+      "allowed_prefixes": [
+        "https://docs.pennylane.ai/en/stable/"
+      ]
+    },
+    {
+      "id": "amazon-braket",
+      "name": "Amazon Braket developer guide",
+      "seeds": [
+        "https://docs.aws.amazon.com/braket/latest/developerguide/what-is-braket.html"
+      ],
+      "allowed_prefixes": [
+        "https://docs.aws.amazon.com/braket/latest/developerguide/"
+      ]
+    },
+    {
+      "id": "cuda-quantum",
+      "name": "NVIDIA CUDA-Q documentation",
+      "seeds": [
+        "https://nvidia.github.io/cuda-quantum/latest/"
+      ],
+      "allowed_prefixes": [
+        "https://nvidia.github.io/cuda-quantum/latest/"
+      ]
+    },
+    {
+      "id": "qutip",
+      "name": "QuTiP documentation",
+      "seeds": [
+        "https://qutip.readthedocs.io/en/latest/"
+      ],
+      "allowed_prefixes": [
+        "https://qutip.readthedocs.io/en/latest/"
+      ]
+    },
+    {
+      "id": "pyquil",
+      "name": "pyQuil documentation",
+      "seeds": [
+        "https://pyquil-docs.rigetti.com/en/stable/"
+      ],
+      "allowed_prefixes": [
+        "https://pyquil-docs.rigetti.com/en/stable/"
+      ]
+    },
+    {
+      "id": "openfermion",
+      "name": "OpenFermion documentation",
+      "seeds": [
+        "https://quantumai.google/openfermion/"
+      ],
+      "allowed_prefixes": [
+        "https://quantumai.google/openfermion/"
+      ]
+    },
+    {
+      "id": "mitiq",
+      "name": "Mitiq documentation",
+      "seeds": [
+        "https://mitiq.readthedocs.io/en/stable/"
+      ],
+      "allowed_prefixes": [
+        "https://mitiq.readthedocs.io/en/stable/"
+      ]
+    },
+    {
+      "id": "pyzx",
+      "name": "PyZX documentation",
+      "seeds": [
+        "https://pyzx.readthedocs.io/en/latest/"
+      ],
+      "allowed_prefixes": [
+        "https://pyzx.readthedocs.io/en/latest/"
+      ]
+    },
+    {
+      "id": "pytket",
+      "name": "TKET documentation",
+      "seeds": [
+        "https://docs.quantinuum.com/tket/user-guide/"
+      ],
+      "allowed_prefixes": [
+        "https://docs.quantinuum.com/tket/"
+      ]
+    },
+    {
+      "id": "qsharp-azure-quantum",
+      "name": "Q# and Azure Quantum documentation",
+      "seeds": [
+        "https://learn.microsoft.com/en-us/azure/quantum/"
+      ],
+      "allowed_prefixes": [
+        "https://learn.microsoft.com/en-us/azure/quantum/"
+      ]
+    },
+    {
+      "id": "tensorcircuit",
+      "name": "TensorCircuit documentation",
+      "seeds": [
+        "https://tensorcircuit.readthedocs.io/en/latest/"
+      ],
+      "allowed_prefixes": [
+        "https://tensorcircuit.readthedocs.io/en/latest/"
+      ]
+    },
+    {
+      "id": "strawberry-fields",
+      "name": "Strawberry Fields documentation",
+      "seeds": [
+        "https://strawberryfields.ai/photonics/"
+      ],
+      "allowed_prefixes": [
+        "https://strawberryfields.ai/photonics/"
+      ]
+    },
+    {
+      "id": "projectq",
+      "name": "ProjectQ documentation",
+      "seeds": [
+        "https://projectq.readthedocs.io/en/latest/"
+      ],
+      "allowed_prefixes": [
+        "https://projectq.readthedocs.io/en/latest/"
+      ]
+    },
+    {
+      "id": "arclight-isq",
+      "name": "Arclight ISQ language documentation",
+      "seeds": [
+        "https://www.arclightquantum.com/isq-docs/latest/install/"
+      ],
+      "allowed_prefixes": [
+        "https://www.arclightquantum.com/isq-docs/latest/"
+      ]
+    }
+  ]
+}

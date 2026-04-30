@@ -4,6 +4,14 @@
 .pytest_cache/
 .tmp-rclone/
 .venv/
+.venv-qwen36-rag/
+.qwen36-rag-local.env
 browser-automation/node_modules/
 browser-automation/profile/
+docs/external/
 page-shot.png
+
+# RAG index artifacts (rebuilt locally, not committed)
+artifacts/quantum-rag/*.pkl.gz
+artifacts/quantum-rag/answer-cache.jsonl
+artifacts/quantum-rag/qwen36-*.json

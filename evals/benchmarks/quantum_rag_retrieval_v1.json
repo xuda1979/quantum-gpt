@@ -1,0 +1,136 @@
+[
+  {
+    "id": "rag_eval_holdout_local_rule",
+    "query": "How should this repo evaluate strict quantum holdout tasks before remote training?",
+    "expected_source_substrings": [
+      "PROJECT.md",
+      "research/quantum_rag_low_compute.md"
+    ],
+    "notes": "Should retrieve project-level local validation policy and RAG usage note."
+  },
+  {
+    "id": "rag_qiskit_task_contract",
+    "query": "Which repo task covers VQE energy expectation from a parameterized ansatz?",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/vqe_energy_minimization/task.json",
+      "evals/tasks/quantum/vqe_energy_minimization/candidate.py"
+    ],
+    "notes": "Should find the VQE eval task definition or its reference implementation."
+  },
+  {
+    "id": "rag_qft_task_contract",
+    "query": "Where is the QFT phase pattern task defined in this repo?",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/qft_phase_pattern/task.json",
+      "evals/tasks/quantum/qft_phase_pattern/candidate.py"
+    ],
+    "notes": "Should find the QFT eval task definition or candidate reference."
+  },
+  {
+    "id": "rag_huanxin_sync_rule",
+    "query": "How does this repo say code should be moved to Huanxin before training?",
+    "expected_source_substrings": [
+      "PROJECT.md",
+      "AGENTS.md",
+      "TOOLS.md"
+    ],
+    "notes": "Should surface the local validation then S3 relay then Huanxin shell workflow."
+  },
+  {
+    "id": "rag_grpo_quantum_benchmark_file",
+    "query": "What benchmark file should GRPO use for quantum training tasks in this repo?",
+    "expected_source_substrings": [
+      "HEARTBEAT.md",
+      "evals/benchmarks/quantum_grpo_training"
+    ],
+    "notes": "Should retrieve the benchmark file mention and ideally the benchmark itself."
+  },
+  {
+    "id": "rag_rag_usage_doc",
+    "query": "What does the current low-compute quantum RAG implementation support and what are its gaps?",
+    "expected_source_substrings": [
+      "research/quantum_rag_low_compute.md"
+    ],
+    "notes": "Should strongly retrieve the implementation note."
+  },
+  {
+    "id": "rag_ghz_task_contract",
+    "query": "Where is the GHZ state witness task and its reference candidate?",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/ghz_state_witness/task.json",
+      "evals/tasks/quantum/ghz_state_witness/candidate.py"
+    ],
+    "notes": "Should find the GHZ state witness task definition or reference implementation."
+  },
+  {
+    "id": "rag_error_detection_task",
+    "query": "How does the bit flip error detection task work in this repo?",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/error_detection_bit_flip/task.json",
+      "evals/tasks/quantum/error_detection_bit_flip/candidate.py"
+    ],
+    "notes": "Should retrieve the error detection bit flip task or its candidate."
+  },
+  {
+    "id": "rag_qaoa_maxcut_task",
+    "query": "Where is the QAOA MaxCut task defined and what does its candidate implementation look like?",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/qaoa_maxcut/task.json",
+      "evals/tasks/quantum/qaoa_maxcut/candidate.py"
+    ],
+    "notes": "Should find QAOA MaxCut task definition or reference implementation."
+  },
+  {
+    "id": "rag_superdense_coding_task",
+    "query": "Which task in this repo implements superdense coding?",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/superdense_coding/task.json",
+      "evals/tasks/quantum/superdense_coding/candidate.py"
+    ],
+    "notes": "Should retrieve superdense coding task or candidate."
+  },
+  {
+    "id": "rag_grover_oracle_task",
+    "query": "What is the Grover oracle diffusion task and where is it defined?",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/grover_oracle_diffusion/task.json",
+      "evals/tasks/quantum/grover_oracle_diffusion/candidate.py"
+    ],
+    "notes": "Should find the Grover oracle diffusion task definition."
+  },
+  {
+    "id": "rag_teleportation_task",
+    "query": "How does the quantum teleportation corrections task work?",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/teleportation_corrections/task.json",
+      "evals/tasks/quantum/teleportation_corrections/candidate.py"
+    ],
+    "notes": "Should retrieve teleportation corrections task or reference."
+  },
+  {
+    "id": "rag_shor_error_correction",
+    "query": "Where is the Shor 9-qubit quantum error correction task?",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/quantum_error_correction_shor_9qubit/task.json",
+      "evals/tasks/quantum/quantum_error_correction_shor_9qubit/candidate.py"
+    ],
+    "notes": "Should find the Shor 9-qubit error correction task."
+  },
+  {
+    "id": "rag_build_rag_script",
+    "query": "How do I build the quantum RAG index using the build script?",
+    "expected_source_substrings": [
+      "scripts/build_quantum_rag.py",
+      "research/quantum_rag_low_compute.md"
+    ],
+    "notes": "Should retrieve the build script or the RAG design note with usage instructions."
+  },
+  {
+    "id": "rag_training_workflow",
+    "query": "What is the verified GRPO training command for this project?",
+    "expected_source_substrings": [
+      "HEARTBEAT.md"
+    ],
+    "notes": "Should retrieve HEARTBEAT which documents the verified GRPO training command."
+  }
+]
