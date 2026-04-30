@@ -4,7 +4,36 @@
 
 发布分支：`codex/量智V0.1.0-Qwen3.6-27B-RAG`
 
+## 下载和安装位置
+
+代码从 GitHub 发布分支下载：
+
+```bash
+git clone https://github.com/xuda1979/quantum-gpt.git
+cd quantum-gpt
+git checkout codex/量智V0.1.0-Qwen3.6-27B-RAG
+```
+
+模型由一键安装脚本自动下载。默认下载源和文件如下：
+
+```text
+Hugging Face: unsloth/Qwen3.6-27B-GGUF
+模型文件: Qwen3.6-27B-Q4_K_M.gguf
+模型大小: 约 16.8G
+本地路径: models/Qwen3.6-27B-GGUF/Qwen3.6-27B-Q4_K_M.gguf
+```
+
+RAG 文档和索引也由一键安装脚本自动准备。默认本地位置如下：
+
+```text
+外部量子文档: docs/external/quantum-sdk-docs-latest
+RAG 索引: artifacts/quantum-rag/qwen36-quantum-docs-index.pkl.gz
+本地配置: .qwen36-rag-local.env
+```
+
 ## 一键安装
+
+下面一个命令会一次性完成本地软件依赖、Qwen3.6-27B 4-bit Q4_K_M 量化模型、RAG 量子文档、RAG 索引和本地配置安装：
 
 ```bash
 scripts/install_qwen36_rag_local.sh
@@ -36,8 +65,8 @@ scripts/query_qwen36_rag_local.sh "How do I build a Bell pair in Qiskit and veri
 - 强烈建议量化：4-bit `Q4_K_M`
 - 默认模型文件：`Qwen3.6-27B-Q4_K_M.gguf`
 - 本地推理路线：纯 CPU
-- 最低链路验证：16GB 内存，约 25GB 可用磁盘
-- 推荐交互配置：32GB 以上内存，40GB 以上可用磁盘
+- 最低链路验证：16G 内存，约 25G 可用磁盘
+- 推荐交互配置：32G 以上内存，40G 以上可用磁盘
 
 本次发布实际下载、检查并验证了 4-bit `Q4_K_M` 文件：
 
@@ -48,7 +77,7 @@ models/Qwen3.6-27B-GGUF/Qwen3.6-27B-Q4_K_M.gguf
 文件大小：
 
 ```text
-16,817,244,384 bytes
+约 16.8G
 ```
 
 ## 4-bit 量化怎么用
