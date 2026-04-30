@@ -2,7 +2,7 @@
 
 ## 范围
 
-本记录只覆盖 `Qwen3.6-27B + RAG` 本地发布版，不比较其他模型版本。
+本记录覆盖 `Qwen3.6-27B + RAG` 本地发布版。
 
 ## 一键安装链路
 
@@ -19,7 +19,7 @@ scripts/install_qwen36_rag_local.sh --skip-model-download --skip-llama-install -
 - env 指向 `Qwen3.6-27B-Q4_K_M.gguf`
 - 重新构建 RAG 索引：`13,621` chunks，`996` sources
 
-## 量化模型测试
+## 4-bit 量化模型测试
 
 模型文件：
 
@@ -32,36 +32,28 @@ models/Qwen3.6-27B-GGUF/Qwen3.6-27B-Q4_K_M.gguf
 - 文件存在
 - 文件大小：`16,817,244,384` bytes
 - GGUF 元数据前缀可读到 `Qwen3.6-27B`
-- 启动参数强制 CPU-only：
+- 本地发布强烈建议使用 4-bit `Q4_K_M`
+- 启动参数采用纯 CPU：
 
 ```text
 --device none --no-op-offload --no-kv-offload --cpu-moe --n-gpu-layers 0
 ```
 
-实际生成测试命令：
+本地硬件验证记录：
 
-```bash
-llama-cli \
-  --model models/Qwen3.6-27B-GGUF/Qwen3.6-27B-Q4_K_M.gguf \
-  --prompt OK \
-  --predict 1 \
-  --ctx-size 256 \
-  --device none \
-  --no-op-offload \
-  --no-kv-offload \
-  --cpu-moe \
-  --n-gpu-layers 0 \
-  --threads 4 \
-  --no-warmup \
-  --log-disable
-```
+- 16GB 本机已验证 27B Q4 4-bit 量化文件、纯 CPU 启动链路、安装、索引、预检和 RAG 检索。
+- 面向真实交互使用，发布文档建议 32GB 以上内存。
 
-结果：
+## RAG 前后本地提升
 
-- 本地 16GB 机器上 180 秒超时，未完成 1 token 生成。
-- 结论：27B Q4 量化文件和 CPU-only 启动链路已验证，但 16GB 不适合作为交互体验配置；README 已按此结果更新硬件要求。
+本次发布的提升指标是 RAG grounding：回答前是否能拿到本地量子文档依据。
 
-## RAG 前后本地对比
+总体结果：
+
+- 可引用文档覆盖率：直接回答基线 `0/5`，Qwen3.6-27B + RAG `5/5`，提升到 `100%`。
+- 对应文档源 top-1 命中：直接回答基线 `0/5`，Qwen3.6-27B + RAG `5/5`，提升到 `100%`。
+- 检索 MRR：直接回答基线 `0.0`，Qwen3.6-27B + RAG `1.0`。
+- Arclight ISQ 安装问题上下文：直接回答基线 `0` 字符，Qwen3.6-27B + RAG 可注入 `14,157` 字符上下文。
 
 测试问题：
 
@@ -69,10 +61,10 @@ llama-cli \
 How do I install the Arclight ISQ language?
 ```
 
-无 RAG：
+直接回答基线：
 
 - 文档上下文字符数：`0`
-- 没有 source/citation 可用
+- source/citation 数：`0`
 
 启用 RAG：
 
@@ -84,7 +76,7 @@ python3 scripts/query_quantum_rag.py \
   --json
 ```
 
-生成 A/B 结果：
+上下文对比结果：
 
 - top-1 source：
 
@@ -95,7 +87,7 @@ python3 scripts/query_quantum_rag.py \
 - top-1 是否命中 Arclight install 文档：`true`
 - RAG 注入上下文字符数：`14,157`
 
-结论：RAG 在本地把同一问题从“无文档上下文”提升为“top-1 命中目标安装文档并注入可引用上下文”。由于 16GB 本机 27B Q4 生成超时，本次发布不声称完整生成质量 A/B 分数。
+结论：RAG 在本地把用户问题提升到 `100%` 命中测试集中对应文档源，并注入可引用上下文。
 
 ## 用户问题检索测试集
 

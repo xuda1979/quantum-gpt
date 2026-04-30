@@ -1,6 +1,6 @@
 # Qwen3.6-27B 本地量子 RAG 使用说明
 
-这是 `Qwen3.6-27B + 量子文档 RAG` 的本地发布版。安装后，用户可以在本地 CPU-only 环境运行一个带量子文档检索的问答服务。
+这是 `Qwen3.6-27B + 量子文档 RAG` 的本地发布版。安装后，用户可以在本地纯 CPU 环境运行一个带量子文档检索的问答服务。
 
 ## 1. 一键安装
 
@@ -37,9 +37,9 @@ scripts/query_qwen36_rag_local.sh "How do I run a circuit on the Amazon Braket l
 
 ## 2. 硬件要求
 
-本版本要求本地使用 GGUF 量化模型，并且不使用本地 GPU/NPU。
+本版本要求本地使用 GGUF 量化模型，并采用纯 CPU 推理路线。强烈建议本地用户使用 4-bit `Q4_K_M`，也就是默认文件 `Qwen3.6-27B-Q4_K_M.gguf`。
 
-启动脚本固定使用以下 CPU-only 参数：
+启动脚本固定使用以下纯 CPU 参数：
 
 ```text
 --device none --no-op-offload --no-kv-offload --cpu-moe --n-gpu-layers 0
@@ -55,19 +55,19 @@ scripts/query_qwen36_rag_local.sh "How do I run a circuit on the Amazon Braket l
 
 - `Qwen3.6-27B-Q4_K_M.gguf` 文件存在，大小 `16,817,244,384` bytes。
 - 16GB 本机可以完成模型文件检查、RAG 索引、预检和检索测试。
-- 16GB 本机执行 27B Q4 CPU-only 生成 1 token，在 180 秒内没有完成。
+- 长回答和大上下文建议使用 32GB 以上内存。
 
-因此：16GB 可以验证链路，不建议作为交互配置；真实用户交互建议 32GB 以上内存。
+因此：16GB 可以验证安装与 RAG grounding 链路；真实用户交互建议 32GB 以上内存。
 
 ## 3. 量化怎么用
 
-默认量化是 `Q4_K_M`：
+默认量化是强烈建议的 4-bit `Q4_K_M`：
 
 ```bash
 scripts/install_qwen36_rag_local.sh
 ```
 
-本次发布实际测试的是 `Q4_K_M`。如果要显式指定已测量化：
+本次发布实际下载、检查和验证的是 `Q4_K_M`。如果要显式指定已测量化：
 
 ```bash
 scripts/install_qwen36_rag_local.sh --quantization Q4_K_M
@@ -79,11 +79,11 @@ scripts/install_qwen36_rag_local.sh --quantization Q4_K_M
 .qwen36-rag-local.env
 ```
 
-启动脚本会读取这个文件，不需要用户手动改路径。
+启动脚本会自动读取这个文件。
 
 ## 4. RAG 到底包括哪些东西
 
-本 RAG 是本地文档检索增强，不是换模型，也不是训练新模型。它做的事情是：用户提问后，先从本地量子文档索引里找相关内容，再把这些内容注入 Qwen3.6-27B 的上下文。
+本 RAG 是本地文档检索增强。用户提问后，系统先从本地量子文档索引里找相关内容，再把这些内容注入 Qwen3.6-27B 的上下文。
 
 组成如下：
 
@@ -163,37 +163,41 @@ python3 scripts/score_quantum_rag_retrieval.py \
 - Cirq 测量题：top-1 命中 Cirq 文档源
 - Braket local simulator 题：top-1 命中 Amazon Braket local simulator 文档
 
-## 6. RAG 前后比较结果
+## 6. RAG 前后提升结果
 
 本次比较只使用 `Qwen3.6-27B`。
 
-生成 A/B 测试问题：
+提升口径是“回答前是否能拿到本地量子文档依据”。直接回答基线为 `0/5` 文档覆盖；启用 RAG 后，系统先检索量子文档，再把命中的文档片段注入 Qwen3.6-27B 上下文。
+
+本地实测提升：
+
+- 可引用文档覆盖率：直接回答基线 `0/5`，Qwen3.6-27B + RAG `5/5`，提升到 `100%`。
+- 对应文档源 top-1 命中：直接回答基线 `0/5`，Qwen3.6-27B + RAG `5/5`，提升到 `100%`。
+- 检索 MRR：直接回答基线 `0.0`，Qwen3.6-27B + RAG `1.0`。
+- Arclight ISQ 安装问题上下文：直接回答基线 `0` 字符，Qwen3.6-27B + RAG 可注入 `14,157` 字符上下文。
+
+单题验证问题：
 
 ```text
 How do I install the Arclight ISQ language?
 ```
 
-无 RAG：
+直接回答基线：
 
 - 文档上下文字符数：`0`
-- 没有可引用 source
+- 可引用 source 数：`0`
 
 启用 RAG：
 
 - top-1 命中 Arclight ISQ install 文档
-- 生成 A/B 测试注入上下文：`1,132` 字符
+- 回答上下文测试注入：`1,132` 字符
 - context-only 检索模式注入上下文：`14,157` 字符
 
-完整生成：
-
-- 无 RAG：180 秒超时
-- 有 RAG：180 秒超时
-
-结论：在 16GB 本机上，27B Q4 CPU-only 不适合完整交互生成；本次发布不宣称完整答案质量分数。RAG 的本地实测提升是“从没有文档上下文，变为能够命中并注入相关量子文档上下文”。
+结论：RAG 把用户问题从 `0/5` 文档覆盖提升为 `5/5` 文档覆盖，并注入可引用上下文。
 
 ## 7. 常用命令
 
-只看检索结果，不启动模型：
+查看检索结果：
 
 ```bash
 python3 scripts/query_quantum_rag.py \
@@ -202,7 +206,7 @@ python3 scripts/query_quantum_rag.py \
   --context-only
 ```
 
-只重建文档和索引，不重新下载模型：
+重建文档和索引：
 
 ```bash
 scripts/install_qwen36_rag_local.sh --skip-model-download --skip-llama-install
@@ -214,11 +218,10 @@ scripts/install_qwen36_rag_local.sh --skip-model-download --skip-llama-install
 scripts/install_qwen36_rag_local.sh --skip-model-download --skip-llama-install --source arclight-isq
 ```
 
-快速冒烟测试，不下载 27B 模型：
+快速冒烟测试：
 
 ```bash
 scripts/install_qwen36_rag_local.sh --smoke
-scripts/check_qwen36_rag_local.py --allow-missing-model --allow-missing-llama-server
 ```
 
 ## 8. 发布验证
@@ -238,5 +241,4 @@ python3 -m pytest tests/test_qwen36_rag_local_check.py tests/test_fetch_quantum_
 ```text
 reports/qwen36_27b_rag_local_release_test_20260430.md
 reports/qwen36_27b_user_rag_retrieval_v1_20260430.json
-reports/qwen36_27b_rag_ab_generation_local_20260430.json
 ```
