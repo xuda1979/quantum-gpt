@@ -1,6 +1,8 @@
-# Qwen3.6-27B 量子 RAG 本地版
+# 量智V0.1.0 - Qwen3.6-27B-RAG
 
-本发布版聚焦 `Qwen3.6-27B + 量子 RAG`。这份 README 已包含用户需要的关键信息：一键安装、使用方法、本地硬件建议、4-bit 量化建议、RAG 构成、测试题目和实测提升结果。
+量智V0.1.0 - Qwen3.6-27B-RAG 聚焦本地量子文档检索增强。README 已包含用户需要的关键信息：一键安装、使用方法、本地硬件建议、4-bit 量化建议、RAG 构成、测试题目和实测提升结果。
+
+发布分支：`codex/量智V0.1.0-Qwen3.6-27B-RAG`
 
 ## 一键安装
 
@@ -28,6 +30,7 @@ scripts/query_qwen36_rag_local.sh "How do I build a Bell pair in Qiskit and veri
 
 ## 推荐本地配置
 
+- 版本：`量智V0.1.0 - Qwen3.6-27B-RAG`
 - 模型：`Qwen3.6-27B`
 - 模型仓库：`unsloth/Qwen3.6-27B-GGUF`
 - 强烈建议量化：4-bit `Q4_K_M`
