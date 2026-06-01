@@ -1,6 +1,6 @@
 # 量智V0.1.0 - Qwen3.6-27B-RAG
 
-量智V0.1.0 - Qwen3.6-27B-RAG 聚焦本地量子文档检索增强。README 已包含用户需要的关键信息：一键安装、使用方法、本地硬件建议、4-bit 量化建议、RAG 构成、测试题目和实测提升结果。
+量智V0.1.0 - Qwen3.6-27B-RAG 聚焦本地量子文档和 ISQ 训练语料检索增强。README 已包含用户需要的关键信息：一键安装、使用方法、本地硬件建议、4-bit 量化建议、RAG 构成、测试题目和实测提升结果。
 
 发布分支：`codex/量智V0.1.0-Qwen3.6-27B-RAG`
 
@@ -27,13 +27,14 @@ RAG 文档和索引也由一键安装脚本自动准备。默认本地位置如�
 
 ```text
 外部量子文档: docs/external/quantum-sdk-docs-latest
+ISQ 训练语料: docs/generated/isq_train_cot_rag
 RAG 索引: artifacts/quantum-rag/qwen36-quantum-docs-index.pkl.gz
 本地配置: .qwen36-rag-local.env
 ```
 
 ## 一键安装
 
-下面一个命令会一次性完成本地软件依赖、Qwen3.6-27B 4-bit Q4_K_M 量化模型、RAG 量子文档、RAG 索引和本地配置安装：
+下面一个命令会一次性完成本地软件依赖、Qwen3.6-27B 4-bit Q4_K_M 量化模型、RAG 量子文档、ISQ 训练语料索引、RAG 索引和本地配置安装：
 
 ```bash
 scripts/install_qwen36_rag_local.sh
@@ -111,18 +112,30 @@ RAG 是本地文档检索增强：用户提问后，系统先从本地量子文�
 - 文档源配置：`configs/quantum_doc_sources.json`
 - 文档抓取：`scripts/fetch_quantum_docs.py`
 - 本地精选量子说明：`docs/quantum_libraries`
+- 用户提供 ISQ 训练语料：`docs/generated/isq_train_cot_rag`
+- ISQ 训练语料转换：`scripts/build_isq_train_cot_rag_docs.py`
 - 外部量子文档：`docs/external/quantum-sdk-docs-latest`
 - 索引构建：`scripts/build_quantum_rag.py`
 - 检索核心：`quantum_rag/`
 - 查询入口：`scripts/query_qwen36_rag_local.sh`
 
-本次本地索引实测规模：
+当前更新后的本机索引实测规模：
 
-- 文档源：`16`
-- 外部文档文件：`968`
-- 检索 chunks：`13,621`
-- sources：`996`
+- roots：`docs/quantum_libraries`、`docs/generated/isq_train_cot_rag`、`docs/external/quantum-sdk-docs-latest`
+- 检索 chunks：`7,263`
+- sources：`619`
 - vectorizer features：`50,000`
+- dense dimensions：`256`
+
+其中，新增 ISQ 训练语料规模：
+
+- 原始文件：`isq_train_cot.json`
+- 训练记录：`5,611`
+- 类别：`61`
+- 生成 RAG Markdown/manifest 文件：`590`
+- 默认分片：每个 shard `10` 条记录
+
+当前本机如果没有抓取 `docs/external/quantum-sdk-docs-latest`，索引仍会包含本地精选量子说明和新增 ISQ 训练语料；如果完成外部文档抓取，外部 SDK 文档也会一并纳入同一个 `qwen36_quantum_docs` profile。
 
 覆盖文档源：
 
@@ -142,6 +155,18 @@ RAG 是本地文档检索增强：用户提问后，系统先从本地量子文�
 - Strawberry Fields
 - ProjectQ
 - Arclight ISQ
+
+新增 ISQ 训练语料覆盖的主要类别：
+
+- `quantum_algorithms`：`1,969`
+- `state_preparation`：`420`
+- `quantum_foundations`：`368`
+- `circuit_basics`：`286`
+- `quantum_circuits`：`192`
+- `gate_decomposition`：`161`
+- `quantum_error_correction`：`145`
+- `isq_language`：`137`
+- `variational_algorithms`：`107`
 
 ## 测试题目
 
@@ -184,6 +209,23 @@ evals/benchmarks/qwen36_27b_user_rag_questions_v1.json
 - MRR：`1.0`
 - 5 个问题均 top-1 命中对应文档源
 
+新增 ISQ 训练语料检索验证：
+
+```bash
+PYTHONIOENCODING=utf-8 python3 scripts/query_quantum_rag.py \
+  --index artifacts/quantum-rag/qwen36-quantum-docs-index.pkl.gz \
+  --query "VQD 在 NISQ 设备上为什么比 VQE 更容易出现误差雪崩？" \
+  --top-k 5 \
+  --context-only \
+  --json
+```
+
+正确结果应在 `source_path` 中命中：
+
+```text
+docs/generated/isq_train_cot_rag/...
+```
+
 ## 本地测试通过
 
 预检通过：
@@ -213,6 +255,18 @@ python3 -m pytest tests/test_qwen36_rag_local_check.py tests/test_fetch_quantum_
 
 ```text
 124 passed
+```
+
+本次 ISQ RAG 更新的新增测试：
+
+```bash
+python3 -m pytest tests/test_build_isq_train_cot_rag_docs.py tests/test_render_codex_local_config.py tests/test_qwen36_rag_codex_proxy.py -q
+```
+
+当前结果：
+
+```text
+10 passed
 ```
 
 ## 安装完成后复核
