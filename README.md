@@ -2,16 +2,16 @@
 
 量智V0.1.0 - Qwen3.6-27B-RAG 聚焦本地量子文档和 ISQ 训练语料检索增强。README 已包含用户需要的关键信息：一键安装、使用方法、本地硬件建议、4-bit 量化建议、RAG 构成、测试题目和实测提升结果。
 
-发布分支：`codex/量智V0.1.0-Qwen3.6-27B-RAG`
+当前 RAG 更新分支：`codex/update-liangzhi-rag`
 
 ## 下载和安装位置
 
-代码从 GitHub 发布分支下载：
+代码从 GitHub 当前 RAG 更新分支下载：
 
 ```bash
-git clone https://github.com/xuda1979/quantum-gpt.git
+git clone https://github.com/yyixinn289/quantum-gpt.git
 cd quantum-gpt
-git checkout codex/量智V0.1.0-Qwen3.6-27B-RAG
+git checkout codex/update-liangzhi-rag
 ```
 
 模型由一键安装脚本自动下载。默认下载源和文件如下：
