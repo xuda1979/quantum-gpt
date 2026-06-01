@@ -7,6 +7,7 @@ VENV_DIR="${VENV_DIR:-$ROOT/.venv-qwen36-rag}"
 MODEL_SIZE="27b"
 QUANTIZATION="Q4_K_M"
 DOCS_DIR="$ROOT/docs/external/quantum-sdk-docs-latest"
+ISQ_TRAIN_COT_RAG_DIR="$ROOT/docs/generated/isq_train_cot_rag"
 INDEX_PATH="$ROOT/artifacts/quantum-rag/qwen36-quantum-docs-index.pkl.gz"
 SUMMARY_JSON="$ROOT/artifacts/quantum-rag/qwen36-quantum-docs-summary.json"
 FETCH_MANIFEST="$ROOT/artifacts/quantum-rag/qwen36-docs-fetch-manifest.json"
@@ -236,6 +237,7 @@ fi
 
 run python "$ROOT/scripts/build_quantum_rag.py" \
   --root "$ROOT/docs/quantum_libraries" \
+  --root "$ISQ_TRAIN_COT_RAG_DIR" \
   --root "$DOCS_DIR" \
   --output "$INDEX_PATH" \
   --summary-json "$SUMMARY_JSON" \

@@ -44,6 +44,7 @@ QUANTUM_DOCS_ROOTS = [
 
 QWEN36_QUANTUM_DOCS_ROOTS = [
     "docs/quantum_libraries",
+    "docs/generated/isq_train_cot_rag",
     "docs/external/quantum-sdk-docs-latest",
 ]
 

@@ -5,6 +5,7 @@
 .tmp-rclone/
 .venv/
 .venv-qwen36-rag/
+**/__pycache__/
 .qwen36-rag-local.env
 browser-automation/node_modules/
 browser-automation/profile/
