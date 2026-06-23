@@ -724,10 +724,11 @@ def summarize_trainable_label_counts(dataset: ChatSftDataset) -> dict[str, Any]:
 
 
 class PaddingCollator:
-    def __init__(self, text_backend: Any, torch_module: Any, *, add_mm_token_type_ids: bool = False) -> None:
+    def __init__(self, text_backend: Any, torch_module: Any, *, add_mm_token_type_ids: bool = False, pad_to_max_length: int | None = None) -> None:
         self.text_backend = text_backend
         self.torch_module = torch_module
         self.add_mm_token_type_ids = add_mm_token_type_ids
+        self.pad_to_max_length = pad_to_max_length
 
     def __call__(self, batch: list[dict]) -> dict[str, Any]:
         return pad_supervised_text_batch(
@@ -735,6 +736,7 @@ class PaddingCollator:
             self.text_backend,
             self.torch_module,
             add_mm_token_type_ids=self.add_mm_token_type_ids,
+            pad_to_max_length=self.pad_to_max_length,
         )
 
 
@@ -1054,12 +1056,24 @@ def main() -> int:
         flush=True,
     )
 
+    # Static padding (constant shapes) avoids Ascend TBE kernel recompilation
+    # per sequence length, which otherwise stalls training on low-core NPU hosts.
+    # Enable with QWEN_SFT_PAD_TO_MAX_LENGTH=1 (pads to --max-length), or set it
+    # to an explicit integer length.
+    _pad_env = os.environ.get("QWEN_SFT_PAD_TO_MAX_LENGTH", "").strip()
+    if _pad_env in ("1", "true", "True"):
+        _pad_to_max_length: int | None = args.max_length
+    elif _pad_env.isdigit():
+        _pad_to_max_length = int(_pad_env)
+    else:
+        _pad_to_max_length = None
     collator = PaddingCollator(
         text_preprocessor.text_backend,
         torch,
         add_mm_token_type_ids=(
             str(runtime_compat.get("config_model_type") if runtime_compat is not None else "").startswith("gemma4")
         ),
+        pad_to_max_length=_pad_to_max_length,
     )
     train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset, num_replicas=world_size, rank=rank, shuffle=True) if distributed else None
     train_loader = DataLoader(train_dataset, batch_size=args.per_device_batch_size, shuffle=(train_sampler is None), collate_fn=collator, sampler=train_sampler)
@@ -1439,9 +1453,18 @@ def main() -> int:
                         if batch_index == 1:
                             print(json.dumps({"stage": "first_eval_start", "batch_index": batch_index, "t": time.time()}, ensure_ascii=False), flush=True)
                         eval_started_at = time.time()
-                        record.update({f"eval_{k}": v for k, v in evaluate(model.module if distributed else model, eval_loader, batch_device, torch).items()})
-                        if batch_index == 1:
-                            print(json.dumps({"stage": "first_eval_done", "batch_index": batch_index, "t": time.time(), "dt_eval_sec": round(time.time() - eval_started_at, 3)}, ensure_ascii=False), flush=True)
+                        try:
+                            record.update({f"eval_{k}": v for k, v in evaluate(model.module if distributed else model, eval_loader, batch_device, torch).items()})
+                            if batch_index == 1:
+                                print(json.dumps({"stage": "first_eval_done", "batch_index": batch_index, "t": time.time(), "dt_eval_sec": round(time.time() - eval_started_at, 3)}, ensure_ascii=False), flush=True)
+                        except Exception as eval_err:  # in-loop eval must never kill training
+                            record["eval_error"] = str(eval_err)
+                            print(json.dumps({"stage": "eval_skipped", "step": global_step, "error": str(eval_err)}, ensure_ascii=False), flush=True)
+                            try:
+                                if getattr(torch, "npu", None) is not None and hasattr(torch.npu, "empty_cache"):
+                                    torch.npu.empty_cache()
+                            except Exception:
+                                pass
                         model.train()
                     metrics.append(record)
                     if rank == 0:
@@ -1501,13 +1524,11 @@ def main() -> int:
         if global_step >= args.max_steps:
             break
 
-    final_eval = None
-    if eval_loader is not None:
-        print(json.dumps({"stage": "final_eval_start", "t": time.time()}, ensure_ascii=False), flush=True)
-        final_eval_started_at = time.time()
-        final_eval = evaluate(model.module if distributed else model, eval_loader, batch_device, torch)
-        print(json.dumps({"stage": "final_eval_done", "t": time.time(), "dt_final_eval_sec": round(time.time() - final_eval_started_at, 3)}, ensure_ascii=False), flush=True)
-
+    # DURABILITY: save the trained adapter BEFORE running final eval. The final
+    # eval can OOM on the NPU (full-vocab logits), and if it crashes the process
+    # before the save, an otherwise-complete training run loses its adapter. By
+    # persisting first, a finished run is always recoverable. Final eval is then
+    # best-effort and wrapped so it can never destroy the saved adapter.
     if rank == 0:
         save_model = model.module if distributed else model
         adapter_dir = args.output_dir / "adapter"
@@ -1523,6 +1544,25 @@ def main() -> int:
             text_preprocessor=text_preprocessor,
         )
         print(json.dumps({"stage": "save_done", "t": time.time(), "dt_save_sec": round(time.time() - save_started_at, 3)}, ensure_ascii=False), flush=True)
+
+    final_eval = None
+    if eval_loader is not None:
+        print(json.dumps({"stage": "final_eval_start", "t": time.time()}, ensure_ascii=False), flush=True)
+        final_eval_started_at = time.time()
+        try:
+            final_eval = evaluate(model.module if distributed else model, eval_loader, batch_device, torch)
+            print(json.dumps({"stage": "final_eval_done", "t": time.time(), "dt_final_eval_sec": round(time.time() - final_eval_started_at, 3)}, ensure_ascii=False), flush=True)
+        except Exception as eval_err:  # never let final eval destroy the saved adapter
+            final_eval = {"error": str(eval_err)}
+            print(json.dumps({"stage": "final_eval_failed", "t": time.time(), "error": str(eval_err)}, ensure_ascii=False), flush=True)
+            try:
+                empty = getattr(torch, "npu", None)
+                if empty is not None and hasattr(empty, "empty_cache"):
+                    empty.empty_cache()
+            except Exception:
+                pass
+
+    if rank == 0:
 
         summary = {
             "model_name": args.model_name,
