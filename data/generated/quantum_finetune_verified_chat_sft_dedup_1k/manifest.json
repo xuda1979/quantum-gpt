@@ -1,0 +1,28 @@
+{
+  "source_train": "data/generated/quantum_finetune_verified_chat_sft/train_chatml.jsonl",
+  "source_eval": "data/generated/quantum_finetune_verified_chat_sft/eval_chatml.jsonl",
+  "method": "number_collapsed_signature_dedup_stratified",
+  "seed": 20260622,
+  "train_in": 10000,
+  "distinct_task_structures": 3189,
+  "dropped_eval_overlap_groups": 399,
+  "selectable_reps": 2790,
+  "train_out": 1000,
+  "eval_out": 495,
+  "id_overlap_train_eval": 0,
+  "signature_overlap_train_eval": 0,
+  "framework_distribution": {
+    "braket": 37,
+    "cirq": 125,
+    "dwave_ocean": 70,
+    "openqasm3": 41,
+    "pennylane": 100,
+    "pytket": 27,
+    "qiskit": 485,
+    "qsharp": 34,
+    "qulacs": 15,
+    "qutip": 30,
+    "stim": 36
+  },
+  "family_count": 83
+}
