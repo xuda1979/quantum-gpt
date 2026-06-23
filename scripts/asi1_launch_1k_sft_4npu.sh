@@ -82,7 +82,11 @@ CFG
 
 # NPU fix: eager attention avoids the failing flash-attention backward op.
 export QWEN_SFT_ATTN_IMPL=eager
-export PYTORCH_NPU_ALLOC_CONF=max_split_size_mb:256
+# NPU fix: chunked cross-entropy avoids materializing the full [B,seq,vocab]
+# logits tensor (the step-10 OOM at loss computation). Cap each chunk's logits.
+export QWEN_SFT_CHUNKED_LOSS=1
+export QWEN_SFT_LOSS_CHUNK=512
+export PYTORCH_NPU_ALLOC_CONF=max_split_size_mb:128
 export TOKENIZERS_PARALLELISM=false
 export PYTHONUNBUFFERED=1
 
@@ -93,8 +97,9 @@ nohup torchrun --nproc_per_node=4 --master_port="$MASTER_PORT" training/qwen_sft
   --output-dir "$OUT" \
   --overwrite-output-dir \
   --device npu \
-  --max-length 768 \
+  --max-length 512 \
   --num-epochs 1 \
+  --max-steps -1 \
   --per-device-batch-size 1 \
   --gradient-accumulation-steps 4 \
   --learning-rate 1e-4 \
@@ -108,10 +113,41 @@ nohup torchrun --nproc_per_node=4 --master_port="$MASTER_PORT" training/qwen_sft
   --target-modules q_proj v_proj o_proj gate_proj up_proj down_proj \
   --train-on-completions-only \
   --gradient-checkpointing \
-  --checkpoint-interval-seconds 3600 \
+  --checkpoint-interval-seconds 900 \
   > "$LOG" 2>&1 &
 echo "$!" > "$PIDFILE"
 sleep 8
 echo "__ASI1_1K_LAUNCHED__ pid=$(cat "$PIDFILE") log=$LOG out=$OUT"
 ps -p "$(cat "$PIDFILE")" -o pid,stat,etime,cmd 2>/dev/null || true
 echo '--- initial log tail ---'; tail -n 25 "$LOG" 2>/dev/null || true
+
+# --- DURABILITY: off-box mirror of outputs to INER S3 every 5 min ---
+# Even though $OUT is on the persistent NAS (/root/work survives container
+# restarts), we additionally mirror every checkpoint + the live log to S3 so a
+# finished/partial adapter can never be lost if this session/container dies.
+RCLONE_CONF="${RCLONE_CONF:-/tmp/iner-rclone.conf}"
+S3_BUCKET="${INER_S3_BUCKET:-jtdlp-21b4208dde424e96b159362ef49c9c96}"
+if [[ -f "$RCLONE_CONF" ]] && ! grep -q '__INER_SECRET__' "$RCLONE_CONF" 2>/dev/null; then
+  RCLONE_BIN="$(command -v rclone || true)"
+  if [[ -n "$RCLONE_BIN" ]]; then
+    S3_DEST="iner:${S3_BUCKET}/software/quantum-gpt/outputs/$(basename "$OUT")"
+    MIRROR_PID_FILE="/tmp/qg_27b_1k_sft_mirror.pid"
+    nohup bash -c '
+      TRAIN_PID="'"$(cat "$PIDFILE")"'"
+      while kill -0 "$TRAIN_PID" 2>/dev/null; do
+        "'"$RCLONE_BIN"'" --config "'"$RCLONE_CONF"'" copy "'"$OUT"'" "'"$S3_DEST"'" \
+          --s3-force-path-style --transfers 4 --checkers 4 >/dev/null 2>&1 || true
+        sleep 300
+      done
+      # one final sync after training exits
+      "'"$RCLONE_BIN"'" --config "'"$RCLONE_CONF"'" copy "'"$OUT"'" "'"$S3_DEST"'" \
+        --s3-force-path-style --transfers 4 --checkers 4 >/dev/null 2>&1 || true
+    ' > /tmp/qg_27b_1k_sft_mirror.log 2>&1 &
+    echo "$!" > "$MIRROR_PID_FILE"
+    echo "__S3_MIRROR_STARTED__ pid=$(cat "$MIRROR_PID_FILE") dest=$S3_DEST (every 300s + final)"
+  else
+    echo "__S3_MIRROR_SKIPPED__ rclone not found; relying on NAS persistence only"
+  fi
+else
+  echo "__S3_MIRROR_SKIPPED__ no usable $RCLONE_CONF; relying on NAS persistence only"
+fi

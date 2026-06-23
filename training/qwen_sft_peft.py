@@ -738,14 +738,92 @@ class PaddingCollator:
         )
 
 
+def _unwrap_causal_lm(model: Any) -> Any:
+    """Return the underlying HF CausalLM, unwrapping DDP/PEFT wrappers."""
+    inner = getattr(model, "module", model)  # DDP
+    inner = getattr(inner, "base_model", inner)  # PEFT LoraModel -> base_model
+    inner = getattr(inner, "model", inner)  # PEFT base_model.model -> HF model
+    return inner
+
+
+def _resolve_lm_head_and_backbone(model: Any):
+    """Best-effort locate the lm_head and the backbone that returns hidden states."""
+    inner = _unwrap_causal_lm(model)
+    lm_head = getattr(inner, "lm_head", None)
+    backbone = getattr(inner, "model", None)
+    return inner, backbone, lm_head
+
+
+def chunked_causal_lm_loss(
+    model: Any,
+    batch: dict,
+    torch_module: Any,
+    chunk_size: int = 1024,
+    ignore_index: int = -100,
+) -> Any:
+    """Compute causal-LM cross-entropy WITHOUT materializing the full
+    [B, seq, vocab] logits tensor.
+
+    The vocab is ~150k, so on a 61 GiB Ascend NPU the fp32 logits+loss tensor at
+    seq_len 512-768 alone OOMs. We run the transformer backbone once to get hidden
+    states, then apply the lm_head + cross-entropy over short slices of the
+    sequence so peak memory is capped at chunk_size tokens of logits at a time.
+
+    Falls back to the model's built-in loss if we cannot locate the lm_head /
+    backbone (so behaviour is never silently wrong).
+    """
+    inner, backbone, lm_head = _resolve_lm_head_and_backbone(model)
+    labels = batch.get("labels")
+    if labels is None or backbone is None or lm_head is None:
+        # Cannot do the memory-frugal path; defer to the model's own loss.
+        return model(**batch).loss
+
+    backbone_inputs = {k: v for k, v in batch.items() if k != "labels"}
+    outputs = backbone(**backbone_inputs)
+    hidden = outputs[0] if isinstance(outputs, tuple) else outputs.last_hidden_state
+
+    # Standard causal shift: predict token t+1 from hidden state at t.
+    shift_hidden = hidden[:, :-1, :].contiguous()
+    shift_labels = labels[:, 1:].contiguous()
+    flat_hidden = shift_hidden.view(-1, shift_hidden.size(-1))
+    flat_labels = shift_labels.view(-1)
+
+    total_tokens = int((flat_labels != ignore_index).sum().item())
+    if total_tokens == 0:
+        return flat_hidden.sum() * 0.0  # keep graph, zero loss
+
+    loss_sum = None
+    n = flat_hidden.size(0)
+    for start in range(0, n, chunk_size):
+        end = min(start + chunk_size, n)
+        logits_chunk = lm_head(flat_hidden[start:end])
+        if logits_chunk.dtype not in (torch_module.float32, torch_module.float64):
+            logits_chunk = logits_chunk.float()
+        labels_chunk = flat_labels[start:end]
+        chunk_loss = torch_module.nn.functional.cross_entropy(
+            logits_chunk,
+            labels_chunk,
+            ignore_index=ignore_index,
+            reduction="sum",
+        )
+        loss_sum = chunk_loss if loss_sum is None else loss_sum + chunk_loss
+        del logits_chunk
+    return loss_sum / total_tokens
+
+
 def evaluate(model: Any, loader: Any, device: Any, torch_module: Any) -> dict[str, float]:
+    use_chunked = os.environ.get("QWEN_SFT_CHUNKED_LOSS", "0") == "1"
+    chunk_size = int(os.environ.get("QWEN_SFT_LOSS_CHUNK", "1024") or "1024")
     model.eval()
     total_loss = 0.0
     total_items = 0
     with torch_module.no_grad():
         for batch in loader:
             batch = {name: tensor.to(device) for name, tensor in batch.items()}
-            loss = model(**batch).loss
+            if use_chunked:
+                loss = chunked_causal_lm_loss(model, batch, torch_module, chunk_size=chunk_size)
+            else:
+                loss = model(**batch).loss
             batch_items = batch["input_ids"].size(0)
             total_loss += float(loss.item()) * batch_items
             total_items += batch_items
@@ -997,6 +1075,9 @@ def main() -> int:
             "Not enough batches to produce one optimizer step. "
             "Lower --gradient-accumulation-steps or increase training data."
         )
+    # --max-steps <= 0 means "train all available steps" (full requested epochs).
+    if args.max_steps <= 0:
+        args.max_steps = max_available_steps
     if args.max_steps > max_available_steps:
         raise ValueError(
             f"Requested --max-steps {args.max_steps} but current settings only allow "
@@ -1282,6 +1363,14 @@ def main() -> int:
     }
     checkpoint_interval_seconds = max(int(getattr(args, "checkpoint_interval_seconds", 0) or 0), 0)
     last_checkpoint_time = time.time()
+    # Memory-frugal loss: avoid materializing full [B, seq, vocab] logits, which
+    # OOMs on Ascend NPU. Enabled via QWEN_SFT_CHUNKED_LOSS=1.
+    use_chunked_loss = os.environ.get("QWEN_SFT_CHUNKED_LOSS", "0") == "1"
+    loss_chunk_size = int(os.environ.get("QWEN_SFT_LOSS_CHUNK", "1024") or "1024")
+    print(
+        json.dumps({"stage": "loss_mode", "chunked": use_chunked_loss, "chunk_size": loss_chunk_size}, ensure_ascii=False),
+        flush=True,
+    )
     print(
         json.dumps(
             {
@@ -1304,10 +1393,16 @@ def main() -> int:
                 first_batch_time = time.time()
                 print(json.dumps({"stage": "first_batch_loaded", "batch_index": batch_index, "input_shape": list(batch["input_ids"].shape), "t": first_batch_time}, ensure_ascii=False), flush=True)
             batch = {name: tensor.to(batch_device) for name, tensor in batch.items()}
-            outputs = model(**batch)
+            if use_chunked_loss:
+                raw_loss = chunked_causal_lm_loss(
+                    model, batch, torch, chunk_size=loss_chunk_size
+                )
+            else:
+                outputs = model(**batch)
+                raw_loss = outputs.loss
             if batch_index == 1:
                 print(json.dumps({"stage": "first_forward_done", "batch_index": batch_index, "t": time.time(), "dt_from_batch_loaded_sec": round(time.time() - first_batch_time, 3)}, ensure_ascii=False), flush=True)
-            loss = outputs.loss / args.gradient_accumulation_steps
+            loss = raw_loss / args.gradient_accumulation_steps
             if batch_index == 1:
                 print(json.dumps({"stage": "first_loss_ready", "batch_index": batch_index, "loss": float(loss.item())}, ensure_ascii=False), flush=True)
             loss.backward()
