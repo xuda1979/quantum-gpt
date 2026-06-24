@@ -75,24 +75,76 @@ def load_examples(path: str, limit: int) -> list[dict]:
     return rows
 
 
+def _apply_qwen35_moe_overlay():
+    """Optionally inject the bundled transformers runtime overlay.
+
+    When the installed transformers natively supports qwen3_5_moe (>=5.6.0) the
+    overlay is unnecessary and is SKIPPED. The overlay is only injected when
+    QUANTUM_TRANSFORMERS_RUNTIME_SRC is explicitly set to a non-empty path
+    (legacy stock-4.57.x containers). This keeps QG_ROOT on sys.path either way
+    so `training.runtime_overlay` is importable.
+    """
+    import os
+    import sys
+    root = os.environ.get("QG_ROOT", "/root/work/software/quantum-gpt")
+    if root not in sys.path:
+        sys.path.insert(0, root)
+    src = os.environ.get("QUANTUM_TRANSFORMERS_RUNTIME_SRC", "").strip()
+    if not src:
+        # Native transformers (>=5.6.0) already ships qwen3_5_moe.
+        return
+    os.environ.setdefault("QUANTUM_HF_HUB_COMPAT_VERSION", "0.35.3")
+    from training.runtime_overlay import configure_runtime_overlay_from_env
+    configure_runtime_overlay_from_env()
+
+
 def build_model(base: str, adapter: str | None, device: str):
+    _apply_qwen35_moe_overlay()
     import torch
     try:
         import torch_npu  # noqa: F401  # registers the NPU backend
     except Exception:
         pass
-    from transformers import AutoModelForCausalLM, AutoTokenizer
+    import transformers
+    from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer
+    # Register qwen3_5_moe into the Auto* registries + apply NPU dense-expert and
+    # peft compat shims (same as the proven training path).
+    try:
+        from training.runtime_overlay import (
+            apply_transformers_peft_compat_shims,
+            register_qwen35_moe_runtime,
+        )
+        register_qwen35_moe_runtime(
+            transformers,
+            auto_config_cls=AutoConfig,
+            auto_model_for_causal_lm_cls=AutoModelForCausalLM,
+        )
+        apply_transformers_peft_compat_shims(transformers)
+    except Exception as exc:  # noqa: BLE001
+        print(f"[overlay] register warning: {exc}", flush=True)
     tok = AutoTokenizer.from_pretrained(base, trust_remote_code=True)
-    model = AutoModelForCausalLM.from_pretrained(
-        base,
+    # The 35B-A3B MoE base does not fit on a single 60GB NPU in bf16 (~70GB of
+    # weights), so by default we shard it across all visible NPUs with
+    # device_map="auto". Set QG_DEVICE_MAP="" to force the legacy single-device
+    # path (model.to(device)).
+    import os as _os
+    device_map = _os.environ.get(
+        "QG_DEVICE_MAP", "auto" if str(device).startswith("npu") else ""
+    ).strip()
+    load_kwargs = dict(
         trust_remote_code=True,
         torch_dtype=torch.bfloat16,
         attn_implementation="eager",  # NPU: flash-attn kernels are unsupported
+        low_cpu_mem_usage=True,
     )
+    if device_map:
+        load_kwargs["device_map"] = device_map
+    model = AutoModelForCausalLM.from_pretrained(base, **load_kwargs)
     if adapter:
         from peft import PeftModel
         model = PeftModel.from_pretrained(model, adapter)
-    model = model.to(device)
+    if not device_map:
+        model = model.to(device)
     model.eval()
     return tok, model
 
@@ -102,7 +154,14 @@ def generate(tok, model, messages: list[dict], max_new_tokens: int, device: str)
     prompt = tok.apply_chat_template(
         messages, tokenize=False, add_generation_prompt=True
     )
-    inputs = tok(prompt, return_tensors="pt").to(device)
+    inputs = tok(prompt, return_tensors="pt")
+    # With device_map="auto" the model is sharded; inputs must sit on the device
+    # that holds the input embeddings (usually the first NPU).
+    try:
+        in_dev = model.get_input_embeddings().weight.device
+    except Exception:  # noqa: BLE001
+        in_dev = device
+    inputs = {k: v.to(in_dev) for k, v in inputs.items()}
     with torch.no_grad():
         out = model.generate(
             **inputs, max_new_tokens=max_new_tokens, do_sample=False,
@@ -155,8 +214,10 @@ def eval_model(tag, base, adapter, examples, device, max_new_tokens, exec_timeou
                               "pass_at_1": v[0] / max(v[1], 1)}
                           for k, v in sorted(per_fw.items())},
     }
-    del model
+    del model, tok
     try:
+        import gc
+        gc.collect()
         import torch
         if getattr(torch, "npu", None) and hasattr(torch.npu, "empty_cache"):
             torch.npu.empty_cache()
