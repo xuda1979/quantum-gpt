@@ -55,6 +55,24 @@ nodes_set0, nodes_set1 = maxcut.interpret(result)
 print(result.x, nodes_set0, nodes_set1, cut_value)
 ```
 
+For complete runnable answer snippets, read the solved assignment from
+`result.x` and cast it to Python integers before indexing or printing. QAOA
+depth is set with `reps`; do not pass circuit resource-count keywords to QAOA.
+
+```python
+def solve_qaoa_maxcut(edges):
+  maxcut = Maxcut(edges)
+  problem = maxcut.to_quadratic_program()
+  sampler = StatevectorSampler(seed=42)
+  qaoa = QAOA(sampler=sampler, optimizer=COBYLA(maxiter=100), reps=2)
+  result = MinimumEigenOptimizer(qaoa).solve(problem)
+
+  solution = [int(value) for value in result.x]
+  set0, set1 = maxcut.interpret(result)
+  cut_value = sum(1 for u, v in edges if solution[u] != solution[v])
+  return solution, set0, set1, cut_value
+```
+
 If repairing an import error, do not use this invalid form:
 
 ```python
@@ -124,9 +142,13 @@ qiskit-algorithms release:
 | `Maxcut(edge_list_or_matrix)` | `__init__(self, graph: nx.Graph \| np.ndarray \| list)` | positional-only `graph` parameter; accepts an unweighted edge list or a symmetric adjacency matrix |
 | `Maxcut.to_quadratic_program` | `(self) -> QuadraticProgram` | instance method, no arguments; call as `Maxcut(edges).to_quadratic_program()`, not `Maxcut.to_quadratic_program(edges)`; returns one `QuadraticProgram`, not a tuple |
 | `Maxcut.interpret` | `(self, result) -> tuple[list[int], list[int]]` | returns the two partitions directly from a solved result |
-| `QAOA.__init__` | `(self, sampler, optimizer, *, reps=1, initial_state=None, mixer=None, initial_point=None, aggregation=None, callback=None, transpiler=None, transpiler_options=None)` | no `num_qubits` argument; the qubit count is inferred from the cost operator |
+| `QAOA.__init__` | `(self, sampler, optimizer, *, reps=1, initial_state=None, mixer=None, initial_point=None, aggregation=None, callback=None, transpiler=None, transpiler_options=None)` | no qubit-count or ancilla-count argument; the qubit count is inferred from the cost operator; set QAOA depth with `reps` |
 | `MinimumEigenOptimizer.__init__` | `(self, min_eigen_solver, penalty=None, converters=None)` | keyword names are `min_eigen_solver` and `converters` (plural); default `converters` is `QuadraticProgramToQubo`, which already handles sense conversion — a `MAXIMIZE`-sense `QuadraticProgram` can be solved directly without manually negating coefficients |
 | `qiskit_optimization.converters` module | exposes `InequalityToEquality`, `IntegerToBinary`, `LinearEqualityToPenalty`, `LinearInequalityToPenalty`, `MaximizeToMinimize`, `MinimizeToMaximize`, `QuadraticProgramToQubo` | no `MinimumToSum` class exists |
+
+`MinimumEigenOptimizer.solve(...)` returns an `OptimizationResult`. Use
+`result.x` for the solution vector and `result.fval` for the objective value;
+do not invent alternate solution-vector attribute names.
 
 Python dicts do not support unary `-`; negating a dict directly (`-coeffs`)
 raises `TypeError: bad operand type for unary -: 'dict'`. Negate the values
@@ -142,6 +164,10 @@ via a dict comprehension instead: `{k: -v for k, v in coeffs.items()}`.
 - Importing `QAOA` from `qiskit_optimization.algorithms` raises ImportError;
     import `QAOA` from `qiskit_algorithms.minimum_eigensolvers` or
     `qiskit_optimization.minimum_eigensolvers` instead.
+- Passing ancilla-count keywords to `QAOA` raises `TypeError`; ancilla counts
+  are circuit properties, not QAOA constructor arguments. Use
+  `QAOA(..., reps=p)` for p-layer QAOA.
+- `MinimumEigenOptimizer` results use `result.x` for the solution vector.
 - `QuadraticProgram` has no `linear_term()` or `quadratic_term()` objective
     builder methods; pass dictionaries to `maximize` or `minimize`.
 - Standard Max-Cut should use `maximize`, not `minimize`, with edge term

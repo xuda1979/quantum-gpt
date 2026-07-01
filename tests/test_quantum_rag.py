@@ -258,7 +258,6 @@ class TestBuildChunksFromRoots:
         doc = root / "docs" / "quantum_libraries" / "qiskit.md"
         doc.parent.mkdir(parents=True)
         doc.write_text("Qiskit current API " * 30, encoding="utf-8")
-
         chunks = build_chunks_from_roots(
             [root / "docs"],
             chunk_size=200,
@@ -271,6 +270,21 @@ class TestBuildChunksFromRoots:
         assert chunks[0].source_path == "docs/quantum_libraries/qiskit.md"
         assert str(tmp_path) not in chunks[0].source_path
         assert "[source: docs/quantum_libraries/qiskit.md]" in chunks[0].text
+
+
+def test_qiskit_qaoa_maxcut_docs_guard_current_api() -> None:
+    root = Path(__file__).resolve().parents[1]
+    qaoa_doc = (root / "docs" / "quantum_libraries" / "qaoa_maxcut.md").read_text(encoding="utf-8")
+    ecosystem_doc = (root / "docs" / "quantum_libraries" / "qiskit_ecosystem_current_api.md").read_text(encoding="utf-8")
+    combined = qaoa_doc + "\n" + ecosystem_doc
+
+    assert "QAOA(sampler=sampler, optimizer=optimizer, reps=2)" in combined
+    assert "result.x" in combined
+    assert "result.fval" in combined
+    assert "do not invent alternate solution-vector attribute names" in combined
+    assert "Ancilla-count keywords are invalid for `QAOA`" in ecosystem_doc
+    assert "result.x0" not in combined
+    assert "num_ancillas=0" not in combined
 
 
 class TestDocumentChunk:
