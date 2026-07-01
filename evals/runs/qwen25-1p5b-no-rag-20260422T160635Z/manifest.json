@@ -1,0 +1,257 @@
+{
+  "label": "no-rag",
+  "created_at_utc": "2026-04-22T16:06:35.126418+00:00",
+  "system_prompt": "You are solving a single quantum-computing evaluation task. Produce only the full contents of the requested Python candidate file. Do not include markdown fences, explanations, or commentary.",
+  "tasks": [
+    {
+      "id": "quantum_bell_pair_construction",
+      "name": "Bell pair construction",
+      "domain": "quantum",
+      "category": "circuit_construction",
+      "prompt_file": "prompts/quantum_bell_pair_construction.txt",
+      "candidate_file": "candidates/quantum_bell_pair_construction.py"
+    },
+    {
+      "id": "quantum_binary_measurement_decoder",
+      "name": "Binary measurement decoder",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "prompt_file": "prompts/quantum_binary_measurement_decoder.txt",
+      "candidate_file": "candidates/quantum_binary_measurement_decoder.py"
+    },
+    {
+      "id": "quantum_bitstring_maxcut_landscape",
+      "name": "Bitstring MaxCut landscape",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "prompt_file": "prompts/quantum_bitstring_maxcut_landscape.txt",
+      "candidate_file": "candidates/quantum_bitstring_maxcut_landscape.py"
+    },
+    {
+      "id": "quantum_circuit_depth_optimization",
+      "name": "Greedy circuit depth optimization via ASAP scheduling",
+      "domain": "quantum",
+      "category": "circuit_optimization",
+      "prompt_file": "prompts/quantum_circuit_depth_optimization.txt",
+      "candidate_file": "candidates/quantum_circuit_depth_optimization.py"
+    },
+    {
+      "id": "quantum_circuit_phase_repair",
+      "name": "Circuit phase repair from noisy gate stream",
+      "domain": "quantum",
+      "category": "debug_repair",
+      "prompt_file": "prompts/quantum_circuit_phase_repair.txt",
+      "candidate_file": "candidates/quantum_circuit_phase_repair.py"
+    },
+    {
+      "id": "quantum_density_matrix_partial_trace",
+      "name": "Density matrix construction and partial trace",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "prompt_file": "prompts/quantum_density_matrix_partial_trace.txt",
+      "candidate_file": "candidates/quantum_density_matrix_partial_trace.py"
+    },
+    {
+      "id": "quantum_error_detection_bit_flip",
+      "name": "Quantum Bit-Flip Error Detection",
+      "domain": "quantum",
+      "category": "debug_repair",
+      "prompt_file": "prompts/quantum_error_detection_bit_flip.txt",
+      "candidate_file": "candidates/quantum_error_detection_bit_flip.py"
+    },
+    {
+      "id": "quantum_gate_alias_casefold_barrier",
+      "name": "Gate alias casefold barrier",
+      "domain": "quantum",
+      "category": "api_normalization",
+      "prompt_file": "prompts/quantum_gate_alias_casefold_barrier.txt",
+      "candidate_file": "candidates/quantum_gate_alias_casefold_barrier.py"
+    },
+    {
+      "id": "quantum_gate_alias_normalization",
+      "name": "Gate alias normalization repair",
+      "domain": "quantum",
+      "category": "api_normalization",
+      "prompt_file": "prompts/quantum_gate_alias_normalization.txt",
+      "candidate_file": "candidates/quantum_gate_alias_normalization.py"
+    },
+    {
+      "id": "quantum_gate_alias_registry_cleanup",
+      "name": "Gate alias registry cleanup",
+      "domain": "quantum",
+      "category": "api_normalization",
+      "prompt_file": "prompts/quantum_gate_alias_registry_cleanup.txt",
+      "candidate_file": "candidates/quantum_gate_alias_registry_cleanup.py"
+    },
+    {
+      "id": "quantum_gate_token_canonicalizer",
+      "name": "Gate token canonicalizer",
+      "domain": "quantum",
+      "category": "api_normalization",
+      "prompt_file": "prompts/quantum_gate_token_canonicalizer.txt",
+      "candidate_file": "candidates/quantum_gate_token_canonicalizer.py"
+    },
+    {
+      "id": "quantum_ghz_state_witness",
+      "name": "GHZ state preparation and entanglement witness",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "prompt_file": "prompts/quantum_ghz_state_witness.txt",
+      "candidate_file": "candidates/quantum_ghz_state_witness.py"
+    },
+    {
+      "id": "quantum_grover_oracle_diffusion",
+      "name": "Grover oracle and diffusion operator simulation",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "prompt_file": "prompts/quantum_grover_oracle_diffusion.txt",
+      "candidate_file": "candidates/quantum_grover_oracle_diffusion.py"
+    },
+    {
+      "id": "quantum_maxcut_assignment_enumerator",
+      "name": "MaxCut assignment enumerator",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "prompt_file": "prompts/quantum_maxcut_assignment_enumerator.txt",
+      "candidate_file": "candidates/quantum_maxcut_assignment_enumerator.py"
+    },
+    {
+      "id": "quantum_maxcut_partition_ranker",
+      "name": "MaxCut partition ranking from Ising-style assignments",
+      "domain": "quantum",
+      "category": "algorithm_reasoning",
+      "prompt_file": "prompts/quantum_maxcut_partition_ranker.txt",
+      "candidate_file": "candidates/quantum_maxcut_partition_ranker.py"
+    },
+    {
+      "id": "quantum_measurement_bug_repair",
+      "name": "Measurement mapping bug repair",
+      "domain": "quantum",
+      "category": "debug_repair",
+      "prompt_file": "prompts/quantum_measurement_bug_repair.txt",
+      "candidate_file": "candidates/quantum_measurement_bug_repair.py"
+    },
+    {
+      "id": "quantum_pauli_message_codec",
+      "name": "Pauli label codec for two-bit messages",
+      "domain": "quantum",
+      "category": "api_normalization",
+      "prompt_file": "prompts/quantum_pauli_message_codec.txt",
+      "candidate_file": "candidates/quantum_pauli_message_codec.py"
+    },
+    {
+      "id": "quantum_phase_estimation_circuit",
+      "name": "Quantum phase estimation unitary eigenvalue extraction",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "prompt_file": "prompts/quantum_phase_estimation_circuit.txt",
+      "candidate_file": "candidates/quantum_phase_estimation_circuit.py"
+    },
+    {
+      "id": "quantum_phase_measurement_register",
+      "name": "Phase measurement register",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "prompt_file": "prompts/quantum_phase_measurement_register.txt",
+      "candidate_file": "candidates/quantum_phase_measurement_register.py"
+    },
+    {
+      "id": "quantum_phase_register_roundtrip",
+      "name": "Phase register round-trip utility",
+      "domain": "quantum",
+      "category": "interface_contract",
+      "prompt_file": "prompts/quantum_phase_register_roundtrip.txt",
+      "candidate_file": "candidates/quantum_phase_register_roundtrip.py"
+    },
+    {
+      "id": "quantum_qaoa_maxcut",
+      "name": "QAOA MaxCut cost function and classical simulation",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "prompt_file": "prompts/quantum_qaoa_maxcut.txt",
+      "candidate_file": "candidates/quantum_qaoa_maxcut.py"
+    },
+    {
+      "id": "quantum_qft_phase_pattern",
+      "name": "QFT phase pattern",
+      "domain": "quantum",
+      "category": "algorithm_reasoning",
+      "prompt_file": "prompts/quantum_qft_phase_pattern.txt",
+      "candidate_file": "candidates/quantum_qft_phase_pattern.py"
+    },
+    {
+      "id": "quantum_channel_depolarizing",
+      "name": "Depolarizing quantum channel simulation",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "prompt_file": "prompts/quantum_channel_depolarizing.txt",
+      "candidate_file": "candidates/quantum_channel_depolarizing.py"
+    },
+    {
+      "id": "quantum_error_correction_shor_9qubit",
+      "name": "Shor 9-qubit error correction code simulation",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "prompt_file": "prompts/quantum_error_correction_shor_9qubit.txt",
+      "candidate_file": "candidates/quantum_error_correction_shor_9qubit.py"
+    },
+    {
+      "id": "quantum_stabilizer_tableau_update_repair",
+      "name": "Stabilizer tableau single-qubit update repair",
+      "domain": "quantum",
+      "category": "debug_repair",
+      "prompt_file": "prompts/quantum_stabilizer_tableau_update_repair.txt",
+      "candidate_file": "candidates/quantum_stabilizer_tableau_update_repair.py"
+    },
+    {
+      "id": "quantum_superdense_coding",
+      "name": "Superdense coding encode/decode",
+      "domain": "quantum",
+      "category": "reasoning",
+      "prompt_file": "prompts/quantum_superdense_coding.txt",
+      "candidate_file": "candidates/quantum_superdense_coding.py"
+    },
+    {
+      "id": "quantum_superdense_identity_lookup",
+      "name": "Superdense identity lookup",
+      "domain": "quantum",
+      "category": "reasoning",
+      "prompt_file": "prompts/quantum_superdense_identity_lookup.txt",
+      "candidate_file": "candidates/quantum_superdense_identity_lookup.py"
+    },
+    {
+      "id": "quantum_superdense_pauli_router",
+      "name": "Superdense Pauli router",
+      "domain": "quantum",
+      "category": "reasoning",
+      "prompt_file": "prompts/quantum_superdense_pauli_router.txt",
+      "candidate_file": "candidates/quantum_superdense_pauli_router.py"
+    },
+    {
+      "id": "quantum_teleportation_corrections",
+      "name": "Teleportation correction mapping",
+      "domain": "quantum",
+      "category": "protocol_logic",
+      "prompt_file": "prompts/quantum_teleportation_corrections.txt",
+      "candidate_file": "candidates/quantum_teleportation_corrections.py"
+    },
+    {
+      "id": "quantum_trotterized_hamiltonian_evolution",
+      "name": "Trotterized Hamiltonian time evolution",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "prompt_file": "prompts/quantum_trotterized_hamiltonian_evolution.txt",
+      "candidate_file": "candidates/quantum_trotterized_hamiltonian_evolution.py"
+    },
+    {
+      "id": "quantum_vqe_energy_minimization",
+      "name": "VQE energy expectation from parameterized ansatz",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "prompt_file": "prompts/quantum_vqe_energy_minimization.txt",
+      "candidate_file": "candidates/quantum_vqe_energy_minimization.py"
+    }
+  ],
+  "model": "Qwen2.5-1.5B-Instruct",
+  "rag_enabled": false
+}

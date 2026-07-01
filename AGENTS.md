@@ -143,12 +143,15 @@ Reactions are lightweight social signals. Humans use them constantly — they sa
 
 Skills provide your tools. When you need one, check its `SKILL.md`. Keep local notes (camera names, SSH details, voice preferences) in `TOOLS.md`.
 
-For this workspace, treat `skills/*.md` as local reference docs for Codex. They are not an instruction to use any OpenClaw runtime.
+For this workspace, the authored skill sources live under `skills/`, and Codex repo-local discovery should point at `.agents/skills`.
+Use `bash scripts/sync_codex_skills.sh` after changing repo skills so `.agents/skills` and `~/.codex/skills` do not drift.
+These skill files are local Codex reference docs, not an instruction to use any OpenClaw runtime.
 
 Local workspace skill of note:
 
-- `skills/huanxin-browser/SKILL.md` for Huanxin train-dev browser automation, environment opening, and running shell commands via `scripts/ai1_shell.sh`, `scripts/ai2_shell.sh`, or `scripts/huanxin_shell.sh`
-- `skills/s3-transfer/SKILL.md` for all local <-> S3 <-> ai1/ai2 code and file transfer
+- `skills/huanxin-s3-ops/SKILL.md` for normal local <-> S3 <-> Huanxin operations, login/session checks, and remote shell/sync workflows
+- `skills/huanxin-browser/SKILL.md` for low-level Huanxin train-dev browser automation debugging
+- `skills/s3-transfer/SKILL.md` for repo-specific S3 relay debugging
 
 ## Execution Policy
 
@@ -156,29 +159,35 @@ Local workspace skill of note:
 - Treat yunwu as the active provider for both model calls and memory search compatibility.
 - Operate Huanxin and S3 directly from this repo with `scripts/`, `browser-automation/`, and local `rclone`/`node` binaries.
 - Ignore `.openclaw/` state unless the user explicitly asks for OpenClaw-specific debugging.
-- For Huanxin work, use local validation first, then S3 transfer, then ai2 shell execution.
+- For Huanxin work, use local validation first, then S3 transfer, then execution in the Huanxin `AI` train-dev environment.
 - Never claim a remote step succeeded unless you actually ran the command and checked the result.
 - If local tests fail, fix the local issue before any remote action.
 
 ### Huanxin Environment Assignment
 
-- **This agent (quantum-rnd) may use both ai1 and ai2** on Huanxin (https://aihuanxin.cn).
-- Default to ai2 for the mainline path unless ai1 offers clearer capacity or parallelism for the current experiment.
-- Browser automation profile is pre-authenticated; use `huanxin_probe.js` to verify before operations.
+- **From 2026-04-26 onward, all new training must use the Huanxin `AI` train-dev environment**, not the old ai1/ai2 training environments.
+- Canonical training route: `https://aihuanxin.cn/kunlun/kl-web?poolId=6&projectId=21b4208dde424e96b159362ef49c9c96#/train-dev/environment/dl-9a5a098accce31c28cf4c6ca23391341?name=AI`
+- If `.huanxin_manual_mode` exists, Huanxin is in human manual-use mode. Do not run Huanxin browser automation, `ai_shell`, `huanxin_shell`, Safari keepalive, profile repair, or browser probes until the lock is removed. Use `scripts/huanxin_manual_mode.sh --status` to verify the lock and `--kill-local` to stop local Huanxin automation.
+- Huanxin browser automation is disabled by default. Removing `.huanxin_manual_mode` or running `scripts/huanxin_manual_mode.sh --manual-off` / `--disable` must not re-enable automation. Only `scripts/huanxin_manual_mode.sh --enable-automation` may create `.huanxin_automation_enabled`, and only when the human explicitly wants Codex to control Huanxin again.
+- Any background task may continue local non-Huanxin work, but no background task may refresh, repair, probe, or control the Huanxin UI while the human is using the webshell manually.
+- Before any Huanxin shell, sync, or training action, verify/login to the exact `AI` train-dev environment. If auth is stale, repair or login first; do not assume an old daemon or ai2 session is valid.
 - The default control plane is local Codex execution from this repo, not OpenClaw-managed wrappers.
-- **CODE TRANSFER: ALWAYS use S3 relay** (`skills/s3-transfer/SKILL.md` and `scripts/` helpers). NEVER use browser automation to upload/paste code or navigate to URLs for file submission. The browser is only for running shell commands via `./scripts/ai1_shell.sh`, `./scripts/ai2_shell.sh`, or `./scripts/huanxin_shell.sh`.
-- Default generic shell entrypoint: `./scripts/huanxin_shell.sh <ai1|ai2> "<cmd>"`.
-- Convenience wrappers: `./scripts/ai1_shell.sh "<cmd>"` and `./scripts/ai2_shell.sh "<cmd>"`.
-- Default two-way transfer entrypoints: `./scripts/push_to_s3.sh`, `./scripts/ai2_sync_from_s3.sh`, and `./scripts/ai2_push_results_to_s3.sh`.
-- If a transfer plan is risky or large, use the helper `--dry-run` modes first before changing ai2 or S3 state.
+- **CODE TRANSFER: ALWAYS use S3 relay** (`skills/huanxin-s3-ops/SKILL.md`, `skills/s3-transfer/SKILL.md`, and `scripts/` helpers). NEVER use browser automation to upload/paste code or navigate to URLs for file submission.
+- Default generic shell entrypoint: `./scripts/huanxin_shell.sh AI "<cmd>"`.
+- Convenience wrapper: `./scripts/ai_shell.sh "<cmd>"`.
+- Default AI two-way transfer entrypoints: `./scripts/push_to_s3.sh`, `./scripts/ai_sync_from_s3.sh`, and `./scripts/ai_push_results_to_s3.sh`.
+- The only active S3 relay for the current `AI` workflow is INER bucket `jtdlp-21b4208dde424e96b159362ef49c9c96`, with project root `iner:jtdlp-21b4208dde424e96b159362ef49c9c96/software/quantum-gpt`.
+- Default `AI` remote project root is `~/software/quantum-gpt` (`/root/software/quantum-gpt` when running as root).
+- Keep historical ai2 details and helpers because existing projects/models may need to be migrated from ai2 to `AI`; do not use ai2 for new training unless the user explicitly asks.
+- For the new `AI` environment, prefer the INER S3 relay documented in `skills/iner-s3-transfer/SKILL.md` and `TOOLS.md`; prove new S3 endpoints with a tiny probe before any broad upload.
+- If a transfer plan is risky or large, use helper `--dry-run` modes first before changing Huanxin or S3 state.
 
 ### Huanxin Status Reporting
 
-- Basic ai2 shell access is already verified in this workspace. Do not describe ai2 access itself as unverified, unavailable, or the current blocker unless a fresh live ai2 shell command has actually failed in this same turn.
-- Do not answer Huanxin blocker questions with generic stories about remote friction, broken entrypoints, or old SIGTERM incidents unless the user explicitly asked for historical debugging context.
-- When asked what is currently slowing you down, default to this framing: ai2 shell access already works; the remaining blocker is the specific end-to-end remote sync, training, or evaluation workflow that still needs to be run and verified.
+- Do not answer Huanxin blocker questions with generic stories about remote friction, broken entrypoints, old ai2 incidents, or stale SIGTERM context unless the user explicitly asked for historical debugging context.
+- When asked what is currently slowing you down, default to this framing: the target has moved to the `AI` train-dev environment; the remaining blocker is the specific end-to-end login, sync, training, or evaluation workflow that still needs to be run and verified there.
 - If you need to mention a blocker, prefer the present-tense concrete blocker with the exact command or workflow step, not a retrospective narrative about earlier setup issues.
-- If the user asks whether you can use Huanxin ai2, answer yes and, when useful, offer or perform a small verification command.
+- If the user asks whether to use ai2 for training, answer no: new training belongs on Huanxin `AI` unless the user explicitly asks for historical ai2 debugging.
 
 **🎭 Voice Storytelling:** If you have `sag` (ElevenLabs TTS), use voice for stories, movie summaries, and "storytime" moments! Way more engaging than walls of text. Surprise people with funny voices.
 

@@ -4,6 +4,7 @@ import gzip
 import math
 import pickle
 import re
+import sys
 import warnings
 from dataclasses import dataclass
 from pathlib import Path
@@ -241,6 +242,13 @@ class QuantumRAGIndex:
 
     @classmethod
     def load(cls, path: Path) -> "QuantumRAGIndex":
+        # Index artifacts may be built with NumPy 2.x and loaded in an
+        # environment pinned to NumPy 1.x.  NumPy 2 pickles can reference
+        # numpy._core.*, while NumPy 1 exposes the same modules under
+        # numpy.core.*.
+        sys.modules.setdefault("numpy._core", np.core)
+        sys.modules.setdefault("numpy._core.numeric", np.core.numeric)
+        sys.modules.setdefault("numpy._core.multiarray", np.core.multiarray)
         with gzip.open(path, "rb") as handle:
             payload = pickle.load(handle)
         return cls(

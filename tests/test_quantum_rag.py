@@ -253,6 +253,25 @@ class TestBuildChunksFromRoots:
         assert any("[source:" in c.text for c in chunks_with)
         assert not any("[source:" in c.text for c in chunks_without)
 
+    def test_source_root_makes_paths_relative(self, tmp_path: Path) -> None:
+        root = tmp_path / "workspace"
+        doc = root / "docs" / "quantum_libraries" / "qiskit.md"
+        doc.parent.mkdir(parents=True)
+        doc.write_text("Qiskit current API " * 30, encoding="utf-8")
+
+        chunks = build_chunks_from_roots(
+            [root / "docs"],
+            chunk_size=200,
+            chunk_overlap=20,
+            min_chunk_chars=10,
+            source_root=root,
+        )
+
+        assert chunks
+        assert chunks[0].source_path == "docs/quantum_libraries/qiskit.md"
+        assert str(tmp_path) not in chunks[0].source_path
+        assert "[source: docs/quantum_libraries/qiskit.md]" in chunks[0].text
+
 
 class TestDocumentChunk:
     def test_to_dict_round_trip(self) -> None:

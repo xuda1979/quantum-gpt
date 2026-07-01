@@ -2,6 +2,37 @@
 
 ## Stable Decisions
 
+- Two-stage training direction clarified on `2026-06-30`:
+  - current phase is model code ability: quantum code generation, general software engineering, RAG-assisted API correctness, executable tests, SFT/trajectory cloning, then GRPO/RLVR on code verifiers
+  - later phase is quantum-computing scientific capability: select 1000 important/classic papers, generate progressive paper-grounded QA/code/research-direction data, distill with SFT, then run mixed distillation + RL while preserving code replay
+  - durable roadmap: `docs/two-stage-training-roadmap-2026-06-30.md`
+
+- INER S3 routing changed on `2026-05-15`:
+  - treat `https://iner.aihuanxin.cn` bucket `jtdlp-21b4208dde424e96b159362ef49c9c96` as the only active S3 relay for this workspace
+  - default project root is `iner:jtdlp-21b4208dde424e96b159362ef49c9c96/software/quantum-gpt`
+  - direct bucket-specific `rclone copyto` / `lsf` operations are now verified working
+  - root-level `rclone lsd iner:` may still fail because the endpoint root serves HTML instead of S3 XML, so future probes should target the explicit bucket path
+- Local release path added on `2026-04-30`:
+  - the user-facing CPU-only local version should use a quantized Qwen3.6 GGUF model served through `llama.cpp` with `--n-gpu-layers 0`
+  - full local testing on a 16 GB Mac proved `Qwen3.6-27B-Q4_K_M.gguf` can load CPU-only but is functionally too slow even for tiny generation
+  - default local model is now the practical CPU target: `unsloth/Qwen3.6-35B-A3B-GGUF` / `Qwen3.6-35B-A3B-UD-IQ2_XXS.gguf`
+  - optional higher-quality 27B/35B quantizations remain available through installer flags, but they should not be the no-GPU/NPU default
+  - one-command install path is `scripts/install_qwen36_rag_local.sh`; smoke mode avoids the huge model download but still validates doc fetch and RAG index build
+- Model policy changed on `2026-04-27`:
+  - use `Qwen/Qwen3.6-27B` as the base model for the next round of fine-tuning
+  - all new SFT and reinforcement-learning runs should default to local/remote path `models/Qwen3.6-27B`
+  - keep Qwen2.5 and OmniCoder references as historical baselines or explicit comparison lanes, not as default training bases
+- Huanxin training target changed on `2026-04-26`:
+  - do not use the old `ai2` environment for new training runs
+  - all new training must target the Huanxin `AI` train-dev environment:
+    `https://aihuanxin.cn/kunlun/kl-web?poolId=6&projectId=21b4208dde424e96b159362ef49c9c96#/train-dev/environment/dl-9a5a098accce31c28cf4c6ca23391341?name=AI`
+  - before any Huanxin shell, sync, or training action, verify/login to that exact `AI` environment
+  - if auth is stale, repair or login first; do not assume an old ai2 daemon/session is valid
+  - `TOOLS.md`, `AGENTS.md`, `PROJECT.md`, Huanxin skills, and the generic Huanxin browser/shell helpers were updated to prefer `AI`
+- Huanxin auth authorization clarified on `2026-06-01`:
+  - the user authorizes Codex to perform Huanxin auth/login and session repair for this workspace through the repo Huanxin skill workflow when needed for Huanxin work
+  - do not store secrets or auth material: no passwords, SMS codes, cookies, bearer tokens, credential-bearing callback URLs, browser profiles, or private auth state in memory, docs, logs, final answers, or skill bodies
+  - preserve the existing manual-mode and automation-disabled-by-default protections; authorization to log in is not authorization to disrupt a manually used Huanxin webshell
 - Huanxin environment policy changed on `2026-04-04`:
   - both `ai1` and `ai2` are valid R&D targets for this workspace
   - `ai2` remains the default path, but `ai1` may be used when it provides better capacity or parallelism

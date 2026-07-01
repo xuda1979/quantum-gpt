@@ -1,0 +1,387 @@
+{
+  "index": "/Users/daxu/software/quantum-gpt/artifacts/quantum-rag/authoritative-index.pkl.gz",
+  "benchmark": "/Users/daxu/software/quantum-gpt/evals/benchmarks/quantum_rag_retrieval_v1.json",
+  "num_queries": 15,
+  "top_k": 5,
+  "alpha": 0.55,
+  "hit_at_k": 1.0,
+  "mrr": 1.0,
+  "mean_latency_ms": 54.7,
+  "queries": [
+    {
+      "id": "rag_eval_holdout_local_rule",
+      "query": "How should this repo evaluate strict quantum holdout tasks before remote training?",
+      "reciprocal_rank": 1.0,
+      "hit": true,
+      "first_hit_rank": 1,
+      "latency_ms": 100.3,
+      "top_sources": [
+        {
+          "rank": 1,
+          "source": "/Users/daxu/software/quantum-gpt/research/quantum_rag_low_compute.md",
+          "score": 1.8292
+        },
+        {
+          "rank": 2,
+          "source": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/error_detection_bit_flip/task.json",
+          "score": 1.7523
+        },
+        {
+          "rank": 3,
+          "source": "/Users/daxu/software/quantum-gpt/evals/benchmarks/gemma4_quantum_generalization_holdout_v1.txt",
+          "score": 1.5083
+        }
+      ]
+    },
+    {
+      "id": "rag_qiskit_task_contract",
+      "query": "Which repo task covers VQE energy expectation from a parameterized ansatz?",
+      "reciprocal_rank": 1.0,
+      "hit": true,
+      "first_hit_rank": 1,
+      "latency_ms": 57.4,
+      "top_sources": [
+        {
+          "rank": 1,
+          "source": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/vqe_energy_minimization/candidate.py",
+          "score": 2.5455
+        },
+        {
+          "rank": 2,
+          "source": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/error_detection_bit_flip/task.json",
+          "score": 1.8816
+        },
+        {
+          "rank": 3,
+          "source": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/vqe_energy_minimization/tests.py",
+          "score": 1.7545
+        }
+      ]
+    },
+    {
+      "id": "rag_qft_task_contract",
+      "query": "Where is the QFT phase pattern task defined in this repo?",
+      "reciprocal_rank": 1.0,
+      "hit": true,
+      "first_hit_rank": 1,
+      "latency_ms": 53.2,
+      "top_sources": [
+        {
+          "rank": 1,
+          "source": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/qft_phase_pattern/candidate.py",
+          "score": 2.5864
+        },
+        {
+          "rank": 2,
+          "source": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/qft_phase_pattern/tests.py",
+          "score": 1.8364
+        },
+        {
+          "rank": 3,
+          "source": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/error_detection_bit_flip/task.json",
+          "score": 1.5151
+        }
+      ]
+    },
+    {
+      "id": "rag_huanxin_sync_rule",
+      "query": "How does this repo say code should be moved to Huanxin before training?",
+      "reciprocal_rank": 1.0,
+      "hit": true,
+      "first_hit_rank": 1,
+      "latency_ms": 50.3,
+      "top_sources": [
+        {
+          "rank": 1,
+          "source": "/Users/daxu/software/quantum-gpt/PROJECT.md",
+          "score": 1.9923
+        },
+        {
+          "rank": 2,
+          "source": "/Users/daxu/software/quantum-gpt/PROJECT.md",
+          "score": 1.9577
+        },
+        {
+          "rank": 3,
+          "source": "/Users/daxu/software/quantum-gpt/PROJECT.md",
+          "score": 1.9231
+        }
+      ]
+    },
+    {
+      "id": "rag_grpo_quantum_benchmark_file",
+      "query": "What benchmark file should GRPO use for quantum training tasks in this repo?",
+      "reciprocal_rank": 1.0,
+      "hit": true,
+      "first_hit_rank": 1,
+      "latency_ms": 51.0,
+      "top_sources": [
+        {
+          "rank": 1,
+          "source": "/Users/daxu/software/quantum-gpt/evals/benchmarks/quantum_grpo_training_v2_disjoint.txt",
+          "score": 3.6221
+        },
+        {
+          "rank": 2,
+          "source": "/Users/daxu/software/quantum-gpt/evals/benchmarks/quantum_grpo_training_v1.txt",
+          "score": 3.5875
+        },
+        {
+          "rank": 3,
+          "source": "/Users/daxu/software/quantum-gpt/evals/benchmarks/quantum_grpo_training_v3_hard_disjoint.txt",
+          "score": 3.5875
+        }
+      ]
+    },
+    {
+      "id": "rag_rag_usage_doc",
+      "query": "What does the current low-compute quantum RAG implementation support and what are its gaps?",
+      "reciprocal_rank": 1.0,
+      "hit": true,
+      "first_hit_rank": 1,
+      "latency_ms": 52.7,
+      "top_sources": [
+        {
+          "rank": 1,
+          "source": "/Users/daxu/software/quantum-gpt/research/quantum_rag_low_compute.md",
+          "score": 3.0827
+        },
+        {
+          "rank": 2,
+          "source": "/Users/daxu/software/quantum-gpt/research/quantum_rag_low_compute.md",
+          "score": 2.9788
+        },
+        {
+          "rank": 3,
+          "source": "/Users/daxu/software/quantum-gpt/research/quantum_rag_low_compute.md",
+          "score": 2.9442
+        }
+      ]
+    },
+    {
+      "id": "rag_ghz_task_contract",
+      "query": "Where is the GHZ state witness task and its reference candidate?",
+      "reciprocal_rank": 1.0,
+      "hit": true,
+      "first_hit_rank": 1,
+      "latency_ms": 51.9,
+      "top_sources": [
+        {
+          "rank": 1,
+          "source": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/ghz_state_witness/candidate.py",
+          "score": 3.7193
+        },
+        {
+          "rank": 2,
+          "source": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/circuit_depth_optimization/candidate.py",
+          "score": 2.2057
+        },
+        {
+          "rank": 3,
+          "source": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/grover_oracle_diffusion/candidate.py",
+          "score": 2.0379
+        }
+      ]
+    },
+    {
+      "id": "rag_error_detection_task",
+      "query": "How does the bit flip error detection task work in this repo?",
+      "reciprocal_rank": 1.0,
+      "hit": true,
+      "first_hit_rank": 1,
+      "latency_ms": 51.3,
+      "top_sources": [
+        {
+          "rank": 1,
+          "source": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/error_detection_bit_flip/task.json",
+          "score": 3.5683
+        },
+        {
+          "rank": 2,
+          "source": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/error_detection_bit_flip/candidate.py",
+          "score": 2.5833
+        },
+        {
+          "rank": 3,
+          "source": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/error_detection_bit_flip/tests.py",
+          "score": 1.8333
+        }
+      ]
+    },
+    {
+      "id": "rag_qaoa_maxcut_task",
+      "query": "Where is the QAOA MaxCut task defined and what does its candidate implementation look like?",
+      "reciprocal_rank": 1.0,
+      "hit": true,
+      "first_hit_rank": 1,
+      "latency_ms": 50.7,
+      "top_sources": [
+        {
+          "rank": 1,
+          "source": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/qaoa_maxcut/candidate.py",
+          "score": 3.6742
+        },
+        {
+          "rank": 2,
+          "source": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/circuit_depth_optimization/candidate.py",
+          "score": 2.1475
+        },
+        {
+          "rank": 3,
+          "source": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/bitstring_maxcut_landscape/candidate.py",
+          "score": 2.1142
+        }
+      ]
+    },
+    {
+      "id": "rag_superdense_coding_task",
+      "query": "Which task in this repo implements superdense coding?",
+      "reciprocal_rank": 1.0,
+      "hit": true,
+      "first_hit_rank": 1,
+      "latency_ms": 50.3,
+      "top_sources": [
+        {
+          "rank": 1,
+          "source": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/superdense_coding/candidate.py",
+          "score": 3.6438
+        },
+        {
+          "rank": 2,
+          "source": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/superdense_pauli_router/candidate.py",
+          "score": 3.5938
+        },
+        {
+          "rank": 3,
+          "source": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/superdense_identity_lookup/candidate.py",
+          "score": 3.5938
+        }
+      ]
+    },
+    {
+      "id": "rag_grover_oracle_task",
+      "query": "What is the Grover oracle diffusion task and where is it defined?",
+      "reciprocal_rank": 1.0,
+      "hit": true,
+      "first_hit_rank": 1,
+      "latency_ms": 51.8,
+      "top_sources": [
+        {
+          "rank": 1,
+          "source": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/grover_oracle_diffusion/candidate.py",
+          "score": 2.6045
+        },
+        {
+          "rank": 2,
+          "source": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/error_detection_bit_flip/task.json",
+          "score": 1.8811
+        },
+        {
+          "rank": 3,
+          "source": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/grover_oracle_diffusion/tests.py",
+          "score": 1.8773
+        }
+      ]
+    },
+    {
+      "id": "rag_teleportation_task",
+      "query": "How does the quantum teleportation corrections task work?",
+      "reciprocal_rank": 1.0,
+      "hit": true,
+      "first_hit_rank": 1,
+      "latency_ms": 50.2,
+      "top_sources": [
+        {
+          "rank": 1,
+          "source": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/teleportation_corrections/candidate.py",
+          "score": 2.6188
+        },
+        {
+          "rank": 2,
+          "source": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/error_detection_bit_flip/task.json",
+          "score": 1.9413
+        },
+        {
+          "rank": 3,
+          "source": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/teleportation_corrections/tests.py",
+          "score": 1.7563
+        }
+      ]
+    },
+    {
+      "id": "rag_shor_error_correction",
+      "query": "Where is the Shor 9-qubit quantum error correction task?",
+      "reciprocal_rank": 1.0,
+      "hit": true,
+      "first_hit_rank": 1,
+      "latency_ms": 50.3,
+      "top_sources": [
+        {
+          "rank": 1,
+          "source": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/quantum_error_correction_shor_9qubit/candidate.py",
+          "score": 2.7111
+        },
+        {
+          "rank": 2,
+          "source": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/quantum_error_correction_shor_9qubit/candidate.py",
+          "score": 2.6611
+        },
+        {
+          "rank": 3,
+          "source": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/error_detection_bit_flip/task.json",
+          "score": 2.0392
+        }
+      ]
+    },
+    {
+      "id": "rag_build_rag_script",
+      "query": "How do I build the quantum RAG index using the build script?",
+      "reciprocal_rank": 1.0,
+      "hit": true,
+      "first_hit_rank": 1,
+      "latency_ms": 50.0,
+      "top_sources": [
+        {
+          "rank": 1,
+          "source": "/Users/daxu/software/quantum-gpt/research/quantum_rag_low_compute.md",
+          "score": 3.035
+        },
+        {
+          "rank": 2,
+          "source": "/Users/daxu/software/quantum-gpt/research/quantum_rag_low_compute.md",
+          "score": 2.99
+        },
+        {
+          "rank": 3,
+          "source": "/Users/daxu/software/quantum-gpt/research/quantum_rag_low_compute.md",
+          "score": 2.945
+        }
+      ]
+    },
+    {
+      "id": "rag_training_workflow",
+      "query": "What is the verified GRPO training command for this project?",
+      "reciprocal_rank": 1.0,
+      "hit": true,
+      "first_hit_rank": 1,
+      "latency_ms": 49.6,
+      "top_sources": [
+        {
+          "rank": 1,
+          "source": "/Users/daxu/software/quantum-gpt/HEARTBEAT.md",
+          "score": 3.595
+        },
+        {
+          "rank": 2,
+          "source": "/Users/daxu/software/quantum-gpt/HEARTBEAT.md",
+          "score": 3.595
+        },
+        {
+          "rank": 3,
+          "source": "/Users/daxu/software/quantum-gpt/HEARTBEAT.md",
+          "score": 3.55
+        }
+      ]
+    }
+  ]
+}

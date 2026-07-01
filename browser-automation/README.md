@@ -14,7 +14,7 @@ This directory contains local Playwright helpers for operating the Huanxin train
 1. `node browser-automation/huanxin_probe.js`
 2. if authenticated, `node browser-automation/huanxin_inspect.js`
 3. open the target environment, usually `ai2`
-4. perform a minimal validated paste into `/root/root/work/quantum-gpt`
+4. perform a minimal validated paste into `/root/work/quantum-gpt`
 
 ## Concurrent workers
 

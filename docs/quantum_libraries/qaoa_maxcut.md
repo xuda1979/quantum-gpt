@@ -1,48 +1,5 @@
 # QAOA for MaxCut
 
-## Evaluation helper signatures
-For lightweight code-generation evals, implement these as module-level
-functions, not class methods:
-
-```python
-import itertools
-
-
-def _edge_weight(edge):
-    if len(edge) == 2:
-        u, v = edge
-        return u, v, 1.0
-    if len(edge) == 3:
-        u, v, w = edge
-        return u, v, float(w)
-    raise ValueError("MaxCut edges must be (u, v) or (u, v, weight)")
-
-
-def maxcut_cost(bitstring, edges):
-    total = 0.0
-    for edge in edges:
-        u, v, w = _edge_weight(edge)
-        if int(bitstring[u]) != int(bitstring[v]):
-            total += w
-    return int(total) if float(total).is_integer() else total
-
-
-def qaoa_cost_landscape(n, edges):
-    rows = []
-    for bits in itertools.product([0, 1], repeat=n):
-        bitstring = "".join(str(bit) for bit in bits)
-        rows.append((bitstring, maxcut_cost(bitstring, edges)))
-    return sorted(rows, key=lambda item: item[1], reverse=True)
-
-
-def brute_force_maxcut(n, edges):
-    return qaoa_cost_landscape(n, edges)[0]
-```
-
-For this helper interface, `qaoa_cost_landscape` is a classical exhaustive
-landscape over bitstrings. Do not give it variational parameters, `depth`,
-`gamma`, or `beta` arguments unless the tests explicitly ask for those.
-
 ## Concept
 The Quantum Approximate Optimization Algorithm (QAOA) attacks
 combinatorial optimization problems by alternating two parameterised
@@ -56,65 +13,144 @@ For depth p, parameters (gamma_1, ..., gamma_p, beta_1, ..., beta_p):
   |gamma, beta> = e^{-i beta_p H_M} e^{-i gamma_p H_C} ...
                   e^{-i beta_1 H_M} e^{-i gamma_1 H_C} |+>^n
 
-## MaxCut cost function (classical bitstring evaluation)
+## Classical bitstring cost evaluation
+The classical MaxCut cost of a bitstring assignment is
 
-```python
-def _edge_weight(edge: tuple) -> tuple[int, int, float]:
-    """Accept either unweighted (u, v) or weighted (u, v, w) edges."""
-    if len(edge) == 2:
-        u, v = edge
-        return u, v, 1.0
-    if len(edge) == 3:
-        u, v, w = edge
-        return u, v, float(w)
-    raise ValueError("MaxCut edges must be (u, v) or (u, v, weight)")
-
-
-def maxcut_cost(bitstring, edges: list[tuple]) -> float:
-    total = 0.0
-    for edge in edges:
-        u, v, w = _edge_weight(edge)
-        if int(bitstring[u]) != int(bitstring[v]):
-            total += w
-    return int(total) if float(total).is_integer() else total
-```
+  cost(x) = sum_{(u,v) in E} w_uv * [x_u != x_v]
 
 Equivalently using +/-1 spins:
 
   cost = sum_{(u,v)} w_uv * (1 - s_u * s_v) / 2
 
-## Reference Python (classical simulation of QAOA cost)
-
-```python
-import itertools
-
-def qaoa_cost_landscape(n: int, edges: list[tuple]) -> list[tuple[str, float]]:
-    rows = []
-    for bits in itertools.product([0, 1], repeat=n):
-        bitstring = "".join(str(bit) for bit in bits)
-        rows.append((bitstring, maxcut_cost(bitstring, edges)))
-    return sorted(rows, key=lambda item: item[1], reverse=True)
-
-
-def brute_force_maxcut(n: int, edges: list[tuple]) -> tuple[str, float]:
-    return qaoa_cost_landscape(n, edges)[0]
-```
+For brute-force enumeration, exhaustive ranking, and bitstring-cost helper
+implementations, see `maxcut_classical_helpers.md` in this same directory.
 
 ## Library snippets
-Qiskit (high-level):
+Qiskit 2.x ecosystem. The latest Qiskit package target is qiskit 2.4.2
+(Python >=3.10). Use the 2.4.x documentation/API as the target for code
+generation and import repair.
+
 ```python
+from qiskit.primitives import StatevectorSampler
+from qiskit_algorithms.minimum_eigensolvers import QAOA
+from qiskit_algorithms.optimizers import COBYLA
+from qiskit_algorithms.utils import algorithm_globals
 from qiskit_optimization.applications import Maxcut
 from qiskit_optimization.algorithms import MinimumEigenOptimizer
+
+algorithm_globals.random_seed = 42
+
+# edges: any list of (u, v) unweighted or (u, v, weight) weighted tuples
+edges = [(0, 1), (1, 2), (2, 0)]
+maxcut = Maxcut(edges)
+quadratic_program = maxcut.to_quadratic_program()
+
+sampler = StatevectorSampler(seed=42)
+optimizer = COBYLA(maxiter=100)
+qaoa = QAOA(sampler=sampler, optimizer=optimizer, reps=2)
+
+result = MinimumEigenOptimizer(qaoa).solve(quadratic_program)
+cut_value = result.fval
+nodes_set0, nodes_set1 = maxcut.interpret(result)
+print(result.x, nodes_set0, nodes_set1, cut_value)
+```
+
+If repairing an import error, do not use this invalid form:
+
+```python
+from qiskit_optimization.algorithms import QAOA
+```
+
+`qiskit_optimization.algorithms` exposes optimization wrappers such as
+`MinimumEigenOptimizer`; QAOA belongs in `qiskit_algorithms` or in
+`qiskit_optimization.minimum_eigensolvers`:
+
+```python
+from qiskit_algorithms.minimum_eigensolvers import QAOA
+# or: from qiskit_optimization.minimum_eigensolvers import QAOA
+from qiskit_optimization.algorithms import MinimumEigenOptimizer
+```
+
+For manually building a Qiskit Optimization Max-Cut problem, do not call
+nonexistent methods such as `linear_term()` or `quadratic_term()`. Use
+`QuadraticProgram.maximize(linear=..., quadratic=...)`. The Max-Cut objective is
+not a minimization; for each weighted edge `(u, v, w)`, maximize
+`w*x_u + w*x_v - 2*w*x_u*x_v`.
+
+```python
+from qiskit_optimization import QuadraticProgram
+
+edges = [(0, 1, 1.0), (1, 2, 1.0), (2, 0, 1.0)]
+problem = QuadraticProgram("manual_maxcut")
+for node in range(3):
+    problem.binary_var(name=f"x{node}")
+
+linear = {f"x{node}": 0.0 for node in range(3)}
+quadratic = {}
+for u, v, weight in edges:
+    linear[f"x{u}"] += weight
+    linear[f"x{v}"] += weight
+    pair = (f"x{u}", f"x{v}")
+    quadratic[pair] = quadratic.get(pair, 0.0) - 2.0 * weight
+
+problem.maximize(linear=linear, quadratic=quadratic)
+```
+
+For weighted or matrix-style graph construction, build a symmetric adjacency
+matrix before creating `Maxcut`:
+
+```python
+import numpy as np
+
+weighted_edges = [(0, 1, 2.0), (1, 2, 1.0), (2, 0, 3.0)]
+adjacency = np.zeros((3, 3))
+for u, v, weight in weighted_edges:
+    adjacency[u, v] = weight
+    adjacency[v, u] = weight
+
+maxcut = Maxcut(adjacency)
 ```
 
 PennyLane offers `qml.qaoa.maxcut` to build cost and mixer Hamiltonians
 automatically.
+
+## Key class signatures (reference)
+
+Actual constructor/method signatures in the current qiskit-optimization /
+qiskit-algorithms release:
+
+| Class / method | Signature | Notes |
+| --- | --- | --- |
+| `Maxcut(edge_list_or_matrix)` | `__init__(self, graph: nx.Graph \| np.ndarray \| list)` | positional-only `graph` parameter; accepts an unweighted edge list or a symmetric adjacency matrix |
+| `Maxcut.to_quadratic_program` | `(self) -> QuadraticProgram` | instance method, no arguments; call as `Maxcut(edges).to_quadratic_program()`, not `Maxcut.to_quadratic_program(edges)`; returns one `QuadraticProgram`, not a tuple |
+| `Maxcut.interpret` | `(self, result) -> tuple[list[int], list[int]]` | returns the two partitions directly from a solved result |
+| `QAOA.__init__` | `(self, sampler, optimizer, *, reps=1, initial_state=None, mixer=None, initial_point=None, aggregation=None, callback=None, transpiler=None, transpiler_options=None)` | no `num_qubits` argument; the qubit count is inferred from the cost operator |
+| `MinimumEigenOptimizer.__init__` | `(self, min_eigen_solver, penalty=None, converters=None)` | keyword names are `min_eigen_solver` and `converters` (plural); default `converters` is `QuadraticProgramToQubo`, which already handles sense conversion — a `MAXIMIZE`-sense `QuadraticProgram` can be solved directly without manually negating coefficients |
+| `qiskit_optimization.converters` module | exposes `InequalityToEquality`, `IntegerToBinary`, `LinearEqualityToPenalty`, `LinearInequalityToPenalty`, `MaximizeToMinimize`, `MinimizeToMaximize`, `QuadraticProgramToQubo` | no `MinimumToSum` class exists |
+
+Python dicts do not support unary `-`; negating a dict directly (`-coeffs`)
+raises `TypeError: bad operand type for unary -: 'dict'`. Negate the values
+via a dict comprehension instead: `{k: -v for k, v in coeffs.items()}`.
 
 ## Common pitfalls
 - Edge weights are *additive*; only count each edge once even if the
   graph is undirected.
 - Evaluation tasks often use unweighted edge pairs `(u, v)` instead of
   weighted triples `(u, v, w)`. Treat missing weight as `1.0`.
+- In current Qiskit, import optimizers such as `COBYLA` from
+    `qiskit_algorithms.optimizers`, not directly from `qiskit_algorithms`.
+- Importing `QAOA` from `qiskit_optimization.algorithms` raises ImportError;
+    import `QAOA` from `qiskit_algorithms.minimum_eigensolvers` or
+    `qiskit_optimization.minimum_eigensolvers` instead.
+- `QuadraticProgram` has no `linear_term()` or `quadratic_term()` objective
+    builder methods; pass dictionaries to `maximize` or `minimize`.
+- Standard Max-Cut should use `maximize`, not `minimize`, with edge term
+    `x_u + x_v - 2*x_u*x_v` for unit weights.
+- `Maxcut(edges)` accepts an unweighted edge list in current
+    qiskit-optimization, but an adjacency matrix is clearer for weighted graphs.
+- Complement bitstrings represent the same MaxCut partition on any graph:
+    flipping every bit swaps which side each set label refers to, but the
+    cut value (number of crossing edges) is unchanged.
 - Keep snippets compatible with Python 3.9 evaluation environments; avoid
   `A | B` union annotations in generated candidate files.
 - The quantum cost expectation <H_C> is shifted by `sum w / 2` from the

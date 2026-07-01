@@ -1,0 +1,96 @@
+{
+  "generated_at_utc": "2026-04-22T15:44:09.446112+00:00",
+  "model_path": "/Users/daxu/.openclaw/workspace-quantum-rnd/models/Qwen2.5-1.5B-Instruct",
+  "index_path": "/Users/daxu/software/quantum-gpt/artifacts/quantum-rag/quantum-code-index.pkl.gz",
+  "device": "mps",
+  "task_count": 2,
+  "max_new_tokens": 256,
+  "temperature": 0.0,
+  "rag": {
+    "top_k": 3,
+    "alpha": 0.55,
+    "max_doc_chars": 1200
+  },
+  "summaries": {
+    "no_rag": {
+      "total": 2,
+      "passed": 2,
+      "pass_rate": 1.0,
+      "by_category": {
+        "circuit_construction": {
+          "pass_rate": 1.0,
+          "pass": 1,
+          "total": 1
+        },
+        "algorithm_implementation": {
+          "pass_rate": 1.0,
+          "pass": 1,
+          "total": 1
+        }
+      },
+      "per_task": {
+        "quantum_bell_pair_construction": true,
+        "quantum_binary_measurement_decoder": true
+      },
+      "failures": [],
+      "run_dir": "evals/runs/qwen25-1p5b-no-rag-20260422T154330Z",
+      "generation_wall_seconds": 11.4
+    },
+    "with_rag": {
+      "total": 2,
+      "passed": 1,
+      "pass_rate": 0.5,
+      "by_category": {
+        "circuit_construction": {
+          "pass_rate": 1.0,
+          "pass": 1,
+          "total": 1
+        },
+        "algorithm_implementation": {
+          "pass_rate": 0.0,
+          "pass": 0,
+          "total": 1
+        }
+      },
+      "per_task": {
+        "quantum_bell_pair_construction": true,
+        "quantum_binary_measurement_decoder": false
+      },
+      "failures": [
+        {
+          "id": "quantum_binary_measurement_decoder",
+          "details": [
+            "runner_exception: TypeError: unsupported operand type(s) for |: 'type' and 'NoneType'",
+            "traceback:",
+            "Traceback (most recent call last):",
+            "  File \"/Users/daxu/software/quantum-gpt/evals/runner/run_eval.py\", line 123, in run_task",
+            "    result = run_single_file_task(module, only_candidate_path)",
+            "  File \"/Users/daxu/software/quantum-gpt/evals/runner/run_eval.py\", line 77, in run_single_file_task",
+            "    return module.run_tests(str(candidate_path))",
+            "  File \"/Users/daxu/software/quantum-gpt/evals/tasks/quantum/binary_measurement_decoder/tests.py\", line 14, in run_tests",
+            "    module = _load(candidate_path)",
+            "  File \"/Users/daxu/software/quantum-gpt/evals/tasks/quantum/binary_measurement_decoder/tests.py\", line 9, in _load",
+            "    spec.loader.exec_module(module)",
+            "  File \"<frozen importlib._bootstrap_external>\", line 850, in exec_module",
+            "  File \"<frozen importlib._bootstrap>\", line 228, in _call_with_frames_removed",
+            "  File \"/Users/daxu/software/quantum-gpt/evals/runs/qwen25-1p5b-with-rag-20260422T154341Z/candidates/quantum_binary_measurement_decoder.py\", line 29, in <module>",
+            "    def shor9_block_correction(s1: int, s2: int) -> int | None:",
+            "TypeError: unsupported operand type(s) for |: 'type' and 'NoneType'"
+          ]
+        }
+      ],
+      "run_dir": "evals/runs/qwen25-1p5b-with-rag-20260422T154341Z",
+      "generation_wall_seconds": 27.36
+    },
+    "delta": {
+      "rag_helped": 0,
+      "rag_hurt": 1,
+      "both_pass": 1,
+      "both_fail": 0,
+      "rag_helped_ids": [],
+      "rag_hurt_ids": [
+        "quantum_binary_measurement_decoder"
+      ]
+    }
+  }
+}

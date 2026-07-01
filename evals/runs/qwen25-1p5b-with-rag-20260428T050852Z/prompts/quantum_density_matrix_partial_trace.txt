@@ -1,0 +1,179 @@
+Task ID: quantum_density_matrix_partial_trace
+Task name: Density matrix construction and partial trace
+Domain: quantum
+Category: algorithm_implementation
+
+Reference documentation (use these only as background; do not echo them):
+--- BEGIN REFERENCE DOCS ---
+[DOC 1] source=density_matrix_partial_trace.md
+[source: quantum-gpt/docs/quantum_libraries/density_matrix_partial_trace.md] [quantum-gpt/docs/quantum libraries/density matrix partial trace.md]
+
+# Density matrices and partial trace
+
+## Density matrix
+For a pure state |psi>, the density matrix is rho = |psi><psi|. For a
+mixed state, rho = sum_i p_i |psi_i><psi_i|. Properties:
+
+- Hermitian: rho = rho^dagger
+- Positive semidefinite: rho >= 0
+- Unit trace: Tr(rho) = 1
+
+For a state vector `psi` of length 2^n, `rho = np.outer(psi, psi.conj())`.
+
+## Partial trace
+For a bipartite system AB with state rho_AB, the reduced density matrix
+on A is rho_A = Tr_B(rho_AB). In matrix elements:
+
+  rho_A[i, j] = sum_k rho_AB[i*d_B + k, j*d_B + k]
+
+where d_B = dim(H_B). This is the canonical "trace out subsystem B"
+formula assuming the *first* subsystem is A and the *second* is B.
+
+## Reference numpy
+
+```python
+import numpy as np
+
+def partial_trace(rho: np.ndarray, dim_a: int, dim_b: int,
+                  trace_out: int = 1) -> np.ndarray:
+    """Return reduced density matrix.
+
+    trace_out=1 traces out subsystem B (returns rho on A).
+    trace_out=0 traces out subsystem A (returns rho on B).
+    """
+    rho4 = rho.reshape(dim_a, dim_b, dim_a, dim_b)
+    if trace_out == 1:
+        return np.einsum("aibj->ab... wait wrong", rho4)  # see corrected below
+    return np.einsum("aibj->ij", rho4)
+
+def partial_trace_b(rho: np.ndarray, dim_a: int, dim_b: int) -> np.ndarray:
+    rho4 = rho.reshape(dim_a, dim_b, dim_a, dim_b)
+    return np.einsum("aibi->ab", rho4)
+
+def partial_trace_a(rho: np.ndarray, dim_a: int, dim_b: int) -> np.ndarray:
+    rho4 = rho.reshape(dim_a, dim_b, dim_a, dim_b)
+    return np.einsum("aibj,ai->...", rho4, np.eye(dim_a))  # alt form
+```
+--- END REFERENCE DOCS ---
+
+Write the simplest Python file that satisfies the supplied tests and return only that file.
+
+Tests the candidate must satisfy:
+--- BEGIN TESTS ---
+import importlib.util
+import math
+
+
+def _load(candidate_path: str):
+    spec = importlib.util.spec_from_file_location("candidate", candidate_path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
+def _mat_close(a, b, tol=1e-9):
+    if len(a) != len(b):
+        return False
+    for row_a, row_b in zip(a, b):
+        if len(row_a) != len(row_b):
+            return False
+        for x, y in zip(row_a, row_b):
+            if abs(x - y) > tol:
+                return False
+    return True
+
+
+def run_tests(candidate_path: str) -> dict:
+    module = _load(candidate_path)
+    failures = []
+
+    # --- outer_product / density_from_state ---
+    # |0> = [1, 0]  ->  rho = [[1,0],[0,0]]
+    rho0 = module.density_from_state([1.0, 0.0])
+    if not _mat_close(rho0, [[1.0, 0.0], [0.0, 0.0]]):
+        failures.append(f"density_from_state(|0>) wrong: {rho0}")
+
+    # |+> = [1/sqrt2, 1/sqrt2]  ->  rho = [[0.5, 0.5], [0.5, 0.5]]
+    s2 = 1.0 / math.sqrt(2)
+    rho_plus = module.density_from_state([s2, s2])
+    if not _mat_close(rho_plus, [[0.5, 0.5], [0.5, 0.5]]):
+        failures.append(f"density_from_state(|+>) wrong: {rho_plus}")
+
+    # --- tensor_product (of density matrices) ---
+    # |0><0| tensor |1><1| = 4x4 matrix
+    rho1 = [[0.0, 0.0], [0.0, 1.0]]  # |1><1|
+    tp = module.tensor_product(rho0, rho1)
+    expected_tp = [
+        [0.0, 0.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0, 0.0],
+    ]
+    if not _mat_close(tp, expected_tp):
+        failures.append(f"tensor_product(|0><0|, |1><1|) wrong: {tp}")
+
+    # --- partial_trace ---
+    # Trace out qubit B from |0><0| tensor |1><1| -> should give |0><0|
+    pt_a = module.partial_trace(tp, 2, 2, trace_out="B")
+    if not _mat_close(pt_a, [[1.0, 0.0], [0.0, 0.0]]):
+        failures.append(f"partial_trace(|01><01|, trace_out=B) -> {pt_a}, expected |0><0|")
+
+    # Trace out qubit A from |0><0| tensor |1><1| -> should give |1><1|
+    pt_b = module.partial_trace(tp, 2, 2, trace_out="A")
+    if not _mat_close(pt_b, [[0.0, 0.0], [0.0, 1.0]]):
+        failures.append(f"partial_trace(|01><01|, trace_out=A) -> {pt_b}, expected |1><1|")
+
+    # Bell state: |Phi+> = (|00> + |11>)/sqrt(2)
+    # rho = [[0.5, 0, 0, 0.5],
+    #         [0,   0, 0, 0  ],
+    #         [0,   0, 0, 0  ],
+    #         [0.5, 0, 0, 0.5]]
+    bell = [s2, 0.0, 0.0, s2]
+    rho_bell = module.density_from_state(bell)
+    expected_bell_rho = [
+        [0.5, 0.0, 0.0, 0.5],
+        [0.0, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0, 0.0],
+        [0.5, 0.0, 0.0, 0.5],
+    ]
+    if not _mat_close(rho_bell, expected_bell_rho):
+        failures.append(f"density_from_state(Bell) wrong: {rho_bell}")
+
+    # Partial trace of Bell state -> maximally mixed
+    pt_bell = module.partial_trace(rho_bell, 2, 2, trace_out="B")
+    expected_mixed = [[0.5, 0.0], [0.0, 0.5]]
+    if not _mat_close(pt_bell, expected_mixed):
+        failures.append(f"partial_trace(Bell, B) -> {pt_bell}, expected maximally mixed {expected_mixed}")
+
+    # Symmetry: tracing out A should also give maximally mixed
+    pt_bell_a = module.partial_trace(rho_bell, 2, 2, trace_out="A")
+    if not _mat_close(pt_bell_a, expected_mixed):
+        failures.append(f"partial_trace(Bell, A) -> {pt_bell_a}, expected maximally mixed")
+
+    # --- purity ---
+    # Pure state purity = 1, maximally mixed 2x2 purity = 0.5
+    p_pure = module.purity(rho0)
+    if not math.isclose(p_pure, 1.0, abs_tol=1e-9):
+        failures.append(f"purity(|0><0|) = {p_pure}, expected 1.0")
+
+    p_mixed = module.purity(expected_mixed)
+    if not math.isclose(p_mixed, 0.5, abs_tol=1e-9):
+        failures.append(f"purity(I/2) = {p_mixed}, expected 0.5")
+
+    # Bell state is pure
+    p_bell = module.purity(rho_bell)
+    if not math.isclose(p_bell, 1.0, abs_tol=1e-9):
+        failures.append(f"purity(Bell state) = {p_bell}, expected 1.0")
+
+    # Partial trace of Bell is mixed with purity 0.5
+    p_reduced = module.purity(pt_bell)
+    if not math.isclose(p_reduced, 0.5, abs_tol=1e-9):
+        failures.append(f"purity(reduced Bell) = {p_reduced}, expected 0.5")
+
+    return {
+        "passed": not failures,
+        "details": failures or ["Density matrix and partial trace operations correct for all test cases"],
+    }
+
+--- END TESTS ---

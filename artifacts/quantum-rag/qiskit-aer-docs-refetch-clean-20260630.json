@@ -1,0 +1,40 @@
+{
+  "fetched_at": "2026-07-01T01:46:55.740147+00:00",
+  "dry_run": false,
+  "sources_path": "/Users/daxu/software/quantum-gpt/configs/quantum_doc_sources.json",
+  "output_dir": "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest",
+  "source_count": 1,
+  "total_written": 20,
+  "results": [
+    {
+      "id": "qiskit-aer",
+      "name": "Qiskit Aer documentation",
+      "seed_count": 1,
+      "seen_count": 20,
+      "written_count": 20,
+      "written": [
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/qiskit-aer/qiskit.github.io-qiskit-aer-c3558d4a8e.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/qiskit-aer/qiskit.github.io-qiskit-aer-genindex.html-5e5e1759b2.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/qiskit-aer/qiskit.github.io-qiskit-aer-search.html-89b2ad09a4.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/qiskit-aer/qiskit.github.io-qiskit-aer-getting_started.html-d8dbd3f8a2.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/qiskit-aer/qiskit.github.io-qiskit-aer-apidocs-aer.html-04094d9bfc.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/qiskit-aer/qiskit.github.io-qiskit-aer-apidocs-aer_provider.html-2930a61d12.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/qiskit-aer/qiskit.github.io-qiskit-aer-stubs-qiskit_aer.AerProvider.html-ef7df11be9.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/qiskit-aer/qiskit.github.io-qiskit-aer-stubs-qiskit_aer.AerSimulator.html-1da1f3510e.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/qiskit-aer/qiskit.github.io-qiskit-aer-stubs-qiskit_aer.QasmSimulator.html-ff89242f7c.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/qiskit-aer/qiskit.github.io-qiskit-aer-stubs-qiskit_aer.StatevectorSimulator.html-bebfb1a27a.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/qiskit-aer/qiskit.github.io-qiskit-aer-stubs-qiskit_aer.UnitarySimulator.html-c0967d57ce.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/qiskit-aer/qiskit.github.io-qiskit-aer-stubs-qiskit_aer.AerError.html-cf8d54003e.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/qiskit-aer/qiskit.github.io-qiskit-aer-apidocs-aer_jobs.html-ec5178da58.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/qiskit-aer/qiskit.github.io-qiskit-aer-stubs-qiskit_aer.jobs.AerJob.html-ed18c74875.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/qiskit-aer/qiskit.github.io-qiskit-aer-apidocs-aer_library.html-a8b54f5c7e.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/qiskit-aer/qiskit.github.io-qiskit-aer-stubs-qiskit_aer.library.SetStatevector.html-2acdd25784.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/qiskit-aer/qiskit.github.io-qiskit-aer-stubs-qiskit_aer.library.SetDensityMatrix.html-8b5e027056.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/qiskit-aer/qiskit.github.io-qiskit-aer-stubs-qiskit_aer.library.SetStabilizer.html-e63d8b04dd.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/qiskit-aer/qiskit.github.io-qiskit-aer-stubs-qiskit_aer.library.SetSuperOp.html-0c14ff2406.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/qiskit-aer/qiskit.github.io-qiskit-aer-stubs-qiskit_aer.library.SetUnitary.html-79a370bebb.md"
+      ],
+      "errors": []
+    }
+  ]
+}

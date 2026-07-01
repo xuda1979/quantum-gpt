@@ -1,0 +1,74 @@
+Task ID: quantum_gate_alias_normalization
+Task name: Gate alias normalization repair
+Domain: quantum
+Category: api_normalization
+
+Write the simplest Python file that satisfies the supplied tests and return only that file.
+
+Reference candidate style example (for format guidance, not for blind copying):
+--- BEGIN REFERENCE CANDIDATE ---
+_ALIASES = {
+    "h": "H",
+    "hadamard": "H",
+    "x": "X",
+    "pauli_x": "X",
+    "cx": "CX",
+    "cnot": "CX",
+}
+
+
+def normalize_gate_sequence(gates):
+    normalized = []
+    for gate in gates:
+        key = gate.strip().lower()
+        canonical = _ALIASES.get(key)
+        if canonical is None:
+            raise ValueError(f"unknown gate: {gate}")
+        normalized.append(canonical)
+    return normalized
+
+--- END REFERENCE CANDIDATE ---
+
+Tests the candidate must satisfy:
+--- BEGIN TESTS ---
+import importlib.util
+
+
+def _load(candidate_path: str):
+    spec = importlib.util.spec_from_file_location("candidate", candidate_path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
+def run_tests(candidate_path: str) -> dict:
+    module = _load(candidate_path)
+    failures = []
+
+    cases = [
+        (["H", "cx", "x"], ["H", "CX", "X"]),
+        ([" hadamard ", "CNOT", "Pauli_X"], ["H", "CX", "X"]),
+        (["h", "h", "cx"], ["H", "H", "CX"]),
+    ]
+    for raw, expected in cases:
+        actual = module.normalize_gate_sequence(raw)
+        if actual != expected:
+            failures.append(f"normalize_gate_sequence({raw!r}) -> {actual!r}, expected {expected!r}")
+
+    for bad in [["swap"], ["H", "measure"]]:
+        try:
+            module.normalize_gate_sequence(bad)
+        except ValueError:
+            continue
+        except Exception as exc:
+            failures.append(f"normalize_gate_sequence({bad!r}) raised {type(exc).__name__}, expected ValueError")
+        else:
+            failures.append(f"normalize_gate_sequence({bad!r}) did not raise ValueError")
+
+    return {
+        "passed": not failures,
+        "details": failures or ["Gate alias normalization handles casing, whitespace, and invalid aliases"],
+    }
+
+--- END TESTS ---

@@ -1,0 +1,88 @@
+Task ID: quantum_maxcut_assignment_enumerator
+Task name: MaxCut assignment enumerator
+Domain: quantum
+Category: algorithm_implementation
+
+Write the simplest Python file that satisfies the supplied tests and return only that file.
+
+Reference candidate style example (for format guidance, not for blind copying):
+--- BEGIN REFERENCE CANDIDATE ---
+from itertools import product
+
+
+def enumerate_bitstrings(n_nodes: int) -> list[str]:
+    if n_nodes <= 0:
+        raise ValueError("n_nodes must be positive")
+    return ["".join(bits) for bits in product("01", repeat=n_nodes)]
+
+
+def cut_value(bitstring: str, edges: list[tuple[int, int]]) -> int:
+    if any(bit not in {"0", "1"} for bit in bitstring):
+        raise ValueError("bitstring must contain only 0/1")
+    total = 0
+    for left, right in edges:
+        if bitstring[left] != bitstring[right]:
+            total += 1
+    return total
+
+
+def best_cut_assignment(n_nodes: int, edges: list[tuple[int, int]]) -> tuple[str, int]:
+    best_bits = ""
+    best_cost = -1
+    for bitstring in enumerate_bitstrings(n_nodes):
+        cost = cut_value(bitstring, edges)
+        if cost > best_cost or (cost == best_cost and (not best_bits or bitstring < best_bits)):
+            best_bits = bitstring
+            best_cost = cost
+    return best_bits, best_cost
+
+--- END REFERENCE CANDIDATE ---
+
+Tests the candidate must satisfy:
+--- BEGIN TESTS ---
+import importlib.util
+
+
+def _load(candidate_path: str):
+    spec = importlib.util.spec_from_file_location("candidate", candidate_path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
+def run_tests(candidate_path: str) -> dict:
+    module = _load(candidate_path)
+    failures = []
+
+    if module.enumerate_bitstrings(2) != ["00", "01", "10", "11"]:
+        failures.append("enumerate_bitstrings(2) should enumerate all assignments in lexical order")
+
+    triangle = [(0, 1), (1, 2), (0, 2)]
+    if module.cut_value("010", triangle) != 2:
+        failures.append("cut_value('010', triangle) should be 2")
+
+    best_bits, best_cost = module.best_cut_assignment(3, triangle)
+    if best_cost != 2:
+        failures.append(f"best_cut_assignment(triangle) -> cost {best_cost}, expected 2")
+    if module.cut_value(best_bits, triangle) != best_cost:
+        failures.append("best_cut_assignment returned inconsistent assignment/cost")
+
+    try:
+        module.enumerate_bitstrings(0)
+        failures.append("enumerate_bitstrings(0) did not raise ValueError")
+    except ValueError:
+        pass
+
+    try:
+        module.cut_value("01a", [(0, 1)])
+        failures.append("cut_value accepted invalid bitstring")
+    except ValueError:
+        pass
+
+    return {
+        "passed": not failures,
+        "details": failures or ["maxcut assignment enumerator imports itertools and returns stable best cuts"],
+    }
+
+--- END TESTS ---

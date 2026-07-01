@@ -1,0 +1,18 @@
+{
+  "label": "no-rag",
+  "generated_at_utc": "2026-04-28T05:28:31.915174+00:00",
+  "model_path": "/Users/daxu/.openclaw/workspace-quantum-rnd/models/Qwen2.5-1.5B-Instruct",
+  "device": "cpu",
+  "max_new_tokens": 512,
+  "temperature": 0.0,
+  "total_wall_seconds": 90.23,
+  "tasks": [
+    {
+      "task_id": "quantum_density_matrix_partial_trace",
+      "prompt_tokens": 1683,
+      "new_tokens": 439,
+      "wall_seconds": 90.2,
+      "output_chars": 1930
+    }
+  ]
+}

@@ -1,0 +1,205 @@
+Task ID: quantum_superdense_pauli_router
+Task name: Superdense Pauli router
+Domain: quantum
+Category: reasoning
+
+Reference documentation (use these only as background; do not echo them):
+--- BEGIN REFERENCE DOCS ---
+[DOC 1] source=superdense_coding.md
+[source: quantum-gpt/docs/quantum_libraries/superdense_coding.md] [quantum-gpt/docs/quantum libraries/superdense coding.md]
+
+# Superdense coding
+
+## Concept
+Superdense coding lets Alice send 2 classical bits to Bob using a single
+qubit, provided they pre-share an entangled Bell pair.
+
+## Protocol
+1. Pre-shared resource: |Phi+> = (|00> + |11>)/sqrt(2). Alice holds
+   qubit 0, Bob holds qubit 1.
+2. Alice encodes (b1, b0) by applying:
+   - 00 -> I  (do nothing) -> |Phi+>
+   - 01 -> X            -> |Psi+> = (|01> + |10>)/sqrt(2)
+   - 10 -> Z            -> |Phi-> = (|00> - |11>)/sqrt(2)
+   - 11 -> ZX (or iY)   -> |Psi-> = (|01> - |10>)/sqrt(2)
+3. Alice sends her qubit to Bob.
+4. Bob applies CNOT(0, 1) then H(0) (Bell-basis measurement) to recover
+   the two classical bits.
+
+## Encode/decode reference
+
+```python
+ENCODE_TABLE = {
+    (0, 0): "I",
+    (0, 1): "X",
+    (1, 0): "Z",
+    (1, 1): "ZX",
+}
+
+def encode(bits: tuple[int, int]) -> str:
+    return ENCODE_TABLE[bits]
+
+DECODE_TABLE = {
+    (0, 0): (0, 0),
+    (0, 1): (0, 1),
+    (1, 0): (1, 0),
+    (1, 1): (1, 1),
+}
+```
+
+After Bob's meas  ...[truncated]
+
+[DOC 2] source=superdense_coding.md
+[source: quantum-gpt/docs/quantum_libraries/superdense_coding.md] [quantum-gpt/docs/quantum libraries/superdense coding.md]
+
+ment, the classical outcome (m0, m1) directly
+matches Alice's input bits (b1, b0).
+
+## State-vector simulation snippet
+
+```python
+import numpy as np
+
+def superdense_state(b1: int, b0: int) -> np.ndarray:
+    amp = 2 ** -0.5
+    # start in |Phi+>
+    state = np.array([amp, 0, 0, amp], dtype=complex)
+    # Alice's encoding on qubit 0 (most significant in big-endian)
+    if b1 == 0 and b0 == 0:
+        pass
+    elif b1 == 0 and b0 == 1:
+        # X on qubit 0 swaps |0x><->|1x>
+        state = state[[2, 3, 0, 1]]
+    elif b1 == 1 and b0 == 0:
+        # Z on qubit 0 flips sign of |1x>
+        state = state * np.array([1, 1, -1, -1])
+    else:  # 11
+        state = state[[2, 3, 0, 1]] * np.array([1, 1, -1, -1])
+    return state
+```
+
+## Common pitfalls
+- The mapping bits -> Pauli depends on which qubit Alice holds. The
+  table above assumes Alice = qubit 0 (control) and Bob = qubit 1.
+- Order matters in "ZX": apply X first, then Z (left-to-right reading).
+
+[DOC 3] source=binary_measurement_decoders.md
+[source: quantum-gpt/docs/quantum_libraries/binary_measurement_decoders.md] [quantum-gpt/docs/quantum libraries/binary measurement decoders.md]
+
+# Binary measurement decoders and Pauli routers
+
+## Bit-flip syndrome decoder
+For the 3-qubit bit-flip code, syndrome bits (s1, s2) come from
+measuring Z0Z1 (s1) and Z1Z2 (s2). Decoder:
+
+```python
+SYNDROMES = {
+    (0, 0): None,  # no error
+    (1, 0): 0,     # X on qubit 0
+    (1, 1): 1,     # X on qubit 1
+    (0, 1): 2,     # X on qubit 2
+}
+```
+
+## Bell measurement decoder
+Bell-basis measurement of two qubits returns a pair of classical bits
+(m1, m2) identifying which Bell state was observed:
+
+```python
+BELL_LABELS = {
+    (0, 0): "Phi+",
+    (0, 1): "Psi+",
+    (1, 0): "Phi-",
+    (1, 1): "Psi-",
+}
+```
+
+## Pauli router (superdense / teleport variants)
+Maps a 2-bit input to a single-qubit Pauli operation on a target qubit:
+
+```python
+PAULI_ROUTER = {
+    (0, 0): "I",
+    (0, 1): "X",
+    (1, 0): "Z",
+    (1, 1): "Y",  # or "ZX" depending on convention
+}
+```
+
+When the convention is "ZX = apply X first then Z", the (1, 1) entry is
+equivalent  ...[truncated]
+--- END REFERENCE DOCS ---
+
+Write the simplest Python file that satisfies the supplied tests and return only that file.
+
+Reference candidate style example (for format guidance, not for blind copying):
+--- BEGIN REFERENCE CANDIDATE ---
+_ENCODE = {
+    "00": "I",
+    "01": "X",
+    "10": "Z",
+    "11": "XZ",
+}
+
+_DECODE = {opcode: bits for bits, opcode in _ENCODE.items()}
+
+
+def _canonical_opcode(opcode: str) -> str:
+    normalized = "".join(str(opcode).strip().upper().split())
+    if normalized == "ZX":
+        normalized = "XZ"
+    if normalized not in _DECODE:
+        raise ValueError("opcode must be one of I, X, Z, XZ")
+    return normalized
+
+
+def encode_message(bits: str) -> str:
+    if bits not in _ENCODE:
+        raise ValueError("bits must be one of 00, 01, 10, 11")
+    return _ENCODE[bits]
+
+
+def decode_message(opcode: str) -> str:
+    return _DECODE[_canonical_opcode(opcode)]
+
+--- END REFERENCE CANDIDATE ---
+
+Tests the candidate must satisfy:
+--- BEGIN TESTS ---
+import importlib.util
+
+
+def _load(candidate_path: str):
+    spec = importlib.util.spec_from_file_location("candidate", candidate_path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
+def run_tests(candidate_path: str) -> dict:
+    module = _load(candidate_path)
+    failures = []
+    expected = {"00": "I", "01": "X", "10": "Z", "11": "XZ"}
+
+    for bits, opcode in expected.items():
+        if module.encode_message(bits) != opcode:
+            failures.append(f"encode_message failed for {bits}")
+        if module.decode_message(opcode) != bits:
+            failures.append(f"decode_message failed for {opcode}")
+
+    if module.decode_message("zx") != "11":
+        failures.append("decode_message should canonicalize zx -> XZ")
+
+    try:
+        module.decode_message("YY")
+        failures.append("decode_message accepted invalid opcode")
+    except ValueError:
+        pass
+
+    return {
+        "passed": not failures,
+        "details": failures or ["superdense Pauli router preserves canonical XZ mapping"],
+    }
+
+--- END TESTS ---

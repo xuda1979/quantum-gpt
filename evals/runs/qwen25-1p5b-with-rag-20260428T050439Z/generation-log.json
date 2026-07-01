@@ -1,0 +1,18 @@
+{
+  "label": "with-rag",
+  "generated_at_utc": "2026-04-28T05:05:22.841003+00:00",
+  "model_path": "/Users/daxu/.openclaw/workspace-quantum-rnd/models/Qwen2.5-1.5B-Instruct",
+  "device": "cpu",
+  "max_new_tokens": 384,
+  "temperature": 0.0,
+  "total_wall_seconds": 43.32,
+  "tasks": [
+    {
+      "task_id": "quantum_grover_oracle_diffusion",
+      "prompt_tokens": 1985,
+      "new_tokens": 281,
+      "wall_seconds": 43.31,
+      "output_chars": 1011
+    }
+  ]
+}

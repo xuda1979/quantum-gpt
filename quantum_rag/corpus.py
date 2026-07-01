@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
@@ -135,7 +136,31 @@ def load_source_text(path: Path) -> str:
     return path.read_text(encoding="utf-8", errors="ignore")
 
 
-def _normalize_path_for_preamble(path: Path) -> str:
+def _display_path(path: Path, source_root: Path | None) -> str:
+    if source_root is None:
+        return path.as_posix()
+    try:
+        return path.resolve().relative_to(source_root.resolve()).as_posix()
+    except ValueError:
+        return path.as_posix()
+
+
+def _common_source_root(roots: Iterable[Path]) -> Path | None:
+    resolved: list[Path] = []
+    for root in roots:
+        candidate = Path(root)
+        if not candidate.exists():
+            continue
+        resolved.append((candidate if candidate.is_dir() else candidate.parent).resolve())
+    if not resolved:
+        return None
+    try:
+        return Path(os.path.commonpath([path.as_posix() for path in resolved]))
+    except ValueError:
+        return None
+
+
+def _normalize_path_for_preamble(path: Path, source_root: Path | None = None) -> str:
     """Turn a source path into a human-readable preamble line for indexing.
 
     The preamble makes directory names, file stems, and task identifiers
@@ -143,7 +168,8 @@ def _normalize_path_for_preamble(path: Path) -> str:
     can match on the path component ``qft_phase_pattern`` even when the chunk
     body does not contain the phrase verbatim.
     """
-    parts = path.parts
+    display_path = _display_path(path, source_root)
+    parts = Path(display_path).parts
     # Use at most the last 4 path components to keep preamble compact
     suffix_parts = parts[-4:] if len(parts) > 4 else parts
     readable = "/".join(suffix_parts)
@@ -235,8 +261,8 @@ def chunk_text(text: str, *, chunk_size: int, chunk_overlap: int) -> list[tuple[
     return chunks
 
 
-def _make_chunk_id(path: Path, start: int, end: int) -> str:
-    digest = hashlib.sha1(f"{path.as_posix()}:{start}:{end}".encode("utf-8")).hexdigest()
+def _make_chunk_id(path: Path, start: int, end: int, source_root: Path | None = None) -> str:
+    digest = hashlib.sha1(f"{_display_path(path, source_root)}:{start}:{end}".encode("utf-8")).hexdigest()
     return digest[:16]
 
 
@@ -247,12 +273,13 @@ def build_chunks_for_file(
     chunk_overlap: int,
     min_chunk_chars: int,
     inject_path_preamble: bool = True,
+    source_root: Path | None = None,
 ) -> list[DocumentChunk]:
     raw_text = load_source_text(path)
     # Build preamble components that make path/metadata visible to BM25/TF-IDF
     preamble_parts: list[str] = []
     if inject_path_preamble:
-        preamble_parts.append(_normalize_path_for_preamble(path))
+        preamble_parts.append(_normalize_path_for_preamble(path, source_root))
         task_meta = _extract_task_metadata(path, raw_text)
         if task_meta:
             preamble_parts.append(task_meta)
@@ -269,8 +296,8 @@ def build_chunks_for_file(
         augmented_text = f"{preamble}\n\n{chunk_text_value}" if preamble else chunk_text_value
         chunks.append(
             DocumentChunk(
-                chunk_id=_make_chunk_id(path, start, end),
-                source_path=path.as_posix(),
+                chunk_id=_make_chunk_id(path, start, end, source_root),
+                source_path=_display_path(path, source_root),
                 title=path.name,
                 text=augmented_text,
                 char_start=start,
@@ -294,10 +321,13 @@ def build_chunks_from_roots(
     allowed_extensions: set[str] | None = None,
     max_files: int | None = None,
     inject_path_preamble: bool = True,
+    source_root: Path | None = None,
 ) -> list[DocumentChunk]:
     chunks: list[DocumentChunk] = []
+    root_list = [Path(root) for root in roots]
+    resolved_source_root = source_root.resolve() if source_root is not None else _common_source_root(root_list)
     for file_index, path in enumerate(
-        iter_source_files(roots, allowed_extensions=allowed_extensions),
+        iter_source_files(root_list, allowed_extensions=allowed_extensions),
         start=1,
     ):
         if max_files is not None and file_index > max_files:
@@ -309,6 +339,7 @@ def build_chunks_from_roots(
                 chunk_overlap=chunk_overlap,
                 min_chunk_chars=min_chunk_chars,
                 inject_path_preamble=inject_path_preamble,
+                source_root=resolved_source_root,
             )
         )
     return chunks

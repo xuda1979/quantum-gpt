@@ -93,5 +93,15 @@ phase flips.
   formula for the optimum.
 - The oracle is a *phase* oracle (sign flip). A simple bit-flip oracle
   must be wrapped with an extra ancilla qubit (`|0> - |1>` trick).
+- Diffusion (`D = 2|s><s| - I`) on a raw amplitude array reduces to a single
+  elementwise step: take the mean of the *current* state vector, then
+  compute `2 * mean - state`. Do not insert an extra transform (FFT, QFT,
+  or an explicit Hadamard-matrix multiply) before computing that mean —
+  applying one changes which vector the mean is taken over, so the
+  reflection is computed in the wrong basis. The symptom is subtle:
+  the code still runs and returns a normalized-looking vector, but the
+  marked amplitude never grows across iterations and stays close to the
+  starting `1/sqrt(N)` (or drops to exactly 0 for some marked indices),
+  instead of climbing toward the expected `sin((2k+1) theta)^2` value.
 - Diffusion can be implemented as H^n X^n CZ_{multi} X^n H^n with the
   multi-controlled Z acting as the "reflect about |0...0>" step.

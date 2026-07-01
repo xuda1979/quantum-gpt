@@ -1,0 +1,186 @@
+Task ID: quantum_gate_token_canonicalizer
+Task name: Gate token canonicalizer
+Domain: quantum
+Category: api_normalization
+
+Reference documentation (use these only as background; do not echo them):
+--- BEGIN REFERENCE DOCS ---
+[DOC 1] source=AGENTS.md
+[source: daxu/software/quantum-gpt/AGENTS.md] [daxu/software/quantum-gpt/AGENTS.md]
+
+receive a heartbeat poll (message matches the configured heartbeat prompt), don't just reply `HEARTBEAT_OK` every time. Use heartbeats productively!
+
+Default heartbeat prompt:
+`Read HEARTBEAT.md if it exists (workspace context). Follow it strictly. Do not infer or repeat old tasks from prior chats. If nothing needs attention, reply HEARTBEAT_OK.`
+
+You are free to edit `HEARTBEAT.md` with a short checklist or reminders. Keep it small to limit token burn.
+
+### Heartbeat vs Cron: When to Use Each
+
+**Use heartbeat when:**
+
+- Multiple checks can batch together (inbox + calendar + notifications in one turn)
+- You need conversational context from recent messages
+- Timing can drift slightly (every ~30 min is fine, not exact)
+- You want to reduce API calls by combining periodic checks
+
+**Use cron when:**
+
+- Exact timing matters ("9:00 AM sharp every Monday")
+- Task needs isolation from main session history
+- You want a different model or thinking level for the task
+- One-shot reminders ("remind me in 20 minut  ...[truncated]
+
+[DOC 2] source=quantum_gates_reference.md
+[source: quantum-gpt/docs/quantum_libraries/quantum_gates_reference.md] [quantum-gpt/docs/quantum libraries/quantum gates reference.md]
+
+oth controls are |1>.
+- **Fredkin (CSWAP)**: swaps two targets if control is |1>.
+
+## Casefold and alias normalization (very common in repair tasks)
+
+Aliases that should canonicalize to a single symbol. After
+`gate.strip().lower()` the lookup table is:
+
+```
+{
+  "h": "H", "hadamard": "H",
+  "x": "X", "pauli_x": "X", "not": "X",
+  "y": "Y", "pauli_y": "Y",
+  "z": "Z", "pauli_z": "Z",
+  "s": "S", "phase": "S",
+  "t": "T",
+  "cx": "CX", "cnot": "CX", "controlled_x": "CX", "cnot_": "CX",
+  "cy": "CY",
+  "cz": "CZ",
+  "swap": "SWAP",
+  "ccx": "CCX", "toffoli": "CCX",
+  "cswap": "CSWAP", "fredkin": "CSWAP",
+}
+```
+
+Unknown aliases should raise `ValueError(f"unknown gate: {gate}")`.
+Rules of thumb for canonicalization in tests:
+1. `gate.strip().lower()` first
+2. Look up in alias dict
+3. Raise `ValueError` for misses (do *not* return the original token)
+
+[DOC 3] source=qiskit_basics.md
+[source: quantum-gpt/docs/quantum_libraries/qiskit_basics.md] [quantum-gpt/docs/quantum libraries/qiskit basics.md]
+
+# Qiskit basics (v1.x API)
+
+## Import surface
+
+```python
+from qiskit import QuantumCircuit, transpile
+from qiskit.quantum_info import Statevector, Operator, partial_trace
+from qiskit_aer import AerSimulator
+```
+
+## Building a circuit
+
+```python
+qc = QuantumCircuit(2, 2)  # 2 qubits, 2 classical bits
+qc.h(0)
+qc.cx(0, 1)
+qc.measure([0, 1], [0, 1])
+```
+
+Common gate methods on `QuantumCircuit`:
+- `.h(q)`, `.x(q)`, `.y(q)`, `.z(q)`, `.s(q)`, `.t(q)`
+- `.rx(theta, q)`, `.ry(theta, q)`, `.rz(theta, q)`
+- `.cx(c, t)`, `.cy(c, t)`, `.cz(c, t)`
+- `.ccx(c1, c2, t)` (Toffoli), `.swap(a, b)`, `.cswap(c, a, b)`
+- `.barrier()`, `.reset(q)`, `.measure(q, c)`
+
+## Simulating with Statevector
+
+```python
+sv = Statevector.from_instruction(qc)
+print(sv.data)         # complex amplitudes (little-endian)
+print(sv.probabilities())
+```
+
+To get the matrix of a unitary circuit: `Operator(qc).data`.
+
+## Running with Aer
+
+```python
+sim = AerSimulator()
+tqc = transpile(qc, sim)
+result = sim.run(tqc,  ...[truncated]
+--- END REFERENCE DOCS ---
+
+Write the simplest Python file that satisfies the supplied tests and return only that file.
+
+Reference candidate style example (for format guidance, not for blind copying):
+--- BEGIN REFERENCE CANDIDATE ---
+_ALIASES = {
+    "h": "H",
+    "hadamard": "H",
+    "x": "X",
+    "paulix": "X",
+    "z": "Z",
+    "pauliz": "Z",
+    "cx": "CX",
+    "cnot": "CX",
+    "controlledx": "CX",
+}
+
+
+def canonical_gate_token(raw_gate: str) -> str:
+    alias = "".join(str(raw_gate).strip().lower().replace("-", "").replace("_", "").split())
+    resolved = _ALIASES.get(alias)
+    if resolved is None:
+        raise ValueError(f"unknown gate token: {raw_gate!r}")
+    return resolved
+
+--- END REFERENCE CANDIDATE ---
+
+Tests the candidate must satisfy:
+--- BEGIN TESTS ---
+import importlib.util
+
+
+def _load(candidate_path: str):
+    spec = importlib.util.spec_from_file_location("candidate", candidate_path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
+def run_tests(candidate_path: str) -> dict:
+    module = _load(candidate_path)
+    failures = []
+
+    cases = [
+        ("x", "X"),
+        (" X ", "X"),
+        ("Pauli_X", "X"),
+        ("h", "H"),
+        ("controlled-x", "CX"),
+        ("CNOT", "CX"),
+    ]
+    for raw_gate, expected in cases:
+        actual = module.canonical_gate_token(raw_gate)
+        if actual != expected:
+            failures.append(f"canonical_gate_token({raw_gate!r}) -> {actual!r}, expected {expected!r}")
+
+    for bad_gate in ("swap", "measure", "t"):
+        try:
+            module.canonical_gate_token(bad_gate)
+        except ValueError:
+            continue
+        except Exception as exc:
+            failures.append(f"canonical_gate_token({bad_gate!r}) raised {type(exc).__name__}, expected ValueError")
+        else:
+            failures.append(f"canonical_gate_token({bad_gate!r}) did not raise ValueError")
+
+    return {
+        "passed": not failures,
+        "details": failures or ["gate token canonicalizer preserves uppercase X/H/CX outputs"],
+    }
+
+--- END TESTS ---

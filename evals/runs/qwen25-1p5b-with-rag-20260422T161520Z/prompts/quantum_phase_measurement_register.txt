@@ -1,0 +1,169 @@
+Task ID: quantum_phase_measurement_register
+Task name: Phase measurement register
+Domain: quantum
+Category: algorithm_implementation
+
+Reference documentation (use these only as background; do not echo them):
+--- BEGIN REFERENCE DOCS ---
+[DOC 1] source=phase_register_roundtrip.md
+[source: quantum-gpt/docs/quantum_libraries/phase_register_roundtrip.md] [quantum-gpt/docs/quantum libraries/phase register roundtrip.md]
+
+# Phase register round-trip patterns
+
+## Concept
+A "phase register" is an n-qubit register whose computational basis
+states encode integer phases as kicked-back angles. Many subroutines
+(QPE, amplitude estimation, Shor's order finding) load phases into
+this register, perform inverse QFT, and then read the integer index.
+
+## Loading a phase
+For a desired phase phi in [0, 1):
+1. Initialise the register to |+>^n via H.
+2. For each qubit q (q = 0, ..., n-1), apply Rz(2*pi * phi * 2^q) on q.
+
+After step 2, the register is in state
+  (1/sqrt(2^n)) sum_k exp(2*pi*i*phi*k) |k>
+
+## Reading back via inverse QFT
+Apply QFT^{-1}, then measure. The most-likely outcome y satisfies
+y/2^n ~= phi (rounded to n bits of precision).
+
+## Round-trip simulation
+
+```python
+import numpy as np
+
+def encode_phase_register(phi: float, n: int) -> np.ndarray:
+    state = np.full(1 << n, 1.0 / np.sqrt(1 << n), dtype=complex)
+    for k in range(1 << n):
+        state[k] *= np.exp(  ...[truncated]
+
+[DOC 2] source=phase_register_roundtrip.md
+[source: quantum-gpt/docs/quantum_libraries/phase_register_roundtrip.md] [quantum-gpt/docs/quantum libraries/phase register roundtrip.md]
+
+g="ij")
+    iqft = np.exp(-2j * np.pi * j * k / N) / np.sqrt(N)
+    out = iqft @ state
+    y = int(np.argmax(np.abs(out) ** 2))
+    return y / N
+```
+
+## Common pitfalls
+- Off-by-one in the rotation angle: use `2*pi * phi * 2^q` for qubit q,
+  not `2*pi * phi / 2^q` (the latter is the controlled-rotation angle
+  in QFT, *not* the phase load).
+- Decoded phase is only accurate to ~ 2^-n; use `n` large enough.
+- For non-integer `phi * 2^n`, the inverse QFT smears probability
+  across multiple bins; argmax gives the closest representable bin.
+
+[DOC 3] source=quantum_phase_estimation.md
+[source: quantum-gpt/docs/quantum_libraries/quantum_phase_estimation.md] [quantum-gpt/docs/quantum libraries/quantum phase estimation.md]
+
+# Quantum Phase Estimation (QPE)
+
+## Concept
+Given a unitary U with eigenvector |psi> and unknown eigenvalue
+exp(2*pi*i*phi), QPE estimates `phi` (a real number in [0, 1)) using
+two registers:
+- `t` counting qubits in the upper register (precision)
+- the eigenvector |psi> in the lower register
+
+## Protocol
+1. Initialise upper register to |+>^t (apply H on each).
+2. Apply controlled-U^(2^k) for k = 0, ..., t-1 with control qubit k.
+3. Apply inverse QFT on the upper register.
+4. Measure the upper register; the integer y satisfies y/2^t ~= phi.
+
+## Returned phase
+The protocol returns an integer `y` in {0, ..., 2^t - 1}. Convert to
+phase via `phi_estimate = y / 2**t`. With perfect alignment phi can be
+recovered exactly when `phi * 2**t` is integer.
+
+## Reference Python (single eigenphase)
+
+```python
+import numpy as np
+
+def estimate_phase(true_phase: float, t: int) -> float:
+    """Idealised QPE: returns phi rounded to t bits."""
+    y = round(true_pha  ...[truncated]
+--- END REFERENCE DOCS ---
+
+Write the simplest Python file that satisfies the supplied tests and return only that file.
+
+Reference candidate style example (for format guidance, not for blind copying):
+--- BEGIN REFERENCE CANDIDATE ---
+def phase_estimation(phase: float, n_bits: int) -> int:
+    if n_bits <= 0:
+        raise ValueError("n_bits must be positive")
+    if not (0.0 <= phase < 1.0):
+        raise ValueError("phase must be in [0, 1)")
+    scale = 1 << n_bits
+    return int(round(phase * scale)) % scale
+
+
+def phase_from_measurement(measurement: int, n_bits: int) -> float:
+    if n_bits <= 0:
+        raise ValueError("n_bits must be positive")
+    scale = 1 << n_bits
+    if not (0 <= measurement < scale):
+        raise ValueError("measurement out of range")
+    return measurement / scale
+
+--- END REFERENCE CANDIDATE ---
+
+Tests the candidate must satisfy:
+--- BEGIN TESTS ---
+import importlib.util
+import math
+
+
+def _load(candidate_path: str):
+    spec = importlib.util.spec_from_file_location("candidate", candidate_path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
+def run_tests(candidate_path: str) -> dict:
+    module = _load(candidate_path)
+    failures = []
+
+    cases = [
+        (0.0, 3, 0),
+        (0.25, 3, 2),
+        (0.5, 3, 4),
+        (0.75, 4, 12),
+        (0.125, 3, 1),
+        (1.0 / 3.0, 3, 3),
+    ]
+    for phase, n_bits, expected in cases:
+        actual = module.phase_estimation(phase, n_bits)
+        if actual != expected:
+            failures.append(f"phase_estimation({phase}, {n_bits}) -> {actual}, expected {expected}")
+
+    for phase in [0.0, 0.25, 0.5, 0.75, 0.125]:
+        measured = module.phase_estimation(phase, 4)
+        recovered = module.phase_from_measurement(measured, 4)
+        if not math.isclose(recovered, phase, abs_tol=1e-9):
+            failures.append(f"phase round-trip failed for {phase}: {measured} -> {recovered}")
+
+    try:
+        module.phase_estimation(1.0, 3)
+        failures.append("phase_estimation did not reject phase == 1.0")
+    except ValueError:
+        pass
+
+    try:
+        module.phase_from_measurement(8, 3)
+        failures.append("phase_from_measurement did not reject out-of-range measurement")
+    except ValueError:
+        pass
+
+    return {
+        "passed": not failures,
+        "details": failures or ["phase measurement register converts phases without tuple/pow mistakes"],
+    }
+
+--- END TESTS ---

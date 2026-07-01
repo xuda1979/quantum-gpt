@@ -2,8 +2,8 @@
 
 This directory contains compact, RAG-friendly documentation for quantum
 computing algorithms and the major Python quantum software libraries
-(Qiskit, Cirq, PennyLane, Amazon Braket) plus pure-NumPy state vector
-simulation patterns.
+(Qiskit, qiskit-aer, qiskit-algorithms, qiskit-optimization, Cirq,
+PennyLane, Amazon Braket) plus pure-NumPy state vector simulation patterns.
 
 The documents here are intentionally short (1-2 pages each) so the
 chunker in `quantum_rag.corpus.build_chunks_from_roots` produces a

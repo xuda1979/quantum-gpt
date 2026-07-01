@@ -6,11 +6,51 @@
       "id": "qiskit",
       "name": "IBM Quantum and Qiskit documentation",
       "seeds": [
-        "https://quantum.cloud.ibm.com/docs/en/",
+        "https://quantum.cloud.ibm.com/docs/en",
         "https://quantum.cloud.ibm.com/docs/api/qiskit"
       ],
       "allowed_prefixes": [
         "https://quantum.cloud.ibm.com/docs/"
+      ]
+    },
+    {
+      "id": "qiskit-algorithms",
+      "name": "Qiskit Algorithms documentation",
+      "seeds": [
+        "https://qiskit-community.github.io/qiskit-algorithms/"
+      ],
+      "allowed_prefixes": [
+        "https://qiskit-community.github.io/qiskit-algorithms/"
+      ]
+    },
+    {
+      "id": "qiskit-optimization",
+      "name": "Qiskit Optimization documentation",
+      "seeds": [
+        "https://qiskit-community.github.io/qiskit-optimization/"
+      ],
+      "allowed_prefixes": [
+        "https://qiskit-community.github.io/qiskit-optimization/"
+      ]
+    },
+    {
+      "id": "qiskit-aer",
+      "name": "Qiskit Aer documentation",
+      "seeds": [
+        "https://qiskit.github.io/qiskit-aer/"
+      ],
+      "allowed_prefixes": [
+        "https://qiskit.github.io/qiskit-aer/"
+      ]
+    },
+    {
+      "id": "qiskit-ibm-runtime",
+      "name": "Qiskit IBM Runtime documentation",
+      "seeds": [
+        "https://quantum.cloud.ibm.com/docs/api/qiskit-ibm-runtime"
+      ],
+      "allowed_prefixes": [
+        "https://quantum.cloud.ibm.com/docs/api/qiskit-ibm-runtime"
       ]
     },
     {

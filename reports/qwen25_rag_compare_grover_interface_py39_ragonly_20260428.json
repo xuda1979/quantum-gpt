@@ -1,0 +1,60 @@
+{
+  "generated_at_utc": "2026-04-28T05:05:22.946444+00:00",
+  "model_path": "/Users/daxu/.openclaw/workspace-quantum-rnd/models/Qwen2.5-1.5B-Instruct",
+  "index_path": "/Users/daxu/software/quantum-gpt/artifacts/quantum-rag/quantum-docs-only-index.pkl.gz",
+  "device": "cpu",
+  "task_count": 1,
+  "max_new_tokens": 384,
+  "temperature": 0.0,
+  "rag": {
+    "top_k": 1,
+    "alpha": 0.55,
+    "max_doc_chars": 2400
+  },
+  "prompt_variant": "compact",
+  "requested_task_ids": [
+    "quantum_grover_oracle_diffusion"
+  ],
+  "summaries": {
+    "with_rag": {
+      "total": 1,
+      "passed": 0,
+      "pass_rate": 0.0,
+      "by_category": {
+        "algorithm_implementation": {
+          "pass_rate": 0.0,
+          "pass": 0,
+          "total": 1
+        }
+      },
+      "per_task": {
+        "quantum_grover_oracle_diffusion": false
+      },
+      "failures": [
+        {
+          "id": "quantum_grover_oracle_diffusion",
+          "details": [
+            "runner_exception: TypeError: unsupported operand type(s) for |: 'type' and 'NoneType'",
+            "traceback:",
+            "Traceback (most recent call last):",
+            "  File \"/Users/daxu/software/quantum-gpt/evals/runner/run_eval.py\", line 171, in run_task",
+            "    result = run_single_file_task(module, only_candidate_path)",
+            "  File \"/Users/daxu/software/quantum-gpt/evals/runner/run_eval.py\", line 125, in run_single_file_task",
+            "    return module.run_tests(str(candidate_path))",
+            "  File \"/Users/daxu/software/quantum-gpt/evals/tasks/quantum/grover_oracle_diffusion/tests.py\", line 20, in run_tests",
+            "    module = _load(candidate_path)",
+            "  File \"/Users/daxu/software/quantum-gpt/evals/tasks/quantum/grover_oracle_diffusion/tests.py\", line 9, in _load",
+            "    spec.loader.exec_module(module)",
+            "  File \"<frozen importlib._bootstrap_external>\", line 850, in exec_module",
+            "  File \"<frozen importlib._bootstrap>\", line 228, in _call_with_frames_removed",
+            "  File \"/Users/daxu/software/quantum-gpt/evals/runs/qwen25-1p5b-with-rag-20260428T050439Z/candidates/quantum_grover_oracle_diffusion.py\", line 19, in <module>",
+            "    def grover_search(n_qubits: int, marked: list[int], iters: int | None = None) -> list[float]:",
+            "TypeError: unsupported operand type(s) for |: 'type' and 'NoneType'"
+          ]
+        }
+      ],
+      "run_dir": "evals/runs/qwen25-1p5b-with-rag-20260428T050439Z",
+      "generation_wall_seconds": 43.32
+    }
+  }
+}

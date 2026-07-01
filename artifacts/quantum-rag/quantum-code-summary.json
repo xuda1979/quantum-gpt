@@ -1,0 +1,16 @@
+{
+  "output": "artifacts/quantum-rag/quantum-code-index.pkl.gz",
+  "profile": "quantum_code",
+  "roots": [
+    "/Users/daxu/software/quantum-gpt/docs/quantum_libraries",
+    "/Users/daxu/software/quantum-gpt/AGENTS.md",
+    "/Users/daxu/software/quantum-gpt/HEARTBEAT.md",
+    "/Users/daxu/software/quantum-gpt/PROJECT.md",
+    "/Users/daxu/software/quantum-gpt/TOOLS.md",
+    "/Users/daxu/software/quantum-gpt/research/quantum_rag_low_compute.md"
+  ],
+  "chunk_count": 90,
+  "source_count": 32,
+  "vectorizer_features": 12503,
+  "dense_dimensions": 12503
+}

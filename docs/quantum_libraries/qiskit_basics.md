@@ -1,9 +1,14 @@
-# Qiskit basics (v1.x API)
+# Qiskit basics (current 2.x core API)
+
+Latest Qiskit package target: qiskit 2.4.2 from PyPI, released 2026-06-13,
+with Python >=3.10 required. Do not infer the latest API from an older local
+Python 3.9 environment.
 
 ## Import surface
 
 ```python
 from qiskit import QuantumCircuit, transpile
+from qiskit.primitives import StatevectorSampler
 from qiskit.quantum_info import Statevector, Operator, partial_trace
 from qiskit_aer import AerSimulator
 ```
@@ -43,6 +48,18 @@ result = sim.run(tqc, shots=1024).result()
 counts = result.get_counts(tqc)
 ```
 
+## StatevectorSampler primitive
+
+```python
+sampler = StatevectorSampler(seed=42)
+job = sampler.run([qc], shots=1024)
+primitive_result = job.result()
+```
+
+Use the primitive interface for current Qiskit algorithm classes such as
+`qiskit_algorithms.QAOA`. Use AerSimulator when you need a backend-like
+simulator result object and counts through `get_counts`.
+
 ## Endianness gotcha
 Qiskit displays bitstrings with qubit 0 as the *rightmost* character
 (little-endian). The Statevector vector index k = sum_i b_i * 2^i where
@@ -53,3 +70,8 @@ b_i is the value of qubit i.
 - Confusing classical-bit index order in `.measure([qubits], [cbits])`.
 - The default basis for parameterised gates is in radians; multiply by
   pi explicitly for angles like 90 degrees.
+- Optimizers such as `COBYLA` live in `qiskit_algorithms.optimizers`, while
+  algorithm classes such as `QAOA` should be imported from explicit algorithm
+  submodules such as `qiskit_algorithms.minimum_eigensolvers`.
+- `qiskit_optimization.algorithms` is for optimizers/wrappers such as
+  `MinimumEigenOptimizer`; it is not the import path for `QAOA`.

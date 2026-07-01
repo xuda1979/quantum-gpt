@@ -1,0 +1,18 @@
+{
+  "label": "with-rag",
+  "generated_at_utc": "2026-04-28T02:26:53.626250+00:00",
+  "model_path": "/Users/daxu/.openclaw/workspace-quantum-rnd/models/Qwen2.5-1.5B-Instruct",
+  "device": "mps",
+  "max_new_tokens": 256,
+  "temperature": 0.0,
+  "total_wall_seconds": 18.8,
+  "tasks": [
+    {
+      "task_id": "quantum_qaoa_maxcut",
+      "prompt_tokens": 1251,
+      "new_tokens": 256,
+      "wall_seconds": 18.69,
+      "output_chars": 982
+    }
+  ]
+}

@@ -1,0 +1,4112 @@
+[
+  {
+    "id": "arclight_install_binary_tarball",
+    "category": "install",
+    "coding_problem": false,
+    "judge_type": "source_and_terms",
+    "query": "How do I install Arclight ISQ with the Binary Tarball path, and what exact command verifies the compiler?",
+    "expected_source_substrings": [
+      "docs/external/quantum-sdk-docs-latest/arclight-isq/"
+    ],
+    "expected_terms": [
+      "Binary Tarball",
+      "unshare --user --pid echo YES",
+      "sha256sum -c",
+      "./isqc --version"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "Binary Tarball",
+      "unshare --user --pid echo YES",
+      "sha256sum -c"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "arclight_install_nix_flake",
+    "category": "install",
+    "coding_problem": false,
+    "judge_type": "source_and_terms",
+    "query": "For Arclight ISQ, show the Nix Flake install route and the command that checks isqc is on PATH.",
+    "expected_source_substrings": [
+      "docs/external/quantum-sdk-docs-latest/arclight-isq/"
+    ],
+    "expected_terms": [
+      "Nix Flake",
+      "cachix use arclight-quantum",
+      "nix shell github:isQ-Team/isQ-Compiler",
+      "isqc --version"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "Nix Flake",
+      "cachix use arclight-quantum",
+      "nix shell github:isQ-Team/isQ-Compiler"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "arclight_install_docker",
+    "category": "install",
+    "coding_problem": false,
+    "judge_type": "source_and_terms",
+    "query": "For Arclight ISQ, what Docker Container commands are documented for Ubuntu and binary-only images?",
+    "expected_source_substrings": [
+      "docs/external/quantum-sdk-docs-latest/arclight-isq/"
+    ],
+    "expected_terms": [
+      "Docker Container",
+      "arclightquantum/isqc:ubuntu-0.0.1",
+      "arclightquantum/isqc:0.0.1",
+      "isqc --version"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "Docker Container",
+      "arclightquantum/isqc:ubuntu-0.0.1",
+      "arclightquantum/isqc:0.0.1"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "qiskit_bell_aer_counts",
+    "category": "sdk_api",
+    "coding_problem": false,
+    "judge_type": "source_and_terms",
+    "query": "In Qiskit v1.x, write a 2-qubit Bell circuit, measure both qubits, run AerSimulator for shots=1024, and retrieve counts.",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/qiskit_basics.md"
+    ],
+    "expected_terms": [
+      "QuantumCircuit",
+      "qc.h(0)",
+      "qc.cx(0, 1)",
+      "AerSimulator",
+      "get_counts"
+    ],
+    "minimum_term_hits": 4,
+    "answer_requirements": [
+      "QuantumCircuit",
+      "qc.h(0)",
+      "qc.cx(0, 1)",
+      "AerSimulator"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 4 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "qiskit_statevector_index_rule",
+    "category": "sdk_api",
+    "coding_problem": false,
+    "judge_type": "source_and_terms",
+    "query": "In Qiskit, explain the Statevector index rule and the measured bitstring rightmost-character gotcha.",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/qiskit_basics.md"
+    ],
+    "expected_terms": [
+      "Statevector",
+      "rightmost",
+      "little-endian",
+      "sum_i",
+      "2^i"
+    ],
+    "minimum_term_hits": 4,
+    "answer_requirements": [
+      "Statevector",
+      "rightmost",
+      "little-endian",
+      "sum_i"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 4 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "qiskit_operator_unitary",
+    "category": "sdk_api",
+    "coding_problem": false,
+    "judge_type": "source_and_terms",
+    "query": "Which Qiskit import and call returns the matrix of a unitary circuit?",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/qiskit_basics.md"
+    ],
+    "expected_terms": [
+      "Operator",
+      "Operator(qc).data",
+      "from qiskit.quantum_info",
+      "unitary"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "Operator",
+      "Operator(qc).data",
+      "from qiskit.quantum_info"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "qiskit_transpile_aer",
+    "category": "sdk_api",
+    "coding_problem": false,
+    "judge_type": "source_and_terms",
+    "query": "For Qiskit Aer sampling, what exact transpile-and-run pattern should I use before result.get_counts?",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/qiskit_basics.md"
+    ],
+    "expected_terms": [
+      "transpile",
+      "AerSimulator",
+      "sim.run",
+      "shots=1024",
+      "result.get_counts"
+    ],
+    "minimum_term_hits": 4,
+    "answer_requirements": [
+      "transpile",
+      "AerSimulator",
+      "sim.run",
+      "shots=1024"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 4 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "qiskit_measure_register_order",
+    "category": "sdk_api",
+    "coding_problem": false,
+    "judge_type": "source_and_terms",
+    "query": "In Qiskit, show the exact call for measuring qubits [0,1] into classical bits [0,1] and mention the register-order pitfall.",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/qiskit_basics.md"
+    ],
+    "expected_terms": [
+      "qc.measure([0, 1], [0, 1])",
+      "classical-bit",
+      "index order",
+      "rightmost"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "qc.measure([0, 1], [0, 1])",
+      "classical-bit",
+      "index order"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "qiskit_common_gate_methods",
+    "category": "sdk_api",
+    "coding_problem": false,
+    "judge_type": "source_and_terms",
+    "query": "List Qiskit QuantumCircuit method names for H, CX, CCX, SWAP, reset, barrier, and parameterized RX.",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/qiskit_basics.md"
+    ],
+    "expected_terms": [
+      ".h(q)",
+      ".cx(c, t)",
+      ".ccx(c1, c2, t)",
+      ".swap(a, b)",
+      ".rx(theta, q)"
+    ],
+    "minimum_term_hits": 4,
+    "answer_requirements": [
+      ".h(q)",
+      ".cx(c, t)",
+      ".ccx(c1, c2, t)",
+      ".swap(a, b)"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 4 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "qiskit_angles_radians",
+    "category": "sdk_api",
+    "coding_problem": false,
+    "judge_type": "source_and_terms",
+    "query": "What Qiskit pitfall should I remember for parameterized gate angles such as 90 degrees?",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/qiskit_basics.md"
+    ],
+    "expected_terms": [
+      "radians",
+      "pi",
+      "parameterised gates",
+      "90 degrees"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "radians",
+      "pi",
+      "parameterised gates"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "qiskit_partial_trace_import",
+    "category": "sdk_api",
+    "coding_problem": false,
+    "judge_type": "source_and_terms",
+    "query": "What Qiskit import surface should I use for Statevector, Operator, and partial_trace?",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/qiskit_basics.md"
+    ],
+    "expected_terms": [
+      "Statevector",
+      "Operator",
+      "partial_trace",
+      "qiskit.quantum_info"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "Statevector",
+      "Operator",
+      "partial_trace"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "qiskit_vqe_imports",
+    "category": "sdk_api",
+    "coding_problem": false,
+    "judge_type": "source_and_terms",
+    "query": "For a Qiskit VQE workflow, name the documented imports for VQE, COBYLA, and RealAmplitudes.",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/vqe_basics.md",
+      "docs/quantum_libraries/qiskit_basics.md"
+    ],
+    "expected_terms": [
+      "VQE",
+      "COBYLA",
+      "RealAmplitudes",
+      "qiskit_algorithms"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "VQE",
+      "COBYLA",
+      "RealAmplitudes"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "cirq_line_qubit_bell",
+    "category": "sdk_api",
+    "coding_problem": false,
+    "judge_type": "source_and_terms",
+    "query": "In Cirq, create three LineQubits and a circuit with H(q0), CNOT(q0,q1), CNOT(q1,q2).",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/cirq_basics.md"
+    ],
+    "expected_terms": [
+      "cirq.LineQubit.range",
+      "cirq.Circuit",
+      "cirq.H(q0)",
+      "cirq.CNOT(q0, q1)",
+      "cirq.CNOT(q1, q2)"
+    ],
+    "minimum_term_hits": 4,
+    "answer_requirements": [
+      "cirq.LineQubit.range",
+      "cirq.Circuit",
+      "cirq.H(q0)",
+      "cirq.CNOT(q0, q1)"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 4 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "cirq_sampling_histogram",
+    "category": "sdk_api",
+    "coding_problem": false,
+    "judge_type": "source_and_terms",
+    "query": "In Cirq, sample q0/q1/q2 with key='m' for repetitions=1024 and print the histogram.",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/cirq_basics.md"
+    ],
+    "expected_terms": [
+      "cirq.Simulator",
+      "cirq.measure",
+      "key=\"m\"",
+      "repetitions=1024",
+      "histogram"
+    ],
+    "minimum_term_hits": 4,
+    "answer_requirements": [
+      "cirq.Simulator",
+      "cirq.measure",
+      "key=\"m\"",
+      "repetitions=1024"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 4 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "cirq_statevector_simulation",
+    "category": "sdk_api",
+    "coding_problem": false,
+    "judge_type": "source_and_terms",
+    "query": "In Cirq, what call simulates a circuit and where is the final state vector stored?",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/cirq_basics.md"
+    ],
+    "expected_terms": [
+      "cirq.Simulator",
+      "sim.simulate",
+      "final_state_vector",
+      "result"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "cirq.Simulator",
+      "sim.simulate",
+      "final_state_vector"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "cirq_endianness_index",
+    "category": "sdk_api",
+    "coding_problem": false,
+    "judge_type": "source_and_terms",
+    "query": "What is Cirq's big-endian state-vector index formula for listed qubits?",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/cirq_basics.md"
+    ],
+    "expected_terms": [
+      "big-endian",
+      "sum_i",
+      "2^(n-1-i)",
+      "first qubit"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "big-endian",
+      "sum_i",
+      "2^(n-1-i)"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "cirq_grid_qubit_topology",
+    "category": "sdk_api",
+    "coding_problem": false,
+    "judge_type": "source_and_terms",
+    "query": "When should I prefer Cirq GridQubit(row, col), and what problem does it model?",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/cirq_basics.md"
+    ],
+    "expected_terms": [
+      "cirq.GridQubit(row, col)",
+      "hardware-realistic",
+      "topologies"
+    ],
+    "minimum_term_hits": 2,
+    "answer_requirements": [
+      "cirq.GridQubit(row, col)",
+      "hardware-realistic"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 2 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "cirq_unitary_pitfall",
+    "category": "sdk_api",
+    "coding_problem": false,
+    "judge_type": "source_and_terms",
+    "query": "What limitation should I remember before calling cirq.unitary(circuit)?",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/cirq_basics.md"
+    ],
+    "expected_terms": [
+      "cirq.unitary(circuit)",
+      "unitary",
+      "no measurement",
+      "operations"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "cirq.unitary(circuit)",
+      "unitary",
+      "no measurement"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "cirq_gate_names",
+    "category": "sdk_api",
+    "coding_problem": false,
+    "judge_type": "source_and_terms",
+    "query": "List the Cirq symbols for RX, RY, RZ, CNOT, CZ, SWAP, ISWAP, TOFFOLI, and CSWAP.",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/cirq_basics.md"
+    ],
+    "expected_terms": [
+      "cirq.rx(theta)",
+      "cirq.ry(theta)",
+      "cirq.rz(theta)",
+      "cirq.CNOT",
+      "cirq.TOFFOLI"
+    ],
+    "minimum_term_hits": 4,
+    "answer_requirements": [
+      "cirq.rx(theta)",
+      "cirq.ry(theta)",
+      "cirq.rz(theta)",
+      "cirq.CNOT"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 4 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "cirq_insert_strategy",
+    "category": "sdk_api",
+    "coding_problem": false,
+    "judge_type": "source_and_terms",
+    "query": "What Cirq InsertStrategy is mentioned when operation ordering matters inside Circuit construction?",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/cirq_basics.md"
+    ],
+    "expected_terms": [
+      "cirq.Circuit",
+      "moments",
+      "cirq.InsertStrategy.NEW_THEN_INLINE",
+      "order"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "cirq.Circuit",
+      "moments",
+      "cirq.InsertStrategy.NEW_THEN_INLINE"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "pennylane_minimal_qnode",
+    "category": "sdk_api",
+    "coding_problem": false,
+    "judge_type": "source_and_terms",
+    "query": "Show the minimal PennyLane QNode pattern with qml.device, @qml.qnode, RY, CNOT, and qml.expval.",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/pennylane_basics.md"
+    ],
+    "expected_terms": [
+      "qml.device",
+      "@qml.qnode",
+      "qml.RY",
+      "qml.CNOT",
+      "qml.expval"
+    ],
+    "minimum_term_hits": 4,
+    "answer_requirements": [
+      "qml.device",
+      "@qml.qnode",
+      "qml.RY",
+      "qml.CNOT"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 4 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "pennylane_trainable_parameter",
+    "category": "sdk_api",
+    "coding_problem": false,
+    "judge_type": "source_and_terms",
+    "query": "In PennyLane, what exact array form is needed so a parameter is trainable?",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/pennylane_basics.md"
+    ],
+    "expected_terms": [
+      "pennylane.numpy",
+      "requires_grad=True",
+      "trainable",
+      "plain numpy"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "pennylane.numpy",
+      "requires_grad=True",
+      "trainable"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "pennylane_return_types",
+    "category": "sdk_api",
+    "coding_problem": false,
+    "judge_type": "source_and_terms",
+    "query": "Name the documented PennyLane QNode return types for state, probabilities, expectation, and sampling.",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/pennylane_basics.md"
+    ],
+    "expected_terms": [
+      "qml.state()",
+      "qml.probs",
+      "qml.expval",
+      "qml.sample"
+    ],
+    "minimum_term_hits": 4,
+    "answer_requirements": [
+      "qml.state()",
+      "qml.probs",
+      "qml.expval",
+      "qml.sample"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 4 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "pennylane_device_shots",
+    "category": "sdk_api",
+    "coding_problem": false,
+    "judge_type": "source_and_terms",
+    "query": "For PennyLane shots-based sampling, what device argument should I set instead of relying on analytic default?",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/pennylane_basics.md"
+    ],
+    "expected_terms": [
+      "qml.device",
+      "shots=1024",
+      "default.qubit",
+      "analytically"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "qml.device",
+      "shots=1024",
+      "default.qubit"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "pennylane_hamiltonian",
+    "category": "sdk_api",
+    "coding_problem": false,
+    "judge_type": "source_and_terms",
+    "query": "Show the PennyLane Hamiltonian pattern with coeffs and observables including PauliZ @ PauliZ.",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/pennylane_basics.md"
+    ],
+    "expected_terms": [
+      "qml.Hamiltonian",
+      "coeffs",
+      "observables",
+      "qml.PauliZ(0) @ qml.PauliZ(1)"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "qml.Hamiltonian",
+      "coeffs",
+      "observables"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "pennylane_qaoa_maxcut_helpers",
+    "category": "sdk_api",
+    "coding_problem": false,
+    "judge_type": "source_and_terms",
+    "query": "Which PennyLane helper builds MaxCut cost and mixer Hamiltonians from a graph?",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/pennylane_basics.md"
+    ],
+    "expected_terms": [
+      "from pennylane import qaoa",
+      "qaoa.maxcut",
+      "cost_h",
+      "mixer_h"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "from pennylane import qaoa",
+      "qaoa.maxcut",
+      "cost_h"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "pennylane_templates",
+    "category": "sdk_api",
+    "coding_problem": false,
+    "judge_type": "source_and_terms",
+    "query": "List PennyLane templates named in the notes for embedding, entanglers, QFT, and phase estimation.",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/pennylane_basics.md"
+    ],
+    "expected_terms": [
+      "qml.AngleEmbedding",
+      "qml.BasicEntanglerLayers",
+      "qml.StronglyEntanglingLayers",
+      "qml.QFT",
+      "qml.QuantumPhaseEstimation"
+    ],
+    "minimum_term_hits": 4,
+    "answer_requirements": [
+      "qml.AngleEmbedding",
+      "qml.BasicEntanglerLayers",
+      "qml.StronglyEntanglingLayers",
+      "qml.QFT"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 4 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "pennylane_multiwire_gate",
+    "category": "sdk_api",
+    "coding_problem": false,
+    "judge_type": "source_and_terms",
+    "query": "What PennyLane pitfall is documented for multi-wire gates such as CNOT or SWAP?",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/pennylane_basics.md"
+    ],
+    "expected_terms": [
+      "wires=[0, 1]",
+      "multi-wire",
+      "tuple",
+      "brittle"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "wires=[0, 1]",
+      "multi-wire",
+      "tuple"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "pennylane_vqe_workflow",
+    "category": "sdk_api",
+    "coding_problem": false,
+    "judge_type": "source_and_terms",
+    "query": "For PennyLane VQE, name the ansatz/QNode/optimizer pieces documented in the VQE note.",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/vqe_basics.md",
+      "docs/quantum_libraries/pennylane_basics.md"
+    ],
+    "expected_terms": [
+      "qml.SimplifiedTwoDesign",
+      "qml.QNode",
+      "qml.AdamOptimizer",
+      "0.05"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "qml.SimplifiedTwoDesign",
+      "qml.QNode",
+      "qml.AdamOptimizer"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "braket_bell_local_counts",
+    "category": "sdk_api",
+    "coding_problem": false,
+    "judge_type": "source_and_terms",
+    "query": "In Amazon Braket, build a Bell circuit and run LocalSimulator for shots=1024 to get measurement_counts.",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/braket_basics.md"
+    ],
+    "expected_terms": [
+      "Circuit().h(0).cnot",
+      "measure([0, 1])",
+      "LocalSimulator",
+      "shots=1024",
+      "measurement_counts"
+    ],
+    "minimum_term_hits": 4,
+    "answer_requirements": [
+      "Circuit().h(0).cnot",
+      "measure([0, 1])",
+      "LocalSimulator",
+      "shots=1024"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 4 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "braket_state_vector_result",
+    "category": "sdk_api",
+    "coding_problem": false,
+    "judge_type": "source_and_terms",
+    "query": "In Braket LocalSimulator, what must I add to request state_vector amplitudes and what shots value should I use?",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/braket_basics.md"
+    ],
+    "expected_terms": [
+      "state_vector()",
+      "shots=0",
+      "result.values[0]",
+      "analytical"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "state_vector()",
+      "shots=0",
+      "result.values[0]"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "braket_endianness",
+    "category": "sdk_api",
+    "coding_problem": false,
+    "judge_type": "source_and_terms",
+    "query": "What endianness does Braket use for bitstrings, and which qubit is most significant?",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/braket_basics.md"
+    ],
+    "expected_terms": [
+      "big-endian",
+      "qubit 0",
+      "most significant bit",
+      "bitstring"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "big-endian",
+      "qubit 0",
+      "most significant bit"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "braket_remote_vs_local",
+    "category": "sdk_api",
+    "coding_problem": false,
+    "judge_type": "source_and_terms",
+    "query": "When should I prefer Braket LocalSimulator instead of AwsDevice in this project?",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/braket_basics.md"
+    ],
+    "expected_terms": [
+      "AwsDevice",
+      "AWS credentials",
+      "LocalSimulator",
+      "local testing"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "AwsDevice",
+      "AWS credentials",
+      "LocalSimulator"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "braket_gate_methods",
+    "category": "sdk_api",
+    "coding_problem": false,
+    "judge_type": "source_and_terms",
+    "query": "List Braket chainable gate methods for rx, ry, rz, cnot, cz, swap, and ccnot.",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/braket_basics.md"
+    ],
+    "expected_terms": [
+      ".rx(q, theta)",
+      ".ry(q, theta)",
+      ".rz(q, theta)",
+      ".cnot(control, target)",
+      ".ccnot(control1, control2, target)"
+    ],
+    "minimum_term_hits": 4,
+    "answer_requirements": [
+      ".rx(q, theta)",
+      ".ry(q, theta)",
+      ".rz(q, theta)",
+      ".cnot(control, target)"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 4 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "bell_phi_plus_amplitudes",
+    "category": "algorithm",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "For a coding answer, return the exact |Phi+> Bell pair amplitude list in basis |00>,|01>,|10>,|11>. The answer must include these check points: 2 ** -0.5; [amp, 0.0, 0.0, amp]; |Phi+>.",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/bell_state_construction.md"
+    ],
+    "expected_terms": [
+      "2 ** -0.5",
+      "[amp, 0.0, 0.0, amp]",
+      "|Phi+>",
+      "basis"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "2 ** -0.5",
+      "[amp, 0.0, 0.0, amp]",
+      "|Phi+>"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "bell_reference_circuit",
+    "category": "algorithm",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "What two gate steps create the default Bell pair |Phi+>, and what are the Qiskit calls? The answer must include these check points: H to qubit 0; CNOT; qc.h(0).",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/bell_state_construction.md"
+    ],
+    "expected_terms": [
+      "H to qubit 0",
+      "CNOT",
+      "qc.h(0)",
+      "qc.cx(0, 1)"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "H to qubit 0",
+      "CNOT",
+      "qc.h(0)"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "ghz_state_list",
+    "category": "algorithm",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "For n=3, what exact GHZ amplitude list should a coding task return under big-endian indexing? The answer must include these check points: 2 ** -0.5; ghz3; state[0].",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/ghz_state.md"
+    ],
+    "expected_terms": [
+      "2 ** -0.5",
+      "ghz3",
+      "state[0]",
+      "state[(1 << n) - 1]"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "2 ** -0.5",
+      "ghz3",
+      "state[0]"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "ghz_witness_expectation",
+    "category": "algorithm",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "How do I compute a GHZ witness expectation and what sign indicates entanglement? The answer must include these check points: W = 1/2 I - |GHZ><GHZ|; 0.5 - fidelity; negative.",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/ghz_state.md"
+    ],
+    "expected_terms": [
+      "W = 1/2 I - |GHZ><GHZ|",
+      "0.5 - fidelity",
+      "negative",
+      "entanglement"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "W = 1/2 I - |GHZ><GHZ|",
+      "0.5 - fidelity",
+      "negative"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "qft_phase_pattern",
+    "category": "algorithm",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "For QFT|x>, what phase formula should tests expect for phases[k]? The answer must include these check points: 2 * pi * x * k / N; mod 2*pi; phases[k].",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/quantum_fourier_transform.md"
+    ],
+    "expected_terms": [
+      "2 * pi * x * k / N",
+      "mod 2*pi",
+      "phases[k]",
+      "QFT"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "2 * pi * x * k / N",
+      "mod 2*pi",
+      "phases[k]"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "qft_matrix_formula",
+    "category": "algorithm",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "What is the QFT matrix element formula and a NumPy construction pattern? The answer must include these check points: exp(2*pi*i * j*k / N); 1 / sqrt(N); np.meshgrid.",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/quantum_fourier_transform.md"
+    ],
+    "expected_terms": [
+      "exp(2*pi*i * j*k / N)",
+      "1 / sqrt(N)",
+      "np.meshgrid",
+      "qft_matrix"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "exp(2*pi*i * j*k / N)",
+      "1 / sqrt(N)",
+      "np.meshgrid"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "qft_inverse_steps",
+    "category": "algorithm",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "How do I invert a QFT circuit in code? The answer must include these check points: reverse the order; negate all rotation angles; QFT_dagger.",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/quantum_fourier_transform.md"
+    ],
+    "expected_terms": [
+      "reverse the order",
+      "negate all rotation angles",
+      "QFT_dagger",
+      "inverse"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "reverse the order",
+      "negate all rotation angles",
+      "QFT_dagger"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "qpe_measurement_integer",
+    "category": "algorithm",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "In ideal QPE, what integer y is measured and how do I convert it back to phase? The answer must include these check points: round(true_phase * (1 << t)); % (1 << t); y / 2**t.",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/quantum_phase_estimation.md"
+    ],
+    "expected_terms": [
+      "round(true_phase * (1 << t))",
+      "% (1 << t)",
+      "y / 2**t",
+      "phi_estimate"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "round(true_phase * (1 << t))",
+      "% (1 << t)",
+      "y / 2**t"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "qpe_protocol_order",
+    "category": "algorithm",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "List the QPE protocol order: counting register preparation, controlled powers, inverse QFT, and measurement. The answer must include these check points: H on each; controlled-U^(2^k); inverse QFT.",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/quantum_phase_estimation.md"
+    ],
+    "expected_terms": [
+      "H on each",
+      "controlled-U^(2^k)",
+      "inverse QFT",
+      "Measure"
+    ],
+    "minimum_term_hits": 4,
+    "answer_requirements": [
+      "H on each",
+      "controlled-U^(2^k)",
+      "inverse QFT",
+      "Measure"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 4 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "qpe_eigenvalue_numpy",
+    "category": "algorithm",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "How does the note estimate the eigenvalue phase from U and an eigenvector using NumPy? The answer must include these check points: Uv = unitary @ eigenvector; np.vdot; np.angle.",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/quantum_phase_estimation.md"
+    ],
+    "expected_terms": [
+      "Uv = unitary @ eigenvector",
+      "np.vdot",
+      "np.angle",
+      "np.exp(2j * np.pi * phi_est)"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "Uv = unitary @ eigenvector",
+      "np.vdot",
+      "np.angle"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "grover_oracle_diffusion",
+    "category": "algorithm",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "For a pure Python Grover simulator, define the oracle sign flip and diffusion update. The answer must include these check points: flip the sign; marked; 2 * mean - a.",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/grover_search.md"
+    ],
+    "expected_terms": [
+      "flip the sign",
+      "marked",
+      "2 * mean - a",
+      "uniform superposition"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "flip the sign",
+      "marked",
+      "2 * mean - a"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "grover_iteration_count",
+    "category": "algorithm",
+    "coding_problem": false,
+    "judge_type": "source_and_terms",
+    "query": "What approximate Grover iteration count should I use for N items and M marked items?",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/grover_search.md"
+    ],
+    "expected_terms": [
+      "(pi/4)",
+      "sqrt(N / M)",
+      "O(sqrt(N))",
+      "marked"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "(pi/4)",
+      "sqrt(N / M)",
+      "O(sqrt(N))"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "vqe_energy_expectation",
+    "category": "algorithm",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "For VQE, what exact NumPy expression computes E(theta)=<psi|H|psi>? The answer must include these check points: np.vdot(state, hamiltonian @ state); np.real; expectation.",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/vqe_basics.md"
+    ],
+    "expected_terms": [
+      "np.vdot(state, hamiltonian @ state)",
+      "np.real",
+      "expectation",
+      "ground-state energy"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "np.vdot(state, hamiltonian @ state)",
+      "np.real",
+      "expectation"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "vqe_workflow_steps",
+    "category": "algorithm",
+    "coding_problem": false,
+    "judge_type": "source_and_terms",
+    "query": "List the VQE workflow steps from Hamiltonian Pauli strings through optimizer.",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/vqe_basics.md"
+    ],
+    "expected_terms": [
+      "sum_i c_i P_i",
+      "ansatz",
+      "measurement basis",
+      "COBYLA",
+      "SPSA"
+    ],
+    "minimum_term_hits": 4,
+    "answer_requirements": [
+      "sum_i c_i P_i",
+      "ansatz",
+      "measurement basis",
+      "COBYLA"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 4 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "qaoa_layer_pattern",
+    "category": "algorithm",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "In a QAOA layer, what Qiskit gate pattern implements each weighted edge and mixer rotation? The answer must include these check points: qc.cx(u, v); qc.rz(2 * w * gamma, v); qc.rx(2 * beta, q).",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/qaoa_maxcut.md"
+    ],
+    "expected_terms": [
+      "qc.cx(u, v)",
+      "qc.rz(2 * w * gamma, v)",
+      "qc.rx(2 * beta, q)",
+      "Cost unitary",
+      "Mixer unitary"
+    ],
+    "minimum_term_hits": 4,
+    "answer_requirements": [
+      "qc.cx(u, v)",
+      "qc.rz(2 * w * gamma, v)",
+      "qc.rx(2 * beta, q)",
+      "Cost unitary"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 4 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "qaoa_maxcut_cost",
+    "category": "algorithm",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "For MaxCut coding, when does an edge (u,v) contribute 1 to maxcut_cost(bitstring, edges)? The answer must include these check points: bitstring[u] != bitstring[v]; cost += 1; edges.",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/qaoa_maxcut.md",
+      "evals/tasks/quantum/qaoa_maxcut/"
+    ],
+    "expected_terms": [
+      "bitstring[u] != bitstring[v]",
+      "cost += 1",
+      "edges",
+      "MaxCut"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "bitstring[u] != bitstring[v]",
+      "cost += 1",
+      "edges"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "teleportation_corrections_table",
+    "category": "algorithm",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "Return the teleportation correction table for (m1,m2) -> I, X, Z, ZX. The answer must include these check points: (0, 0): \"I\"; (0, 1): \"X\"; (1, 0): \"Z\".",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/quantum_teleportation.md"
+    ],
+    "expected_terms": [
+      "(0, 0): \"I\"",
+      "(0, 1): \"X\"",
+      "(1, 0): \"Z\"",
+      "(1, 1): \"ZX\""
+    ],
+    "minimum_term_hits": 4,
+    "answer_requirements": [
+      "(0, 0): \"I\"",
+      "(0, 1): \"X\"",
+      "(1, 0): \"Z\"",
+      "(1, 1): \"ZX\""
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 4 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "teleportation_apply_order",
+    "category": "algorithm",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "In the teleport(alpha,beta,m1,m2) snippet, which bit controls X and which controls Z? The answer must include these check points: if m2 == 1; X; if m1 == 1.",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/quantum_teleportation.md"
+    ],
+    "expected_terms": [
+      "if m2 == 1",
+      "X",
+      "if m1 == 1",
+      "Z"
+    ],
+    "minimum_term_hits": 4,
+    "answer_requirements": [
+      "if m2 == 1",
+      "X",
+      "if m1 == 1",
+      "Z"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 4 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "superdense_encode_table",
+    "category": "algorithm",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "For superdense coding with Alice as qubit 0, give the encode table for 00,01,10,11. The answer must include these check points: 00 -> I; 01 -> X; 10 -> Z.",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/superdense_coding.md"
+    ],
+    "expected_terms": [
+      "00 -> I",
+      "01 -> X",
+      "10 -> Z",
+      "11 -> ZX"
+    ],
+    "minimum_term_hits": 4,
+    "answer_requirements": [
+      "00 -> I",
+      "01 -> X",
+      "10 -> Z",
+      "11 -> ZX"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 4 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "superdense_bell_measurement",
+    "category": "algorithm",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "What Bob-side Bell-basis measurement gates recover the two classical bits in superdense coding? The answer must include these check points: CNOT(0, 1); H(0); Bell-basis measurement.",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/superdense_coding.md"
+    ],
+    "expected_terms": [
+      "CNOT(0, 1)",
+      "H(0)",
+      "Bell-basis measurement",
+      "recover"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "CNOT(0, 1)",
+      "H(0)",
+      "Bell-basis measurement"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "density_plain_python_api",
+    "category": "algorithm",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "For the density-matrix eval API, name the four public functions and say whether NumPy is allowed. The answer must include these check points: density_from_state; tensor_product; partial_trace.",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/density_matrix_partial_trace.md",
+      "docs/quantum_libraries/density_matrix_eval_api.md"
+    ],
+    "expected_terms": [
+      "density_from_state",
+      "tensor_product",
+      "partial_trace",
+      "purity",
+      "Do not import NumPy"
+    ],
+    "minimum_term_hits": 4,
+    "answer_requirements": [
+      "density_from_state",
+      "tensor_product",
+      "partial_trace",
+      "purity"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 4 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "density_partial_trace_b",
+    "category": "algorithm",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "In partial_trace(rho, dim_a, dim_b, trace_out), what loops compute tracing out subsystem B? The answer must include these check points: trace_out == \"B\"; dim_a x dim_a; rho[i * dim_b + k][j * dim_b + k].",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/density_matrix_partial_trace.md",
+      "docs/quantum_libraries/density_matrix_eval_api.md"
+    ],
+    "expected_terms": [
+      "trace_out == \"B\"",
+      "dim_a x dim_a",
+      "rho[i * dim_b + k][j * dim_b + k]",
+      "return reduced"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "trace_out == \"B\"",
+      "dim_a x dim_a",
+      "rho[i * dim_b + k][j * dim_b + k]"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "density_partial_trace_a",
+    "category": "algorithm",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "In partial_trace, what output shape and index formula are used when trace_out is 'A'? The answer must include these check points: trace_out == \"A\"; dim_b x dim_b; rho[i * dim_b + k][i * dim_b + l].",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/density_matrix_partial_trace.md",
+      "docs/quantum_libraries/density_matrix_eval_api.md"
+    ],
+    "expected_terms": [
+      "trace_out == \"A\"",
+      "dim_b x dim_b",
+      "rho[i * dim_b + k][i * dim_b + l]",
+      "ValueError"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "trace_out == \"A\"",
+      "dim_b x dim_b",
+      "rho[i * dim_b + k][i * dim_b + l]"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "depolarizing_channel_formula",
+    "category": "algorithm",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "For a single-qubit depolarizing channel, give both E(rho) formulas in the notes. The answer must include these check points: (1 - p) * rho + p * I / 2; 1 - 3p/4; p/4.",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/depolarizing_channel.md"
+    ],
+    "expected_terms": [
+      "(1 - p) * rho + p * I / 2",
+      "1 - 3p/4",
+      "p/4",
+      "X rho X"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "(1 - p) * rho + p * I / 2",
+      "1 - 3p/4",
+      "p/4"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "depolarizing_kraus",
+    "category": "algorithm",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "For a quantum coding task, write the Kraus coefficient pattern for depolarizing_kraus(p). The answer must include these check points: np.sqrt(1 - 3 * p / 4); np.sqrt(p / 4); I.",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/depolarizing_channel.md"
+    ],
+    "expected_terms": [
+      "np.sqrt(1 - 3 * p / 4)",
+      "np.sqrt(p / 4)",
+      "I",
+      "X",
+      "Y",
+      "Z"
+    ],
+    "minimum_term_hits": 4,
+    "answer_requirements": [
+      "np.sqrt(1 - 3 * p / 4)",
+      "np.sqrt(p / 4)",
+      "I",
+      "X"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 4 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "bitflip_syndrome_decoder",
+    "category": "algorithm",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "For the 3-qubit bit-flip code, return the syndrome lookup table for (s1,s2). The answer must include these check points: (0, 0): None; (1, 0): 0; (1, 1): 1.",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/error_correction_basics.md",
+      "docs/quantum_libraries/binary_measurement_decoders.md"
+    ],
+    "expected_terms": [
+      "(0, 0): None",
+      "(1, 0): 0",
+      "(1, 1): 1",
+      "(0, 1): 2"
+    ],
+    "minimum_term_hits": 4,
+    "answer_requirements": [
+      "(0, 0): None",
+      "(1, 0): 0",
+      "(1, 1): 1",
+      "(0, 1): 2"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 4 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "shor9_encoded_states",
+    "category": "algorithm",
+    "coding_problem": false,
+    "judge_type": "source_and_terms",
+    "query": "What are the |0_L> and |1_L> encoded state formulas for Shor 9-qubit code?",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/error_correction_basics.md"
+    ],
+    "expected_terms": [
+      "1/(2*sqrt(2))",
+      "|000> + |111>",
+      "|000> - |111>",
+      "three blocks"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "1/(2*sqrt(2))",
+      "|000> + |111>",
+      "|000> - |111>"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "stabilizer_h_update",
+    "category": "algorithm",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "In tableau simulation, what is the H update rule including the sign flip condition? The answer must include these check points: swap x_q and z_q; x & z; sign.",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/stabilizer_formalism.md"
+    ],
+    "expected_terms": [
+      "swap x_q and z_q",
+      "x & z",
+      "sign",
+      "pre-update"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "swap x_q and z_q",
+      "x & z",
+      "sign"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "stabilizer_s_update",
+    "category": "algorithm",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "In tableau simulation, what is the S update rule for z_q and sign? The answer must include these check points: z_q ^= x_q; flip sign; x_q AND z_q.",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/stabilizer_formalism.md"
+    ],
+    "expected_terms": [
+      "z_q ^= x_q",
+      "flip sign",
+      "x_q AND z_q",
+      "apply_s"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "z_q ^= x_q",
+      "flip sign",
+      "x_q AND z_q"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "stabilizer_cnot_update",
+    "category": "algorithm",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "In tableau simulation, give the CNOT update formulas for x_t, z_c, and sign. The answer must include these check points: x_t ^= x_c; z_c ^= z_t; xc & zt.",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/stabilizer_formalism.md"
+    ],
+    "expected_terms": [
+      "x_t ^= x_c",
+      "z_c ^= z_t",
+      "xc & zt",
+      "xt ^ zc ^ 1"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "x_t ^= x_c",
+      "z_c ^= z_t",
+      "xc & zt"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "trotter_first_order",
+    "category": "algorithm",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "Give the first-order Trotter formula for exp(-i(A+B)t) and the dt pattern. The answer must include these check points: exp(-i A t/n); exp(-i B t/n); dt = t / n_steps.",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/trotter_decomposition.md"
+    ],
+    "expected_terms": [
+      "exp(-i A t/n)",
+      "exp(-i B t/n)",
+      "dt = t / n_steps",
+      "matrix_power"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "exp(-i A t/n)",
+      "exp(-i B t/n)",
+      "dt = t / n_steps"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "trotter_second_order",
+    "category": "algorithm",
+    "coding_problem": false,
+    "judge_type": "source_and_terms",
+    "query": "For a quantum coding task, give the second-order symmetric Trotter formula S2(t).",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/trotter_decomposition.md"
+    ],
+    "expected_terms": [
+      "exp(-i A t/2)",
+      "exp(-i B t)",
+      "exp(-i A t/2)",
+      "O(t^3 / n^2)"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "exp(-i A t/2)",
+      "exp(-i B t)",
+      "exp(-i A t/2)"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "gate_alias_normalization_table",
+    "category": "algorithm",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "For gate alias normalization, what lookup entries canonicalize hadamard, pauli_x, cnot, toffoli, and fredkin? The answer must include these check points: hadamard; \"H\"; pauli_x.",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/quantum_gates_reference.md"
+    ],
+    "expected_terms": [
+      "hadamard",
+      "\"H\"",
+      "pauli_x",
+      "\"X\"",
+      "toffoli"
+    ],
+    "minimum_term_hits": 4,
+    "answer_requirements": [
+      "hadamard",
+      "\"H\"",
+      "pauli_x",
+      "\"X\""
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 4 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "gate_unknown_error",
+    "category": "algorithm",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "What should gate normalization do for an unknown alias instead of returning the original token? The answer must include these check points: gate.strip().lower(); ValueError; unknown gate.",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/quantum_gates_reference.md"
+    ],
+    "expected_terms": [
+      "gate.strip().lower()",
+      "ValueError",
+      "unknown gate",
+      "lookup"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "gate.strip().lower()",
+      "ValueError",
+      "unknown gate"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "state_vector_single_qubit_apply",
+    "category": "algorithm",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "In pure NumPy state-vector simulation, what reshape/tensordot/moveaxis pattern applies a single-qubit gate? The answer must include these check points: reshape([2] * n); np.tensordot; np.moveaxis.",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/state_vector_simulation.md"
+    ],
+    "expected_terms": [
+      "reshape([2] * n)",
+      "np.tensordot",
+      "np.moveaxis",
+      "target"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "reshape([2] * n)",
+      "np.tensordot",
+      "np.moveaxis"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "state_vector_measurement_probs",
+    "category": "algorithm",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "How do I compute measurement probabilities and sample outcomes from a state vector? The answer must include these check points: np.abs(state) ** 2; rng.choice; shots.",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/state_vector_simulation.md"
+    ],
+    "expected_terms": [
+      "np.abs(state) ** 2",
+      "rng.choice",
+      "shots",
+      "p=probs"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "np.abs(state) ** 2",
+      "rng.choice",
+      "shots"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "circuit_repair_cnot_swapped",
+    "category": "repair",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "In circuit repair, what symptom and fix are documented for swapped CNOT control/target? The answer must include these check points: Swapped control/target; probabilities mirror; control comes first.",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/circuit_repair_recipes.md"
+    ],
+    "expected_terms": [
+      "Swapped control/target",
+      "probabilities mirror",
+      "control comes first",
+      "cx(c, t)"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "Swapped control/target",
+      "probabilities mirror",
+      "control comes first"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "circuit_repair_missing_h",
+    "category": "repair",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "In Bell-basis measurement repair, what gate sequence is needed before measurement? The answer must include these check points: CX(0, 1); H(0); Bell-basis.",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/circuit_repair_recipes.md"
+    ],
+    "expected_terms": [
+      "CX(0, 1)",
+      "H(0)",
+      "Bell-basis",
+      "Missing H"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "CX(0, 1)",
+      "H(0)",
+      "Bell-basis"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "circuit_repair_float_precision",
+    "category": "repair",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "How should candidate code compare 1/sqrt(2) amplitudes in tests? The answer must include these check points: math.isclose; np.allclose; abs_tol=1e-9.",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/bell_state_construction.md"
+    ],
+    "expected_terms": [
+      "math.isclose",
+      "np.allclose",
+      "abs_tol=1e-9",
+      "exact equality"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "math.isclose",
+      "np.allclose",
+      "abs_tol=1e-9"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "task_bell_pair_state",
+    "category": "quantum_coding_task",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "Implement bell_pair_state() for the eval task and return the exact Phi+ list. The answer must include these check points: bell_pair_state; 2 ** -0.5; [amp, 0.0, 0.0, amp].",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/bell_pair_construction/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "bell_pair_state",
+      "2 ** -0.5",
+      "[amp, 0.0, 0.0, amp]"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "bell_pair_state",
+      "2 ** -0.5",
+      "[amp, 0.0, 0.0, amp]"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "task_measurement_mapping",
+    "category": "quantum_coding_task",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "Repair measurement_mapping(bitstring) where input ordering is q1q0; map the rightmost bit to q0. The answer must include these check points: measurement_mapping; q1q0; rightmost.",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/measurement_bug_repair/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "measurement_mapping",
+      "q1q0",
+      "rightmost",
+      "{\"q0\": int(bitstring[1])"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "measurement_mapping",
+      "q1q0",
+      "rightmost"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "task_phase_estimation_measurement",
+    "category": "quantum_coding_task",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "Implement phase_estimation(eigenvalue_phase, n_counting_bits) with ideal rounded measurement modulo 2^n. The answer must include these check points: phase_estimation; round(eigenvalue_phase * n_states); % n_states.",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/phase_estimation_circuit/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "phase_estimation",
+      "round(eigenvalue_phase * n_states)",
+      "% n_states",
+      "1 << n_counting_bits"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "phase_estimation",
+      "round(eigenvalue_phase * n_states)",
+      "% n_states"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "task_phase_from_measurement",
+    "category": "quantum_coding_task",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "Implement phase_from_measurement(measurement, n_counting_bits) returning measurement / 2^n. The answer must include these check points: phase_from_measurement; measurement / n_states; [0, 1).",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/phase_estimation_circuit/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "phase_from_measurement",
+      "measurement / n_states",
+      "[0, 1)",
+      "1 << n_counting_bits"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "phase_from_measurement",
+      "measurement / n_states",
+      "[0, 1)"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "task_qaoa_maxcut_cost",
+    "category": "quantum_coding_task",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "Implement maxcut_cost so an edge contributes only when the two endpoint bits differ. The answer must include these check points: maxcut_cost; bitstring[u] != bitstring[v]; cost += 1.",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/qaoa_maxcut/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "maxcut_cost",
+      "bitstring[u] != bitstring[v]",
+      "cost += 1",
+      "edges"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "maxcut_cost",
+      "bitstring[u] != bitstring[v]",
+      "cost += 1"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "task_qaoa_bruteforce",
+    "category": "quantum_coding_task",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "Implement brute_force_maxcut with lexicographically smallest tie-break. The answer must include these check points: brute_force_maxcut; format(i; best_cost.",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/qaoa_maxcut/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "brute_force_maxcut",
+      "format(i",
+      "best_cost",
+      "lexicographically smallest"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "brute_force_maxcut",
+      "format(i",
+      "best_cost"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "task_qaoa_landscape_sort",
+    "category": "quantum_coding_task",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "Implement qaoa_cost_landscape sorted by descending cost and ascending bitstring. The answer must include these check points: qaoa_cost_landscape; results.sort; -x[1].",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/qaoa_maxcut/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "qaoa_cost_landscape",
+      "results.sort",
+      "-x[1]",
+      "x[0]"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "qaoa_cost_landscape",
+      "results.sort",
+      "-x[1]"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "task_grover_uniform",
+    "category": "quantum_coding_task",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "Implement uniform_superposition(n_qubits) with amplitude 1/sqrt(2^n). The answer must include these check points: uniform_superposition; math.sqrt; [amp] * n.",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/grover_oracle_diffusion/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "uniform_superposition",
+      "math.sqrt",
+      "[amp] * n",
+      "2 ** n_qubits"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "uniform_superposition",
+      "math.sqrt",
+      "[amp] * n"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "task_grover_oracle",
+    "category": "quantum_coding_task",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "Implement oracle(state, marked) by flipping only the marked basis amplitude sign. The answer must include these check points: oracle; marked; -result[marked].",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/grover_oracle_diffusion/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "oracle",
+      "marked",
+      "-result[marked]",
+      "list(state)"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "oracle",
+      "marked",
+      "-result[marked]"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "task_grover_diffusion",
+    "category": "quantum_coding_task",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "Implement diffusion(state) as reflection about the mean amplitude. The answer must include these check points: diffusion; mean = sum(state) / n; 2 * mean - a.",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/grover_oracle_diffusion/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "diffusion",
+      "mean = sum(state) / n",
+      "2 * mean - a",
+      "return"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "diffusion",
+      "mean = sum(state) / n",
+      "2 * mean - a"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "task_grover_search_loop",
+    "category": "quantum_coding_task",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "Implement grover_search by alternating oracle and diffusion for the requested iterations. The answer must include these check points: grover_search; for _ in range(iterations); oracle.",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/grover_oracle_diffusion/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "grover_search",
+      "for _ in range(iterations)",
+      "oracle",
+      "diffusion"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "grover_search",
+      "for _ in range(iterations)",
+      "oracle"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "task_density_from_state",
+    "category": "quantum_coding_task",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "Implement density_from_state(state) as a plain-list outer product. The answer must include these check points: density_from_state; state[i] * state[j]; list[list[float]].",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/density_matrix_partial_trace/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "density_from_state",
+      "state[i] * state[j]",
+      "list[list[float]]",
+      "rho"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "density_from_state",
+      "state[i] * state[j]",
+      "list[list[float]]"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "task_tensor_product",
+    "category": "quantum_coding_task",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "Implement tensor_product(a,b) using result[i*db+k][j*db+l] = a[i][j] * b[k][l]. The answer must include these check points: tensor_product; i * db + k; j * db + l.",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/density_matrix_partial_trace/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "tensor_product",
+      "i * db + k",
+      "j * db + l",
+      "a[i][j] * b[k][l]"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "tensor_product",
+      "i * db + k",
+      "j * db + l"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "task_partial_trace_b",
+    "category": "quantum_coding_task",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "Implement partial_trace trace_out='B' returning the dim_a x dim_a reduced matrix. The answer must include these check points: partial_trace; trace_out == \"B\"; dim_a.",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/density_matrix_partial_trace/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "partial_trace",
+      "trace_out == \"B\"",
+      "dim_a",
+      "rho[i * dim_b + k][j * dim_b + k]"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "partial_trace",
+      "trace_out == \"B\"",
+      "dim_a"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "task_partial_trace_a",
+    "category": "quantum_coding_task",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "Implement partial_trace trace_out='A' returning the dim_b x dim_b reduced matrix. The answer must include these check points: trace_out == \"A\"; dim_b; rho[i * dim_b + k][i * dim_b + l].",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/density_matrix_partial_trace/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "trace_out == \"A\"",
+      "dim_b",
+      "rho[i * dim_b + k][i * dim_b + l]",
+      "result"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "trace_out == \"A\"",
+      "dim_b",
+      "rho[i * dim_b + k][i * dim_b + l]"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "task_purity",
+    "category": "quantum_coding_task",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "Implement purity(rho) as Tr(rho^2) with nested loops over i,j. The answer must include these check points: purity; rho[i][j] * rho[j][i]; Tr(rho^2).",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/density_matrix_partial_trace/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "purity",
+      "rho[i][j] * rho[j][i]",
+      "Tr(rho^2)",
+      "total"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "purity",
+      "rho[i][j] * rho[j][i]",
+      "Tr(rho^2)"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "task_shor_encode",
+    "category": "quantum_coding_task",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "Implement shor_encode(logical_bit) with amplitudes at the 8 block combinations. The answer must include these check points: shor_encode; 1.0 / (2 * math.sqrt(2)); block_states = [0, 7].",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/quantum_error_correction_shor_9qubit/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "shor_encode",
+      "1.0 / (2 * math.sqrt(2))",
+      "block_states = [0, 7]",
+      "512"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "shor_encode",
+      "1.0 / (2 * math.sqrt(2))",
+      "block_states = [0, 7]"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "task_shor_apply_x_error",
+    "category": "quantum_coding_task",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "Implement apply_x_error(state, qubit) for qubit index 0-8 with MSB-first conversion. The answer must include these check points: apply_x_error; 8 - qubit; i ^ (1 << bit).",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/quantum_error_correction_shor_9qubit/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "apply_x_error",
+      "8 - qubit",
+      "i ^ (1 << bit)",
+      "MSB"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "apply_x_error",
+      "8 - qubit",
+      "i ^ (1 << bit)"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "task_shor_decode_majority",
+    "category": "quantum_coding_task",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "Implement Shor decode bit-flip correction by majority vote within each 3-qubit block. The answer must include these check points: shor_decode; majority vote; bin(b0).count.",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/quantum_error_correction_shor_9qubit/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "shor_decode",
+      "majority vote",
+      "bin(b0).count",
+      "corrected"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "shor_decode",
+      "majority vote",
+      "bin(b0).count"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "task_shor_decode_phase",
+    "category": "quantum_coding_task",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "Implement Shor decode logical bit by comparing amp_000 and amp_111 signs. The answer must include these check points: amp_000; amp_111; same sign.",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/quantum_error_correction_shor_9qubit/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "amp_000",
+      "amp_111",
+      "same sign",
+      "opposite signs"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "amp_000",
+      "amp_111",
+      "same sign"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "task_teleportation_corrections",
+    "category": "quantum_coding_task",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "Implement teleportation_corrections(m0,m1) where m0 controls X and m1 controls Z. The answer must include these check points: teleportation_corrections; m0 controls the X; m1 controls the Z.",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/teleportation_corrections/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "teleportation_corrections",
+      "m0 controls the X",
+      "m1 controls the Z",
+      "ops.append"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "teleportation_corrections",
+      "m0 controls the X",
+      "m1 controls the Z"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "task_bitflip_decoder",
+    "category": "quantum_coding_task",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "Implement the 3-qubit bit-flip syndrome decoder table for all four outcomes. The answer must include these check points: (0, 0): None; (1, 0): 0; (1, 1): 1.",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/error_detection_bit_flip/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "(0, 0): None",
+      "(1, 0): 0",
+      "(1, 1): 1",
+      "(0, 1): 2"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "(0, 0): None",
+      "(1, 0): 0",
+      "(1, 1): 1"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "task_gate_alias_normalize",
+    "category": "quantum_coding_task",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "Implement normalize_gate so cnot maps to CX, toffoli maps to CCX, and unknown aliases raise ValueError. The answer must include these check points: normalize_gate; cnot; CX.",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/gate_alias_normalization/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "normalize_gate",
+      "cnot",
+      "CX",
+      "ValueError"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "normalize_gate",
+      "cnot",
+      "CX"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "task_gate_casefold_barrier",
+    "category": "quantum_coding_task",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "Implement gate alias casefolding with strip().lower() and preserve barrier handling if present. The answer must include these check points: strip().lower(); barrier; casefold.",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/gate_alias_casefold_barrier/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "strip().lower()",
+      "barrier",
+      "casefold",
+      "ValueError"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "strip().lower()",
+      "barrier",
+      "casefold"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "task_gate_registry_cleanup",
+    "category": "quantum_coding_task",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "Clean a gate alias registry so aliases map to canonical H, X, CX, CCX, CSWAP symbols. The answer must include these check points: alias; canonical; CCX.",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/gate_alias_registry_cleanup/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "alias",
+      "canonical",
+      "CCX",
+      "CSWAP"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "alias",
+      "canonical",
+      "CCX"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "task_gate_token_canonicalizer",
+    "category": "quantum_coding_task",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "Implement a token canonicalizer that normalizes whitespace/case and raises on unknown gates. The answer must include these check points: canonicalizer; strip; lower.",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/gate_token_canonicalizer/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "canonicalizer",
+      "strip",
+      "lower",
+      "unknown"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "canonicalizer",
+      "strip",
+      "lower"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "task_superdense_encode",
+    "category": "quantum_coding_task",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "Implement superdense coding encode table: 00 I, 01 X, 10 Z, 11 ZX. The answer must include these check points: superdense; 00; I.",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/superdense_coding/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "superdense",
+      "00",
+      "I",
+      "ZX"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "superdense",
+      "00",
+      "I"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "task_superdense_identity_lookup",
+    "category": "quantum_coding_task",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "Return the canonical 4-row superdense identity lookup table without inventing formulas. The answer must include these check points: identity lookup; (0, 0); (1, 1).",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/superdense_identity_lookup/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "identity lookup",
+      "(0, 0)",
+      "(1, 1)",
+      "ZX"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "identity lookup",
+      "(0, 0)",
+      "(1, 1)"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "task_superdense_pauli_router",
+    "category": "quantum_coding_task",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "Implement the Pauli router for 2-bit superdense messages with I/X/Z/Y or ZX convention. The answer must include these check points: PAULI_ROUTER; (0, 1): \"X\"; (1, 0): \"Z\".",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/superdense_pauli_router/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "PAULI_ROUTER",
+      "(0, 1): \"X\"",
+      "(1, 0): \"Z\"",
+      "(1, 1)"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "PAULI_ROUTER",
+      "(0, 1): \"X\"",
+      "(1, 0): \"Z\""
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "task_pauli_message_codec",
+    "category": "quantum_coding_task",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "Implement a Pauli message codec mapping two classical bits to I, X, Z, or Y/ZX. The answer must include these check points: Pauli; I; X.",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/pauli_message_codec/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "Pauli",
+      "I",
+      "X",
+      "Z",
+      "Y"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "Pauli",
+      "I",
+      "X"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "task_binary_measurement_decoder",
+    "category": "quantum_coding_task",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "Implement Bell and syndrome binary measurement decoders with pinned bit order. The answer must include these check points: BELL_LABELS; SYNDROMES; (m1, m2).",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/binary_measurement_decoder/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "BELL_LABELS",
+      "SYNDROMES",
+      "(m1, m2)",
+      "not swappable"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "BELL_LABELS",
+      "SYNDROMES",
+      "(m1, m2)"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "task_phase_measurement_register",
+    "category": "quantum_coding_task",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "Implement phase measurement register parsing without bit-reversing the expected integer. The answer must include these check points: phase; measurement; register.",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/phase_measurement_register/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "phase",
+      "measurement",
+      "register",
+      "bit-reversed"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "phase",
+      "measurement",
+      "register"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "task_phase_register_roundtrip",
+    "category": "quantum_coding_task",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "Implement phase register encode/decode roundtrip for fixed counting bits. The answer must include these check points: phase_register; roundtrip; counting bits.",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/phase_register_roundtrip/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "phase_register",
+      "roundtrip",
+      "counting bits",
+      "measurement"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "phase_register",
+      "roundtrip",
+      "counting bits"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "task_qft_phase_pattern",
+    "category": "quantum_coding_task",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "Implement QFT phase pattern phases[k] = 2*pi*x*k/N mod 2*pi. The answer must include these check points: phases[k]; 2 * pi * x * k / N; mod.",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/qft_phase_pattern/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "phases[k]",
+      "2 * pi * x * k / N",
+      "mod",
+      "2*pi"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "phases[k]",
+      "2 * pi * x * k / N",
+      "mod"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "task_circuit_phase_repair",
+    "category": "quantum_coding_task",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "Repair phase comparisons by reducing phases modulo 2*pi before allclose. The answer must include these check points: np.mod; 2 * np.pi; np.allclose.",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/circuit_phase_repair/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "np.mod",
+      "2 * np.pi",
+      "np.allclose",
+      "phase"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "np.mod",
+      "2 * np.pi",
+      "np.allclose"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "task_circuit_depth_optimization",
+    "category": "quantum_coding_task",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "Optimize a gate sequence by canceling adjacent self-inverse gates and merging rotations. The answer must include these check points: HH; XX; CNOT-CNOT.",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/circuit_depth_optimization/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "HH",
+      "XX",
+      "CNOT-CNOT",
+      "Rz(a+b)"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "HH",
+      "XX",
+      "CNOT-CNOT"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "task_stabilizer_tableau_update",
+    "category": "quantum_coding_task",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "Repair stabilizer tableau H/S/CNOT updates using pre-update sign bits. The answer must include these check points: apply_h; apply_s; apply_cnot.",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/stabilizer_tableau_update_repair/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "apply_h",
+      "apply_s",
+      "apply_cnot",
+      "pre-update"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "apply_h",
+      "apply_s",
+      "apply_cnot"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "task_quantum_channel_depolarizing",
+    "category": "quantum_coding_task",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "Implement depolarizing Kraus operators and apply_channel with K @ rho @ K.conj().T. The answer must include these check points: depolarizing; Kraus; K @ rho @ K.conj().T.",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/quantum_channel_depolarizing/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "depolarizing",
+      "Kraus",
+      "K @ rho @ K.conj().T",
+      "CPTP"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "depolarizing",
+      "Kraus",
+      "K @ rho @ K.conj().T"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "task_trotterized_evolution",
+    "category": "quantum_coding_task",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "Implement trotter_step and trotter_evolve using dt=t/n_steps and matrix_power. The answer must include these check points: trotter_step; trotter_evolve; dt = t / n_steps.",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/trotterized_hamiltonian_evolution/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "trotter_step",
+      "trotter_evolve",
+      "dt = t / n_steps",
+      "matrix_power"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "trotter_step",
+      "trotter_evolve",
+      "dt = t / n_steps"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "task_vqe_energy_minimization",
+    "category": "quantum_coding_task",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "Implement VQE energy minimization helper around expectation <psi|H|psi>. The answer must include these check points: VQE; expectation; np.vdot.",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/vqe_energy_minimization/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "VQE",
+      "expectation",
+      "np.vdot",
+      "minimise"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "VQE",
+      "expectation",
+      "np.vdot"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "task_bitstring_maxcut_landscape",
+    "category": "quantum_coding_task",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "Implement bitstring MaxCut landscape over all 2^n assignments with deterministic sorting. The answer must include these check points: bitstring; MaxCut; 2^n.",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/bitstring_maxcut_landscape/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "bitstring",
+      "MaxCut",
+      "2^n",
+      "sorting"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "bitstring",
+      "MaxCut",
+      "2^n"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "task_maxcut_assignment_enumerator",
+    "category": "quantum_coding_task",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "Enumerate all MaxCut assignments as zero-padded bitstrings. The answer must include these check points: enumerate; format; bitstrings.",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/maxcut_assignment_enumerator/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "enumerate",
+      "format",
+      "bitstrings",
+      "MaxCut"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "enumerate",
+      "format",
+      "bitstrings"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "task_maxcut_partition_ranker",
+    "category": "quantum_coding_task",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "Rank MaxCut partitions by cut value with deterministic tie-breaks. The answer must include these check points: rank; partition; cut value.",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/maxcut_partition_ranker/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "rank",
+      "partition",
+      "cut value",
+      "tie"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "rank",
+      "partition",
+      "cut value"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "task_ghz_state_witness",
+    "category": "quantum_coding_task",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "Implement GHZ state and witness returning negative value for the perfect GHZ state. The answer must include these check points: GHZ; witness; 0.5 - fidelity.",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/ghz_state_witness/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "GHZ",
+      "witness",
+      "0.5 - fidelity",
+      "negative"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "GHZ",
+      "witness",
+      "0.5 - fidelity"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "task_quantum_circuit_construction",
+    "category": "quantum_coding_task",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "For a code task, choose one endianness convention and construct the Bell pair without markdown fences. The answer must include these check points: endianness; Bell pair; candidate.py.",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/bell_pair_construction/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "endianness",
+      "Bell pair",
+      "candidate.py",
+      "no markdown"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "endianness",
+      "Bell pair",
+      "candidate.py"
+    ],
+    "judge": "Pass if the answer cites one expected source and includes at least 3 of the expected terms exactly or with equivalent code syntax."
+  },
+  {
+    "id": "concrete_bell_phi_plus_state",
+    "category": "quantum_coding_exact",
+    "coding_problem": true,
+    "judge_type": "unit_test_backed",
+    "query": "Write bell_pair_state(); the unit test expects length 4 and amplitudes [1/sqrt(2), 0, 0, 1/sqrt(2)] in |00>, |01>, |10>, |11> order. The answer must include these check points: bell_pair_state; len(state) == 4; 2 ** -0.5.",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/bell_pair_construction/tests.py",
+      "evals/tasks/quantum/bell_pair_construction/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "bell_pair_state",
+      "len(state) == 4",
+      "2 ** -0.5",
+      "[amp, 0.0, 0.0, amp]"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "bell_pair_state",
+      "len(state) == 4",
+      "2 ** -0.5",
+      "[amp, 0.0, 0.0, amp]"
+    ],
+    "judge": "Pass if the answer cites one expected source, includes the required terms, and gives code or steps that satisfy evals/tasks/quantum/bell_pair_construction/tests.py.",
+    "unit_test_file": "evals/tasks/quantum/bell_pair_construction/tests.py",
+    "example_io": [
+      "bell_pair_state() -> [0.70710678..., 0.0, 0.0, 0.70710678...]"
+    ]
+  },
+  {
+    "id": "concrete_measurement_q1q0_mapping",
+    "category": "quantum_coding_exact",
+    "coding_problem": true,
+    "judge_type": "unit_test_backed",
+    "query": "Repair measurement_mapping(bitstring): for input ordering q1q0, bitstring '10' must map q1=1 and q0=0. The answer must include these check points: measurement_mapping; bitstring[1]; q0.",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/measurement_bug_repair/tests.py",
+      "evals/tasks/quantum/measurement_bug_repair/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "measurement_mapping",
+      "bitstring[1]",
+      "q0",
+      "q1"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "measurement_mapping",
+      "bitstring[1]",
+      "q0",
+      "q1"
+    ],
+    "judge": "Pass if the answer cites one expected source, includes the required terms, and gives code or steps that satisfy evals/tasks/quantum/measurement_bug_repair/tests.py.",
+    "unit_test_file": "evals/tasks/quantum/measurement_bug_repair/tests.py",
+    "example_io": [
+      "measurement_mapping('10') -> {'q0': 0, 'q1': 1}"
+    ]
+  },
+  {
+    "id": "concrete_phase_estimation_rounding_cases",
+    "category": "quantum_coding_exact",
+    "coding_problem": true,
+    "judge_type": "unit_test_backed",
+    "query": "Implement phase_estimation(phi, n_bits) so phi=0.25,n_bits=3 returns 2; phi=0.75,n_bits=4 returns 12; phi=1/3,n_bits=3 returns 3. The answer must include these check points: phase_estimation; round; 1 << n_bits.",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/phase_estimation_circuit/tests.py",
+      "evals/tasks/quantum/phase_estimation_circuit/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "phase_estimation",
+      "round",
+      "1 << n_bits",
+      "% n_states"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "phase_estimation",
+      "round",
+      "1 << n_bits",
+      "% n_states"
+    ],
+    "judge": "Pass if the answer cites one expected source, includes the required terms, and gives code or steps that satisfy evals/tasks/quantum/phase_estimation_circuit/tests.py.",
+    "unit_test_file": "evals/tasks/quantum/phase_estimation_circuit/tests.py",
+    "example_io": [
+      "phase_estimation(0.25, 3) -> 2",
+      "phase_estimation(0.75, 4) -> 12",
+      "phase_estimation(1/3, 3) -> 3"
+    ]
+  },
+  {
+    "id": "concrete_phase_from_measurement_roundtrip",
+    "category": "quantum_coding_exact",
+    "coding_problem": true,
+    "judge_type": "unit_test_backed",
+    "query": "Implement phase_from_measurement(m, n_bits) so measurement 4 with 3 counting bits returns 0.5 and exact phases round-trip. The answer must include these check points: phase_from_measurement; measurement / n_states; 1 << n_bits.",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/phase_estimation_circuit/tests.py",
+      "evals/tasks/quantum/phase_estimation_circuit/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "phase_from_measurement",
+      "measurement / n_states",
+      "1 << n_bits",
+      "round-trip"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "phase_from_measurement",
+      "measurement / n_states",
+      "1 << n_bits",
+      "round-trip"
+    ],
+    "judge": "Pass if the answer cites one expected source, includes the required terms, and gives code or steps that satisfy evals/tasks/quantum/phase_estimation_circuit/tests.py.",
+    "unit_test_file": "evals/tasks/quantum/phase_estimation_circuit/tests.py",
+    "example_io": [
+      "phase_from_measurement(4, 3) -> 0.5"
+    ]
+  },
+  {
+    "id": "concrete_qaoa_triangle_costs",
+    "category": "quantum_coding_exact",
+    "coding_problem": true,
+    "judge_type": "unit_test_backed",
+    "query": "Implement maxcut_cost for triangle edges [(0,1),(1,2),(0,2)]: '000' returns 0, '010' returns 2, and '100' returns 2. The answer must include these check points: maxcut_cost; bitstring[u] != bitstring[v]; '010'.",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/qaoa_maxcut/tests.py",
+      "evals/tasks/quantum/qaoa_maxcut/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "maxcut_cost",
+      "bitstring[u] != bitstring[v]",
+      "'010'",
+      "2"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "maxcut_cost",
+      "bitstring[u] != bitstring[v]",
+      "'010'",
+      "2"
+    ],
+    "judge": "Pass if the answer cites one expected source, includes the required terms, and gives code or steps that satisfy evals/tasks/quantum/qaoa_maxcut/tests.py.",
+    "unit_test_file": "evals/tasks/quantum/qaoa_maxcut/tests.py",
+    "example_io": [
+      "maxcut_cost('000', triangle) -> 0",
+      "maxcut_cost('010', triangle) -> 2",
+      "maxcut_cost('100', triangle) -> 2"
+    ]
+  },
+  {
+    "id": "concrete_qaoa_line_costs",
+    "category": "quantum_coding_exact",
+    "coding_problem": true,
+    "judge_type": "unit_test_backed",
+    "query": "Implement maxcut_cost for line edges [(0,1),(1,2),(2,3)]: '0101' returns 3 and '0011' returns 1. The answer must include these check points: line_edges; '0101'; 3.",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/qaoa_maxcut/tests.py",
+      "evals/tasks/quantum/qaoa_maxcut/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "line_edges",
+      "'0101'",
+      "3",
+      "'0011'"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "line_edges",
+      "'0101'",
+      "3",
+      "'0011'"
+    ],
+    "judge": "Pass if the answer cites one expected source, includes the required terms, and gives code or steps that satisfy evals/tasks/quantum/qaoa_maxcut/tests.py.",
+    "unit_test_file": "evals/tasks/quantum/qaoa_maxcut/tests.py",
+    "example_io": [
+      "maxcut_cost('0101', line_edges) -> 3",
+      "maxcut_cost('0011', line_edges) -> 1"
+    ]
+  },
+  {
+    "id": "concrete_qaoa_landscape_sorting",
+    "category": "quantum_coding_exact",
+    "coding_problem": true,
+    "judge_type": "unit_test_backed",
+    "query": "Implement qaoa_cost_landscape for a 3-node triangle so it returns 8 rows sorted by descending cost, with top cost 2 and bottom cost 0. The answer must include these check points: qaoa_cost_landscape; len(landscape) == 8; sorted.",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/qaoa_maxcut/tests.py",
+      "evals/tasks/quantum/qaoa_maxcut/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "qaoa_cost_landscape",
+      "len(landscape) == 8",
+      "sorted",
+      "reverse=True"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "qaoa_cost_landscape",
+      "len(landscape) == 8",
+      "sorted",
+      "reverse=True"
+    ],
+    "judge": "Pass if the answer cites one expected source, includes the required terms, and gives code or steps that satisfy evals/tasks/quantum/qaoa_maxcut/tests.py.",
+    "unit_test_file": "evals/tasks/quantum/qaoa_maxcut/tests.py",
+    "example_io": [
+      "qaoa_cost_landscape(3, triangle)[0][1] -> 2",
+      "qaoa_cost_landscape(3, triangle)[-1][1] -> 0"
+    ]
+  },
+  {
+    "id": "concrete_grover_uniform_two_qubits",
+    "category": "quantum_coding_exact",
+    "coding_problem": true,
+    "judge_type": "unit_test_backed",
+    "query": "Implement uniform_superposition(2): the test expects four amplitudes, each exactly 0.5 within tolerance. The answer must include these check points: uniform_superposition; 2 ** n_qubits; 1.0 / math.sqrt(4).",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/grover_oracle_diffusion/tests.py",
+      "evals/tasks/quantum/grover_oracle_diffusion/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "uniform_superposition",
+      "2 ** n_qubits",
+      "1.0 / math.sqrt(4)",
+      "0.5"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "uniform_superposition",
+      "2 ** n_qubits",
+      "1.0 / math.sqrt(4)",
+      "0.5"
+    ],
+    "judge": "Pass if the answer cites one expected source, includes the required terms, and gives code or steps that satisfy evals/tasks/quantum/grover_oracle_diffusion/tests.py.",
+    "unit_test_file": "evals/tasks/quantum/grover_oracle_diffusion/tests.py",
+    "example_io": [
+      "uniform_superposition(2) -> [0.5, 0.5, 0.5, 0.5]"
+    ]
+  },
+  {
+    "id": "concrete_grover_oracle_marked3",
+    "category": "quantum_coding_exact",
+    "coding_problem": true,
+    "judge_type": "unit_test_backed",
+    "query": "Implement oracle(state, marked) so oracle([0.5,0.5,0.5,0.5], 3) returns [0.5,0.5,0.5,-0.5]. The answer must include these check points: oracle; marked; -0.5.",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/grover_oracle_diffusion/tests.py",
+      "evals/tasks/quantum/grover_oracle_diffusion/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "oracle",
+      "marked",
+      "-0.5",
+      "list(state)"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "oracle",
+      "marked",
+      "-0.5",
+      "list(state)"
+    ],
+    "judge": "Pass if the answer cites one expected source, includes the required terms, and gives code or steps that satisfy evals/tasks/quantum/grover_oracle_diffusion/tests.py.",
+    "unit_test_file": "evals/tasks/quantum/grover_oracle_diffusion/tests.py",
+    "example_io": [
+      "oracle([0.5, 0.5, 0.5, 0.5], 3) -> [0.5, 0.5, 0.5, -0.5]"
+    ]
+  },
+  {
+    "id": "concrete_grover_diffusion_exact",
+    "category": "quantum_coding_exact",
+    "coding_problem": true,
+    "judge_type": "unit_test_backed",
+    "query": "Implement diffusion(state): for [0.5,0.5,0.5,-0.5], mean=0.25 and the output must be [0,0,0,1]. The answer must include these check points: diffusion; mean = sum(state) / n; 2 * mean - a.",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/grover_oracle_diffusion/tests.py",
+      "evals/tasks/quantum/grover_oracle_diffusion/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "diffusion",
+      "mean = sum(state) / n",
+      "2 * mean - a",
+      "[0.0, 0.0, 0.0, 1.0]"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "diffusion",
+      "mean = sum(state) / n",
+      "2 * mean - a",
+      "[0.0, 0.0, 0.0, 1.0]"
+    ],
+    "judge": "Pass if the answer cites one expected source, includes the required terms, and gives code or steps that satisfy evals/tasks/quantum/grover_oracle_diffusion/tests.py.",
+    "unit_test_file": "evals/tasks/quantum/grover_oracle_diffusion/tests.py",
+    "example_io": [
+      "diffusion([0.5, 0.5, 0.5, -0.5]) -> [0.0, 0.0, 0.0, 1.0]"
+    ]
+  },
+  {
+    "id": "concrete_grover_search_two_qubits",
+    "category": "quantum_coding_exact",
+    "coding_problem": true,
+    "judge_type": "unit_test_backed",
+    "query": "Implement grover_search for n_qubits=2, marked=3, iterations=1 so the marked-state probability is 1.0. The answer must include these check points: grover_search; marked=3; iterations=1.",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/grover_oracle_diffusion/tests.py",
+      "evals/tasks/quantum/grover_oracle_diffusion/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "grover_search",
+      "marked=3",
+      "iterations=1",
+      "probability"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "grover_search",
+      "marked=3",
+      "iterations=1",
+      "probability"
+    ],
+    "judge": "Pass if the answer cites one expected source, includes the required terms, and gives code or steps that satisfy evals/tasks/quantum/grover_oracle_diffusion/tests.py.",
+    "unit_test_file": "evals/tasks/quantum/grover_oracle_diffusion/tests.py",
+    "example_io": [
+      "sum amplitude^2 is 1",
+      "result_state[3] ** 2 -> 1.0"
+    ]
+  },
+  {
+    "id": "concrete_density_zero_state",
+    "category": "quantum_coding_exact",
+    "coding_problem": true,
+    "judge_type": "unit_test_backed",
+    "query": "Implement density_from_state([1,0]) so it returns [[1,0],[0,0]] as a plain Python nested list. The answer must include these check points: density_from_state; [[1.0, 0.0], [0.0, 0.0]]; plain Python.",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/density_matrix_partial_trace/tests.py",
+      "evals/tasks/quantum/density_matrix_partial_trace/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "density_from_state",
+      "[[1.0, 0.0], [0.0, 0.0]]",
+      "plain Python",
+      "outer product"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "density_from_state",
+      "[[1.0, 0.0], [0.0, 0.0]]",
+      "plain Python",
+      "outer product"
+    ],
+    "judge": "Pass if the answer cites one expected source, includes the required terms, and gives code or steps that satisfy evals/tasks/quantum/density_matrix_partial_trace/tests.py.",
+    "unit_test_file": "evals/tasks/quantum/density_matrix_partial_trace/tests.py",
+    "example_io": [
+      "density_from_state([1.0, 0.0]) -> [[1.0, 0.0], [0.0, 0.0]]"
+    ]
+  },
+  {
+    "id": "concrete_density_plus_state",
+    "category": "quantum_coding_exact",
+    "coding_problem": true,
+    "judge_type": "unit_test_backed",
+    "query": "Implement density_from_state for |+>: input [1/sqrt(2),1/sqrt(2)] must return all four matrix entries as 0.5. The answer must include these check points: density_from_state; 1 / math.sqrt(2); 0.5.",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/density_matrix_partial_trace/tests.py",
+      "evals/tasks/quantum/density_matrix_partial_trace/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "density_from_state",
+      "1 / math.sqrt(2)",
+      "0.5",
+      "[[0.5, 0.5], [0.5, 0.5]]"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "density_from_state",
+      "1 / math.sqrt(2)",
+      "0.5",
+      "[[0.5, 0.5], [0.5, 0.5]]"
+    ],
+    "judge": "Pass if the answer cites one expected source, includes the required terms, and gives code or steps that satisfy evals/tasks/quantum/density_matrix_partial_trace/tests.py.",
+    "unit_test_file": "evals/tasks/quantum/density_matrix_partial_trace/tests.py",
+    "example_io": [
+      "density_from_state([1/sqrt(2), 1/sqrt(2)]) -> [[0.5, 0.5], [0.5, 0.5]]"
+    ]
+  },
+  {
+    "id": "concrete_tensor_product_01",
+    "category": "quantum_coding_exact",
+    "coding_problem": true,
+    "judge_type": "unit_test_backed",
+    "query": "Implement tensor_product so |0><0| tensor |1><1| produces a 4x4 matrix with the only 1.0 at row 1 column 1. The answer must include these check points: tensor_product; i * db + k; j * db + l.",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/density_matrix_partial_trace/tests.py",
+      "evals/tasks/quantum/density_matrix_partial_trace/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "tensor_product",
+      "i * db + k",
+      "j * db + l",
+      "expected_tp"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "tensor_product",
+      "i * db + k",
+      "j * db + l",
+      "expected_tp"
+    ],
+    "judge": "Pass if the answer cites one expected source, includes the required terms, and gives code or steps that satisfy evals/tasks/quantum/density_matrix_partial_trace/tests.py.",
+    "unit_test_file": "evals/tasks/quantum/density_matrix_partial_trace/tests.py",
+    "example_io": [
+      "tensor_product(|0><0|, |1><1|)[1][1] -> 1.0"
+    ]
+  },
+  {
+    "id": "concrete_partial_trace_product_b",
+    "category": "quantum_coding_exact",
+    "coding_problem": true,
+    "judge_type": "unit_test_backed",
+    "query": "Implement partial_trace for trace_out='B': tracing B from |01><01| must return |0><0|. The answer must include these check points: partial_trace; trace_out == \"B\"; [[1.0, 0.0], [0.0, 0.0]].",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/density_matrix_partial_trace/tests.py",
+      "evals/tasks/quantum/density_matrix_partial_trace/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "partial_trace",
+      "trace_out == \"B\"",
+      "[[1.0, 0.0], [0.0, 0.0]]",
+      "dim_a"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "partial_trace",
+      "trace_out == \"B\"",
+      "[[1.0, 0.0], [0.0, 0.0]]",
+      "dim_a"
+    ],
+    "judge": "Pass if the answer cites one expected source, includes the required terms, and gives code or steps that satisfy evals/tasks/quantum/density_matrix_partial_trace/tests.py.",
+    "unit_test_file": "evals/tasks/quantum/density_matrix_partial_trace/tests.py",
+    "example_io": [
+      "partial_trace(tp, 2, 2, trace_out='B') -> [[1.0, 0.0], [0.0, 0.0]]"
+    ]
+  },
+  {
+    "id": "concrete_partial_trace_bell_b",
+    "category": "quantum_coding_exact",
+    "coding_problem": true,
+    "judge_type": "unit_test_backed",
+    "query": "Implement partial_trace for a Bell density matrix: tracing out B must return the maximally mixed matrix [[0.5,0],[0,0.5]]. The answer must include these check points: Bell; trace_out=\"B\"; maximally mixed.",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/density_matrix_partial_trace/tests.py",
+      "evals/tasks/quantum/density_matrix_partial_trace/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "Bell",
+      "trace_out=\"B\"",
+      "maximally mixed",
+      "[[0.5, 0.0], [0.0, 0.5]]"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "Bell",
+      "trace_out=\"B\"",
+      "maximally mixed",
+      "[[0.5, 0.0], [0.0, 0.5]]"
+    ],
+    "judge": "Pass if the answer cites one expected source, includes the required terms, and gives code or steps that satisfy evals/tasks/quantum/density_matrix_partial_trace/tests.py.",
+    "unit_test_file": "evals/tasks/quantum/density_matrix_partial_trace/tests.py",
+    "example_io": [
+      "partial_trace(rho_bell, 2, 2, trace_out='B') -> [[0.5, 0.0], [0.0, 0.5]]"
+    ]
+  },
+  {
+    "id": "concrete_purity_values",
+    "category": "quantum_coding_exact",
+    "coding_problem": true,
+    "judge_type": "unit_test_backed",
+    "query": "Implement purity(rho): |0><0| and Bell rho must return 1.0; I/2 and the reduced Bell state must return 0.5. The answer must include these check points: purity; rho[i][j] * rho[j][i]; 1.0.",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/density_matrix_partial_trace/tests.py",
+      "evals/tasks/quantum/density_matrix_partial_trace/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "purity",
+      "rho[i][j] * rho[j][i]",
+      "1.0",
+      "0.5"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "purity",
+      "rho[i][j] * rho[j][i]",
+      "1.0",
+      "0.5"
+    ],
+    "judge": "Pass if the answer cites one expected source, includes the required terms, and gives code or steps that satisfy evals/tasks/quantum/density_matrix_partial_trace/tests.py.",
+    "unit_test_file": "evals/tasks/quantum/density_matrix_partial_trace/tests.py",
+    "example_io": [
+      "purity(|0><0|) -> 1.0",
+      "purity(I/2) -> 0.5"
+    ]
+  },
+  {
+    "id": "concrete_shor_x_error_msb",
+    "category": "quantum_coding_exact",
+    "coding_problem": true,
+    "judge_type": "unit_test_backed",
+    "query": "Implement apply_x_error(state, qubit) for qubits 0..8 using MSB-first mapping, so the bit index is 8 - qubit. The answer must include these check points: apply_x_error; 8 - qubit; i ^ (1 << bit).",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/quantum_error_correction_shor_9qubit/tests.py",
+      "evals/tasks/quantum/quantum_error_correction_shor_9qubit/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "apply_x_error",
+      "8 - qubit",
+      "i ^ (1 << bit)",
+      "MSB"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "apply_x_error",
+      "8 - qubit",
+      "i ^ (1 << bit)",
+      "MSB"
+    ],
+    "judge": "Pass if the answer cites one expected source, includes the required terms, and gives code or steps that satisfy evals/tasks/quantum/quantum_error_correction_shor_9qubit/tests.py.",
+    "unit_test_file": "evals/tasks/quantum/quantum_error_correction_shor_9qubit/tests.py",
+    "example_io": [
+      "qubit 0 flips the most significant bit",
+      "qubit 8 flips the least significant bit"
+    ]
+  },
+  {
+    "id": "concrete_shor_decode_majority",
+    "category": "quantum_coding_exact",
+    "coding_problem": true,
+    "judge_type": "unit_test_backed",
+    "query": "Implement Shor bit-flip correction by majority vote inside each 3-qubit block before logical phase decoding. The answer must include these check points: shor_decode; majority; 3-qubit block.",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/quantum_error_correction_shor_9qubit/tests.py",
+      "evals/tasks/quantum/quantum_error_correction_shor_9qubit/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "shor_decode",
+      "majority",
+      "3-qubit block",
+      "corrected"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "shor_decode",
+      "majority",
+      "3-qubit block",
+      "corrected"
+    ],
+    "judge": "Pass if the answer cites one expected source, includes the required terms, and gives code or steps that satisfy evals/tasks/quantum/quantum_error_correction_shor_9qubit/tests.py.",
+    "unit_test_file": "evals/tasks/quantum/quantum_error_correction_shor_9qubit/tests.py",
+    "example_io": [
+      "each block is decoded by majority vote"
+    ]
+  },
+  {
+    "id": "concrete_teleportation_all_bits",
+    "category": "quantum_coding_exact",
+    "coding_problem": true,
+    "judge_type": "unit_test_backed",
+    "query": "Implement teleportation_corrections(m0,m1): (0,0)->[], (1,0)->['X'], (0,1)->['Z'], (1,1)->['Z','X']; invalid bits raise ValueError. The answer must include these check points: teleportation_corrections; (1, 0): [\"X\"]; (0, 1): [\"Z\"].",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/teleportation_corrections/tests.py",
+      "evals/tasks/quantum/teleportation_corrections/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "teleportation_corrections",
+      "(1, 0): [\"X\"]",
+      "(0, 1): [\"Z\"]",
+      "ValueError"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "teleportation_corrections",
+      "(1, 0): [\"X\"]",
+      "(0, 1): [\"Z\"]",
+      "ValueError"
+    ],
+    "judge": "Pass if the answer cites one expected source, includes the required terms, and gives code or steps that satisfy evals/tasks/quantum/teleportation_corrections/tests.py.",
+    "unit_test_file": "evals/tasks/quantum/teleportation_corrections/tests.py",
+    "example_io": [
+      "teleportation_corrections(1, 1) -> ['Z', 'X']",
+      "teleportation_corrections(0, 2) raises ValueError"
+    ]
+  },
+  {
+    "id": "concrete_bitflip_syndrome_table",
+    "category": "quantum_coding_exact",
+    "coding_problem": true,
+    "judge_type": "unit_test_backed",
+    "query": "Implement the 3-qubit bit-flip syndrome decoder: (0,0)->None, (1,0)->0, (1,1)->1, and (0,1)->2. The answer must include these check points: (0, 0): None; (1, 0): 0; (1, 1): 1.",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/error_detection_bit_flip/tests.py",
+      "evals/tasks/quantum/error_detection_bit_flip/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "(0, 0): None",
+      "(1, 0): 0",
+      "(1, 1): 1",
+      "(0, 1): 2"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "(0, 0): None",
+      "(1, 0): 0",
+      "(1, 1): 1",
+      "(0, 1): 2"
+    ],
+    "judge": "Pass if the answer cites one expected source, includes the required terms, and gives code or steps that satisfy evals/tasks/quantum/error_detection_bit_flip/tests.py.",
+    "unit_test_file": "evals/tasks/quantum/error_detection_bit_flip/tests.py",
+    "example_io": [
+      "decode_syndrome(1, 1) -> 1"
+    ]
+  },
+  {
+    "id": "concrete_gate_alias_cnot_unknown",
+    "category": "quantum_coding_exact",
+    "coding_problem": true,
+    "judge_type": "unit_test_backed",
+    "query": "Implement normalize_gate so 'cnot' maps to 'CX', 'toffoli' maps to 'CCX', and unknown aliases raise ValueError. The answer must include these check points: normalize_gate; cnot; CX.",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/gate_alias_normalization/tests.py",
+      "evals/tasks/quantum/gate_alias_normalization/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "normalize_gate",
+      "cnot",
+      "CX",
+      "ValueError"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "normalize_gate",
+      "cnot",
+      "CX",
+      "ValueError"
+    ],
+    "judge": "Pass if the answer cites one expected source, includes the required terms, and gives code or steps that satisfy evals/tasks/quantum/gate_alias_normalization/tests.py.",
+    "unit_test_file": "evals/tasks/quantum/gate_alias_normalization/tests.py",
+    "example_io": [
+      "normalize_gate('cnot') -> 'CX'",
+      "normalize_gate('toffoli') -> 'CCX'",
+      "normalize_gate('???') raises ValueError"
+    ]
+  },
+  {
+    "id": "concrete_gate_casefold_barrier",
+    "category": "quantum_coding_exact",
+    "coding_problem": true,
+    "judge_type": "unit_test_backed",
+    "query": "Implement gate alias normalization with strip().lower(): ' Hadamard ' maps to H and barrier handling is preserved. The answer must include these check points: strip().lower(); Hadamard; H.",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/gate_alias_casefold_barrier/tests.py",
+      "evals/tasks/quantum/gate_alias_casefold_barrier/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "strip().lower()",
+      "Hadamard",
+      "H",
+      "barrier"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "strip().lower()",
+      "Hadamard",
+      "H",
+      "barrier"
+    ],
+    "judge": "Pass if the answer cites one expected source, includes the required terms, and gives code or steps that satisfy evals/tasks/quantum/gate_alias_casefold_barrier/tests.py.",
+    "unit_test_file": "evals/tasks/quantum/gate_alias_casefold_barrier/tests.py",
+    "example_io": [
+      "normalize_gate(' Hadamard ') -> 'H'",
+      "normalize_gate('barrier') keeps barrier behavior"
+    ]
+  },
+  {
+    "id": "concrete_superdense_encode_table",
+    "category": "quantum_coding_exact",
+    "coding_problem": true,
+    "judge_type": "unit_test_backed",
+    "query": "Implement the superdense encode table exactly: '00'->I, '01'->X, '10'->Z, and '11'->ZX. The answer must include these check points: superdense; '00': 'I'; '01': 'X'.",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/superdense_coding/tests.py",
+      "evals/tasks/quantum/superdense_coding/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "superdense",
+      "'00': 'I'",
+      "'01': 'X'",
+      "'11': 'ZX'"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "superdense",
+      "'00': 'I'",
+      "'01': 'X'",
+      "'11': 'ZX'"
+    ],
+    "judge": "Pass if the answer cites one expected source, includes the required terms, and gives code or steps that satisfy evals/tasks/quantum/superdense_coding/tests.py.",
+    "unit_test_file": "evals/tasks/quantum/superdense_coding/tests.py",
+    "example_io": [
+      "encode('00') -> 'I'",
+      "encode('11') -> 'ZX'"
+    ]
+  },
+  {
+    "id": "concrete_superdense_router_table",
+    "category": "quantum_coding_exact",
+    "coding_problem": true,
+    "judge_type": "unit_test_backed",
+    "query": "Implement PAULI_ROUTER for superdense messages: (0,0)->I, (0,1)->X, (1,0)->Z, and (1,1)->ZX or Y by the task convention. The answer must include these check points: PAULI_ROUTER; (0, 0); (0, 1): \"X\".",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/superdense_pauli_router/tests.py",
+      "evals/tasks/quantum/superdense_pauli_router/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "PAULI_ROUTER",
+      "(0, 0)",
+      "(0, 1): \"X\"",
+      "(1, 1)"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "PAULI_ROUTER",
+      "(0, 0)",
+      "(0, 1): \"X\"",
+      "(1, 1)"
+    ],
+    "judge": "Pass if the answer cites one expected source, includes the required terms, and gives code or steps that satisfy evals/tasks/quantum/superdense_pauli_router/tests.py.",
+    "unit_test_file": "evals/tasks/quantum/superdense_pauli_router/tests.py",
+    "example_io": [
+      "PAULI_ROUTER[(0, 1)] -> 'X'",
+      "PAULI_ROUTER[(1, 0)] -> 'Z'"
+    ]
+  },
+  {
+    "id": "concrete_binary_decoder_tables",
+    "category": "quantum_coding_exact",
+    "coding_problem": true,
+    "judge_type": "unit_test_backed",
+    "query": "Implement Bell and syndrome binary measurement decoders with fixed bit order; do not swap (m1,m2). The answer must include these check points: BELL_LABELS; SYNDROMES; (m1, m2).",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/binary_measurement_decoder/tests.py",
+      "evals/tasks/quantum/binary_measurement_decoder/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "BELL_LABELS",
+      "SYNDROMES",
+      "(m1, m2)",
+      "not swappable"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "BELL_LABELS",
+      "SYNDROMES",
+      "(m1, m2)",
+      "not swappable"
+    ],
+    "judge": "Pass if the answer cites one expected source, includes the required terms, and gives code or steps that satisfy evals/tasks/quantum/binary_measurement_decoder/tests.py.",
+    "unit_test_file": "evals/tasks/quantum/binary_measurement_decoder/tests.py",
+    "example_io": [
+      "Bell label table and syndrome table use the documented bit order"
+    ]
+  },
+  {
+    "id": "concrete_phase_register_bounds",
+    "category": "quantum_coding_exact",
+    "coding_problem": true,
+    "judge_type": "unit_test_backed",
+    "query": "Implement phase measurement register parsing so measurements stay in [0, 2^n) and are not bit-reversed. The answer must include these check points: phase; measurement; [0, 2^n).",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/phase_measurement_register/tests.py",
+      "evals/tasks/quantum/phase_measurement_register/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "phase",
+      "measurement",
+      "[0, 2^n)",
+      "not bit-reversed"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "phase",
+      "measurement",
+      "[0, 2^n)",
+      "not bit-reversed"
+    ],
+    "judge": "Pass if the answer cites one expected source, includes the required terms, and gives code or steps that satisfy evals/tasks/quantum/phase_measurement_register/tests.py.",
+    "unit_test_file": "evals/tasks/quantum/phase_measurement_register/tests.py",
+    "example_io": [
+      "measurement integer is used directly, without reversing bits"
+    ]
+  },
+  {
+    "id": "concrete_qft_phase_x1_n4",
+    "category": "quantum_coding_exact",
+    "coding_problem": true,
+    "judge_type": "unit_test_backed",
+    "query": "Implement QFT phase pattern for N=4,x=1: phases[k] are 0, pi/2, pi, and 3*pi/2 modulo 2*pi. The answer must include these check points: phases[k]; 2 * pi * x * k / N; pi/2.",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/qft_phase_pattern/tests.py",
+      "evals/tasks/quantum/qft_phase_pattern/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "phases[k]",
+      "2 * pi * x * k / N",
+      "pi/2",
+      "3*pi/2"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "phases[k]",
+      "2 * pi * x * k / N",
+      "pi/2",
+      "3*pi/2"
+    ],
+    "judge": "Pass if the answer cites one expected source, includes the required terms, and gives code or steps that satisfy evals/tasks/quantum/qft_phase_pattern/tests.py.",
+    "unit_test_file": "evals/tasks/quantum/qft_phase_pattern/tests.py",
+    "example_io": [
+      "qft_phases(x=1, N=4) -> [0, pi/2, pi, 3*pi/2]"
+    ]
+  },
+  {
+    "id": "concrete_phase_repair_modulo",
+    "category": "quantum_coding_exact",
+    "coding_problem": true,
+    "judge_type": "unit_test_backed",
+    "query": "Repair phase comparisons so values are reduced modulo 2*pi before np.allclose, making 0 and 2*pi equivalent. The answer must include these check points: np.mod; 2 * np.pi; np.allclose.",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/circuit_phase_repair/tests.py",
+      "evals/tasks/quantum/circuit_phase_repair/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "np.mod",
+      "2 * np.pi",
+      "np.allclose",
+      "equivalent"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "np.mod",
+      "2 * np.pi",
+      "np.allclose",
+      "equivalent"
+    ],
+    "judge": "Pass if the answer cites one expected source, includes the required terms, and gives code or steps that satisfy evals/tasks/quantum/circuit_phase_repair/tests.py.",
+    "unit_test_file": "evals/tasks/quantum/circuit_phase_repair/tests.py",
+    "example_io": [
+      "phase 0 compares equal to 2*pi after modulo reduction"
+    ]
+  },
+  {
+    "id": "concrete_depth_cancel_self_inverse",
+    "category": "quantum_coding_exact",
+    "coding_problem": true,
+    "judge_type": "unit_test_backed",
+    "query": "Optimize a gate list by canceling adjacent self-inverse pairs such as H-H, X-X, and CNOT-CNOT. The answer must include these check points: HH; XX; CNOT-CNOT.",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/circuit_depth_optimization/tests.py",
+      "evals/tasks/quantum/circuit_depth_optimization/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "HH",
+      "XX",
+      "CNOT-CNOT",
+      "cancel"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "HH",
+      "XX",
+      "CNOT-CNOT",
+      "cancel"
+    ],
+    "judge": "Pass if the answer cites one expected source, includes the required terms, and gives code or steps that satisfy evals/tasks/quantum/circuit_depth_optimization/tests.py.",
+    "unit_test_file": "evals/tasks/quantum/circuit_depth_optimization/tests.py",
+    "example_io": [
+      "['H','H'] is removed",
+      "two adjacent identical CNOTs are removed"
+    ]
+  },
+  {
+    "id": "concrete_stabilizer_updates",
+    "category": "quantum_coding_exact",
+    "coding_problem": true,
+    "judge_type": "unit_test_backed",
+    "query": "Repair stabilizer tableau apply_h/apply_s/apply_cnot using pre-update x/z bits and the documented sign flips. The answer must include these check points: apply_h; apply_s; apply_cnot.",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/stabilizer_tableau_update_repair/tests.py",
+      "evals/tasks/quantum/stabilizer_tableau_update_repair/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "apply_h",
+      "apply_s",
+      "apply_cnot",
+      "pre-update"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "apply_h",
+      "apply_s",
+      "apply_cnot",
+      "pre-update"
+    ],
+    "judge": "Pass if the answer cites one expected source, includes the required terms, and gives code or steps that satisfy evals/tasks/quantum/stabilizer_tableau_update_repair/tests.py.",
+    "unit_test_file": "evals/tasks/quantum/stabilizer_tableau_update_repair/tests.py",
+    "example_io": [
+      "H swaps x_q and z_q",
+      "S updates z_q ^= x_q",
+      "CNOT updates x_t and z_c"
+    ]
+  },
+  {
+    "id": "concrete_depolarizing_half_zero",
+    "category": "quantum_coding_exact",
+    "coding_problem": true,
+    "judge_type": "unit_test_backed",
+    "query": "Implement depolarizing_channel so |0><0| with p=0.5 returns [[0.75,0],[0,0.25]]. The answer must include these check points: depolarizing_channel; p=0.5; [[0.75, 0.0], [0.0, 0.25]].",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/quantum_channel_depolarizing/tests.py",
+      "evals/tasks/quantum/quantum_channel_depolarizing/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "depolarizing_channel",
+      "p=0.5",
+      "[[0.75, 0.0], [0.0, 0.25]]",
+      "I / 2"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "depolarizing_channel",
+      "p=0.5",
+      "[[0.75, 0.0], [0.0, 0.25]]",
+      "I / 2"
+    ],
+    "judge": "Pass if the answer cites one expected source, includes the required terms, and gives code or steps that satisfy evals/tasks/quantum/quantum_channel_depolarizing/tests.py.",
+    "unit_test_file": "evals/tasks/quantum/quantum_channel_depolarizing/tests.py",
+    "example_io": [
+      "depolarizing_channel([[1,0],[0,0]], 0.5) -> [[0.75, 0.0], [0.0, 0.25]]"
+    ]
+  },
+  {
+    "id": "concrete_depolarizing_full_mixed",
+    "category": "quantum_coding_exact",
+    "coding_problem": true,
+    "judge_type": "unit_test_backed",
+    "query": "Implement depolarizing_channel so p=1.0 maps |0><0| to the maximally mixed state [[0.5,0],[0,0.5]]. The answer must include these check points: depolarizing_channel; p=1.0; maximally mixed.",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/quantum_channel_depolarizing/tests.py",
+      "evals/tasks/quantum/quantum_channel_depolarizing/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "depolarizing_channel",
+      "p=1.0",
+      "maximally mixed",
+      "[[0.5, 0.0], [0.0, 0.5]]"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "depolarizing_channel",
+      "p=1.0",
+      "maximally mixed",
+      "[[0.5, 0.0], [0.0, 0.5]]"
+    ],
+    "judge": "Pass if the answer cites one expected source, includes the required terms, and gives code or steps that satisfy evals/tasks/quantum/quantum_channel_depolarizing/tests.py.",
+    "unit_test_file": "evals/tasks/quantum/quantum_channel_depolarizing/tests.py",
+    "example_io": [
+      "depolarizing_channel([[1,0],[0,0]], 1.0) -> [[0.5, 0.0], [0.0, 0.5]]"
+    ]
+  },
+  {
+    "id": "concrete_amplitude_damping_one_to_zero",
+    "category": "quantum_coding_exact",
+    "coding_problem": true,
+    "judge_type": "unit_test_backed",
+    "query": "Implement amplitude_damping_channel so |1><1| with gamma=1 maps to |0><0|. The answer must include these check points: amplitude_damping_channel; gamma=1; [[1.0, 0.0], [0.0, 0.0]].",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/quantum_channel_depolarizing/tests.py",
+      "evals/tasks/quantum/quantum_channel_depolarizing/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "amplitude_damping_channel",
+      "gamma=1",
+      "[[1.0, 0.0], [0.0, 0.0]]",
+      "Kraus"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "amplitude_damping_channel",
+      "gamma=1",
+      "[[1.0, 0.0], [0.0, 0.0]]",
+      "Kraus"
+    ],
+    "judge": "Pass if the answer cites one expected source, includes the required terms, and gives code or steps that satisfy evals/tasks/quantum/quantum_channel_depolarizing/tests.py.",
+    "unit_test_file": "evals/tasks/quantum/quantum_channel_depolarizing/tests.py",
+    "example_io": [
+      "amplitude_damping_channel(|1><1|, 1.0) -> |0><0|"
+    ]
+  },
+  {
+    "id": "concrete_trotter_pauli_matrices",
+    "category": "quantum_coding_exact",
+    "coding_problem": true,
+    "judge_type": "unit_test_backed",
+    "query": "Implement pauli_matrix so X is [[0,1],[1,0]], Z is [[1,0],[0,-1]], and I is [[1,0],[0,1]]. The answer must include these check points: pauli_matrix; \"X\"; \"Z\".",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/trotterized_hamiltonian_evolution/tests.py",
+      "evals/tasks/quantum/trotterized_hamiltonian_evolution/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "pauli_matrix",
+      "\"X\"",
+      "\"Z\"",
+      "\"I\""
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "pauli_matrix",
+      "\"X\"",
+      "\"Z\"",
+      "\"I\""
+    ],
+    "judge": "Pass if the answer cites one expected source, includes the required terms, and gives code or steps that satisfy evals/tasks/quantum/trotterized_hamiltonian_evolution/tests.py.",
+    "unit_test_file": "evals/tasks/quantum/trotterized_hamiltonian_evolution/tests.py",
+    "example_io": [
+      "pauli_matrix('X') -> [[0, 1], [1, 0]]",
+      "pauli_matrix('Z') -> [[1, 0], [0, -1]]"
+    ]
+  },
+  {
+    "id": "concrete_trotter_z_pi",
+    "category": "quantum_coding_exact",
+    "coding_problem": true,
+    "judge_type": "unit_test_backed",
+    "query": "Implement trotter_evolve so evolving |0> under Z for t=pi returns approximately -|0> and preserves norm. The answer must include these check points: trotter_evolve; Z; math.pi.",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/trotterized_hamiltonian_evolution/tests.py",
+      "evals/tasks/quantum/trotterized_hamiltonian_evolution/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "trotter_evolve",
+      "Z",
+      "math.pi",
+      "norm"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "trotter_evolve",
+      "Z",
+      "math.pi",
+      "norm"
+    ],
+    "judge": "Pass if the answer cites one expected source, includes the required terms, and gives code or steps that satisfy evals/tasks/quantum/trotterized_hamiltonian_evolution/tests.py.",
+    "unit_test_file": "evals/tasks/quantum/trotterized_hamiltonian_evolution/tests.py",
+    "example_io": [
+      "trotter_evolve([1,0], [(1.0,'Z')], t=pi, steps=100) -> [-1, 0] approximately"
+    ]
+  },
+  {
+    "id": "concrete_vqe_energy_z",
+    "category": "quantum_coding_exact",
+    "coding_problem": true,
+    "judge_type": "unit_test_backed",
+    "query": "Implement VQE expectation energy so <0|Z|0> evaluates to 1.0 and <1|Z|1> evaluates to -1.0. The answer must include these check points: VQE; expectation; np.vdot.",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/vqe_energy_minimization/tests.py",
+      "evals/tasks/quantum/vqe_energy_minimization/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "VQE",
+      "expectation",
+      "np.vdot",
+      "Z"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "VQE",
+      "expectation",
+      "np.vdot",
+      "Z"
+    ],
+    "judge": "Pass if the answer cites one expected source, includes the required terms, and gives code or steps that satisfy evals/tasks/quantum/vqe_energy_minimization/tests.py.",
+    "unit_test_file": "evals/tasks/quantum/vqe_energy_minimization/tests.py",
+    "example_io": [
+      "energy(|0>, Z) -> 1.0",
+      "energy(|1>, Z) -> -1.0"
+    ]
+  },
+  {
+    "id": "concrete_maxcut_assignment_enumerator",
+    "category": "quantum_coding_exact",
+    "coding_problem": true,
+    "judge_type": "unit_test_backed",
+    "query": "Enumerate all MaxCut assignments for n=3 as zero-padded bitstrings from '000' through '111'. The answer must include these check points: enumerate; format; 03b.",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/maxcut_assignment_enumerator/tests.py",
+      "evals/tasks/quantum/maxcut_assignment_enumerator/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "enumerate",
+      "format",
+      "03b",
+      "'111'"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "enumerate",
+      "format",
+      "03b",
+      "'111'"
+    ],
+    "judge": "Pass if the answer cites one expected source, includes the required terms, and gives code or steps that satisfy evals/tasks/quantum/maxcut_assignment_enumerator/tests.py.",
+    "unit_test_file": "evals/tasks/quantum/maxcut_assignment_enumerator/tests.py",
+    "example_io": [
+      "enumerate_assignments(3) -> ['000', ..., '111']"
+    ]
+  },
+  {
+    "id": "concrete_maxcut_partition_ranker",
+    "category": "quantum_coding_exact",
+    "coding_problem": true,
+    "judge_type": "unit_test_backed",
+    "query": "Rank MaxCut partitions by descending cut value with deterministic ascending-bitstring tie breaks. The answer must include these check points: rank; partition; descending.",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/maxcut_partition_ranker/tests.py",
+      "evals/tasks/quantum/maxcut_partition_ranker/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "rank",
+      "partition",
+      "descending",
+      "tie"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "rank",
+      "partition",
+      "descending",
+      "tie"
+    ],
+    "judge": "Pass if the answer cites one expected source, includes the required terms, and gives code or steps that satisfy evals/tasks/quantum/maxcut_partition_ranker/tests.py.",
+    "unit_test_file": "evals/tasks/quantum/maxcut_partition_ranker/tests.py",
+    "example_io": [
+      "higher cut values appear first",
+      "equal cut values sort by bitstring"
+    ]
+  },
+  {
+    "id": "concrete_ghz_witness_negative",
+    "category": "quantum_coding_exact",
+    "coding_problem": true,
+    "judge_type": "unit_test_backed",
+    "query": "Implement GHZ witness so the perfect 3-qubit GHZ state has witness value 0.5 - fidelity = -0.5. The answer must include these check points: GHZ; witness; 0.5 - fidelity.",
+    "expected_source_substrings": [
+      "evals/tasks/quantum/ghz_state_witness/tests.py",
+      "evals/tasks/quantum/ghz_state_witness/",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/"
+    ],
+    "expected_terms": [
+      "GHZ",
+      "witness",
+      "0.5 - fidelity",
+      "-0.5"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "GHZ",
+      "witness",
+      "0.5 - fidelity",
+      "-0.5"
+    ],
+    "judge": "Pass if the answer cites one expected source, includes the required terms, and gives code or steps that satisfy evals/tasks/quantum/ghz_state_witness/tests.py.",
+    "unit_test_file": "evals/tasks/quantum/ghz_state_witness/tests.py",
+    "example_io": [
+      "ghz_witness(perfect_ghz) -> -0.5"
+    ]
+  }
+]

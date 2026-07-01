@@ -1,0 +1,207 @@
+Task ID: quantum_bitstring_maxcut_landscape
+Task name: Bitstring MaxCut landscape
+Domain: quantum
+Category: algorithm_implementation
+
+Reference documentation (use these only as background; do not echo them):
+--- BEGIN REFERENCE DOCS ---
+[DOC 1] source=qaoa_maxcut.md
+[source: quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md] [quantum-gpt/docs/quantum libraries/qaoa maxcut.md]
+
+# QAOA for MaxCut
+
+## Concept
+The Quantum Approximate Optimization Algorithm (QAOA) attacks
+combinatorial optimization problems by alternating two parameterised
+unitaries. For MaxCut on a graph G = (V, E) with edge weights w_uv:
+
+- Cost Hamiltonian:  H_C = sum_{(u,v) in E} (w_uv / 2) * (I - Z_u Z_v)
+- Mixer Hamiltonian: H_M = sum_v X_v
+
+For depth p, parameters (gamma_1, ..., gamma_p, beta_1, ..., beta_p):
+
+  |gamma, beta> = e^{-i beta_p H_M} e^{-i gamma_p H_C} ...
+                  e^{-i beta_1 H_M} e^{-i gamma_1 H_C} |+>^n
+
+## MaxCut cost function (classical bitstring evaluation)
+
+```python
+def maxcut_cost(bitstring: list[int], edges: list[tuple[int, int, float]]) -> float:
+    total = 0.0
+    for u, v, w in edges:
+        if bitstring[u] != bitstring[v]:
+            total += w
+    return total
+```
+
+Equivalently using +/-1 spins:
+
+  cost = sum_{(u,v)} w_uv * (1 - s_u * s_v) / 2
+
+## Reference Python (classical simulation of QAOA cost)
+
+```python
+import itertools
+
+def best_  ...[truncated]
+
+[DOC 2] source=qaoa_maxcut.md
+[source: quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md] [quantum-gpt/docs/quantum libraries/qaoa maxcut.md]
+
+0, 1], repeat=n):
+        cost = maxcut_cost(list(bits), edges)
+        if cost > best[0]:
+            best = (cost, list(bits))
+    return best
+```
+
+## Library snippets
+Qiskit (high-level):
+```python
+from qiskit_optimization.applications import Maxcut
+from qiskit_optimization.algorithms import MinimumEigenOptimizer
+```
+
+PennyLane offers `qml.qaoa.maxcut` to build cost and mixer Hamiltonians
+automatically.
+
+## Common pitfalls
+- Edge weights are *additive*; only count each edge once even if the
+  graph is undirected.
+- The quantum cost expectation <H_C> is shifted by `sum w / 2` from the
+  classical cut value: <H_C>_psi = (sum w_uv) / 2 - sum w_uv/2 <Z_u Z_v>.
+- For p=1, optimal (gamma, beta) for triangle-free graphs is roughly
+  gamma = pi/8, beta = pi/8 (use grid search to confirm).
+
+[DOC 3] source=maxcut_classical_helpers.md
+[source: quantum-gpt/docs/quantum_libraries/maxcut_classical_helpers.md] [quantum-gpt/docs/quantum libraries/maxcut classical helpers.md]
+
+# MaxCut: classical bitstring evaluation, enumeration, ranking
+
+## Definitions
+A cut on graph G = (V, E, w) given a partition (S, V\S) is the set of
+edges with one endpoint in each part. The cut weight (cost) is
+
+  cost(x) = sum_{(u,v) in E} w_uv * [x_u != x_v]
+
+where x is a bitstring of length |V| with 0/1 indicating partition.
+
+## Bitstring cost
+
+```python
+def cut_cost(bitstring: list[int], edges: list[tuple[int, int, float]]) -> float:
+    total = 0.0
+    for u, v, w in edges:
+        if bitstring[u] != bitstring[v]:
+            total += w
+    return total
+```
+
+## Brute force enumeration
+
+```python
+import itertools
+
+def enumerate_cuts(n: int, edges: list[tuple[int, int, float]]) -> list[tuple[list[int], float]]:
+    out: list[tuple[list[int], float]] = []
+    for bits in itertools.product([0, 1], repeat=n):
+        cost = cut_cost(list(bits), edges)
+        out.append((list(bits), cost))
+    return out
+
+def best_cut(n: int, edges) -> tuple[floa  ...[truncated]
+--- END REFERENCE DOCS ---
+
+Write the simplest Python file that satisfies the supplied tests and return only that file.
+
+Reference candidate style example (for format guidance, not for blind copying):
+--- BEGIN REFERENCE CANDIDATE ---
+from itertools import product
+
+
+def maxcut_cost(bitstring: str, edges: list[tuple[int, int]]) -> int:
+    bits = str(bitstring)
+    if any(bit not in {"0", "1"} for bit in bits):
+        raise ValueError("bitstring must contain only 0 and 1")
+    cost = 0
+    for left, right in edges:
+        if bits[left] != bits[right]:
+            cost += 1
+    return cost
+
+
+def brute_force_maxcut(n_nodes: int, edges: list[tuple[int, int]]) -> tuple[str, int]:
+    best = ""
+    best_cost = -1
+    for bits in product("01", repeat=n_nodes):
+        bitstring = "".join(bits)
+        cost = maxcut_cost(bitstring, edges)
+        if cost > best_cost or (cost == best_cost and bitstring < best):
+            best = bitstring
+            best_cost = cost
+    return best, best_cost
+
+
+def qaoa_cost_landscape(n_nodes: int, edges: list[tuple[int, int]]) -> list[tuple[str, int]]:
+    landscape = []
+    for bits in product("01", repeat=n_nodes):
+        bitstring = "".join(bits)
+        landscape.append((bitstring, maxcut_cost(bitstring, edges)))
+    landscape.sort(key=lambda item: (-item[1], item[0]))
+    return landscape
+
+--- END REFERENCE CANDIDATE ---
+
+Tests the candidate must satisfy:
+--- BEGIN TESTS ---
+import importlib.util
+
+
+def _load(candidate_path: str):
+    spec = importlib.util.spec_from_file_location("candidate", candidate_path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
+def run_tests(candidate_path: str) -> dict:
+    module = _load(candidate_path)
+    failures = []
+
+    triangle = [(0, 1), (1, 2), (0, 2)]
+    if module.maxcut_cost("000", triangle) != 0:
+        failures.append("maxcut_cost('000', triangle) should be 0")
+    if module.maxcut_cost("010", triangle) != 2:
+        failures.append("maxcut_cost('010', triangle) should be 2")
+
+    line = [(0, 1), (1, 2), (2, 3)]
+    if module.maxcut_cost("0101", line) != 3:
+        failures.append("maxcut_cost('0101', line) should be 3")
+
+    best_bits, best_cost = module.brute_force_maxcut(3, triangle)
+    if best_cost != 2:
+        failures.append(f"brute_force_maxcut(triangle) -> cost {best_cost}, expected 2")
+    if module.maxcut_cost(best_bits, triangle) != best_cost:
+        failures.append("brute_force_maxcut returned inconsistent bitstring/cost")
+
+    landscape = module.qaoa_cost_landscape(3, triangle)
+    if len(landscape) != 8:
+        failures.append(f"landscape length={len(landscape)}, expected 8")
+    else:
+        costs = [cost for _, cost in landscape]
+        if costs != sorted(costs, reverse=True):
+            failures.append("qaoa_cost_landscape is not sorted descending by cost")
+
+    try:
+        module.maxcut_cost("01a", [(0, 1)])
+        failures.append("maxcut_cost accepted an invalid bitstring")
+    except ValueError:
+        pass
+
+    return {
+        "passed": not failures,
+        "details": failures or ["bitstring MaxCut landscape works without hidden helper names"],
+    }
+
+--- END TESTS ---

@@ -1,0 +1,230 @@
+Task ID: quantum_stabilizer_tableau_update_repair
+Task name: Stabilizer tableau single-qubit update repair
+Domain: quantum
+Category: debug_repair
+
+Reference documentation (use these only as background; do not echo them):
+--- BEGIN REFERENCE DOCS ---
+[DOC 1] source=stabilizer_formalism.md
+[source: quantum-gpt/docs/quantum_libraries/stabilizer_formalism.md] [quantum-gpt/docs/quantum libraries/stabilizer formalism.md]
+
+# Stabilizer formalism and tableau update
+
+## Concept
+A stabilizer state is the unique +1 eigenstate of a maximal abelian
+subgroup of the n-qubit Pauli group. Any stabilizer state can be
+described compactly by its stabilizer generators (a list of n Pauli
+strings), or equivalently by a binary "tableau" of size 2n x (2n+1).
+
+Stabilizer circuits are exactly the Clifford circuits: H, S, CNOT.
+They can be simulated efficiently in O(n^2) per gate via the Aaronson-
+Gottesman tableau algorithm.
+
+## Tableau layout
+Rows: 2n stabilizer generators (n destabilizers + n stabilizers).
+Columns: 2n binary symplectic + 1 sign column.
+
+For each row r:
+- x bits: r[0:n]
+- z bits: r[n:2n]
+- sign:  r[2n] (1 means -)
+
+A Pauli operator is X^x Z^z up to a global phase set by the sign bit.
+
+## Update rules
+- **H on qubit q**: swap x_q and z_q in every row; flip sign if x_q AND z_q in that row.
+- **S on qubit q**: z_q ^= x_q; flip sign if x_q AND z_q in that row.
+- **CNOT(c, t)**: x  ...[truncated]
+
+[DOC 2] source=stabilizer_formalism.md
+[source: quantum-gpt/docs/quantum_libraries/stabilizer_formalism.md] [quantum-gpt/docs/quantum libraries/stabilizer formalism.md]
+
++ q] = z, x
+
+def apply_s(tableau, n, q):
+    for r in tableau:
+        x = r[q]
+        z = r[n + q]
+        r[2 * n] ^= x & z
+        r[n + q] ^= x
+
+def apply_cnot(tableau, n, c, t):
+    for r in tableau:
+        xc, xt = r[c], r[t]
+        zc, zt = r[n + c], r[n + t]
+        r[2 * n] ^= xc & zt & (xt ^ zc ^ 1)
+        r[t] ^= xc
+        r[n + c] ^= zt
+```
+
+## Common pitfalls
+- The sign update uses *pre-update* bits; computing it after mutating
+  the row is the most common bug.
+- Destabilizer rows must be tracked alongside stabilizer rows even if
+  you only care about the stabilizer subspace.
+- Measurement is the trickiest gate: it requires distinguishing the
+  deterministic vs random cases (whether any stabilizer anticommutes
+  with the measured Pauli).
+
+[DOC 3] source=circuit_repair_recipes.md
+[source: quantum-gpt/docs/quantum_libraries/circuit_repair_recipes.md] [quantum-gpt/docs/quantum libraries/circuit repair recipes.md]
+
+tion tests expect `ValueError` but the
+     code returns the original token.
+   - Fix: raise `ValueError(f"unknown gate: {gate}")` after the lookup.
+
+## Depth optimization patterns
+- Cancel adjacent pairs of self-inverse gates (HH, XX, CNOT-CNOT same wires).
+- Merge consecutive single-qubit rotations: Rz(a) Rz(b) -> Rz(a+b).
+- Use commutation rules to slide commuting gates past each other and
+  expose more cancellations: e.g. `Rz` commutes with `CZ` on the same
+  wires.
+- Replace H Z H = X, H X H = Z when reducing surrounding context allows.
+
+## Phase repair patterns
+- Apply `np.mod(phases, 2 * np.pi)` before comparison.
+- Convert between `exp(i * phi)` and `phi` carefully: use `np.angle` for
+  the inverse.
+- Phase pattern from QFT|x>: `phi_k = (2 * pi * x * k / N) mod 2*pi`.
+
+## Checklist before returning candidate code
+- [ ] Imports are present and minimal.
+- [ ] Function signatures match the test's expectations exactly.
+- [ ] Edge cases (empty list  ...[truncated]
+--- END REFERENCE DOCS ---
+
+Write the simplest Python file that satisfies the supplied tests and return only that file.
+
+Reference candidate style example (for format guidance, not for blind copying):
+--- BEGIN REFERENCE CANDIDATE ---
+def _normalize_pauli(label: str) -> str:
+    normalized = label.strip().upper()
+    if normalized not in {"I", "X", "Y", "Z"}:
+        raise ValueError(f"unsupported Pauli operator: {label!r}")
+    return normalized
+
+
+_CONJUGATION_RULES = {
+    "H": {
+        "I": (1, "I"),
+        "X": (1, "Z"),
+        "Y": (-1, "Y"),
+        "Z": (1, "X"),
+    },
+    "S": {
+        "I": (1, "I"),
+        "X": (1, "Y"),
+        "Y": (-1, "X"),
+        "Z": (1, "Z"),
+    },
+    "SDG": {
+        "I": (1, "I"),
+        "X": (-1, "Y"),
+        "Y": (1, "X"),
+        "Z": (1, "Z"),
+    },
+}
+
+
+def apply_gate_sequence(pauli: str, gates: list[str]) -> tuple[int, str]:
+    """Update a signed single-qubit Pauli under Clifford conjugation."""
+    raw = pauli.strip()
+    sign = -1 if raw.startswith("-") else 1
+    label = raw[1:] if raw.startswith("-") else raw
+    label = _normalize_pauli(label)
+
+    for gate in gates:
+        gate_name = gate.strip().upper()
+        if gate_name not in _CONJUGATION_RULES:
+            raise ValueError(f"unsupported gate: {gate!r}")
+        gate_sign, next_label = _CONJUGATION_RULES[gate_name][label]
+        sign *= gate_sign
+        label = next_label
+
+    return sign, label
+
+--- END REFERENCE CANDIDATE ---
+
+Tests the candidate must satisfy:
+--- BEGIN TESTS ---
+import copy
+import importlib.util
+
+
+
+def _load(candidate_path: str):
+    spec = importlib.util.spec_from_file_location("candidate", candidate_path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
+CASES = [
+    ("X", ["H"], (1, "Z")),
+    ("Z", ["H", "H"], (1, "Z")),
+    ("Y", ["H"], (-1, "Y")),
+    ("X", ["S"], (1, "Y")),
+    ("Y", ["S"], (-1, "X")),
+    ("X", ["SDG"], (-1, "Y")),
+    ("Y", ["SDG"], (1, "X")),
+    ("-X", ["S", "H"], (1, "Y")),
+    (" z ", [" h ", " s ", " sdg "], (1, "X")),
+    ("I", ["H", "S", "SDG", "H"], (1, "I")),
+    ("-Y", ["H", "S", "H"], (-1, "Z")),
+    ("X", ["S", "S", "H"], (-1, "Z")),
+    ("Y", ["SDG", "H", "S", "H"], (1, "X")),
+]
+
+
+BAD_PAULIS = ["", "A", "-Q"]
+BAD_GATES = [["T"], ["H", "measure"], ["S", "CZ"]]
+
+
+
+def run_tests(candidate_path: str) -> dict:
+    module = _load(candidate_path)
+    failures = []
+
+    for pauli, gates, expected in CASES:
+        original_gates = copy.deepcopy(gates)
+        actual = module.apply_gate_sequence(pauli, gates)
+        if actual != expected:
+            failures.append(
+                f"apply_gate_sequence({pauli!r}, {gates!r}) -> {actual!r}, expected {expected!r}"
+            )
+        if gates != original_gates:
+            failures.append(f"apply_gate_sequence mutated gates input for {pauli!r}, {gates!r}")
+
+    for bad_pauli in BAD_PAULIS:
+        try:
+            module.apply_gate_sequence(bad_pauli, ["H"])
+        except ValueError:
+            pass
+        except Exception as exc:
+            failures.append(
+                f"apply_gate_sequence({bad_pauli!r}, ['H']) raised {type(exc).__name__}, expected ValueError"
+            )
+        else:
+            failures.append(f"apply_gate_sequence({bad_pauli!r}, ['H']) did not raise ValueError")
+
+    for bad_gates in BAD_GATES:
+        try:
+            module.apply_gate_sequence("X", bad_gates)
+        except ValueError:
+            pass
+        except Exception as exc:
+            failures.append(
+                f"apply_gate_sequence('X', {bad_gates!r}) raised {type(exc).__name__}, expected ValueError"
+            )
+        else:
+            failures.append(f"apply_gate_sequence('X', {bad_gates!r}) did not raise ValueError")
+
+    return {
+        "passed": not failures,
+        "details": failures or [
+            "Stabilizer tableau repair preserves sign and axis updates across H/S/SDG sequences"
+        ],
+    }
+
+--- END TESTS ---

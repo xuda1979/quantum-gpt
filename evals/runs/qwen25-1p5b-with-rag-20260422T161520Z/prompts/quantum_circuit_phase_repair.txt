@@ -1,0 +1,144 @@
+Task ID: quantum_circuit_phase_repair
+Task name: Circuit phase repair from noisy gate stream
+Domain: quantum
+Category: debug_repair
+
+Reference documentation (use these only as background; do not echo them):
+--- BEGIN REFERENCE DOCS ---
+[DOC 1] source=circuit_repair_recipes.md
+[source: quantum-gpt/docs/quantum_libraries/circuit_repair_recipes.md] [quantum-gpt/docs/quantum libraries/circuit repair recipes.md]
+
+tion tests expect `ValueError` but the
+     code returns the original token.
+   - Fix: raise `ValueError(f"unknown gate: {gate}")` after the lookup.
+
+## Depth optimization patterns
+- Cancel adjacent pairs of self-inverse gates (HH, XX, CNOT-CNOT same wires).
+- Merge consecutive single-qubit rotations: Rz(a) Rz(b) -> Rz(a+b).
+- Use commutation rules to slide commuting gates past each other and
+  expose more cancellations: e.g. `Rz` commutes with `CZ` on the same
+  wires.
+- Replace H Z H = X, H X H = Z when reducing surrounding context allows.
+
+## Phase repair patterns
+- Apply `np.mod(phases, 2 * np.pi)` before comparison.
+- Convert between `exp(i * phi)` and `phi` carefully: use `np.angle` for
+  the inverse.
+- Phase pattern from QFT|x>: `phi_k = (2 * pi * x * k / N) mod 2*pi`.
+
+## Checklist before returning candidate code
+- [ ] Imports are present and minimal.
+- [ ] Function signatures match the test's expectations exactly.
+- [ ] Edge cases (empty list  ...[truncated]
+
+[DOC 2] source=TOOLS.md
+[source: daxu/software/quantum-gpt/TOOLS.md] [daxu/software/quantum-gpt/TOOLS.md]
+
+install_huanxin_safari_keepalive_agent.sh --install`.
+- Check the LaunchAgent with `bash scripts/install_huanxin_safari_keepalive_agent.sh --status`.
+- For one-command diagnosis, use `bash scripts/huanxin_status.sh`.
+- Huanxin shell wrappers now default to daemon mode. This is deliberate: it keeps one warm browser session instead of repeatedly relaunching standalone automation.
+- The daemon shell path now self-heals from the existing Safari `#/train-dev` session if Chromium hits Keycloak login during startup.
+- The stable default is still on-demand daemon startup plus Safari-backed self-heal.
+- Browser-profile repair now runs on an isolated Chromium copy and only syncs back to `browser-automation/profile/` after the exact `#/train-dev` app surface is confirmed, so failed repair attempts should no longer poison the stored base profile.
+- There is an optional ai2 daemon LaunchAgent helper in `scripts/install_huanxin_ai2_daemon_agent.sh`, but it is not the default path. Only opt into it explicitly with `H  ...[truncated]
+
+[DOC 3] source=quantum_circuit_construction_patterns.md
+[source: quantum-gpt/docs/quantum_libraries/quantum_circuit_construction_patterns.md] [quantum-gpt/docs/quantum libraries/quantum circuit construction patterns.md]
+
+test fixtures usually
+use `numpy.allclose` on the phase angles modulo `2*pi`. Always reduce
+phases via `np.mod(phases, 2 * np.pi)` before comparing.
+
+## Endianness alignment
+A surprising number of bugs come from mixing endianness conventions
+between input bitstrings, gate matrices, and library-returned state
+vectors. Pick *one* convention per task and convert at the boundaries.
+
+## Common pitfalls
+- Forgetting to `transpile` (Qiskit) before sampling - works but slow.
+- Mutating shared circuit objects; copy before parameter substitution.
+- Off-by-one in qubit indices: e.g. `range(n - 1)` vs `range(n)` for
+  nearest-neighbour entanglers.
+--- END REFERENCE DOCS ---
+
+Write the simplest Python file that satisfies the supplied tests and return only that file.
+
+Reference candidate style example (for format guidance, not for blind copying):
+--- BEGIN REFERENCE CANDIDATE ---
+def repair_phase_sequence(ops: list[str]) -> list[str]:
+    """Normalize a one-qubit gate stream and remove redundant phase cancellations.
+
+    Rules:
+    - Normalize tokens by stripping whitespace and uppercasing.
+    - Accept only H, X, Z, S, SDG.
+    - Cancel adjacent inverse phase pairs: S followed by SDG, or SDG followed by S.
+    - Cancel adjacent self-inverse pairs: H H, X X, Z Z.
+    - Preserve all other operations in order.
+    - Raise ValueError on unsupported operations.
+    """
+    normalized = []
+    for raw in ops:
+        token = raw.strip().upper()
+        if token not in {"H", "X", "Z", "S", "SDG"}:
+            raise ValueError(f"unsupported gate: {raw}")
+        if normalized:
+            prev = normalized[-1]
+            if (prev, token) in {("S", "SDG"), ("SDG", "S")}:
+                normalized.pop()
+                continue
+            if prev == token and token in {"H", "X", "Z"}:
+                normalized.pop()
+                continue
+        normalized.append(token)
+    return normalized
+
+--- END REFERENCE CANDIDATE ---
+
+Tests the candidate must satisfy:
+--- BEGIN TESTS ---
+import importlib.util
+
+
+
+def _load(candidate_path: str):
+    spec = importlib.util.spec_from_file_location("candidate", candidate_path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
+
+def run_tests(candidate_path: str) -> dict:
+    module = _load(candidate_path)
+    failures = []
+
+    cases = [
+        (["H", "H", "X", "Z"], ["X", "Z"]),
+        ([" s ", "sdg", "H", "x", "X"], ["H"]),
+        (["Z", "S", "SDG", "Z", "H"], ["H"]),
+        (["S", "H", "SDG"], ["S", "H", "SDG"]),
+        (["sdg", "s", "x", "x", "z"], ["Z"]),
+    ]
+    for raw, expected in cases:
+        actual = module.repair_phase_sequence(raw)
+        if actual != expected:
+            failures.append(f"repair_phase_sequence({raw!r}) -> {actual!r}, expected {expected!r}")
+
+    for bad in [["T"], ["H", " measure "]]:
+        try:
+            module.repair_phase_sequence(bad)
+        except ValueError:
+            continue
+        except Exception as exc:
+            failures.append(f"repair_phase_sequence({bad!r}) raised {type(exc).__name__}, expected ValueError")
+        else:
+            failures.append(f"repair_phase_sequence({bad!r}) did not raise ValueError")
+
+    return {
+        "passed": not failures,
+        "details": failures or ["Circuit phase repair handles normalization, cancellations, and unsupported gates"],
+    }
+
+--- END TESTS ---

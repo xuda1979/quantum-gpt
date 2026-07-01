@@ -1,0 +1,134 @@
+{
+  "benchmark": "evals/benchmarks/quantum_rag_retrieval_v1.json",
+  "index": "artifacts/quantum-rag/default-index.pkl.gz",
+  "top_k": 5,
+  "alpha": 0.55,
+  "query_expansion_enabled": true,
+  "max_chunks_per_source": 1,
+  "excluded_source_substrings": [
+    "evals/benchmarks/quantum_rag_retrieval_v1.json",
+    "reports/quantum_rag_retrieval_"
+  ],
+  "metrics": {
+    "hit@5": 0.16666666666666666,
+    "mrr": 0.03333333333333333,
+    "total_examples": 6,
+    "hit_count": 1
+  },
+  "examples": [
+    {
+      "id": "rag_eval_holdout_local_rule",
+      "query": "How should this repo evaluate strict quantum holdout tasks before remote training?",
+      "expected_source_substrings": [
+        "PROJECT.md",
+        "research/quantum_rag_low_compute.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": false,
+      "reciprocal_rank": 0.0,
+      "first_hit_rank": null,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/reports/gemma4-26b-a4b-it-quantum-holdout-base-eval-20260413.md",
+        "/Users/daxu/software/quantum-gpt/reports/leadership_brief_2026-03-31.md",
+        "/Users/daxu/software/quantum-gpt/reports/leadership_qa_2026-03-31.md",
+        "/Users/daxu/software/quantum-gpt/research/papers/gemma4_26b_a4b_weekend_demo/paper.md",
+        "/Users/daxu/software/quantum-gpt/research/huanxin-remote-bootstrap-plan.md"
+      ]
+    },
+    {
+      "id": "rag_qiskit_task_contract",
+      "query": "Which repo task covers VQE energy expectation from a parameterized ansatz?",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/vqe_energy_minimization/task.json",
+        "evals/tasks/quantum/vqe_energy_minimization/candidate.py"
+      ],
+      "top_k": 5,
+      "hit_at_k": false,
+      "reciprocal_rank": 0.0,
+      "first_hit_rank": null,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/research/RESEARCH-REPORT.tex",
+        "/Users/daxu/software/quantum-gpt/reports/autonomous_rd_cycle_gemma4-e2b-it_2026-04-08.json",
+        "/Users/daxu/software/quantum-gpt/reports/autonomous_rd_cycle_gemma4-26b-a4b-it_2026-04-08.json",
+        "/Users/daxu/software/quantum-gpt/reports/autonomous_rd_cycle_gemma4-26b-a4b-it_2026-04-10.json",
+        "/Users/daxu/software/quantum-gpt/reports/autonomous_rd_cycle_gemma4-31b-it_2026-04-08.json"
+      ]
+    },
+    {
+      "id": "rag_qft_task_contract",
+      "query": "Where is the QFT phase pattern task defined in this repo?",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/qft_phase_pattern/task.json",
+        "evals/tasks/quantum/qft_phase_pattern/candidate.py"
+      ],
+      "top_k": 5,
+      "hit_at_k": false,
+      "reciprocal_rank": 0.0,
+      "first_hit_rank": null,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/research/RESEARCH-REPORT.tex",
+        "/Users/daxu/software/quantum-gpt/reports/autonomous_rd_cycle_gemma4-e2b-it_2026-04-08.json",
+        "/Users/daxu/software/quantum-gpt/reports/autonomous_rd_cycle_gemma4-e2b-it_2026-04-07.json",
+        "/Users/daxu/software/quantum-gpt/reports/autonomous_rd_cycle_gemma4-31b-it_2026-04-08.json",
+        "/Users/daxu/software/quantum-gpt/reports/autonomous_rd_cycle_gemma4-26b-a4b-it_2026-04-10.json"
+      ]
+    },
+    {
+      "id": "rag_huanxin_sync_rule",
+      "query": "How does this repo say code should be moved to Huanxin before training?",
+      "expected_source_substrings": [
+        "PROJECT.md",
+        "AGENTS.md",
+        "TOOLS.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 0.2,
+      "first_hit_rank": 5,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/research/RESEARCH-REPORT.md",
+        "/Users/daxu/software/quantum-gpt/research/huanxin-remote-bootstrap-plan.md",
+        "/Users/daxu/software/quantum-gpt/research/papers/gemma4_26b_a4b_weekend_demo/paper.md",
+        "/Users/daxu/software/quantum-gpt/research/huanxin-latest-status.md",
+        "/Users/daxu/software/quantum-gpt/AGENTS.md"
+      ]
+    },
+    {
+      "id": "rag_grpo_quantum_benchmark_file",
+      "query": "What benchmark file should GRPO use for quantum training tasks in this repo?",
+      "expected_source_substrings": [
+        "HEARTBEAT.md",
+        "evals/benchmarks/quantum_grpo_training_v1.txt"
+      ],
+      "top_k": 5,
+      "hit_at_k": false,
+      "reciprocal_rank": 0.0,
+      "first_hit_rank": null,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/research/papers/gemma4_26b_a4b_weekend_demo/paper.md",
+        "/Users/daxu/software/quantum-gpt/AGENTS.md",
+        "/Users/daxu/software/quantum-gpt/research/eval-difficulty-jump-v2.md",
+        "/Users/daxu/software/quantum-gpt/research/model-target.md",
+        "/Users/daxu/software/quantum-gpt/reports/leadership_qa_2026-03-31.md"
+      ]
+    },
+    {
+      "id": "rag_rag_usage_doc",
+      "query": "What does the current low-compute quantum RAG implementation support and what are its gaps?",
+      "expected_source_substrings": [
+        "research/quantum_rag_low_compute.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": false,
+      "reciprocal_rank": 0.0,
+      "first_hit_rank": null,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/research/huanxin-remote-bootstrap-plan.md",
+        "/Users/daxu/software/quantum-gpt/reports/base_vs_adapter_outputs_omnicoder9b_semantic_v4_2npu_true20_20260330.json/base_vs_adapter_outputs_omnicoder9b_semantic_v4_2npu_true20_20260330.json",
+        "/Users/daxu/software/quantum-gpt/HEARTBEAT.md",
+        "/Users/daxu/software/quantum-gpt/research/papers/autonomous_rd_cycle_system/paper.md",
+        "/Users/daxu/software/quantum-gpt/research/eval-spec-v0.md"
+      ]
+    }
+  ]
+}

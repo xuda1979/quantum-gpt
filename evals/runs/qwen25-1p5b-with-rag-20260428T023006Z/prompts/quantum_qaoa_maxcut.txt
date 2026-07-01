@@ -1,0 +1,132 @@
+Task ID: quantum_qaoa_maxcut
+Task name: QAOA MaxCut cost function and classical simulation
+Domain: quantum
+Category: algorithm_implementation
+
+Reference documentation (use these only as background; do not echo them):
+--- BEGIN REFERENCE DOCS ---
+[DOC 1] source=qaoa_maxcut.md
+[source: quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md] [quantum-gpt/docs/quantum libraries/qaoa maxcut.md]
+
+# QAOA for MaxCut
+
+## Concept
+The Quantum Approximate Optimization Algorithm (QAOA) attacks
+combinatorial optimization problems by alternating two parameterised
+unitaries. For MaxCut on a graph G = (V, E) with edge weights w_uv:
+
+- Cost Hamiltonian:  H_C = sum_{(u,v) in E} (w_uv / 2) * (I - Z_u Z_v)
+- Mixer Hamiltonian: H_M = sum_v X_v
+
+For depth p, parameters (gamma_1, ..., gamma_p, beta_1, ..., beta_p):
+
+  |gamma, beta> = e^{-i beta_p H_M} e^{-i gamma_p H_C} ...
+                  e^{-i beta_1 H_M} e^{-i gamma_1 H_C} |+>^n
+
+## MaxCut cost function (classical bitstring evaluation)
+
+```python
+def _edge_weight(edge: tuple) -> tuple[int, int, float]:
+    """Accept either unweighted (u, v) or weighted (u, v, w) edges."""
+    if len(edge) == 2:
+        u, v = edge
+        return u, v, 1.0
+    if len(edge) == 3:
+        u, v, w = edge
+        return u, v, float(w)
+    raise ValueError("MaxCut edges must be (u, v) or (u, v, weight)")
+
+def maxcut_cost(bitstring, edges: list[tuple]) -> float:
+    total = 0.0
+    for edge in edges:
+        u, v, w = _edge_weight(edge)
+        if int(bitstring[u]) != int(bitstring[v]):
+            total += w
+    return int(total) if float(total).is_integer() else total
+```
+
+Equivalently using +/-1 spins:
+
+  cost = sum_{(u,v)} w_uv * (1 - s_u * s_v) / 2
+
+## Reference Python (classical simulation of QAOA cost)
+
+```python
+import itertools
+--- END REFERENCE DOCS ---
+
+Write the simplest Python file that satisfies the supplied tests and return only that file.
+
+Tests the candidate must satisfy:
+--- BEGIN TESTS ---
+import importlib.util
+
+
+def _load(candidate_path: str):
+    spec = importlib.util.spec_from_file_location("candidate", candidate_path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
+def run_tests(candidate_path: str) -> dict:
+    module = _load(candidate_path)
+    failures = []
+
+    # Triangle graph: 3 nodes, 3 edges
+    tri_edges = [(0, 1), (1, 2), (0, 2)]
+
+    # maxcut_cost tests
+    if module.maxcut_cost("000", tri_edges) != 0:
+        failures.append("maxcut_cost('000', triangle) should be 0")
+    if module.maxcut_cost("010", tri_edges) != 2:
+        failures.append("maxcut_cost('010', triangle) should be 2")
+    if module.maxcut_cost("100", tri_edges) != 2:
+        failures.append("maxcut_cost('100', triangle) should be 2")
+
+    # Line graph: 0-1-2-3
+    line_edges = [(0, 1), (1, 2), (2, 3)]
+    if module.maxcut_cost("0101", line_edges) != 3:
+        failures.append("maxcut_cost('0101', line) should be 3")
+    if module.maxcut_cost("0011", line_edges) != 1:
+        failures.append("maxcut_cost('0011', line) should be 1")
+
+    # brute_force_maxcut on triangle: max cut = 2
+    bs, cost = module.brute_force_maxcut(3, tri_edges)
+    if cost != 2:
+        failures.append(f"brute_force_maxcut(triangle) cost={cost}, expected 2")
+    # verify the returned bitstring actually achieves that cost
+    if module.maxcut_cost(bs, tri_edges) != cost:
+        failures.append("brute_force_maxcut returned inconsistent bitstring/cost")
+
+    # brute_force_maxcut on line: max cut = 3 (alternating)
+    bs2, cost2 = module.brute_force_maxcut(4, line_edges)
+    if cost2 != 3:
+        failures.append(f"brute_force_maxcut(line4) cost={cost2}, expected 3")
+
+    # qaoa_cost_landscape: check sorted descending
+    landscape = module.qaoa_cost_landscape(3, tri_edges)
+    if len(landscape) != 8:
+        failures.append(f"landscape length={len(landscape)}, expected 8")
+    else:
+        costs = [c for _, c in landscape]
+        if costs != sorted(costs, reverse=True):
+            failures.append("landscape not sorted descending by cost")
+        if landscape[0][1] != 2:
+            failures.append(f"landscape top cost={landscape[0][1]}, expected 2")
+        if landscape[-1][1] != 0:
+            failures.append(f"landscape bottom cost={landscape[-1][1]}, expected 0")
+
+    # Single edge
+    if module.maxcut_cost("01", [(0, 1)]) != 1:
+        failures.append("maxcut_cost('01', single edge) should be 1")
+    if module.maxcut_cost("00", [(0, 1)]) != 0:
+        failures.append("maxcut_cost('00', single edge) should be 0")
+
+    return {
+        "passed": not failures,
+        "details": failures or ["QAOA MaxCut functions correct for all test cases"],
+    }
+
+--- END TESTS ---

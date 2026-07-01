@@ -1,0 +1,25 @@
+{
+  "label": "no-rag",
+  "generated_at_utc": "2026-04-28T03:24:48.615486+00:00",
+  "model_path": "/Users/daxu/.openclaw/workspace-quantum-rnd/models/Qwen2.5-1.5B-Instruct",
+  "device": "mps",
+  "max_new_tokens": 512,
+  "temperature": 0.0,
+  "total_wall_seconds": 381.18,
+  "tasks": [
+    {
+      "task_id": "quantum_grover_oracle_diffusion",
+      "prompt_tokens": 1471,
+      "new_tokens": 512,
+      "wall_seconds": 106.68,
+      "output_chars": 1497
+    },
+    {
+      "task_id": "quantum_density_matrix_partial_trace",
+      "prompt_tokens": 1683,
+      "new_tokens": 504,
+      "wall_seconds": 271.99,
+      "output_chars": 2285
+    }
+  ]
+}

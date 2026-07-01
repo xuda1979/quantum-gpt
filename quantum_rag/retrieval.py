@@ -32,6 +32,7 @@ TERM_EXPANSIONS = {
 }
 
 SOURCE_PRIORITY_RULES: list[tuple[str, float]] = [
+    ("docs/quantum_libraries/", 1.8),
     ("evals/tasks/quantum/", 1.35),
     ("evals/benchmarks/", 1.25),
     ("AGENTS.md", 1.2),
@@ -46,6 +47,14 @@ QUERY_AWARE_RULES: list[tuple[tuple[str, ...], tuple[str, ...], float]] = [
     (("cirq",), ("cirq", "cirq_basics"), 1.8),
     (("pennylane", "qml"), ("pennylane", "pennylane_basics"), 1.8),
     (("braket", "amazon braket"), ("amazon-braket", "braket_basics"), 1.8),
+    (("bell", "phi+"), ("bell_state_construction", "bell_pair_construction"), 1.9),
+    (("qpe", "phase estimation", "ideal qpe"), ("quantum_phase_estimation", "phase_estimation_circuit"), 1.9),
+    (("qaoa", "maxcut", "mixer"), ("qaoa_maxcut", "qaoa"), 1.9),
+    (("state vector", "measurement probabilities", "sample outcomes"), ("state_vector_simulation",), 1.9),
+    (("density matrix", "partial trace"), ("density_matrix_partial_trace", "density_matrix_eval_api"), 1.9),
+    (("depolarizing", "kraus"), ("depolarizing_channel", "quantum_channel_depolarizing"), 1.9),
+    (("stabilizer", "tableau"), ("stabilizer_formalism", "stabilizer_tableau"), 1.9),
+    (("trotter", "suzuki"), ("trotter_decomposition", "trotterized"), 1.9),
     (("cuda-q", "cuda quantum"), ("cuda-quantum",), 1.8),
     (("qutip",), ("qutip",), 1.8),
     (("pyquil", "rigetti"), ("pyquil",), 1.8),

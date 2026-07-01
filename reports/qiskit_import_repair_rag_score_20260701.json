@@ -1,0 +1,42 @@
+{
+  "benchmark": "evals/benchmarks/qiskit_import_repair_rag_questions_20260701.json",
+  "index": "artifacts/quantum-rag/qwen36-quantum-docs-index.pkl.gz",
+  "top_k": 8,
+  "alpha": 0.55,
+  "query_expansion_enabled": true,
+  "max_chunks_per_source": 1,
+  "excluded_source_substrings": [
+    "evals/benchmarks/qiskit_import_repair_rag_questions_20260701.json",
+    "reports/quantum_rag_retrieval_"
+  ],
+  "metrics": {
+    "hit@8": 1.0,
+    "mrr": 1.0,
+    "total_examples": 1,
+    "hit_count": 1
+  },
+  "examples": [
+    {
+      "id": "qiskit_qaoa_optimization_algorithms_import_error",
+      "query": "Fix ImportError: cannot import name QAOA from qiskit_optimization.algorithms. What current Qiskit imports should be used with MinimumEigenOptimizer?",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/qiskit_ecosystem_current_api.md",
+        "docs/quantum_libraries/qaoa_maxcut.md"
+      ],
+      "top_k": 8,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "docs/quantum_libraries/qaoa_maxcut.md",
+        "docs/quantum_libraries/qiskit_ecosystem_current_api.md",
+        "docs/quantum_libraries/qiskit_basics.md",
+        "docs/external/quantum-sdk-docs-latest/qiskit/quantum.cloud.ibm.com-docs-tutorials-advanced-techniques-for-qaoa-4a2e788d16.md",
+        "docs/external/quantum-sdk-docs-latest/qiskit-optimization/qiskit-community.github.io-qiskit-optimization-tutorials-10_warm_start_qaoa.html-23358294dd.md",
+        "docs/external/quantum-sdk-docs-latest/cirq/quantumai.google-cirq-experiments-qaoa-qaoa_maxcut-9ccca32000.md",
+        "docs/external/quantum-sdk-docs-latest/cuda-quantum/nvidia.github.io-cuda-quantum-latest-applications-python-adapt_qaoa.html-885c867279.md",
+        "docs/external/quantum-sdk-docs-latest/pytket/docs.quantinuum.com-tket-user-guide-examples-algorithms_and_protocols-pytket-qujax_qaoa.ht-f833bdc40d.md"
+      ]
+    }
+  ]
+}

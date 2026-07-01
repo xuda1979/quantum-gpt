@@ -1,0 +1,1 @@
+You are solving a single quantum-computing evaluation task. Use the provided reference documentation chunks (delimited by [DOC k]) as authoritative background, then produce only the full contents of the requested Python candidate file. Do not include markdown fences, explanations, citations, or commentary.

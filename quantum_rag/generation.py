@@ -15,6 +15,7 @@ RAG_SYSTEM_PROMPT = (
     "Answer using only the provided retrieved context when making factual claims. "
     "If the context is insufficient, say what is missing. "
     "Prefer concrete implementation guidance for quantum SDKs, algorithms, and repo-specific workflows. "
+    "When the context contains commands, class names, methods, or API calls, include those exact details. "
     "Cite claims inline with [C1], [C2], etc."
 )
 
@@ -78,6 +79,7 @@ class ChatCompletionsClient:
     model: str
     timeout_seconds: float = 180.0
     api_key: str = "dummy"
+    enable_thinking: bool = False
 
     def generate(self, messages: list[dict[str, Any]], *, max_output_tokens: int, temperature: float) -> str:
         payload = {
@@ -87,6 +89,8 @@ class ChatCompletionsClient:
             "temperature": temperature,
             "stream": False,
         }
+        if not self.enable_thinking:
+            payload["chat_template_kwargs"] = {"enable_thinking": False}
         request = urllib.request.Request(
             url=self.base_url.rstrip("/") + "/v1/chat/completions",
             data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),

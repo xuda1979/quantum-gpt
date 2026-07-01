@@ -1,0 +1,172 @@
+Task ID: quantum_bell_pair_construction
+Task name: Bell pair construction
+Domain: quantum
+Category: circuit_construction
+
+Reference documentation (use these only as background; do not echo them):
+--- BEGIN REFERENCE DOCS ---
+[DOC 1] source=bell_state_construction.md
+[source: quantum-gpt/docs/quantum_libraries/bell_state_construction.md] [quantum-gpt/docs/quantum libraries/bell state construction.md]
+
+# Bell pair construction
+
+## Concept
+A Bell pair is a maximally entangled two-qubit state. The four Bell
+states are:
+
+- |Phi+> = (|00> + |11>) / sqrt(2)
+- |Phi-> = (|00> - |11>) / sqrt(2)
+- |Psi+> = (|01> + |10>) / sqrt(2)
+- |Psi-> = (|01> - |10>) / sqrt(2)
+
+The default "Bell pair" is |Phi+>.
+
+## Amplitudes
+Indexing in the computational basis (|00>, |01>, |10>, |11>):
+
+```
+phi_plus  = [1/sqrt(2), 0, 0, 1/sqrt(2)]
+phi_minus = [1/sqrt(2), 0, 0, -1/sqrt(2)]
+psi_plus  = [0, 1/sqrt(2), 1/sqrt(2), 0]
+psi_minus = [0, 1/sqrt(2), -1/sqrt(2), 0]
+```
+
+In Python, `2 ** -0.5` is the canonical idiom for 1/sqrt(2).
+
+## Reference circuit (|Phi+>)
+1. Apply H to qubit 0
+2. Apply CNOT with qubit 0 as control, qubit 1 as target
+
+```python
+def bell_pair_state():
+    amp = 2 ** -0.5
+    return [amp, 0.0, 0.0, amp]  # |Phi+>
+```
+
+## Library snippets
+
+Qiskit:
+```python
+from qiskit import QuantumCircuit
+qc = QuantumCircuit(2)
+qc.h(0); qc.cx(0, 1)
+```
+
+Cirq:
+```python
+import  ...[truncated]
+
+[DOC 2] source=quantum_teleportation.md
+[source: quantum-gpt/docs/quantum_libraries/quantum_teleportation.md] [quantum-gpt/docs/quantum libraries/quantum teleportation.md]
+
+# Quantum teleportation
+
+## Concept
+Teleportation transfers the *state* of a qubit from Alice to Bob using
+two classical bits and one pre-shared Bell pair, without physically
+moving the qubit.
+
+## Protocol
+Initial state: |psi>_A (alpha|0> + beta|1>) plus shared Bell pair
+|Phi+>_{B,C} between Alice (qubit B) and Bob (qubit C).
+
+1. Alice applies CNOT(A, B), then H(A).
+2. Alice measures qubits A and B in the computational basis -> two
+   classical bits (m1, m2).
+3. Alice sends (m1, m2) to Bob.
+4. Bob applies a correction on his qubit C:
+   - (0, 0) -> I
+   - (0, 1) -> X
+   - (1, 0) -> Z
+   - (1, 1) -> ZX (apply X then Z)
+5. Bob's qubit is now in state |psi>.
+
+## Correction table
+
+```python
+CORRECTIONS = {
+    (0, 0): "I",
+    (0, 1): "X",
+    (1, 0): "Z",
+    (1, 1): "ZX",
+}
+
+def teleport_correction(m1: int, m2: int) -> str:
+    return CORRECTIONS[(m1, m2)]
+```
+
+`m1` is Alice's measurement of qubit A (post H), `m2` is Alice's
+measurement of qubit B (post C  ...[truncated]
+
+[DOC 3] source=quantum_circuit_construction_patterns.md
+[source: quantum-gpt/docs/quantum_libraries/quantum_circuit_construction_patterns.md] [quantum-gpt/docs/quantum libraries/quantum circuit construction patterns.md]
+
+# Quantum circuit construction patterns
+
+## Layered circuits
+Most quantum algorithms decompose into:
+1. State preparation (e.g. H^n on the input register).
+2. Oracle / problem-encoding block (Grover oracle, QAOA cost unitary).
+3. Diffusion / mixer / inverse-QFT block.
+4. Measurement.
+
+Keep each block as a function returning a circuit; compose them with
+`+` (Cirq), `compose` (Qiskit), or operator overloading.
+
+## Parameterised circuits
+For VQE/QAOA, expose parameters as inputs:
+
+```python
+def qaoa_layer(qc, gamma, beta, edges, n):
+    # Cost unitary
+    for u, v, w in edges:
+        qc.cx(u, v)
+        qc.rz(2 * w * gamma, v)
+        qc.cx(u, v)
+    # Mixer unitary
+    for q in range(n):
+        qc.rx(2 * beta, q)
+```
+
+## Repair / minimal-edit patterns
+For repair-style tasks (common in evals/tasks/quantum/...):
+- Read the failing tests carefully; only change what the test exercises.
+- Prefer renaming/aliasing over re-imple  ...[truncated]
+--- END REFERENCE DOCS ---
+
+Write the simplest Python file that satisfies the supplied tests and return only that file.
+
+Reference candidate style example (for format guidance, not for blind copying):
+--- BEGIN REFERENCE CANDIDATE ---
+def bell_pair_state():
+    """Return the Bell state |Phi+> amplitudes as a length-4 list."""
+    amp = 2 ** -0.5
+    return [amp, 0.0, 0.0, amp]
+
+--- END REFERENCE CANDIDATE ---
+
+Tests the candidate must satisfy:
+--- BEGIN TESTS ---
+import importlib.util
+import math
+
+
+def _load(candidate_path: str):
+    spec = importlib.util.spec_from_file_location("candidate", candidate_path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
+def run_tests(candidate_path: str) -> dict:
+    module = _load(candidate_path)
+    state = module.bell_pair_state()
+    expected = [2 ** -0.5, 0.0, 0.0, 2 ** -0.5]
+    ok = len(state) == 4 and all(math.isclose(a, b, rel_tol=1e-9, abs_tol=1e-9) for a, b in zip(state, expected))
+    return {
+        "passed": ok,
+        "details": [f"state={state}"] if ok else ["Bell pair amplitudes did not match expected |Phi+> state"],
+    }
+
+--- END TESTS ---

@@ -6,10 +6,11 @@ Build an R&D program for a quantum-coding LLM that can write high-quality quantu
 
 ## Model Direction
 
-- Current validated baseline: **Qwen2.5-1.5B-Instruct** (on ai2 at `models/Qwen2.5-1.5B-Instruct`)
-- Next-round target: **OmniCoder-9B** (planned remote path: `models/OmniCoder-9B`)
+- Historical validated baseline: **Qwen2.5-1.5B-Instruct** (validated on older Huanxin routes; keep only for comparison)
+- Next-round base model for all SFT and reinforcement-learning training: **Qwen3.6-27B** (`Qwen/Qwen3.6-27B`, local/remote path `models/Qwen3.6-27B`)
+- Historical/alternate target: **OmniCoder-9B** (`models/OmniCoder-9B`), retained for comparison and legacy adapter analysis
 - Near-term orchestration model: yunwu/gpt-5.4
-- Training hardware: 8x Ascend 910B NPUs on Huanxin AI2
+- Training hardware: Huanxin `AI` train-dev environment
 
 ## Current Objective
 
@@ -30,10 +31,14 @@ The work should stay realistic under current constraints:
 
 ## Remote Fine-Tuning Path
 
-- Huanxin route: `https://aihuanxin.cn/kunlun/kl-web?poolId=1&projectId=3ed7854b946a47b1a49ad754baa76cd3#/train-dev`
-- Intended remote workdir: `/root/root/work/quantum-gpt`
-- Transfer mode: S3 staging via `./scripts/push_to_s3.sh`, `./scripts/ai2_sync_from_s3.sh`, `./scripts/ai2_push_results_to_s3.sh`
-- Shell access: `./scripts/ai2_shell.sh "your command"`
+- Huanxin route: `https://aihuanxin.cn/kunlun/kl-web?poolId=6&projectId=21b4208dde424e96b159362ef49c9c96#/train-dev/environment/dl-9a5a098accce31c28cf4c6ca23391341?name=AI`
+- Intended `AI` remote workdir: `/root/software/quantum-gpt` (`~/software/quantum-gpt`)
+- Historical ai2 source workdir for migration: `/root/root/work/quantum-gpt`
+- Transfer mode: S3 staging via `./scripts/upload_quantum_gpt_to_iner_s3.sh`, `./scripts/push_to_s3.sh`, `./scripts/ai_sync_from_s3.sh`, and `./scripts/ai_push_results_to_s3.sh`
+- Active S3 relay for the current `AI` workflow: `iner:jtdlp-21b4208dde424e96b159362ef49c9c96/software/quantum-gpt`
+- Keep old ai2 relay helpers only for migrating existing ai2 projects/models into `AI`
+- Shell access: `./scripts/ai_shell.sh "your command"` or `./scripts/huanxin_shell.sh AI "your command"`
+- Login rule: verify/login to the exact `AI` train-dev environment before shell, sync, or training work
 - Local validation is mandatory before remote training:
 	- run `python3 evals/runner/run_eval.py`
 	- run any additional local tests for files you changed
@@ -63,13 +68,13 @@ The work should stay realistic under current constraints:
 - When a substantial decision is made, update MEMORY.md if it exists or create it if needed
 - If code is changed, leave the repo in a runnable state and record how to verify it
 - Before any remote training attempt, run the local eval harness and any relevant local tests first; only proceed if they all pass
-- Transfer code via S3 scripts, run training via `./scripts/ai2_shell.sh`
+- Transfer code via S3 scripts, run training via `./scripts/ai_shell.sh`
 - If blocked, document the blocker and define the smallest next experiment
 
 ## First Milestones
 
 1. Define scope and success metrics for the target model
-2. Choose a CPU-feasible adaptation strategy for Qwen2.5-1.5B-Instruct
+2. Choose a resource-feasible adaptation strategy for Qwen3.6-27B on Huanxin `AI`
 3. Build a starter corpus specification for quantum and software-engineering tasks
 4. Create evaluation tasks with objective scoring
 5. Implement the first end-to-end prototype pipeline in this workspace

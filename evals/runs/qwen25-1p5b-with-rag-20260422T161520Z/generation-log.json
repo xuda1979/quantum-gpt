@@ -1,0 +1,228 @@
+{
+  "label": "with-rag",
+  "generated_at_utc": "2026-04-22T16:21:32.187571+00:00",
+  "model_path": "/Users/daxu/.openclaw/workspace-quantum-rnd/models/Qwen2.5-1.5B-Instruct",
+  "device": "mps",
+  "max_new_tokens": 384,
+  "temperature": 0.0,
+  "total_wall_seconds": 371.23,
+  "tasks": [
+    {
+      "task_id": "quantum_bell_pair_construction",
+      "prompt_tokens": 1611,
+      "new_tokens": 34,
+      "wall_seconds": 4.06,
+      "output_chars": 82
+    },
+    {
+      "task_id": "quantum_binary_measurement_decoder",
+      "prompt_tokens": 1637,
+      "new_tokens": 82,
+      "wall_seconds": 7.26,
+      "output_chars": 290
+    },
+    {
+      "task_id": "quantum_bitstring_maxcut_landscape",
+      "prompt_tokens": 1918,
+      "new_tokens": 384,
+      "wall_seconds": 39.44,
+      "output_chars": 465
+    },
+    {
+      "task_id": "quantum_circuit_depth_optimization",
+      "prompt_tokens": 2236,
+      "new_tokens": 384,
+      "wall_seconds": 32.01,
+      "output_chars": 345
+    },
+    {
+      "task_id": "quantum_circuit_phase_repair",
+      "prompt_tokens": 1586,
+      "new_tokens": 384,
+      "wall_seconds": 30.3,
+      "output_chars": 778
+    },
+    {
+      "task_id": "quantum_density_matrix_partial_trace",
+      "prompt_tokens": 3385,
+      "new_tokens": 8,
+      "wall_seconds": 5.64,
+      "output_chars": 0
+    },
+    {
+      "task_id": "quantum_error_detection_bit_flip",
+      "prompt_tokens": 2026,
+      "new_tokens": 23,
+      "wall_seconds": 5.33,
+      "output_chars": 28
+    },
+    {
+      "task_id": "quantum_gate_alias_casefold_barrier",
+      "prompt_tokens": 1863,
+      "new_tokens": 81,
+      "wall_seconds": 7.96,
+      "output_chars": 200
+    },
+    {
+      "task_id": "quantum_gate_alias_normalization",
+      "prompt_tokens": 1757,
+      "new_tokens": 58,
+      "wall_seconds": 5.87,
+      "output_chars": 172
+    },
+    {
+      "task_id": "quantum_gate_alias_registry_cleanup",
+      "prompt_tokens": 2026,
+      "new_tokens": 50,
+      "wall_seconds": 5.65,
+      "output_chars": 126
+    },
+    {
+      "task_id": "quantum_gate_token_canonicalizer",
+      "prompt_tokens": 1676,
+      "new_tokens": 156,
+      "wall_seconds": 15.54,
+      "output_chars": 525
+    },
+    {
+      "task_id": "quantum_ghz_state_witness",
+      "prompt_tokens": 3364,
+      "new_tokens": 6,
+      "wall_seconds": 6.05,
+      "output_chars": 0
+    },
+    {
+      "task_id": "quantum_grover_oracle_diffusion",
+      "prompt_tokens": 2634,
+      "new_tokens": 384,
+      "wall_seconds": 49.24,
+      "output_chars": 1259
+    },
+    {
+      "task_id": "quantum_maxcut_assignment_enumerator",
+      "prompt_tokens": 1731,
+      "new_tokens": 3,
+      "wall_seconds": 2.15,
+      "output_chars": 5
+    },
+    {
+      "task_id": "quantum_maxcut_partition_ranker",
+      "prompt_tokens": 1958,
+      "new_tokens": 384,
+      "wall_seconds": 35.68,
+      "output_chars": 514
+    },
+    {
+      "task_id": "quantum_measurement_bug_repair",
+      "prompt_tokens": 1514,
+      "new_tokens": 19,
+      "wall_seconds": 3.37,
+      "output_chars": 34
+    },
+    {
+      "task_id": "quantum_pauli_message_codec",
+      "prompt_tokens": 1828,
+      "new_tokens": 16,
+      "wall_seconds": 3.07,
+      "output_chars": 45
+    },
+    {
+      "task_id": "quantum_phase_estimation_circuit",
+      "prompt_tokens": 1831,
+      "new_tokens": 110,
+      "wall_seconds": 9.62,
+      "output_chars": 406
+    },
+    {
+      "task_id": "quantum_phase_measurement_register",
+      "prompt_tokens": 1668,
+      "new_tokens": 47,
+      "wall_seconds": 5.11,
+      "output_chars": 144
+    },
+    {
+      "task_id": "quantum_phase_register_roundtrip",
+      "prompt_tokens": 1826,
+      "new_tokens": 41,
+      "wall_seconds": 4.7,
+      "output_chars": 115
+    },
+    {
+      "task_id": "quantum_qaoa_maxcut",
+      "prompt_tokens": 2268,
+      "new_tokens": 9,
+      "wall_seconds": 3.29,
+      "output_chars": 11
+    },
+    {
+      "task_id": "quantum_qft_phase_pattern",
+      "prompt_tokens": 1857,
+      "new_tokens": 95,
+      "wall_seconds": 8.55,
+      "output_chars": 239
+    },
+    {
+      "task_id": "quantum_channel_depolarizing",
+      "prompt_tokens": 3435,
+      "new_tokens": 31,
+      "wall_seconds": 9.24,
+      "output_chars": 63
+    },
+    {
+      "task_id": "quantum_error_correction_shor_9qubit",
+      "prompt_tokens": 3563,
+      "new_tokens": 52,
+      "wall_seconds": 13.11,
+      "output_chars": 157
+    },
+    {
+      "task_id": "quantum_stabilizer_tableau_update_repair",
+      "prompt_tokens": 2216,
+      "new_tokens": 37,
+      "wall_seconds": 5.09,
+      "output_chars": 78
+    },
+    {
+      "task_id": "quantum_superdense_coding",
+      "prompt_tokens": 1665,
+      "new_tokens": 10,
+      "wall_seconds": 2.44,
+      "output_chars": 4
+    },
+    {
+      "task_id": "quantum_superdense_identity_lookup",
+      "prompt_tokens": 1778,
+      "new_tokens": 37,
+      "wall_seconds": 4.44,
+      "output_chars": 113
+    },
+    {
+      "task_id": "quantum_superdense_pauli_router",
+      "prompt_tokens": 1865,
+      "new_tokens": 186,
+      "wall_seconds": 14.95,
+      "output_chars": 592
+    },
+    {
+      "task_id": "quantum_teleportation_corrections",
+      "prompt_tokens": 1566,
+      "new_tokens": 11,
+      "wall_seconds": 2.57,
+      "output_chars": 0
+    },
+    {
+      "task_id": "quantum_trotterized_hamiltonian_evolution",
+      "prompt_tokens": 3724,
+      "new_tokens": 82,
+      "wall_seconds": 18.91,
+      "output_chars": 205
+    },
+    {
+      "task_id": "quantum_vqe_energy_minimization",
+      "prompt_tokens": 2242,
+      "new_tokens": 98,
+      "wall_seconds": 9.98,
+      "output_chars": 318
+    }
+  ]
+}

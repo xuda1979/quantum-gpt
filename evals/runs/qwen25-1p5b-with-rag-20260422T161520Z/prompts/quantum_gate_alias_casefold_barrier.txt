@@ -1,0 +1,186 @@
+Task ID: quantum_gate_alias_casefold_barrier
+Task name: Gate alias casefold barrier
+Domain: quantum
+Category: api_normalization
+
+Reference documentation (use these only as background; do not echo them):
+--- BEGIN REFERENCE DOCS ---
+[DOC 1] source=quantum_gates_reference.md
+[source: quantum-gpt/docs/quantum_libraries/quantum_gates_reference.md] [quantum-gpt/docs/quantum libraries/quantum gates reference.md]
+
+oth controls are |1>.
+- **Fredkin (CSWAP)**: swaps two targets if control is |1>.
+
+## Casefold and alias normalization (very common in repair tasks)
+
+Aliases that should canonicalize to a single symbol. After
+`gate.strip().lower()` the lookup table is:
+
+```
+{
+  "h": "H", "hadamard": "H",
+  "x": "X", "pauli_x": "X", "not": "X",
+  "y": "Y", "pauli_y": "Y",
+  "z": "Z", "pauli_z": "Z",
+  "s": "S", "phase": "S",
+  "t": "T",
+  "cx": "CX", "cnot": "CX", "controlled_x": "CX", "cnot_": "CX",
+  "cy": "CY",
+  "cz": "CZ",
+  "swap": "SWAP",
+  "ccx": "CCX", "toffoli": "CCX",
+  "cswap": "CSWAP", "fredkin": "CSWAP",
+}
+```
+
+Unknown aliases should raise `ValueError(f"unknown gate: {gate}")`.
+Rules of thumb for canonicalization in tests:
+1. `gate.strip().lower()` first
+2. Look up in alias dict
+3. Raise `ValueError` for misses (do *not* return the original token)
+
+[DOC 2] source=quantum_gates_reference.md
+[source: quantum-gpt/docs/quantum_libraries/quantum_gates_reference.md] [quantum-gpt/docs/quantum libraries/quantum gates reference.md]
+
+# Single-qubit and multi-qubit gate reference
+
+## Standard single-qubit gates
+
+| Symbol | Name | Matrix |
+| --- | --- | --- |
+| I | Identity | [[1,0],[0,1]] |
+| X | Pauli-X (NOT) | [[0,1],[1,0]] |
+| Y | Pauli-Y | [[0,-i],[i,0]] |
+| Z | Pauli-Z | [[1,0],[0,-1]] |
+| H | Hadamard | (1/sqrt(2)) [[1,1],[1,-1]] |
+| S | Phase | [[1,0],[0,i]] |
+| Sdg | S-dagger | [[1,0],[0,-i]] |
+| T | pi/8 | [[1,0],[0,exp(i*pi/4)]] |
+| Tdg | T-dagger | [[1,0],[0,exp(-i*pi/4)]] |
+
+Rotation gates: Rx(t)=exp(-i*t/2 * X), Ry(t)=exp(-i*t/2 * Y),
+Rz(t)=exp(-i*t/2 * Z). Closed forms:
+- Rx(t) = [[cos(t/2), -i*sin(t/2)], [-i*sin(t/2), cos(t/2)]]
+- Ry(t) = [[cos(t/2), -sin(t/2)], [sin(t/2), cos(t/2)]]
+- Rz(t) = [[exp(-i*t/2), 0], [0, exp(i*t/2)]]
+
+## Two-qubit gates
+
+| Symbol | Name | Action |
+| --- | --- | --- |
+| CX (CNOT) | Controlled-X | flips target if control is |1> |
+| CY | Controlled-Y | applies Y to target if control |1> |
+| CZ | Controlled-Z | sign-flips |11> |
+| SWAP | Sw  ...[truncated]
+
+[DOC 3] source=circuit_repair_recipes.md
+[source: quantum-gpt/docs/quantum_libraries/circuit_repair_recipes.md] [quantum-gpt/docs/quantum libraries/circuit repair recipes.md]
+
+# Circuit repair and depth-optimization recipes
+
+## Common micro-bugs in quantum candidate code
+
+1. **Swapped control/target on CNOT**
+   - Symptom: state vector probabilities mirror across qubits.
+   - Fix: re-read protocol; control comes first in `cx(c, t)`.
+
+2. **Missing H before measurement**
+   - Symptom: superdense / teleportation tests fail because Bell-basis
+     measurement was not performed.
+   - Fix: the standard Bell-basis measurement is `CX(0, 1); H(0); measure`.
+
+3. **Wrong endianness for amplitude lists**
+   - Symptom: amplitudes look right for a relabelled state.
+   - Fix: pin endianness once. For lists of 2^n complex numbers, prefer
+     big-endian (qubit 0 = most significant bit).
+
+4. **Float precision drift**
+   - Symptom: `assertEqual` fails on `1/sqrt(2)` produced by repeated
+     normalisation.
+   - Fix: use `math.isclose` or `np.allclose` with `abs_tol=1e-9`.
+
+5. **Missing alias / not raising on unknown gate**
+   - Symptom: gate  ...[truncated]
+--- END REFERENCE DOCS ---
+
+Write the simplest Python file that satisfies the supplied tests and return only that file.
+
+Reference candidate style example (for format guidance, not for blind copying):
+--- BEGIN REFERENCE CANDIDATE ---
+from typing import Iterable
+
+
+_ALIASES = {
+    "h": "H",
+    "hadamard": "H",
+    "cx": "CX",
+    "cnot": "CX",
+    "controlledx": "CX",
+    "x": "X",
+    "paulix": "X",
+    "z": "Z",
+    "pauliz": "Z",
+}
+
+
+def _normalize_alias(raw_gate: str) -> str:
+    return "".join(str(raw_gate).strip().lower().replace("-", "").replace("_", "").split())
+
+
+def normalize_gate_sequence(gates: Iterable[str]) -> list[str]:
+    canonical: list[str] = []
+    for gate in gates:
+        alias = _normalize_alias(gate)
+        if alias == "measure":
+            raise ValueError("measurement is not a gate alias")
+        resolved = _ALIASES.get(alias)
+        if resolved is None:
+            raise ValueError(f"unknown gate alias: {gate!r}")
+        canonical.append(resolved)
+    return canonical
+
+--- END REFERENCE CANDIDATE ---
+
+Tests the candidate must satisfy:
+--- BEGIN TESTS ---
+import importlib.util
+
+
+def _load(candidate_path: str):
+    spec = importlib.util.spec_from_file_location("candidate", candidate_path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
+def run_tests(candidate_path: str) -> dict:
+    module = _load(candidate_path)
+    failures = []
+
+    cases = [
+        (["H", "cx", "x"], ["H", "CX", "X"]),
+        ([" hadamard ", "CNOT", "Pauli_X"], ["H", "CX", "X"]),
+        (["x", "z", "controlled-x"], ["X", "Z", "CX"]),
+    ]
+    for raw, expected in cases:
+        actual = module.normalize_gate_sequence(raw)
+        if actual != expected:
+            failures.append(f"normalize_gate_sequence({raw!r}) -> {actual!r}, expected {expected!r}")
+
+    for bad in (["swap"], ["H", "measure"], ["H", "T"]):
+        try:
+            module.normalize_gate_sequence(bad)
+        except ValueError:
+            continue
+        except Exception as exc:
+            failures.append(f"normalize_gate_sequence({bad!r}) raised {type(exc).__name__}, expected ValueError")
+        else:
+            failures.append(f"normalize_gate_sequence({bad!r}) did not raise ValueError")
+
+    return {
+        "passed": not failures,
+        "details": failures or ["gate alias casefold barrier normalizes x/X and rejects invalid aliases"],
+    }
+
+--- END TESTS ---

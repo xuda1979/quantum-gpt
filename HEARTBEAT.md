@@ -3,11 +3,15 @@
 - Continue the quantum coding LLM R&D project in this workspace.
 - Read PROJECT.md first, then inspect recent memory notes before acting.
 - Your goal is to **autonomously iterate the full cycle**: research → code → train on Huanxin → evaluate → repeat.
+- Current phase priority (2026-06-30): train model code ability first. Keep quantum code generation, API correctness, software engineering, tests, RAG-assisted repair, and executable pass@1 as the active training target.
+- Future phase: after code ability stabilizes, build the 1000-classic-paper quantum science corpus, generate progressive paper-grounded QA/code/research-direction data, run distillation SFT, then mixed distillation + RL. See `docs/two-stage-training-roadmap-2026-06-30.md`.
 - Each cycle should produce a concrete improvement: dataset refinement, training run, eval comparison, or code change.
 - Use local CPU only for designing experiments, running evals, and code changes.
-- Base model: **Qwen2.5-1.5B-Instruct** (located at `models/Qwen2.5-1.5B-Instruct` on ai2).
-- Fine-tune via SFT (LoRA) then GRPO. Keep software-engineering capability as a first-class goal.
+- Base model for new training: **Qwen/Qwen3.6-27B** at `models/Qwen3.6-27B` under Huanxin `AI`.
+- Fine-tune via SFT (LoRA) then GRPO/RL in Huanxin `AI`. Keep software-engineering capability as a first-class goal.
 - Before any Huanxin training action, run `python3 evals/runner/run_eval.py` locally; only proceed if the full current task suite passes.
+- If `.huanxin_manual_mode` exists, do not run Huanxin browser automation, shell wrappers, Safari keepalive, profile repair, or Huanxin browser probes. Treat Huanxin automation as intentionally paused for human manual webshell use.
+- Huanxin automation is disabled by default. `scripts/huanxin_manual_mode.sh --manual-off` / `--disable` only removes the manual lock; it does not create `.huanxin_automation_enabled`. Only use `scripts/huanxin_manual_mode.sh --enable-automation` after the human explicitly asks Codex to control Huanxin again.
 
 ## CRITICAL: Research Before Asking
 
@@ -31,16 +35,17 @@ Examples of what you should NEVER ask the user:
 - "How do I download a model?" → `web_search` for it
 - "What are good hyperparameters?" → `web_search` for recent papers/guides
 
-## Remote Execution — Huanxin AI1 / AI2
+## Remote Execution — Huanxin AI
 
 - CRITICAL: Do NOT use ACP, sessions_spawn, or subagent for remote training. There are NO ACP subagents configured. ACP will never work.
 - **Train-dev route**:
   ```
-  https://aihuanxin.cn/kunlun/kl-web?poolId=1&projectId=3ed7854b946a47b1a49ad754baa76cd3#/train-dev
+  https://aihuanxin.cn/kunlun/kl-web?poolId=6&projectId=21b4208dde424e96b159362ef49c9c96#/train-dev/environment/dl-9a5a098accce31c28cf4c6ca23391341?name=AI
   ```
-- Both `ai1` and `ai2` are valid R&D targets now. Default to `ai2` unless `ai1` is the better capacity/parallelism choice for the current step.
-- **NEVER kill the browser daemon** — killing it loses the auth session cookies. The daemon must stay running indefinitely.
-- Use the Huanxin environment regularly to keep the login session alive. Prefer lightweight non-destructive checks on the exact `#/train-dev` route instead of letting the session sit idle for long stretches.
+- From 2026-04-26 onward, **all new training, fine-tuning, SFT, GRPO, PPO, DPO, and other RL work must use Huanxin `AI`**, not ai1 or ai2.
+- Keep ai1/ai2 notes only for historical migration/debugging. Do not launch new training there unless the user explicitly overrides this rule.
+- Do not kill the browser daemon during normal autonomous work because that may lose auth cookies. This rule is overridden by manual webshell protection: if the human reports refreshes, lost input, or `.huanxin_manual_mode` exists, stop local Huanxin automation instead of preserving daemon state.
+- Use the Huanxin environment regularly only when automation is explicitly enabled. Do not keepalive, probe, or refresh Huanxin while manual mode is active.
 - Treat the Safari `#/train-dev` session and the browser-automation profile as two separate states. Do not confuse “Safari is still logged in” with “Playwright/daemon auth is still valid.”
 - For a no-new-page keepalive on the already-open Safari Huanxin tab, use:
   `bash scripts/huanxin_safari_keepalive.sh --refresh`
@@ -53,21 +58,30 @@ Examples of what you should NEVER ask the user:
   `bash scripts/huanxin_status.sh`
 - The manual fallback loop still exists:
   `bash scripts/huanxin_safari_keepalive_loop.sh`
-- Use `scripts/huanxin_shell.sh <ai1|ai2> "<cmd>"` as the generic shell entrypoint. Convenience wrappers remain available.
+- Use `scripts/huanxin_shell.sh AI "<cmd>"` as the generic shell entrypoint.
+- Convenience wrapper: `scripts/ai_shell.sh "<cmd>"`.
 - Treat the daemon-backed shell path as mandatory by default. Do not silently fall back to standalone browser launches because that churns session state and reintroduces login problems.
 - Only allow standalone shell fallback for explicit recovery/debugging by setting `HUANXIN_ALLOW_STANDALONE_FALLBACK=1`.
   ```
-  scripts/huanxin_shell.sh ai2 "your shell command here"
-  scripts/ai1_shell.sh "your shell command here"
-  scripts/ai2_shell.sh "your shell command here"
+  scripts/huanxin_shell.sh AI "your shell command here"
+  scripts/ai_shell.sh "your shell command here"
   ```
 - Or call the Playwright script directly:
   ```
   node browser-automation/huanxin_shell_exec.js ai1 --command "your shell command here"
   node browser-automation/huanxin_shell_exec.js ai2 --command "your shell command here"
   ```
-- Remote working dir: `/root/root/work/quantum-gpt`
-- Browser daemon ports: ai1 → `19001`, ai2 → `19002`
+- Remote working dir: `/root/software/quantum-gpt`
+- Browser daemon port for AI shell control is managed by the wrapper; verify with `bash scripts/huanxin_status.sh`.
+
+## Current AI Session State (2026-04-28)
+
+- `scripts/ai_shell.sh` verified canonical `AI` shell access and remote root `/root/software/quantum-gpt`.
+- Remote project files, trainer, and strict quantum train/eval JSONL are present.
+- Current training blocker: `models/Qwen3.6-27B/config.json` is missing in AI.
+- Safari keepalive LaunchAgent install attempted but `launchctl bootstrap` failed with `Bootstrap failed: 5: Input/output error`; do not assume automatic keepalive is loaded.
+- Before any remote training action, run a fresh short probe:
+  `HUANXIN_WAIT_MS=120000 bash scripts/ai_shell.sh "cd /root/software/quantum-gpt && pwd && test -f training/qwen_sft_peft.py && test -f models/Qwen3.6-27B/config.json"`
 
 ## Verified GRPO Training Command (2026-04-02)
 
@@ -128,13 +142,15 @@ Preferred post-run sequence:
 4. Compare against the semantic-v4 and codefirst baselines
 5. Run `scripts/run_base_vs_adapter_eval.py` on `reports/base_vs_adapter_eval_slice_interface_prefix.json`
 
-## S3 Transfer (Code ↔ AI2)
+## S3 Transfer (Code ↔ AI)
 
 Use these scripts for file transfer (all routes through S3):
-- Local → S3: `scripts/push_to_s3.sh` (or `--dry-run`)
-- S3 → ai2: `scripts/ai2_sync_from_s3.sh` (or `--dry-run`)
-- ai2 → S3: `scripts/ai2_push_results_to_s3.sh` (or `--dry-run`)
-See `skills/s3-transfer/SKILL.md` for details. Remote writes need `--s3-no-check-bucket`.
+- Local → S3: `scripts/push_to_s3.sh` or `scripts/upload_quantum_gpt_to_iner_s3.sh` (use `--dry-run` first for broad uploads)
+- S3 → AI: `scripts/ai_sync_from_s3.sh` (or `--dry-run`)
+- AI → S3: `scripts/ai_push_results_to_s3.sh` (or `--dry-run`)
+- S3 → local: `scripts/pull_from_s3.sh`
+- Active S3 relay for the current workflow: `iner:jtdlp-21b4208dde424e96b159362ef49c9c96/software/quantum-gpt`
+See `skills/iner-s3-transfer/SKILL.md` and `TOOLS.md` for details. Remote writes need `--s3-no-check-bucket`.
 
 ## Autonomous Iteration Cycle
 
@@ -142,11 +158,10 @@ Each heartbeat cycle, follow this pattern:
 
 1. **Evaluate locally**: `python3 evals/runner/run_eval.py` — must be green on the full current suite
 2. **Push code to S3**: `scripts/push_to_s3.sh`
-3. **Sync S3 → ai2**: `scripts/ai2_sync_from_s3.sh`
-4. **Launch training** on ai2 with `nohup` (see command above)
-   - For the corrected semantic-v4 true20 run, include `--num-epochs 2`
-5. **Monitor**: poll `ps aux | grep torchrun` + `tail /tmp/train.log`
-6. **Push results back**: `scripts/ai2_push_results_to_s3.sh`
+3. **Sync S3 → AI**: `scripts/ai_sync_from_s3.sh`
+4. **Launch training** on `AI` with the current verified `AI` command path
+5. **Monitor**: use the current `AI` shell / job helpers and log tails for the launched run
+6. **Push results back**: `scripts/ai_push_results_to_s3.sh`
 7. **Pull results locally**: `scripts/pull_from_s3.sh <output-dir>`
 8. **Analyze results** locally — compare loss/perplexity across runs and inspect the interface-prefix base-vs-adapter slice
 9. **Improve**: refine dataset, adjust hyperparams, or improve code based on results

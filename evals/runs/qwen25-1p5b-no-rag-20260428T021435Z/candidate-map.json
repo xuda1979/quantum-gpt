@@ -1,0 +1,6 @@
+{
+  "quantum_density_matrix_partial_trace": "candidates/quantum_density_matrix_partial_trace.py",
+  "quantum_qaoa_maxcut": "candidates/quantum_qaoa_maxcut.py",
+  "quantum_channel_depolarizing": "candidates/quantum_channel_depolarizing.py",
+  "quantum_vqe_energy_minimization": "candidates/quantum_vqe_energy_minimization.py"
+}

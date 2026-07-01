@@ -1,0 +1,3082 @@
+{
+  "benchmark": "evals/benchmarks/qwen36_27b_user_rag_questions_v2.json",
+  "index": "artifacts/quantum-rag/qwen36-quantum-docs-index.pkl.gz",
+  "top_k": 5,
+  "alpha": 0.55,
+  "query_expansion_enabled": true,
+  "max_chunks_per_source": 1,
+  "excluded_source_substrings": [
+    "evals/benchmarks/qwen36_27b_user_rag_questions_v2.json",
+    "reports/quantum_rag_retrieval_"
+  ],
+  "metrics": {
+    "hit@5": 1.0,
+    "mrr": 0.9791139240506328,
+    "total_examples": 158,
+    "hit_count": 158
+  },
+  "examples": [
+    {
+      "id": "arclight_install_binary_tarball",
+      "query": "How do I install Arclight ISQ with the Binary Tarball path, and what exact command verifies the compiler?",
+      "expected_source_substrings": [
+        "docs/external/quantum-sdk-docs-latest/arclight-isq/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/arclight-isq/www.arclightquantum.com-isq-docs-latest-install-f8d6bb8581.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/arclight-isq/www.arclightquantum.com-isq-docs-latest-examples-basic-0c4132631f.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/arclight-isq/www.arclightquantum.com-isq-docs-latest-devsetup-74f70398dd.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/arclight-isq/www.arclightquantum.com-isq-docs-latest-grammar-7f01391631.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/arclight-isq/www.arclightquantum.com-isq-docs-latest-examples-grover-4580b9916f.md"
+      ]
+    },
+    {
+      "id": "arclight_install_nix_flake",
+      "query": "For Arclight ISQ, show the Nix Flake install route and the command that checks isqc is on PATH.",
+      "expected_source_substrings": [
+        "docs/external/quantum-sdk-docs-latest/arclight-isq/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/arclight-isq/www.arclightquantum.com-isq-docs-latest-install-f8d6bb8581.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/arclight-isq/www.arclightquantum.com-isq-docs-latest-usage-22a8771a8a.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/arclight-isq/www.arclightquantum.com-isq-docs-latest-versioning-ab6801ef72.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/arclight-isq/www.arclightquantum.com-isq-docs-latest-print_page-77a3ba20f3.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/arclight-isq/www.arclightquantum.com-isq-docs-latest-6c964d854e.md"
+      ]
+    },
+    {
+      "id": "arclight_install_docker",
+      "query": "For Arclight ISQ, what Docker Container commands are documented for Ubuntu and binary-only images?",
+      "expected_source_substrings": [
+        "docs/external/quantum-sdk-docs-latest/arclight-isq/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/arclight-isq/www.arclightquantum.com-isq-docs-latest-install-f8d6bb8581.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/arclight-isq/www.arclightquantum.com-isq-docs-latest-grammar-7f01391631.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/arclight-isq/www.arclightquantum.com-isq-docs-latest-print_page-77a3ba20f3.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/arclight-isq/www.arclightquantum.com-isq-docs-latest-examples-recursive-825e27a6eb.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/arclight-isq/www.arclightquantum.com-isq-docs-latest-examples-arith-cdb8862418.md"
+      ]
+    },
+    {
+      "id": "qiskit_bell_aer_counts",
+      "query": "In Qiskit v1.x, write a 2-qubit Bell circuit, measure both qubits, run AerSimulator for shots=1024, and retrieve counts.",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/qiskit_basics.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 0.5,
+      "first_hit_rank": 2,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/bell_state_construction.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qiskit_basics.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/qiskit/quantum.cloud.ibm.com-docs-tutorials-transpilation-optimizations-with-sabre-c0135e450b.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/qiskit/quantum.cloud.ibm.com-docs-api-qiskit-qiskit.circuit.QuantumCircuit-13edec4671.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/pytket/docs.quantinuum.com-tket-extensions-pytket-qiskit-api.html-c3bd606954.md"
+      ]
+    },
+    {
+      "id": "qiskit_statevector_index_rule",
+      "query": "In Qiskit, explain the Statevector index rule and the measured bitstring rightmost-character gotcha.",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/qiskit_basics.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qiskit_basics.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/qiskit/quantum.cloud.ibm.com-docs-api-qiskit-quantum_info-4ba06ca61e.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/qiskit/quantum.cloud.ibm.com-docs-guides-construct-circuits-86e20d47f4.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/qiskit/quantum.cloud.ibm.com-docs-api-qiskit-qiskit.circuit.QuantumCircuit-13edec4671.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/qiskit/quantum.cloud.ibm.com-docs-api-qiskit-transpiler_synthesis_plugins-c48a93b9b4.md"
+      ]
+    },
+    {
+      "id": "qiskit_operator_unitary",
+      "query": "Which Qiskit import and call returns the matrix of a unitary circuit?",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/qiskit_basics.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qiskit_basics.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/qiskit/quantum.cloud.ibm.com-docs-guides-construct-circuits-86e20d47f4.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/qiskit/quantum.cloud.ibm.com-docs-errors-87a582b853.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/qiskit/quantum.cloud.ibm.com-docs-api-qiskit-qasm3-c4b38bb41f.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/qiskit/quantum.cloud.ibm.com-docs-api-qiskit-circuit_library-1e5ec5d93a.md"
+      ]
+    },
+    {
+      "id": "qiskit_transpile_aer",
+      "query": "For Qiskit Aer sampling, what exact transpile-and-run pattern should I use before result.get_counts?",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/qiskit_basics.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qiskit_basics.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/qiskit/quantum.cloud.ibm.com-docs-api-qiskit-visualization-af6db20f8e.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/qiskit/quantum.cloud.ibm.com-docs-tutorials-compilation-methods-for-hamiltonian-simulation-circui-54dfea345c.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/qiskit/quantum.cloud.ibm.com-docs-guides-functions-4840ce9ac7.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/qiskit/quantum.cloud.ibm.com-docs-guides-primitives-6cfd56c343.md"
+      ]
+    },
+    {
+      "id": "qiskit_measure_register_order",
+      "query": "In Qiskit, show the exact call for measuring qubits [0,1] into classical bits [0,1] and mention the register-order pitfall.",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/qiskit_basics.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qiskit_basics.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/qiskit/quantum.cloud.ibm.com-docs-tutorials-sample-based-krylov-quantum-diagonalization-3d51dd5d0c.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/qiskit/quantum.cloud.ibm.com-docs-tutorials-long-range-entanglement-28504c4dcd.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/qiskit/quantum.cloud.ibm.com-docs-tutorials-edc-cut-bell-pair-benchmarking-0972be7d79.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/qiskit/quantum.cloud.ibm.com-docs-tutorials-quantum-approximate-optimization-algorithm-368b9c7998.md"
+      ]
+    },
+    {
+      "id": "qiskit_common_gate_methods",
+      "query": "List Qiskit QuantumCircuit method names for H, CX, CCX, SWAP, reset, barrier, and parameterized RX.",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/qiskit_basics.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qiskit_basics.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/qiskit/quantum.cloud.ibm.com-docs-api-qiskit-qiskit.circuit.QuantumCircuit-13edec4671.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/qiskit/quantum.cloud.ibm.com-docs-api-qiskit-synthesis-e9cb8db85f.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/pytket/docs.quantinuum.com-tket-extensions-pytket-qiskit-api.html-c3bd606954.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/qiskit/quantum.cloud.ibm.com-docs-api-qiskit-transpiler-782d77647d.md"
+      ]
+    },
+    {
+      "id": "qiskit_angles_radians",
+      "query": "What Qiskit pitfall should I remember for parameterized gate angles such as 90 degrees?",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/qiskit_basics.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qiskit_basics.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/qiskit/quantum.cloud.ibm.com-docs-api-qiskit-qasm2-18a540cbff.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/qiskit/quantum.cloud.ibm.com-docs-api-qiskit-qasm3-c4b38bb41f.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/qiskit/quantum.cloud.ibm.com-docs-tutorials-fractional-gates-5d5555346c.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/qiskit/quantum.cloud.ibm.com-docs-guides-primitives-6cfd56c343.md"
+      ]
+    },
+    {
+      "id": "qiskit_partial_trace_import",
+      "query": "What Qiskit import surface should I use for Statevector, Operator, and partial_trace?",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/qiskit_basics.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qiskit_basics.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/qiskit/quantum.cloud.ibm.com-docs-api-qiskit-qiskit.circuit.QuantumCircuit-13edec4671.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/qiskit/quantum.cloud.ibm.com-docs-errors-87a582b853.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/qiskit/quantum.cloud.ibm.com-docs-tutorials-qunova-hivqe-4a6f593b32.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/qiskit/quantum.cloud.ibm.com-docs-tutorials-shors-algorithm-689e836b75.md"
+      ]
+    },
+    {
+      "id": "qiskit_vqe_imports",
+      "query": "For a Qiskit VQE workflow, name the documented imports for VQE, COBYLA, and RealAmplitudes.",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/vqe_basics.md",
+        "docs/quantum_libraries/qiskit_basics.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qiskit_basics.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/qiskit/quantum.cloud.ibm.com-docs-guides-tools-intro-13fd961381.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/qiskit/quantum.cloud.ibm.com-docs-guides-compute-services-0b031dfdf8.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/qiskit/quantum.cloud.ibm.com-docs-guides-error-mitigation-and-suppression-techniques-deb0d0a760.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/qiskit/quantum.cloud.ibm.com-docs-tutorials-ai-transpiler-introduction-9e7ac03778.md"
+      ]
+    },
+    {
+      "id": "cirq_line_qubit_bell",
+      "query": "In Cirq, create three LineQubits and a circuit with H(q0), CNOT(q0,q1), CNOT(q1,q2).",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/cirq_basics.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/cirq_basics.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/cirq/quantumai.google-cirq-build-circuits-7bf9572146.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/cirq/quantumai.google-cirq-hardware-ionq-getting_started-ec30a36e18.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/cirq/quantumai.google-cirq-experiments-textbook_algorithms-2ab7f97fab.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/qsharp-azure-quantum/learn.microsoft.com-en-us-azure-quantum-quickstart-microsoft-cirq-a01cc07034.md"
+      ]
+    },
+    {
+      "id": "cirq_sampling_histogram",
+      "query": "In Cirq, sample q0/q1/q2 with key='m' for repetitions=1024 and print the histogram.",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/cirq_basics.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/cirq_basics.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/cirq/quantumai.google-cirq-hardware-aqt-getting_started-b595f56411.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/cirq/quantumai.google-cirq-experiments-qaoa-qaoa_maxcut-9ccca32000.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/cirq/quantumai.google-cirq-experiments-qaoa-binary_paintshop-04b01fc176.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/cirq/quantumai.google-cirq-experiments-qaoa-qaoa_ising-b82902b542.md"
+      ]
+    },
+    {
+      "id": "cirq_statevector_simulation",
+      "query": "In Cirq, what call simulates a circuit and where is the final state vector stored?",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/cirq_basics.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/cirq_basics.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/state_vector_simulation.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/cirq/quantumai.google-cirq-experiments-quantum_walks-5fb5a23c84.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/cirq/quantumai.google-cirq-experiments-qaoa-qaoa_ising-b82902b542.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/cirq/quantumai.google-cirq-experiments-textbook_algorithms-2ab7f97fab.md"
+      ]
+    },
+    {
+      "id": "cirq_endianness_index",
+      "query": "What is Cirq's big-endian state-vector index formula for listed qubits?",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/cirq_basics.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/cirq_basics.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/cirq/quantumai.google-cirq-build-circuits-7bf9572146.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/cirq/quantumai.google-cirq-hardware-azure-quantum-access-47fc94b027.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/cirq/quantumai.google-cirq-build-ecosystem-ed3533cc00.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/cirq/quantumai.google-cirq-build-interop-a5fdd2dcca.md"
+      ]
+    },
+    {
+      "id": "cirq_grid_qubit_topology",
+      "query": "When should I prefer Cirq GridQubit(row, col), and what problem does it model?",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/cirq_basics.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/cirq_basics.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/cirq/quantumai.google-cirq-build-protocols-ac58e92279.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/cirq/quantumai.google-cirq-experiments-qaoa-example_problems-b17b355be4.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/cirq/quantumai.google-cirq-experiments-guide-data_collection-acf3639c00.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/cirq/quantumai.google-cirq-experiments-guide-data_collection_idioms-23c6868288.md"
+      ]
+    },
+    {
+      "id": "cirq_unitary_pitfall",
+      "query": "What limitation should I remember before calling cirq.unitary(circuit)?",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/cirq_basics.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/cirq_basics.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/cirq/quantumai.google-cirq-experiments-qaoa-qaoa_ising-b82902b542.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/cirq/quantumai.google-cirq-experiments-quantum_walks-5fb5a23c84.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/cirq/quantumai.google-cirq-start-start-710b269538.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/cirq/quantumai.google-cirq-experiments-qaoa-qaoa_maxcut-9ccca32000.md"
+      ]
+    },
+    {
+      "id": "cirq_gate_names",
+      "query": "List the Cirq symbols for RX, RY, RZ, CNOT, CZ, SWAP, ISWAP, TOFFOLI, and CSWAP.",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/cirq_basics.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/cirq_basics.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/cirq/quantumai.google-cirq-start-intro-6262b5be81.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/cirq/quantumai.google-cirq-build-custom_gates-00e320845b.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/cirq/quantumai.google-cirq-build-circuits-7bf9572146.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/cirq/quantumai.google-cirq-ef291391f4.md"
+      ]
+    },
+    {
+      "id": "cirq_insert_strategy",
+      "query": "What Cirq InsertStrategy is mentioned when operation ordering matters inside Circuit construction?",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/cirq_basics.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/cirq_basics.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/cirq/quantumai.google-cirq-noise-19febff3af.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/cirq/quantumai.google-cirq-build-pauli_observables-84dc472d0e.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/cirq/quantumai.google-cirq-build-protocols-ac58e92279.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/cirq/quantumai.google-cirq-hardware-pasqal-access-5dc201f2f5.md"
+      ]
+    },
+    {
+      "id": "pennylane_minimal_qnode",
+      "query": "Show the minimal PennyLane QNode pattern with qml.device, @qml.qnode, RY, CNOT, and qml.expval.",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/pennylane_basics.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/pennylane_basics.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/pennylane/docs.pennylane.ai-en-stable-development-release_notes.html-01745aad7e.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/pennylane/docs.pennylane.ai-en-stable-introduction-interfaces.html-4432fa638f.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/pennylane/docs.pennylane.ai-en-stable-code-qml_shadows.html-66c7263b62.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/pennylane/docs.pennylane.ai-en-stable-code-qml_resource.html-330bb2ba6e.md"
+      ]
+    },
+    {
+      "id": "pennylane_trainable_parameter",
+      "query": "In PennyLane, what exact array form is needed so a parameter is trainable?",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/pennylane_basics.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/pennylane_basics.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/pennylane/docs.pennylane.ai-en-stable-development-adding_operators.html-55bd8c7060.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/pennylane/docs.pennylane.ai-en-stable-development-release_notes.html-01745aad7e.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/pennylane/docs.pennylane.ai-en-stable-code-qml_pulse.html-cf0c93b29c.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/pennylane/docs.pennylane.ai-en-stable-code-qml_numpy.html-4f2dcdb508.md"
+      ]
+    },
+    {
+      "id": "pennylane_return_types",
+      "query": "Name the documented PennyLane QNode return types for state, probabilities, expectation, and sampling.",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/pennylane_basics.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/pennylane_basics.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/pennylane/docs.pennylane.ai-en-stable-code-qml.html-2731987eed.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/pennylane/docs.pennylane.ai-en-stable-development-release_notes.html-01745aad7e.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/pennylane/docs.pennylane.ai-en-stable-code-qml_shadows.html-66c7263b62.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/pennylane/docs.pennylane.ai-en-stable-code-qml_transforms.html-947dee53e6.md"
+      ]
+    },
+    {
+      "id": "pennylane_device_shots",
+      "query": "For PennyLane shots-based sampling, what device argument should I set instead of relying on analytic default?",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/pennylane_basics.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/pennylane_basics.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/pennylane/docs.pennylane.ai-en-stable-development-deprecations.html-28956ef3f8.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/pennylane/docs.pennylane.ai-en-stable-introduction-data.html-70c27f512e.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/pennylane/docs.pennylane.ai-en-stable-introduction-compiling_circuits.html-68eaf46682.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/pennylane/docs.pennylane.ai-en-stable-development-release_notes.html-01745aad7e.md"
+      ]
+    },
+    {
+      "id": "pennylane_hamiltonian",
+      "query": "Show the PennyLane Hamiltonian pattern with coeffs and observables including PauliZ @ PauliZ.",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/pennylane_basics.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/pennylane_basics.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/pennylane/docs.pennylane.ai-en-stable-code-qml_pulse.html-cf0c93b29c.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/pennylane/docs.pennylane.ai-en-stable-development-release_notes.html-01745aad7e.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/pennylane/docs.pennylane.ai-en-stable-code-qml_liealg.html-d1c5e98c68.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/pennylane/docs.pennylane.ai-en-stable-code-qml_qnn.html-3c6ac5c54a.md"
+      ]
+    },
+    {
+      "id": "pennylane_qaoa_maxcut_helpers",
+      "query": "Which PennyLane helper builds MaxCut cost and mixer Hamiltonians from a graph?",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/pennylane_basics.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 0.5,
+      "first_hit_rank": 2,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/pennylane_basics.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/pennylane/docs.pennylane.ai-en-stable-code-qml_qaoa.html-17d406a299.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/cirq/quantumai.google-cirq-experiments-qaoa-qaoa_maxcut-9ccca32000.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/cuda-quantum/nvidia.github.io-cuda-quantum-latest-applications-python-digitized_counterdiabatic_qaoa.ht-04f881362b.md"
+      ]
+    },
+    {
+      "id": "pennylane_templates",
+      "query": "List PennyLane templates named in the notes for embedding, entanglers, QFT, and phase estimation.",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/pennylane_basics.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 0.5,
+      "first_hit_rank": 2,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_phase_estimation.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/pennylane_basics.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/pennylane/docs.pennylane.ai-en-stable-code-api-pennylane.TwoModeSqueezing.html-81edf5dacd.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/pennylane/docs.pennylane.ai-en-stable-development-plugins.html-614ab9d279.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/pennylane/docs.pennylane.ai-en-stable-code-qml_debugging.html-cb1760ae2a.md"
+      ]
+    },
+    {
+      "id": "pennylane_multiwire_gate",
+      "query": "What PennyLane pitfall is documented for multi-wire gates such as CNOT or SWAP?",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/pennylane_basics.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/pennylane_basics.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/pennylane/docs.pennylane.ai-en-stable-development-adding_operators.html-55bd8c7060.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/pennylane/docs.pennylane.ai-en-stable-code-qml_capture.html-65a59e6f27.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/pennylane/docs.pennylane.ai-en-stable-development-release_notes.html-01745aad7e.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/pennylane/docs.pennylane.ai-en-stable-code-qml_workflow.html-104b1f137b.md"
+      ]
+    },
+    {
+      "id": "pennylane_vqe_workflow",
+      "query": "For PennyLane VQE, name the ansatz/QNode/optimizer pieces documented in the VQE note.",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/vqe_basics.md",
+        "docs/quantum_libraries/pennylane_basics.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/pennylane_basics.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/pennylane/docs.pennylane.ai-en-stable-development-plugins.html-614ab9d279.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/pennylane/docs.pennylane.ai-en-stable-code-qml_transforms.html-947dee53e6.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/pennylane/docs.pennylane.ai-en-stable-development-adding_operators.html-55bd8c7060.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/pennylane/docs.pennylane.ai-en-stable-code-qml_pulse.html-cf0c93b29c.md"
+      ]
+    },
+    {
+      "id": "braket_bell_local_counts",
+      "query": "In Amazon Braket, build a Bell circuit and run LocalSimulator for shots=1024 to get measurement_counts.",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/braket_basics.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/braket_basics.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/bell_state_construction.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/amazon-braket/docs.aws.amazon.com-braket-latest-developerguide-braket-submit-tasks-simulators-b469abeac9.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/amazon-braket/docs.aws.amazon.com-braket-latest-developerguide-braket-openqasm-measure-qubits.html-33c9814d0c.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/amazon-braket/docs.aws.amazon.com-braket-latest-developerguide-braket-send-to-local-simulator.html-5f571c7d55.md"
+      ]
+    },
+    {
+      "id": "braket_state_vector_result",
+      "query": "In Braket LocalSimulator, what must I add to request state_vector amplitudes and what shots value should I use?",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/braket_basics.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/braket_basics.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/amazon-braket/docs.aws.amazon.com-braket-latest-developerguide-braket-result-types.html-6d4e758e89.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/amazon-braket/docs.aws.amazon.com-braket-latest-developerguide-braket-submit-tasks-simulators-b469abeac9.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/amazon-braket/docs.aws.amazon.com-braket-latest-developerguide-braket-send-to-local-simulator.html-5f571c7d55.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/README.md"
+      ]
+    },
+    {
+      "id": "braket_endianness",
+      "query": "What endianness does Braket use for bitstrings, and which qubit is most significant?",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/braket_basics.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/braket_basics.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/amazon-braket/docs.aws.amazon.com-braket-latest-developerguide-braket-openqasm.html-b21fd5de30.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/amazon-braket/docs.aws.amazon.com-braket-latest-developerguide-braket-openqasm-computing-gradients.html-41ed501dd6.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/amazon-braket/docs.aws.amazon.com-braket-latest-developerguide-braket-openqasm-verbatim-compilation.html-693b537b87.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/amazon-braket/docs.aws.amazon.com-braket-latest-developerguide-braket-openqasm-noise-simulation.html-08a2f7dc26.md"
+      ]
+    },
+    {
+      "id": "braket_remote_vs_local",
+      "query": "When should I prefer Braket LocalSimulator instead of AwsDevice in this project?",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/braket_basics.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/braket_basics.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/README.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/amazon-braket/docs.aws.amazon.com-braket-latest-developerguide-braket-constructing-circuit.html-52f1fc7efe.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/amazon-braket/docs.aws.amazon.com-braket-latest-developerguide-braket-devices.md-b0b5548398.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/amazon-braket/docs.aws.amazon.com-braket-latest-developerguide-braket-devices.html-4f67ccfb3e.md"
+      ]
+    },
+    {
+      "id": "braket_gate_methods",
+      "query": "List Braket chainable gate methods for rx, ry, rz, cnot, cz, swap, and ccnot.",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/braket_basics.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/braket_basics.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/amazon-braket/docs.aws.amazon.com-braket-latest-developerguide-braket-pricing.md-16bc11be33.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/amazon-braket/docs.aws.amazon.com-braket-latest-developerguide-braket-references.html-5228604d3f.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/amazon-braket/docs.aws.amazon.com-braket-latest-developerguide-braket-pricing.html-b12b6b2078.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/amazon-braket/docs.aws.amazon.com-braket-latest-developerguide-braket-submit-tasks-simulators-b469abeac9.md"
+      ]
+    },
+    {
+      "id": "bell_phi_plus_amplitudes",
+      "query": "For a coding answer, return the exact |Phi+> Bell pair amplitude list in basis |00>,|01>,|10>,|11>. The answer must include these check points: 2 ** -0.5; [amp, 0.0, 0.0, amp]; |Phi+>.",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/bell_state_construction.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/bell_state_construction.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/superdense_coding.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/ghz_state.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/binary_measurement_decoders.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/grover_search.md"
+      ]
+    },
+    {
+      "id": "bell_reference_circuit",
+      "query": "What two gate steps create the default Bell pair |Phi+>, and what are the Qiskit calls? The answer must include these check points: H to qubit 0; CNOT; qc.h(0).",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/bell_state_construction.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/bell_state_construction.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qiskit_basics.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/qiskit/quantum.cloud.ibm.com-docs-tutorials-nishimori-phase-transition-2cba022141.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/qiskit/quantum.cloud.ibm.com-docs-tutorials-edc-cut-bell-pair-benchmarking-0972be7d79.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/qsharp-azure-quantum/learn.microsoft.com-en-us-azure-quantum-quickstart-microsoft-qiskit-9b4a9fb536.md"
+      ]
+    },
+    {
+      "id": "ghz_state_list",
+      "query": "For n=3, what exact GHZ amplitude list should a coding task return under big-endian indexing? The answer must include these check points: 2 ** -0.5; ghz3; state[0].",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/ghz_state.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/ghz_state.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/bell_state_construction.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/depolarizing_channel.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_partial_trace.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_fourier_transform.md"
+      ]
+    },
+    {
+      "id": "ghz_witness_expectation",
+      "query": "How do I compute a GHZ witness expectation and what sign indicates entanglement? The answer must include these check points: W = 1/2 I - |GHZ><GHZ|; 0.5 - fidelity; negative.",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/ghz_state.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/ghz_state.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_partial_trace.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/grover_search.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/stabilizer_formalism.md"
+      ]
+    },
+    {
+      "id": "qft_phase_pattern",
+      "query": "For QFT|x>, what phase formula should tests expect for phases[k]? The answer must include these check points: 2 * pi * x * k / N; mod 2*pi; phases[k].",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/quantum_fourier_transform.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_fourier_transform.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/circuit_repair_recipes.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_circuit_construction_patterns.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/phase_register_roundtrip.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/grover_search.md"
+      ]
+    },
+    {
+      "id": "qft_matrix_formula",
+      "query": "What is the QFT matrix element formula and a NumPy construction pattern? The answer must include these check points: exp(2*pi*i * j*k / N); 1 / sqrt(N); np.meshgrid.",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/quantum_fourier_transform.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_fourier_transform.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/phase_register_roundtrip.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_partial_trace.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/circuit_repair_recipes.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/measurement_and_classical_register.md"
+      ]
+    },
+    {
+      "id": "qft_inverse_steps",
+      "query": "How do I invert a QFT circuit in code? The answer must include these check points: reverse the order; negate all rotation angles; QFT_dagger.",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/quantum_fourier_transform.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_fourier_transform.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_partial_trace.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_circuit_construction_patterns.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/phase_register_roundtrip.md"
+      ]
+    },
+    {
+      "id": "qpe_measurement_integer",
+      "query": "In ideal QPE, what integer y is measured and how do I convert it back to phase? The answer must include these check points: round(true_phase * (1 << t)); % (1 << t); y / 2**t.",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/quantum_phase_estimation.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_phase_estimation.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/phase_register_roundtrip.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_fourier_transform.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_circuit_construction_patterns.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_gates_reference.md"
+      ]
+    },
+    {
+      "id": "qpe_protocol_order",
+      "query": "List the QPE protocol order: counting register preparation, controlled powers, inverse QFT, and measurement. The answer must include these check points: H on each; controlled-U^(2^k); inverse QFT.",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/quantum_phase_estimation.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_phase_estimation.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_circuit_construction_patterns.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_fourier_transform.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/phase_register_roundtrip.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/circuit_repair_recipes.md"
+      ]
+    },
+    {
+      "id": "qpe_eigenvalue_numpy",
+      "query": "How does the note estimate the eigenvalue phase from U and an eigenvector using NumPy? The answer must include these check points: Uv = unitary @ eigenvector; np.vdot; np.angle.",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/quantum_phase_estimation.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_phase_estimation.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/vqe_basics.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_circuit_construction_patterns.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_partial_trace.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/trotter_decomposition.md"
+      ]
+    },
+    {
+      "id": "grover_oracle_diffusion",
+      "query": "For a pure Python Grover simulator, define the oracle sign flip and diffusion update. The answer must include these check points: flip the sign; marked; 2 * mean - a.",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/grover_search.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/grover_search.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_partial_trace.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/stabilizer_formalism.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_circuit_construction_patterns.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/error_correction_basics.md"
+      ]
+    },
+    {
+      "id": "grover_iteration_count",
+      "query": "What approximate Grover iteration count should I use for N items and M marked items?",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/grover_search.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/grover_search.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_circuit_construction_patterns.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/depolarizing_channel.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/circuit_repair_recipes.md"
+      ]
+    },
+    {
+      "id": "vqe_energy_expectation",
+      "query": "For VQE, what exact NumPy expression computes E(theta)=<psi|H|psi>? The answer must include these check points: np.vdot(state, hamiltonian @ state); np.real; expectation.",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/vqe_basics.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/vqe_basics.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_phase_estimation.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_partial_trace.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/grover_search.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/measurement_and_classical_register.md"
+      ]
+    },
+    {
+      "id": "vqe_workflow_steps",
+      "query": "List the VQE workflow steps from Hamiltonian Pauli strings through optimizer.",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/vqe_basics.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/vqe_basics.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/stabilizer_formalism.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/tensorcircuit/tensorcircuit.readthedocs.io-en-latest-api-applications-vqes.html-ee1a2a0b97.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/superdense_coding.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/depolarizing_channel.md"
+      ]
+    },
+    {
+      "id": "qaoa_layer_pattern",
+      "query": "In a QAOA layer, what Qiskit gate pattern implements each weighted edge and mixer rotation? The answer must include these check points: qc.cx(u, v); qc.rz(2 * w * gamma, v); qc.rx(2 * beta, q).",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/qaoa_maxcut.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qiskit_basics.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/pennylane/docs.pennylane.ai-en-stable-code-qml_qaoa.html-17d406a299.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/cirq/quantumai.google-cirq-experiments-qaoa-example_problems-b17b355be4.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/cuda-quantum/nvidia.github.io-cuda-quantum-latest-applications-python-qaoa.html-f0e5432714.md"
+      ]
+    },
+    {
+      "id": "qaoa_maxcut_cost",
+      "query": "For MaxCut coding, when does an edge (u,v) contribute 1 to maxcut_cost(bitstring, edges)? The answer must include these check points: bitstring[u] != bitstring[v]; cost += 1; edges.",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/qaoa_maxcut.md",
+        "evals/tasks/quantum/qaoa_maxcut/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/cirq/quantumai.google-cirq-experiments-qaoa-qaoa_maxcut-9ccca32000.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/cuda-quantum/nvidia.github.io-cuda-quantum-latest-applications-python-adapt_qaoa.html-885c867279.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/tensorcircuit/tensorcircuit.readthedocs.io-en-latest-tutorials-qaoa_nae3sat.html-52ffcab521.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/qiskit/quantum.cloud.ibm.com-docs-tutorials-advanced-techniques-for-qaoa-4a2e788d16.md"
+      ]
+    },
+    {
+      "id": "teleportation_corrections_table",
+      "query": "Return the teleportation correction table for (m1,m2) -> I, X, Z, ZX. The answer must include these check points: (0, 0): \"I\"; (0, 1): \"X\"; (1, 0): \"Z\".",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/quantum_teleportation.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_teleportation.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/binary_measurement_decoders.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/error_correction_basics.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/depolarizing_channel.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/superdense_coding.md"
+      ]
+    },
+    {
+      "id": "teleportation_apply_order",
+      "query": "In the teleport(alpha,beta,m1,m2) snippet, which bit controls X and which controls Z? The answer must include these check points: if m2 == 1; X; if m1 == 1.",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/quantum_teleportation.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_teleportation.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/binary_measurement_decoders.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/superdense_coding.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/depolarizing_channel.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/stabilizer_formalism.md"
+      ]
+    },
+    {
+      "id": "superdense_encode_table",
+      "query": "For superdense coding with Alice as qubit 0, give the encode table for 00,01,10,11. The answer must include these check points: 00 -> I; 01 -> X; 10 -> Z.",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/superdense_coding.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/superdense_coding.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/binary_measurement_decoders.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/bell_state_construction.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/measurement_and_classical_register.md"
+      ]
+    },
+    {
+      "id": "superdense_bell_measurement",
+      "query": "What Bob-side Bell-basis measurement gates recover the two classical bits in superdense coding? The answer must include these check points: CNOT(0, 1); H(0); Bell-basis measurement.",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/superdense_coding.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 0.5,
+      "first_hit_rank": 2,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/bell_state_construction.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/superdense_coding.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_teleportation.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/binary_measurement_decoders.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/circuit_repair_recipes.md"
+      ]
+    },
+    {
+      "id": "density_plain_python_api",
+      "query": "For the density-matrix eval API, name the four public functions and say whether NumPy is allowed. The answer must include these check points: density_from_state; tensor_product; partial_trace.",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/density_matrix_partial_trace.md",
+        "docs/quantum_libraries/density_matrix_eval_api.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_eval_api.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_partial_trace.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/grover_search.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/stabilizer_formalism.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_teleportation.md"
+      ]
+    },
+    {
+      "id": "density_partial_trace_b",
+      "query": "In partial_trace(rho, dim_a, dim_b, trace_out), what loops compute tracing out subsystem B? The answer must include these check points: trace_out == \"B\"; dim_a x dim_a; rho[i * dim_b + k][j * dim_b + k].",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/density_matrix_partial_trace.md",
+        "docs/quantum_libraries/density_matrix_eval_api.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_eval_api.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/depolarizing_channel.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_fourier_transform.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/phase_register_roundtrip.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qiskit_basics.md"
+      ]
+    },
+    {
+      "id": "density_partial_trace_a",
+      "query": "In partial_trace, what output shape and index formula are used when trace_out is 'A'? The answer must include these check points: trace_out == \"A\"; dim_b x dim_b; rho[i * dim_b + k][i * dim_b + l].",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/density_matrix_partial_trace.md",
+        "docs/quantum_libraries/density_matrix_eval_api.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_eval_api.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_fourier_transform.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/depolarizing_channel.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/grover_search.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/measurement_and_classical_register.md"
+      ]
+    },
+    {
+      "id": "depolarizing_channel_formula",
+      "query": "For a single-qubit depolarizing channel, give both E(rho) formulas in the notes. The answer must include these check points: (1 - p) * rho + p * I / 2; 1 - 3p/4; p/4.",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/depolarizing_channel.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/depolarizing_channel.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_fourier_transform.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/measurement_and_classical_register.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/ghz_state.md"
+      ]
+    },
+    {
+      "id": "depolarizing_kraus",
+      "query": "For a quantum coding task, write the Kraus coefficient pattern for depolarizing_kraus(p). The answer must include these check points: np.sqrt(1 - 3 * p / 4); np.sqrt(p / 4); I.",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/depolarizing_channel.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/depolarizing_channel.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_fourier_transform.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_circuit_construction_patterns.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/trotter_decomposition.md"
+      ]
+    },
+    {
+      "id": "bitflip_syndrome_decoder",
+      "query": "For the 3-qubit bit-flip code, return the syndrome lookup table for (s1,s2). The answer must include these check points: (0, 0): None; (1, 0): 0; (1, 1): 1.",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/error_correction_basics.md",
+        "docs/quantum_libraries/binary_measurement_decoders.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/binary_measurement_decoders.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/grover_search.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/depolarizing_channel.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/superdense_coding.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/ghz_state.md"
+      ]
+    },
+    {
+      "id": "shor9_encoded_states",
+      "query": "What are the |0_L> and |1_L> encoded state formulas for Shor 9-qubit code?",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/error_correction_basics.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 0.2,
+      "first_hit_rank": 5,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_fourier_transform.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/phase_register_roundtrip.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_circuit_construction_patterns.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_teleportation.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/error_correction_basics.md"
+      ]
+    },
+    {
+      "id": "stabilizer_h_update",
+      "query": "In tableau simulation, what is the H update rule including the sign flip condition? The answer must include these check points: swap x_q and z_q; x & z; sign.",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/stabilizer_formalism.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/stabilizer_formalism.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/grover_search.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/error_correction_basics.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/superdense_coding.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_gates_reference.md"
+      ]
+    },
+    {
+      "id": "stabilizer_s_update",
+      "query": "In tableau simulation, what is the S update rule for z_q and sign? The answer must include these check points: z_q ^= x_q; flip sign; x_q AND z_q.",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/stabilizer_formalism.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/stabilizer_formalism.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/measurement_and_classical_register.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/grover_search.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_partial_trace.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/superdense_coding.md"
+      ]
+    },
+    {
+      "id": "stabilizer_cnot_update",
+      "query": "In tableau simulation, give the CNOT update formulas for x_t, z_c, and sign. The answer must include these check points: x_t ^= x_c; z_c ^= z_t; xc & zt.",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/stabilizer_formalism.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/stabilizer_formalism.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/braket_basics.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_partial_trace.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/ghz_state.md"
+      ]
+    },
+    {
+      "id": "trotter_first_order",
+      "query": "Give the first-order Trotter formula for exp(-i(A+B)t) and the dt pattern. The answer must include these check points: exp(-i A t/n); exp(-i B t/n); dt = t / n_steps.",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/trotter_decomposition.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/trotter_decomposition.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/circuit_repair_recipes.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_partial_trace.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_fourier_transform.md"
+      ]
+    },
+    {
+      "id": "trotter_second_order",
+      "query": "For a quantum coding task, give the second-order symmetric Trotter formula S2(t).",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/trotter_decomposition.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/trotter_decomposition.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/binary_measurement_decoders.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/grover_search.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/maxcut_classical_helpers.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/error_correction_basics.md"
+      ]
+    },
+    {
+      "id": "gate_alias_normalization_table",
+      "query": "For gate alias normalization, what lookup entries canonicalize hadamard, pauli_x, cnot, toffoli, and fredkin? The answer must include these check points: hadamard; \"H\"; pauli_x.",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/quantum_gates_reference.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_gates_reference.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_circuit_construction_patterns.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/circuit_repair_recipes.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/braket_basics.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/error_correction_basics.md"
+      ]
+    },
+    {
+      "id": "gate_unknown_error",
+      "query": "What should gate normalization do for an unknown alias instead of returning the original token? The answer must include these check points: gate.strip().lower(); ValueError; unknown gate.",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/quantum_gates_reference.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_gates_reference.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_circuit_construction_patterns.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_partial_trace.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/circuit_repair_recipes.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_phase_estimation.md"
+      ]
+    },
+    {
+      "id": "state_vector_single_qubit_apply",
+      "query": "In pure NumPy state-vector simulation, what reshape/tensordot/moveaxis pattern applies a single-qubit gate? The answer must include these check points: reshape([2] * n); np.tensordot; np.moveaxis.",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/state_vector_simulation.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/state_vector_simulation.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_partial_trace.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_circuit_construction_patterns.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/depolarizing_channel.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/superdense_coding.md"
+      ]
+    },
+    {
+      "id": "state_vector_measurement_probs",
+      "query": "How do I compute measurement probabilities and sample outcomes from a state vector? The answer must include these check points: np.abs(state) ** 2; rng.choice; shots.",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/state_vector_simulation.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/state_vector_simulation.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/measurement_and_classical_register.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/circuit_repair_recipes.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_partial_trace.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/grover_search.md"
+      ]
+    },
+    {
+      "id": "circuit_repair_cnot_swapped",
+      "query": "In circuit repair, what symptom and fix are documented for swapped CNOT control/target? The answer must include these check points: Swapped control/target; probabilities mirror; control comes first.",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/circuit_repair_recipes.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/circuit_repair_recipes.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/braket_basics.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/state_vector_simulation.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_gates_reference.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/measurement_and_classical_register.md"
+      ]
+    },
+    {
+      "id": "circuit_repair_missing_h",
+      "query": "In Bell-basis measurement repair, what gate sequence is needed before measurement? The answer must include these check points: CX(0, 1); H(0); Bell-basis.",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/circuit_repair_recipes.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 0.5,
+      "first_hit_rank": 2,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/bell_state_construction.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/circuit_repair_recipes.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_gates_reference.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_circuit_construction_patterns.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/binary_measurement_decoders.md"
+      ]
+    },
+    {
+      "id": "circuit_repair_float_precision",
+      "query": "How should candidate code compare 1/sqrt(2) amplitudes in tests? The answer must include these check points: math.isclose; np.allclose; abs_tol=1e-9.",
+      "expected_source_substrings": [
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/bell_state_construction.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/circuit_repair_recipes.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/bell_state_construction.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/binary_measurement_decoders.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_partial_trace.md"
+      ]
+    },
+    {
+      "id": "task_bell_pair_state",
+      "query": "Implement bell_pair_state() for the eval task and return the exact Phi+ list. The answer must include these check points: bell_pair_state; 2 ** -0.5; [amp, 0.0, 0.0, amp].",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/bell_pair_construction/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/bell_state_construction.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_eval_api.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_partial_trace.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/ghz_state.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md"
+      ]
+    },
+    {
+      "id": "task_measurement_mapping",
+      "query": "Repair measurement_mapping(bitstring) where input ordering is q1q0; map the rightmost bit to q0. The answer must include these check points: measurement_mapping; q1q0; rightmost.",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/measurement_bug_repair/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_partial_trace.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_fourier_transform.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/maxcut_classical_helpers.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/braket_basics.md"
+      ]
+    },
+    {
+      "id": "task_phase_estimation_measurement",
+      "query": "Implement phase_estimation(eigenvalue_phase, n_counting_bits) with ideal rounded measurement modulo 2^n. The answer must include these check points: phase_estimation; round(eigenvalue_phase * n_states); % n_states.",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/phase_estimation_circuit/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_phase_estimation.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/grover_search.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_fourier_transform.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_partial_trace.md"
+      ]
+    },
+    {
+      "id": "task_phase_from_measurement",
+      "query": "Implement phase_from_measurement(measurement, n_counting_bits) returning measurement / 2^n. The answer must include these check points: phase_from_measurement; measurement / n_states; [0, 1).",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/phase_estimation_circuit/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_fourier_transform.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_partial_trace.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/measurement_and_classical_register.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/binary_measurement_decoders.md"
+      ]
+    },
+    {
+      "id": "task_qaoa_maxcut_cost",
+      "query": "Implement maxcut_cost so an edge contributes only when the two endpoint bits differ. The answer must include these check points: maxcut_cost; bitstring[u] != bitstring[v]; cost += 1.",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/qaoa_maxcut/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/cirq/quantumai.google-cirq-experiments-qaoa-qaoa_maxcut-9ccca32000.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/tensorcircuit/tensorcircuit.readthedocs.io-en-latest-tutorials-qaoa_nae3sat.html-52ffcab521.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/tensorcircuit/tensorcircuit.readthedocs.io-en-latest-tutorials-qaoa.html-ea79d64696.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/cuda-quantum/nvidia.github.io-cuda-quantum-latest-applications-python-qaoa.html-f0e5432714.md"
+      ]
+    },
+    {
+      "id": "task_qaoa_bruteforce",
+      "query": "Implement brute_force_maxcut with lexicographically smallest tie-break. The answer must include these check points: brute_force_maxcut; format(i; best_cost.",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/qaoa_maxcut/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_eval_api.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/qiskit/quantum.cloud.ibm.com-docs-tutorials-advanced-techniques-for-qaoa-4a2e788d16.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/cirq/quantumai.google-cirq-experiments-qaoa-routing_with_tket-77af719916.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/cirq/quantumai.google-cirq-experiments-qaoa-binary_paintshop-04b01fc176.md"
+      ]
+    },
+    {
+      "id": "task_qaoa_landscape_sort",
+      "query": "Implement qaoa_cost_landscape sorted by descending cost and ascending bitstring. The answer must include these check points: qaoa_cost_landscape; results.sort; -x[1].",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/qaoa_maxcut/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/tensorcircuit/tensorcircuit.readthedocs.io-en-latest-tutorials-qaoa.html-ea79d64696.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/cuda-quantum/nvidia.github.io-cuda-quantum-latest-applications-python-qaoa.html-f0e5432714.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/cirq/quantumai.google-cirq-experiments-qaoa-example_problems-b17b355be4.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/cirq/quantumai.google-cirq-experiments-qaoa-qaoa_maxcut-9ccca32000.md"
+      ]
+    },
+    {
+      "id": "task_grover_uniform",
+      "query": "Implement uniform_superposition(n_qubits) with amplitude 1/sqrt(2^n). The answer must include these check points: uniform_superposition; math.sqrt; [amp] * n.",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/grover_oracle_diffusion/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/grover_search.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_fourier_transform.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_partial_trace.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/circuit_repair_recipes.md"
+      ]
+    },
+    {
+      "id": "task_grover_oracle",
+      "query": "Implement oracle(state, marked) by flipping only the marked basis amplitude sign. The answer must include these check points: oracle; marked; -result[marked].",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/grover_oracle_diffusion/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/grover_search.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_eval_api.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/phase_register_roundtrip.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_circuit_construction_patterns.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_partial_trace.md"
+      ]
+    },
+    {
+      "id": "task_grover_diffusion",
+      "query": "Implement diffusion(state) as reflection about the mean amplitude. The answer must include these check points: diffusion; mean = sum(state) / n; 2 * mean - a.",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/grover_oracle_diffusion/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_eval_api.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/grover_search.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/depolarizing_channel.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/measurement_and_classical_register.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_fourier_transform.md"
+      ]
+    },
+    {
+      "id": "task_grover_search_loop",
+      "query": "Implement grover_search by alternating oracle and diffusion for the requested iterations. The answer must include these check points: grover_search; for _ in range(iterations); oracle.",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/grover_oracle_diffusion/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_eval_api.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/grover_search.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_partial_trace.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_circuit_construction_patterns.md"
+      ]
+    },
+    {
+      "id": "task_density_from_state",
+      "query": "Implement density_from_state(state) as a plain-list outer product. The answer must include these check points: density_from_state; state[i] * state[j]; list[list[float]].",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/density_matrix_partial_trace/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_eval_api.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_partial_trace.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/depolarizing_channel.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/phase_register_roundtrip.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_fourier_transform.md"
+      ]
+    },
+    {
+      "id": "task_tensor_product",
+      "query": "Implement tensor_product(a,b) using result[i*db+k][j*db+l] = a[i][j] * b[k][l]. The answer must include these check points: tensor_product; i * db + k; j * db + l.",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/density_matrix_partial_trace/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_eval_api.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_partial_trace.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/depolarizing_channel.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_fourier_transform.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qiskit_basics.md"
+      ]
+    },
+    {
+      "id": "task_partial_trace_b",
+      "query": "Implement partial_trace trace_out='B' returning the dim_a x dim_a reduced matrix. The answer must include these check points: partial_trace; trace_out == \"B\"; dim_a.",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/density_matrix_partial_trace/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_eval_api.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_partial_trace.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/depolarizing_channel.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_fourier_transform.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/error_correction_basics.md"
+      ]
+    },
+    {
+      "id": "task_partial_trace_a",
+      "query": "Implement partial_trace trace_out='A' returning the dim_b x dim_b reduced matrix. The answer must include these check points: trace_out == \"A\"; dim_b; rho[i * dim_b + k][i * dim_b + l].",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/density_matrix_partial_trace/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_eval_api.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_fourier_transform.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/depolarizing_channel.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qiskit_basics.md"
+      ]
+    },
+    {
+      "id": "task_purity",
+      "query": "Implement purity(rho) as Tr(rho^2) with nested loops over i,j. The answer must include these check points: purity; rho[i][j] * rho[j][i]; Tr(rho^2).",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/density_matrix_partial_trace/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_eval_api.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_partial_trace.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_fourier_transform.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/depolarizing_channel.md"
+      ]
+    },
+    {
+      "id": "task_shor_encode",
+      "query": "Implement shor_encode(logical_bit) with amplitudes at the 8 block combinations. The answer must include these check points: shor_encode; 1.0 / (2 * math.sqrt(2)); block_states = [0, 7].",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/quantum_error_correction_shor_9qubit/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_fourier_transform.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/bell_state_construction.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_circuit_construction_patterns.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/ghz_state.md"
+      ]
+    },
+    {
+      "id": "task_shor_apply_x_error",
+      "query": "Implement apply_x_error(state, qubit) for qubit index 0-8 with MSB-first conversion. The answer must include these check points: apply_x_error; 8 - qubit; i ^ (1 << bit).",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/quantum_error_correction_shor_9qubit/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_fourier_transform.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/grover_search.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/binary_measurement_decoders.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qiskit_basics.md"
+      ]
+    },
+    {
+      "id": "task_shor_decode_majority",
+      "query": "Implement Shor decode bit-flip correction by majority vote within each 3-qubit block. The answer must include these check points: shor_decode; majority vote; bin(b0).count.",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/quantum_error_correction_shor_9qubit/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/binary_measurement_decoders.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/error_correction_basics.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_fourier_transform.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_partial_trace.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/superdense_coding.md"
+      ]
+    },
+    {
+      "id": "task_shor_decode_phase",
+      "query": "Implement Shor decode logical bit by comparing amp_000 and amp_111 signs. The answer must include these check points: amp_000; amp_111; same sign.",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/quantum_error_correction_shor_9qubit/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_fourier_transform.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/circuit_repair_recipes.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/error_correction_basics.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_teleportation.md"
+      ]
+    },
+    {
+      "id": "task_teleportation_corrections",
+      "query": "Implement teleportation_corrections(m0,m1) where m0 controls X and m1 controls Z. The answer must include these check points: teleportation_corrections; m0 controls the X; m1 controls the Z.",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/teleportation_corrections/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_teleportation.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/superdense_coding.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/binary_measurement_decoders.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_gates_reference.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/stabilizer_formalism.md"
+      ]
+    },
+    {
+      "id": "task_bitflip_decoder",
+      "query": "Implement the 3-qubit bit-flip syndrome decoder table for all four outcomes. The answer must include these check points: (0, 0): None; (1, 0): 0; (1, 1): 1.",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/error_detection_bit_flip/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_eval_api.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/binary_measurement_decoders.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_teleportation.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/grover_search.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/bell_state_construction.md"
+      ]
+    },
+    {
+      "id": "task_gate_alias_normalize",
+      "query": "Implement normalize_gate so cnot maps to CX, toffoli maps to CCX, and unknown aliases raise ValueError. The answer must include these check points: normalize_gate; cnot; CX.",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/gate_alias_normalization/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_eval_api.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_gates_reference.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/circuit_repair_recipes.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_partial_trace.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md"
+      ]
+    },
+    {
+      "id": "task_gate_casefold_barrier",
+      "query": "Implement gate alias casefolding with strip().lower() and preserve barrier handling if present. The answer must include these check points: strip().lower(); barrier; casefold.",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/gate_alias_casefold_barrier/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_eval_api.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/circuit_repair_recipes.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_circuit_construction_patterns.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_partial_trace.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_gates_reference.md"
+      ]
+    },
+    {
+      "id": "task_gate_registry_cleanup",
+      "query": "Clean a gate alias registry so aliases map to canonical H, X, CX, CCX, CSWAP symbols. The answer must include these check points: alias; canonical; CCX.",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/gate_alias_registry_cleanup/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/circuit_repair_recipes.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_gates_reference.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_partial_trace.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/ghz_state.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/bell_state_construction.md"
+      ]
+    },
+    {
+      "id": "task_gate_token_canonicalizer",
+      "query": "Implement a token canonicalizer that normalizes whitespace/case and raises on unknown gates. The answer must include these check points: canonicalizer; strip; lower.",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/gate_token_canonicalizer/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_partial_trace.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/circuit_repair_recipes.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_gates_reference.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_phase_estimation.md"
+      ]
+    },
+    {
+      "id": "task_superdense_encode",
+      "query": "Implement superdense coding encode table: 00 I, 01 X, 10 Z, 11 ZX. The answer must include these check points: superdense; 00; I.",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/superdense_coding/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_eval_api.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/superdense_coding.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/depolarizing_channel.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/binary_measurement_decoders.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_gates_reference.md"
+      ]
+    },
+    {
+      "id": "task_superdense_identity_lookup",
+      "query": "Return the canonical 4-row superdense identity lookup table without inventing formulas. The answer must include these check points: identity lookup; (0, 0); (1, 1).",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/superdense_identity_lookup/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/superdense_coding.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/binary_measurement_decoders.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/error_correction_basics.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_partial_trace.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_teleportation.md"
+      ]
+    },
+    {
+      "id": "task_superdense_pauli_router",
+      "query": "Implement the Pauli router for 2-bit superdense messages with I/X/Z/Y or ZX convention. The answer must include these check points: PAULI_ROUTER; (0, 1): \"X\"; (1, 0): \"Z\".",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/superdense_pauli_router/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/superdense_coding.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/binary_measurement_decoders.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/depolarizing_channel.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/stabilizer_formalism.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/error_correction_basics.md"
+      ]
+    },
+    {
+      "id": "task_pauli_message_codec",
+      "query": "Implement a Pauli message codec mapping two classical bits to I, X, Z, or Y/ZX. The answer must include these check points: Pauli; I; X.",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/pauli_message_codec/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_eval_api.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/binary_measurement_decoders.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_teleportation.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/stabilizer_formalism.md"
+      ]
+    },
+    {
+      "id": "task_binary_measurement_decoder",
+      "query": "Implement Bell and syndrome binary measurement decoders with pinned bit order. The answer must include these check points: BELL_LABELS; SYNDROMES; (m1, m2).",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/binary_measurement_decoder/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/bell_state_construction.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_teleportation.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_fourier_transform.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/binary_measurement_decoders.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/superdense_coding.md"
+      ]
+    },
+    {
+      "id": "task_phase_measurement_register",
+      "query": "Implement phase measurement register parsing without bit-reversing the expected integer. The answer must include these check points: phase; measurement; register.",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/phase_measurement_register/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_phase_estimation.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/phase_register_roundtrip.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/binary_measurement_decoders.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_fourier_transform.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_circuit_construction_patterns.md"
+      ]
+    },
+    {
+      "id": "task_phase_register_roundtrip",
+      "query": "Implement phase register encode/decode roundtrip for fixed counting bits. The answer must include these check points: phase_register; roundtrip; counting bits.",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/phase_register_roundtrip/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/phase_register_roundtrip.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_eval_api.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_phase_estimation.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_circuit_construction_patterns.md"
+      ]
+    },
+    {
+      "id": "task_qft_phase_pattern",
+      "query": "Implement QFT phase pattern phases[k] = 2*pi*x*k/N mod 2*pi. The answer must include these check points: phases[k]; 2 * pi * x * k / N; mod.",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/qft_phase_pattern/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_eval_api.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_fourier_transform.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/circuit_repair_recipes.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/phase_register_roundtrip.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_circuit_construction_patterns.md"
+      ]
+    },
+    {
+      "id": "task_circuit_phase_repair",
+      "query": "Repair phase comparisons by reducing phases modulo 2*pi before allclose. The answer must include these check points: np.mod; 2 * np.pi; np.allclose.",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/circuit_phase_repair/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/circuit_repair_recipes.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_circuit_construction_patterns.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_fourier_transform.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/phase_register_roundtrip.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_phase_estimation.md"
+      ]
+    },
+    {
+      "id": "task_circuit_depth_optimization",
+      "query": "Optimize a gate sequence by canceling adjacent self-inverse gates and merging rotations. The answer must include these check points: HH; XX; CNOT-CNOT.",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/circuit_depth_optimization/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/circuit_repair_recipes.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_partial_trace.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_circuit_construction_patterns.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/README.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/cirq_basics.md"
+      ]
+    },
+    {
+      "id": "task_stabilizer_tableau_update",
+      "query": "Repair stabilizer tableau H/S/CNOT updates using pre-update sign bits. The answer must include these check points: apply_h; apply_s; apply_cnot.",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/stabilizer_tableau_update_repair/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/stabilizer_formalism.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/superdense_coding.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_partial_trace.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/grover_search.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/error_correction_basics.md"
+      ]
+    },
+    {
+      "id": "task_quantum_channel_depolarizing",
+      "query": "Implement depolarizing Kraus operators and apply_channel with K @ rho @ K.conj().T. The answer must include these check points: depolarizing; Kraus; K @ rho @ K.conj().T.",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/quantum_channel_depolarizing/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/depolarizing_channel.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_eval_api.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_partial_trace.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/measurement_and_classical_register.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_fourier_transform.md"
+      ]
+    },
+    {
+      "id": "task_trotterized_evolution",
+      "query": "Implement trotter_step and trotter_evolve using dt=t/n_steps and matrix_power. The answer must include these check points: trotter_step; trotter_evolve; dt = t / n_steps.",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/trotterized_hamiltonian_evolution/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/trotter_decomposition.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_partial_trace.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_phase_estimation.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/braket_basics.md"
+      ]
+    },
+    {
+      "id": "task_vqe_energy_minimization",
+      "query": "Implement VQE energy minimization helper around expectation <psi|H|psi>. The answer must include these check points: VQE; expectation; np.vdot.",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/vqe_energy_minimization/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/vqe_basics.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/error_correction_basics.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_partial_trace.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_teleportation.md"
+      ]
+    },
+    {
+      "id": "task_bitstring_maxcut_landscape",
+      "query": "Implement bitstring MaxCut landscape over all 2^n assignments with deterministic sorting. The answer must include these check points: bitstring; MaxCut; 2^n.",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/bitstring_maxcut_landscape/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/tensorcircuit/tensorcircuit.readthedocs.io-en-latest-tutorials-qaoa_quantum_dropout.html-d15cd2a8ad.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/cirq/quantumai.google-cirq-experiments-qaoa-qaoa_ising-b82902b542.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/cirq/quantumai.google-cirq-experiments-qaoa-qaoa_maxcut-9ccca32000.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/cuda-quantum/nvidia.github.io-cuda-quantum-latest-applications-python-qaoa.html-f0e5432714.md"
+      ]
+    },
+    {
+      "id": "task_maxcut_assignment_enumerator",
+      "query": "Enumerate all MaxCut assignments as zero-padded bitstrings. The answer must include these check points: enumerate; format; bitstrings.",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/maxcut_assignment_enumerator/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/cirq/quantumai.google-cirq-experiments-qaoa-qaoa_maxcut-9ccca32000.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/cirq/quantumai.google-cirq-experiments-qaoa-precomputed_analysis-9d69e288a0.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/cirq/quantumai.google-cirq-experiments-qaoa-qaoa_ising-b82902b542.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/tensorcircuit/tensorcircuit.readthedocs.io-en-latest-tutorials-qaoa_quantum_dropout.html-d15cd2a8ad.md"
+      ]
+    },
+    {
+      "id": "task_maxcut_partition_ranker",
+      "query": "Rank MaxCut partitions by cut value with deterministic tie-breaks. The answer must include these check points: rank; partition; cut value.",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/maxcut_partition_ranker/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/cuda-quantum/nvidia.github.io-cuda-quantum-latest-applications-python-qaoa.html-f0e5432714.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/cirq/quantumai.google-cirq-experiments-qaoa-qaoa_maxcut-9ccca32000.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/qiskit/quantum.cloud.ibm.com-docs-tutorials-advanced-techniques-for-qaoa-4a2e788d16.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/cirq/quantumai.google-cirq-experiments-qaoa-qaoa_ising-b82902b542.md"
+      ]
+    },
+    {
+      "id": "task_ghz_state_witness",
+      "query": "Implement GHZ state and witness returning negative value for the perfect GHZ state. The answer must include these check points: GHZ; witness; 0.5 - fidelity.",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/ghz_state_witness/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/ghz_state.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_partial_trace.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/maxcut_classical_helpers.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/circuit_repair_recipes.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/grover_search.md"
+      ]
+    },
+    {
+      "id": "task_quantum_circuit_construction",
+      "query": "For a code task, choose one endianness convention and construct the Bell pair without markdown fences. The answer must include these check points: endianness; Bell pair; candidate.py.",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/bell_pair_construction/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/bell_state_construction.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_eval_api.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/binary_measurement_decoders.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_circuit_construction_patterns.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_teleportation.md"
+      ]
+    },
+    {
+      "id": "concrete_bell_phi_plus_state",
+      "query": "Write bell_pair_state(); the unit test expects length 4 and amplitudes [1/sqrt(2), 0, 0, 1/sqrt(2)] in |00>, |01>, |10>, |11> order. The answer must include these check points: bell_pair_state; len(state) == 4; 2 ** -0.5.",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/bell_pair_construction/tests.py",
+        "evals/tasks/quantum/bell_pair_construction/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/bell_state_construction.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_fourier_transform.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_partial_trace.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/superdense_coding.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/measurement_and_classical_register.md"
+      ]
+    },
+    {
+      "id": "concrete_measurement_q1q0_mapping",
+      "query": "Repair measurement_mapping(bitstring): for input ordering q1q0, bitstring '10' must map q1=1 and q0=0. The answer must include these check points: measurement_mapping; bitstring[1]; q0.",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/measurement_bug_repair/tests.py",
+        "evals/tasks/quantum/measurement_bug_repair/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/measurement_and_classical_register.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_partial_trace.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/bell_state_construction.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/maxcut_classical_helpers.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md"
+      ]
+    },
+    {
+      "id": "concrete_phase_estimation_rounding_cases",
+      "query": "Implement phase_estimation(phi, n_bits) so phi=0.25,n_bits=3 returns 2; phi=0.75,n_bits=4 returns 12; phi=1/3,n_bits=3 returns 3. The answer must include these check points: phase_estimation; round; 1 << n_bits.",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/phase_estimation_circuit/tests.py",
+        "evals/tasks/quantum/phase_estimation_circuit/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_eval_api.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_phase_estimation.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/phase_register_roundtrip.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/circuit_repair_recipes.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/depolarizing_channel.md"
+      ]
+    },
+    {
+      "id": "concrete_phase_from_measurement_roundtrip",
+      "query": "Implement phase_from_measurement(m, n_bits) so measurement 4 with 3 counting bits returns 0.5 and exact phases round-trip. The answer must include these check points: phase_from_measurement; measurement / n_states; 1 << n_bits.",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/phase_estimation_circuit/tests.py",
+        "evals/tasks/quantum/phase_estimation_circuit/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/measurement_and_classical_register.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/binary_measurement_decoders.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/circuit_repair_recipes.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/grover_search.md"
+      ]
+    },
+    {
+      "id": "concrete_qaoa_triangle_costs",
+      "query": "Implement maxcut_cost for triangle edges [(0,1),(1,2),(0,2)]: '000' returns 0, '010' returns 2, and '100' returns 2. The answer must include these check points: maxcut_cost; bitstring[u] != bitstring[v]; '010'.",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/qaoa_maxcut/tests.py",
+        "evals/tasks/quantum/qaoa_maxcut/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/cuda-quantum/nvidia.github.io-cuda-quantum-latest-applications-python-qaoa.html-f0e5432714.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/tensorcircuit/tensorcircuit.readthedocs.io-en-latest-tutorials-qaoa_nae3sat.html-52ffcab521.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/cirq/quantumai.google-cirq-experiments-qaoa-qaoa_maxcut-9ccca32000.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/qiskit/quantum.cloud.ibm.com-docs-tutorials-pauli-correlation-encoding-for-qaoa-a8962bc377.md"
+      ]
+    },
+    {
+      "id": "concrete_qaoa_line_costs",
+      "query": "Implement maxcut_cost for line edges [(0,1),(1,2),(2,3)]: '0101' returns 3 and '0011' returns 1. The answer must include these check points: line_edges; '0101'; 3.",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/qaoa_maxcut/tests.py",
+        "evals/tasks/quantum/qaoa_maxcut/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/cirq/quantumai.google-cirq-experiments-qaoa-qaoa_maxcut-9ccca32000.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/cuda-quantum/nvidia.github.io-cuda-quantum-latest-applications-python-qaoa.html-f0e5432714.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/pennylane/docs.pennylane.ai-en-stable-code-qml_qaoa.html-17d406a299.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/cuda-quantum/nvidia.github.io-cuda-quantum-latest-applications-python-digitized_counterdiabatic_qaoa.ht-04f881362b.md"
+      ]
+    },
+    {
+      "id": "concrete_qaoa_landscape_sorting",
+      "query": "Implement qaoa_cost_landscape for a 3-node triangle so it returns 8 rows sorted by descending cost, with top cost 2 and bottom cost 0. The answer must include these check points: qaoa_cost_landscape; len(landscape) == 8; sorted.",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/qaoa_maxcut/tests.py",
+        "evals/tasks/quantum/qaoa_maxcut/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/tensorcircuit/tensorcircuit.readthedocs.io-en-latest-tutorials-qaoa_quantum_dropout.html-d15cd2a8ad.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/cirq/quantumai.google-cirq-experiments-qaoa-hardware_grid_circuits-3bee29d6d2.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/cirq/quantumai.google-cirq-experiments-qaoa-qaoa_maxcut-9ccca32000.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/qiskit/quantum.cloud.ibm.com-docs-tutorials-advanced-techniques-for-qaoa-4a2e788d16.md"
+      ]
+    },
+    {
+      "id": "concrete_grover_uniform_two_qubits",
+      "query": "Implement uniform_superposition(2): the test expects four amplitudes, each exactly 0.5 within tolerance. The answer must include these check points: uniform_superposition; 2 ** n_qubits; 1.0 / math.sqrt(4).",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/grover_oracle_diffusion/tests.py",
+        "evals/tasks/quantum/grover_oracle_diffusion/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/grover_search.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_fourier_transform.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/phase_register_roundtrip.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/ghz_state.md"
+      ]
+    },
+    {
+      "id": "concrete_grover_oracle_marked3",
+      "query": "Implement oracle(state, marked) so oracle([0.5,0.5,0.5,0.5], 3) returns [0.5,0.5,0.5,-0.5]. The answer must include these check points: oracle; marked; -0.5.",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/grover_oracle_diffusion/tests.py",
+        "evals/tasks/quantum/grover_oracle_diffusion/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/grover_search.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/ghz_state.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_circuit_construction_patterns.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_partial_trace.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/bell_state_construction.md"
+      ]
+    },
+    {
+      "id": "concrete_grover_diffusion_exact",
+      "query": "Implement diffusion(state): for [0.5,0.5,0.5,-0.5], mean=0.25 and the output must be [0,0,0,1]. The answer must include these check points: diffusion; mean = sum(state) / n; 2 * mean - a.",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/grover_oracle_diffusion/tests.py",
+        "evals/tasks/quantum/grover_oracle_diffusion/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_eval_api.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/grover_search.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/depolarizing_channel.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_fourier_transform.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/ghz_state.md"
+      ]
+    },
+    {
+      "id": "concrete_grover_search_two_qubits",
+      "query": "Implement grover_search for n_qubits=2, marked=3, iterations=1 so the marked-state probability is 1.0. The answer must include these check points: grover_search; marked=3; iterations=1.",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/grover_oracle_diffusion/tests.py",
+        "evals/tasks/quantum/grover_oracle_diffusion/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/grover_search.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/depolarizing_channel.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_circuit_construction_patterns.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_partial_trace.md"
+      ]
+    },
+    {
+      "id": "concrete_density_zero_state",
+      "query": "Implement density_from_state([1,0]) so it returns [[1,0],[0,0]] as a plain Python nested list. The answer must include these check points: density_from_state; [[1.0, 0.0], [0.0, 0.0]]; plain Python.",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/density_matrix_partial_trace/tests.py",
+        "evals/tasks/quantum/density_matrix_partial_trace/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_eval_api.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_partial_trace.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/pennylane_basics.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/error_correction_basics.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/depolarizing_channel.md"
+      ]
+    },
+    {
+      "id": "concrete_density_plus_state",
+      "query": "Implement density_from_state for |+>: input [1/sqrt(2),1/sqrt(2)] must return all four matrix entries as 0.5. The answer must include these check points: density_from_state; 1 / math.sqrt(2); 0.5.",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/density_matrix_partial_trace/tests.py",
+        "evals/tasks/quantum/density_matrix_partial_trace/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_eval_api.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_fourier_transform.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/depolarizing_channel.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/bell_state_construction.md"
+      ]
+    },
+    {
+      "id": "concrete_tensor_product_01",
+      "query": "Implement tensor_product so |0><0| tensor |1><1| produces a 4x4 matrix with the only 1.0 at row 1 column 1. The answer must include these check points: tensor_product; i * db + k; j * db + l.",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/density_matrix_partial_trace/tests.py",
+        "evals/tasks/quantum/density_matrix_partial_trace/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_eval_api.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_fourier_transform.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_partial_trace.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/depolarizing_channel.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/phase_register_roundtrip.md"
+      ]
+    },
+    {
+      "id": "concrete_partial_trace_product_b",
+      "query": "Implement partial_trace for trace_out='B': tracing B from |01><01| must return |0><0|. The answer must include these check points: partial_trace; trace_out == \"B\"; [[1.0, 0.0], [0.0, 0.0]].",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/density_matrix_partial_trace/tests.py",
+        "evals/tasks/quantum/density_matrix_partial_trace/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_eval_api.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/bell_state_construction.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/pennylane_basics.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qiskit_basics.md"
+      ]
+    },
+    {
+      "id": "concrete_partial_trace_bell_b",
+      "query": "Implement partial_trace for a Bell density matrix: tracing out B must return the maximally mixed matrix [[0.5,0],[0,0.5]]. The answer must include these check points: Bell; trace_out=\"B\"; maximally mixed.",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/density_matrix_partial_trace/tests.py",
+        "evals/tasks/quantum/density_matrix_partial_trace/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_eval_api.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_partial_trace.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/bell_state_construction.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/depolarizing_channel.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/ghz_state.md"
+      ]
+    },
+    {
+      "id": "concrete_purity_values",
+      "query": "Implement purity(rho): |0><0| and Bell rho must return 1.0; I/2 and the reduced Bell state must return 0.5. The answer must include these check points: purity; rho[i][j] * rho[j][i]; 1.0.",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/density_matrix_partial_trace/tests.py",
+        "evals/tasks/quantum/density_matrix_partial_trace/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/bell_state_construction.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_eval_api.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/depolarizing_channel.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_fourier_transform.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/phase_register_roundtrip.md"
+      ]
+    },
+    {
+      "id": "concrete_shor_x_error_msb",
+      "query": "Implement apply_x_error(state, qubit) for qubits 0..8 using MSB-first mapping, so the bit index is 8 - qubit. The answer must include these check points: apply_x_error; 8 - qubit; i ^ (1 << bit).",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/quantum_error_correction_shor_9qubit/tests.py",
+        "evals/tasks/quantum/quantum_error_correction_shor_9qubit/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_fourier_transform.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/binary_measurement_decoders.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_teleportation.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/measurement_and_classical_register.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qiskit_basics.md"
+      ]
+    },
+    {
+      "id": "concrete_shor_decode_majority",
+      "query": "Implement Shor bit-flip correction by majority vote inside each 3-qubit block before logical phase decoding. The answer must include these check points: shor_decode; majority; 3-qubit block.",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/quantum_error_correction_shor_9qubit/tests.py",
+        "evals/tasks/quantum/quantum_error_correction_shor_9qubit/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/error_correction_basics.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_circuit_construction_patterns.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/circuit_repair_recipes.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_fourier_transform.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/binary_measurement_decoders.md"
+      ]
+    },
+    {
+      "id": "concrete_teleportation_all_bits",
+      "query": "Implement teleportation_corrections(m0,m1): (0,0)->[], (1,0)->['X'], (0,1)->['Z'], (1,1)->['Z','X']; invalid bits raise ValueError. The answer must include these check points: teleportation_corrections; (1, 0): [\"X\"]; (0, 1): [\"Z\"].",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/teleportation_corrections/tests.py",
+        "evals/tasks/quantum/teleportation_corrections/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_teleportation.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/binary_measurement_decoders.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/superdense_coding.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/depolarizing_channel.md"
+      ]
+    },
+    {
+      "id": "concrete_bitflip_syndrome_table",
+      "query": "Implement the 3-qubit bit-flip syndrome decoder: (0,0)->None, (1,0)->0, (1,1)->1, and (0,1)->2. The answer must include these check points: (0, 0): None; (1, 0): 0; (1, 1): 1.",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/error_detection_bit_flip/tests.py",
+        "evals/tasks/quantum/error_detection_bit_flip/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/error_correction_basics.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/binary_measurement_decoders.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/depolarizing_channel.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/superdense_coding.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_teleportation.md"
+      ]
+    },
+    {
+      "id": "concrete_gate_alias_cnot_unknown",
+      "query": "Implement normalize_gate so 'cnot' maps to 'CX', 'toffoli' maps to 'CCX', and unknown aliases raise ValueError. The answer must include these check points: normalize_gate; cnot; CX.",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/gate_alias_normalization/tests.py",
+        "evals/tasks/quantum/gate_alias_normalization/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_eval_api.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_gates_reference.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/circuit_repair_recipes.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_partial_trace.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md"
+      ]
+    },
+    {
+      "id": "concrete_gate_casefold_barrier",
+      "query": "Implement gate alias normalization with strip().lower(): ' Hadamard ' maps to H and barrier handling is preserved. The answer must include these check points: strip().lower(); Hadamard; H.",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/gate_alias_casefold_barrier/tests.py",
+        "evals/tasks/quantum/gate_alias_casefold_barrier/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_gates_reference.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/circuit_repair_recipes.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_circuit_construction_patterns.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/error_correction_basics.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_partial_trace.md"
+      ]
+    },
+    {
+      "id": "concrete_superdense_encode_table",
+      "query": "Implement the superdense encode table exactly: '00'->I, '01'->X, '10'->Z, and '11'->ZX. The answer must include these check points: superdense; '00': 'I'; '01': 'X'.",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/superdense_coding/tests.py",
+        "evals/tasks/quantum/superdense_coding/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_eval_api.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/superdense_coding.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_gates_reference.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/binary_measurement_decoders.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/depolarizing_channel.md"
+      ]
+    },
+    {
+      "id": "concrete_superdense_router_table",
+      "query": "Implement PAULI_ROUTER for superdense messages: (0,0)->I, (0,1)->X, (1,0)->Z, and (1,1)->ZX or Y by the task convention. The answer must include these check points: PAULI_ROUTER; (0, 0); (0, 1): \"X\".",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/superdense_pauli_router/tests.py",
+        "evals/tasks/quantum/superdense_pauli_router/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/superdense_coding.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/binary_measurement_decoders.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/depolarizing_channel.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_teleportation.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/ghz_state.md"
+      ]
+    },
+    {
+      "id": "concrete_binary_decoder_tables",
+      "query": "Implement Bell and syndrome binary measurement decoders with fixed bit order; do not swap (m1,m2). The answer must include these check points: BELL_LABELS; SYNDROMES; (m1, m2).",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/binary_measurement_decoder/tests.py",
+        "evals/tasks/quantum/binary_measurement_decoder/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/bell_state_construction.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_eval_api.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/binary_measurement_decoders.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_teleportation.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_partial_trace.md"
+      ]
+    },
+    {
+      "id": "concrete_phase_register_bounds",
+      "query": "Implement phase measurement register parsing so measurements stay in [0, 2^n) and are not bit-reversed. The answer must include these check points: phase; measurement; [0, 2^n).",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/phase_measurement_register/tests.py",
+        "evals/tasks/quantum/phase_measurement_register/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/measurement_and_classical_register.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/phase_register_roundtrip.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/depolarizing_channel.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/stabilizer_formalism.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/grover_search.md"
+      ]
+    },
+    {
+      "id": "concrete_qft_phase_x1_n4",
+      "query": "Implement QFT phase pattern for N=4,x=1: phases[k] are 0, pi/2, pi, and 3*pi/2 modulo 2*pi. The answer must include these check points: phases[k]; 2 * pi * x * k / N; pi/2.",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/qft_phase_pattern/tests.py",
+        "evals/tasks/quantum/qft_phase_pattern/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_eval_api.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_fourier_transform.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/circuit_repair_recipes.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/phase_register_roundtrip.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_circuit_construction_patterns.md"
+      ]
+    },
+    {
+      "id": "concrete_phase_repair_modulo",
+      "query": "Repair phase comparisons so values are reduced modulo 2*pi before np.allclose, making 0 and 2*pi equivalent. The answer must include these check points: np.mod; 2 * np.pi; np.allclose.",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/circuit_phase_repair/tests.py",
+        "evals/tasks/quantum/circuit_phase_repair/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/circuit_repair_recipes.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_fourier_transform.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_circuit_construction_patterns.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_phase_estimation.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/phase_register_roundtrip.md"
+      ]
+    },
+    {
+      "id": "concrete_depth_cancel_self_inverse",
+      "query": "Optimize a gate list by canceling adjacent self-inverse pairs such as H-H, X-X, and CNOT-CNOT. The answer must include these check points: HH; XX; CNOT-CNOT.",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/circuit_depth_optimization/tests.py",
+        "evals/tasks/quantum/circuit_depth_optimization/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/circuit_repair_recipes.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/grover_search.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_partial_trace.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/stabilizer_formalism.md"
+      ]
+    },
+    {
+      "id": "concrete_stabilizer_updates",
+      "query": "Repair stabilizer tableau apply_h/apply_s/apply_cnot using pre-update x/z bits and the documented sign flips. The answer must include these check points: apply_h; apply_s; apply_cnot.",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/stabilizer_tableau_update_repair/tests.py",
+        "evals/tasks/quantum/stabilizer_tableau_update_repair/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/stabilizer_formalism.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/superdense_coding.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/grover_search.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_partial_trace.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md"
+      ]
+    },
+    {
+      "id": "concrete_depolarizing_half_zero",
+      "query": "Implement depolarizing_channel so |0><0| with p=0.5 returns [[0.75,0],[0,0.25]]. The answer must include these check points: depolarizing_channel; p=0.5; [[0.75, 0.0], [0.0, 0.25]].",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/quantum_channel_depolarizing/tests.py",
+        "evals/tasks/quantum/quantum_channel_depolarizing/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/depolarizing_channel.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_eval_api.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/ghz_state.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/bell_state_construction.md"
+      ]
+    },
+    {
+      "id": "concrete_depolarizing_full_mixed",
+      "query": "Implement depolarizing_channel so p=1.0 maps |0><0| to the maximally mixed state [[0.5,0],[0,0.5]]. The answer must include these check points: depolarizing_channel; p=1.0; maximally mixed.",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/quantum_channel_depolarizing/tests.py",
+        "evals/tasks/quantum/quantum_channel_depolarizing/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/depolarizing_channel.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/ghz_state.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/state_vector_simulation.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/bell_state_construction.md"
+      ]
+    },
+    {
+      "id": "concrete_amplitude_damping_one_to_zero",
+      "query": "Implement amplitude_damping_channel so |1><1| with gamma=1 maps to |0><0|. The answer must include these check points: amplitude_damping_channel; gamma=1; [[1.0, 0.0], [0.0, 0.0]].",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/quantum_channel_depolarizing/tests.py",
+        "evals/tasks/quantum/quantum_channel_depolarizing/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_eval_api.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/bell_state_construction.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/ghz_state.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/maxcut_classical_helpers.md"
+      ]
+    },
+    {
+      "id": "concrete_trotter_pauli_matrices",
+      "query": "Implement pauli_matrix so X is [[0,1],[1,0]], Z is [[1,0],[0,-1]], and I is [[1,0],[0,1]]. The answer must include these check points: pauli_matrix; \"X\"; \"Z\".",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/trotterized_hamiltonian_evolution/tests.py",
+        "evals/tasks/quantum/trotterized_hamiltonian_evolution/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/depolarizing_channel.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_teleportation.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_gates_reference.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/error_correction_basics.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/binary_measurement_decoders.md"
+      ]
+    },
+    {
+      "id": "concrete_trotter_z_pi",
+      "query": "Implement trotter_evolve so evolving |0> under Z for t=pi returns approximately -|0> and preserves norm. The answer must include these check points: trotter_evolve; Z; math.pi.",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/trotterized_hamiltonian_evolution/tests.py",
+        "evals/tasks/quantum/trotterized_hamiltonian_evolution/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/trotter_decomposition.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/circuit_repair_recipes.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/depolarizing_channel.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_phase_estimation.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_fourier_transform.md"
+      ]
+    },
+    {
+      "id": "concrete_vqe_energy_z",
+      "query": "Implement VQE expectation energy so <0|Z|0> evaluates to 1.0 and <1|Z|1> evaluates to -1.0. The answer must include these check points: VQE; expectation; np.vdot.",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/vqe_energy_minimization/tests.py",
+        "evals/tasks/quantum/vqe_energy_minimization/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/vqe_basics.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/depolarizing_channel.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_teleportation.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/superdense_coding.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/binary_measurement_decoders.md"
+      ]
+    },
+    {
+      "id": "concrete_maxcut_assignment_enumerator",
+      "query": "Enumerate all MaxCut assignments for n=3 as zero-padded bitstrings from '000' through '111'. The answer must include these check points: enumerate; format; 03b.",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/maxcut_assignment_enumerator/tests.py",
+        "evals/tasks/quantum/maxcut_assignment_enumerator/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/pennylane/docs.pennylane.ai-en-stable-code-qml_qaoa.html-17d406a299.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/cuda-quantum/nvidia.github.io-cuda-quantum-latest-applications-python-qaoa.html-f0e5432714.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/tensorcircuit/tensorcircuit.readthedocs.io-en-latest-tutorials-qaoa.html-ea79d64696.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/cuda-quantum/nvidia.github.io-cuda-quantum-latest-applications-python-digitized_counterdiabatic_qaoa.ht-04f881362b.md"
+      ]
+    },
+    {
+      "id": "concrete_maxcut_partition_ranker",
+      "query": "Rank MaxCut partitions by descending cut value with deterministic ascending-bitstring tie breaks. The answer must include these check points: rank; partition; descending.",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/maxcut_partition_ranker/tests.py",
+        "evals/tasks/quantum/maxcut_partition_ranker/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/cuda-quantum/nvidia.github.io-cuda-quantum-latest-applications-python-qaoa.html-f0e5432714.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/qiskit/quantum.cloud.ibm.com-docs-tutorials-advanced-techniques-for-qaoa-4a2e788d16.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/tensorcircuit/tensorcircuit.readthedocs.io-en-latest-tutorials-qaoa.html-ea79d64696.md",
+        "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest/pennylane/docs.pennylane.ai-en-stable-code-qml_qaoa.html-17d406a299.md"
+      ]
+    },
+    {
+      "id": "concrete_ghz_witness_negative",
+      "query": "Implement GHZ witness so the perfect 3-qubit GHZ state has witness value 0.5 - fidelity = -0.5. The answer must include these check points: GHZ; witness; 0.5 - fidelity.",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/ghz_state_witness/tests.py",
+        "evals/tasks/quantum/ghz_state_witness/",
+        "docs/quantum_libraries/circuit_repair_recipes.md",
+        "docs/quantum_libraries/"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/ghz_state.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/README.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_partial_trace.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/error_correction_basics.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/binary_measurement_decoders.md"
+      ]
+    }
+  ]
+}

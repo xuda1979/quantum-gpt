@@ -1,0 +1,26 @@
+{
+  "quantum_grover_oracle_diffusion": [
+    {
+      "rank": 1,
+      "score": 1.9625,
+      "source": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/grover_search.md"
+    },
+    {
+      "rank": 2,
+      "score": 1.85,
+      "source": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/grover_search.md"
+    }
+  ],
+  "quantum_density_matrix_partial_trace": [
+    {
+      "rank": 1,
+      "score": 1.9813,
+      "source": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_partial_trace.md"
+    },
+    {
+      "rank": 2,
+      "score": 1.8125,
+      "source": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_partial_trace.md"
+    }
+  ]
+}

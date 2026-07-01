@@ -342,6 +342,47 @@ def generate_for_run(
     return log
 
 
+def check_prompt_budget(
+    tokenizer,
+    prompts_by_label: dict[str, tuple[str, dict[str, str]]],
+    *,
+    max_input_tokens: int | None,
+) -> dict[str, dict[str, int]]:
+    """Validate all prompt sizes before any expensive generation starts."""
+    prompt_lengths: dict[str, dict[str, int]] = {}
+    over_budget: list[dict[str, Any]] = []
+    for label, (system_prompt, user_prompts) in prompts_by_label.items():
+        label_lengths: dict[str, int] = {}
+        for task_id, user_prompt in user_prompts.items():
+            prompt_text = tokenizer.apply_chat_template(
+                [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                tokenize=False,
+                add_generation_prompt=True,
+            )
+            token_count = len(tokenizer(prompt_text)["input_ids"])
+            label_lengths[task_id] = int(token_count)
+            if max_input_tokens is not None and token_count > max_input_tokens:
+                over_budget.append(
+                    {
+                        "label": label,
+                        "task_id": task_id,
+                        "prompt_tokens": int(token_count),
+                        "max_input_tokens": int(max_input_tokens),
+                    }
+                )
+        prompt_lengths[label] = label_lengths
+    if over_budget:
+        raise SystemExit(
+            "Prompt budget exceeded before generation: "
+            + json.dumps(over_budget, ensure_ascii=False)
+            + ". Lower --top-k/--max-doc-chars, raise --max-input-tokens, or use --prompt-variant compact."
+        )
+    return prompt_lengths
+
+
 def score_run(run_dir: Path) -> dict[str, Any]:
     candidate_map = run_dir / "candidate-map.json"
     completed = subprocess.run(
@@ -491,14 +532,33 @@ def main() -> int:
                 for c in chunks
             ]
 
-    # Lazy-import torch + transformers
-    print(json.dumps({"stage": "load_model_start", "model": str(args.model_path), "device": args.device}, ensure_ascii=False), flush=True)
+    # Load the tokenizer first so prompt-budget errors fail before model loading
+    # or any partial generation artifacts are created.
     import torch
     from transformers import AutoModelForCausalLM, AutoTokenizer
 
     tokenizer = AutoTokenizer.from_pretrained(args.model_path)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
+    prompts_to_check: dict[str, tuple[str, dict[str, str]]] = {}
+    if args.mode in ("both", "no_rag"):
+        prompts_to_check["no-rag"] = (SYSTEM_PROMPT_BASE, base_prompts)
+    if args.mode in ("both", "rag"):
+        prompts_to_check["with-rag"] = (SYSTEM_PROMPT_RAG, rag_prompts)
+    prompt_lengths = check_prompt_budget(
+        tokenizer,
+        prompts_to_check,
+        max_input_tokens=args.max_input_tokens or None,
+    )
+    print(
+        json.dumps(
+            {"stage": "prompt_budget_checked", "prompt_lengths": prompt_lengths},
+            ensure_ascii=False,
+        ),
+        flush=True,
+    )
+
+    print(json.dumps({"stage": "load_model_start", "model": str(args.model_path), "device": args.device}, ensure_ascii=False), flush=True)
     dtype = torch.float16 if args.device != "cpu" else torch.float32
     model = AutoModelForCausalLM.from_pretrained(
         args.model_path,

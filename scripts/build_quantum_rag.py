@@ -114,6 +114,7 @@ def main() -> int:
         chunk_overlap=args.chunk_overlap,
         min_chunk_chars=args.min_chunk_chars,
         max_files=args.max_files,
+        source_root=ROOT,
     )
     if not chunks:
         raise SystemExit("No chunks were built. Check the provided roots or filters.")

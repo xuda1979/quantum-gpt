@@ -1,0 +1,181 @@
+Task ID: quantum_maxcut_assignment_enumerator
+Task name: MaxCut assignment enumerator
+Domain: quantum
+Category: algorithm_implementation
+
+Reference documentation (use these only as background; do not echo them):
+--- BEGIN REFERENCE DOCS ---
+[DOC 1] source=qaoa_maxcut.md
+[source: quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md] [quantum-gpt/docs/quantum libraries/qaoa maxcut.md]
+
+# QAOA for MaxCut
+
+## Concept
+The Quantum Approximate Optimization Algorithm (QAOA) attacks
+combinatorial optimization problems by alternating two parameterised
+unitaries. For MaxCut on a graph G = (V, E) with edge weights w_uv:
+
+- Cost Hamiltonian:  H_C = sum_{(u,v) in E} (w_uv / 2) * (I - Z_u Z_v)
+- Mixer Hamiltonian: H_M = sum_v X_v
+
+For depth p, parameters (gamma_1, ..., gamma_p, beta_1, ..., beta_p):
+
+  |gamma, beta> = e^{-i beta_p H_M} e^{-i gamma_p H_C} ...
+                  e^{-i beta_1 H_M} e^{-i gamma_1 H_C} |+>^n
+
+## MaxCut cost function (classical bitstring evaluation)
+
+```python
+def maxcut_cost(bitstring: list[int], edges: list[tuple[int, int, float]]) -> float:
+    total = 0.0
+    for u, v, w in edges:
+        if bitstring[u] != bitstring[v]:
+            total += w
+    return total
+```
+
+Equivalently using +/-1 spins:
+
+  cost = sum_{(u,v)} w_uv * (1 - s_u * s_v) / 2
+
+## Reference Python (classical simulation of QAOA cost)
+
+```python
+import itertools
+
+def best_  ...[truncated]
+
+[DOC 2] source=qaoa_maxcut.md
+[source: quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md] [quantum-gpt/docs/quantum libraries/qaoa maxcut.md]
+
+0, 1], repeat=n):
+        cost = maxcut_cost(list(bits), edges)
+        if cost > best[0]:
+            best = (cost, list(bits))
+    return best
+```
+
+## Library snippets
+Qiskit (high-level):
+```python
+from qiskit_optimization.applications import Maxcut
+from qiskit_optimization.algorithms import MinimumEigenOptimizer
+```
+
+PennyLane offers `qml.qaoa.maxcut` to build cost and mixer Hamiltonians
+automatically.
+
+## Common pitfalls
+- Edge weights are *additive*; only count each edge once even if the
+  graph is undirected.
+- The quantum cost expectation <H_C> is shifted by `sum w / 2` from the
+  classical cut value: <H_C>_psi = (sum w_uv) / 2 - sum w_uv/2 <Z_u Z_v>.
+- For p=1, optimal (gamma, beta) for triangle-free graphs is roughly
+  gamma = pi/8, beta = pi/8 (use grid search to confirm).
+
+[DOC 3] source=AGENTS.md
+[source: daxu/software/quantum-gpt/AGENTS.md] [daxu/software/quantum-gpt/AGENTS.md]
+
+hell.sh`, or `scripts/huanxin_shell.sh`
+- `skills/s3-transfer/SKILL.md` for all local <-> S3 <-> ai1/ai2 code and file transfer
+
+## Execution Policy
+
+- Default orchestration model is yunwu/gpt-5.4.
+- Treat yunwu as the active provider for both model calls and memory search compatibility.
+- Operate Huanxin and S3 directly from this repo with `scripts/`, `browser-automation/`, and local `rclone`/`node` binaries.
+- Ignore `.openclaw/` state unless the user explicitly asks for OpenClaw-specific debugging.
+- For Huanxin work, use local validation first, then S3 transfer, then ai2 shell execution.
+- Never claim a remote step succeeded unless you actually ran the command and checked the result.
+- If local tests fail, fix the local issue before any remote action.
+
+### Huanxin Environment Assignment
+
+- **This agent (quantum-rnd) may use both ai1 and ai2** on Huanxin (https://aihuanxin.cn).
+- Default to ai2 for the mainline path unless ai1 offers clearer capacity or parallelism for the current experiment.
+- Br  ...[truncated]
+--- END REFERENCE DOCS ---
+
+Write the simplest Python file that satisfies the supplied tests and return only that file.
+
+Reference candidate style example (for format guidance, not for blind copying):
+--- BEGIN REFERENCE CANDIDATE ---
+from itertools import product
+
+
+def enumerate_bitstrings(n_nodes: int) -> list[str]:
+    if n_nodes <= 0:
+        raise ValueError("n_nodes must be positive")
+    return ["".join(bits) for bits in product("01", repeat=n_nodes)]
+
+
+def cut_value(bitstring: str, edges: list[tuple[int, int]]) -> int:
+    if any(bit not in {"0", "1"} for bit in bitstring):
+        raise ValueError("bitstring must contain only 0/1")
+    total = 0
+    for left, right in edges:
+        if bitstring[left] != bitstring[right]:
+            total += 1
+    return total
+
+
+def best_cut_assignment(n_nodes: int, edges: list[tuple[int, int]]) -> tuple[str, int]:
+    best_bits = ""
+    best_cost = -1
+    for bitstring in enumerate_bitstrings(n_nodes):
+        cost = cut_value(bitstring, edges)
+        if cost > best_cost or (cost == best_cost and (not best_bits or bitstring < best_bits)):
+            best_bits = bitstring
+            best_cost = cost
+    return best_bits, best_cost
+
+--- END REFERENCE CANDIDATE ---
+
+Tests the candidate must satisfy:
+--- BEGIN TESTS ---
+import importlib.util
+
+
+def _load(candidate_path: str):
+    spec = importlib.util.spec_from_file_location("candidate", candidate_path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
+def run_tests(candidate_path: str) -> dict:
+    module = _load(candidate_path)
+    failures = []
+
+    if module.enumerate_bitstrings(2) != ["00", "01", "10", "11"]:
+        failures.append("enumerate_bitstrings(2) should enumerate all assignments in lexical order")
+
+    triangle = [(0, 1), (1, 2), (0, 2)]
+    if module.cut_value("010", triangle) != 2:
+        failures.append("cut_value('010', triangle) should be 2")
+
+    best_bits, best_cost = module.best_cut_assignment(3, triangle)
+    if best_cost != 2:
+        failures.append(f"best_cut_assignment(triangle) -> cost {best_cost}, expected 2")
+    if module.cut_value(best_bits, triangle) != best_cost:
+        failures.append("best_cut_assignment returned inconsistent assignment/cost")
+
+    try:
+        module.enumerate_bitstrings(0)
+        failures.append("enumerate_bitstrings(0) did not raise ValueError")
+    except ValueError:
+        pass
+
+    try:
+        module.cut_value("01a", [(0, 1)])
+        failures.append("cut_value accepted invalid bitstring")
+    except ValueError:
+        pass
+
+    return {
+        "passed": not failures,
+        "details": failures or ["maxcut assignment enumerator imports itertools and returns stable best cuts"],
+    }
+
+--- END TESTS ---
