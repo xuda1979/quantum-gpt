@@ -397,3 +397,13 @@ python3 scripts/run_asi2_35b_pass1_eval.py \
 - 12 题旧 35B `0/12` 已被审计为无效生成路径问题，不可作为模型质量结论。
 - 27B fallback 在同一 12 题上 base / adapter 均为 `8/12`，作为唯一完整结果暂时只能用来佐证“评测管线本身可执行”。
 - 下一步需要补齐 35B adapter 的 495 loss / pass@1 和 corrected 12 题 pass@1，才能给出 35B 模型效果结论。
+
+## 12. 2026-07-01 远程状态核查
+
+2026-07-01 尝试通过 Huanxin browser daemon 远程登录 ASI2 核查训练产物：
+
+- ASI2 环境状态：**已锁定（locked）**，Shell 终端 **已断开（disconnected）**。
+- Huanxin shell endpoint 返回 `code=170022 获取shell终端信息失败`，pod `dl-868c196fb82d3e0b8cfbbe826d8afd0a-r0-7fea445b7d3c-0`。
+- ASI1/AI 与 ASI3 同样返回 `code=170022`，属于平台侧 shell 终端不可用，不是 ASI2 单点故障。
+- INER S3 `reports/` 与 `outputs/` 列表均未发现 `qwen36_35b_dedup1k_495_*` eval JSON 或 `qwen36-35b-a3b-dedup1k-lora-qvo-moe-noK-1ep-*` adapter 目录。
+- 结论：从本地无法远程确认 35B dedup-1k SFT 是否训练完成、adapter 是否持久化到 NAS。需要 Huanxin shell 恢复后（或直接有 NAS 访问的人）检查 `/root/work/filestorage/outputs/qwen36-35b-a3b-dedup1k-lora-qvo-moe-noK-1ep-<STAMP>/adapter` 是否存在，再跑第 10 节表中的 4 步评测。
