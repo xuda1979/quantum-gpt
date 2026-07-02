@@ -9,7 +9,7 @@
 1. `data/generated/quantum_finetune_verified_chat_sft_dedup_1k/` 的 495 条 held-out 样本评测口径。
 2. 2026-06-11 使用的 12 个新生成可执行任务评测口径，包含 8 个量子任务和 4 个软件工程任务。
 
-结论先行：495 held-out 数据、质量审计、pass@1 harness 和 CE loss/perplexity harness 已经落地，但本地和 INER S3 当前没有找到 35B dedup-1k adapter 在 495 条样本上跑完后的结果 JSON。因此 495 部分只能报告数据、方法和“未归档有效结果”的状态，不能给出 pass@1 或 loss 改善数字。12 题部分有一组已完成的 27B fallback 评测结果，base 和 adapter 均为 `8/12`；35B W8A8 的旧 `0/12` 报告已经被审计判定为无效生成路径问题，不能作为模型质量结论。
+结论先行：35B dedup-1k LoRA SFT 已于 2026-06-23 在 ASI2 上训练完成，adapter 已持久化到 NAS（`/root/work/filestorage/outputs/qwen36-35b-a3b-dedup1k-lora-qvo-moe-noK-1ep-20260623T084650Z/adapter`，5.32 GiB），`final_eval` loss = 0.0216、perplexity = 1.0219，250/250 步完整跑完 1 epoch。但 495 held-out pass@1、495 held-out loss/perplexity、12 题 corrected pass@1 三个评测都还没有跑，因此目前只有训练态指标，没有可执行的 pass@1 或 per-framework 改善数字。12 题部分有一组已完成的 27B fallback 评测结果，base 和 adapter 均为 `8/12`；35B W8A8 的旧 `0/12` 报告已经被审计判定为无效生成路径问题，不能作为模型质量结论。详见第 12 节的远程核查记录。
 
 ## 2. 495 条 held-out 样本
 
@@ -342,11 +342,18 @@ python3 scripts/run_asi2_35b_pass1_eval.py \
 
 ## 8. 已知结果归档清单
 
-下表汇总截至 2026-06-30 本地与 INER S3 上能够定位到的、与 35B adapter 评测相关的全部 artifact。除了 27B fallback 的 12 题结果是完整的，35B 本身的 adapter 评测结果尚未归档。
+下表汇总截至 2026-07-01 本地、NAS、INER S3 上能够定位到的、与 35B adapter 评测相关的全部 artifact。35B dedup-1k 训练已完成并持久化 adapter，但三个 adapter 评测（495 pass@1、495 loss、12 题 pass@1）均未跑。
 
 | 评测口径 | 模型 | 状态 | 结果文件 | 关键数字 |
 | :--- | :--- | :--- | :--- | :--- |
-| 495 held-out pass@1 | 35B dedup-1k adapter | 未归档 | 期望 `reports/qwen36_35b_dedup1k_495_base_vs_adapter_pass1_*.json` | 无 |
+| 35B dedup-1k SFT 训练 | 35B-A3B W8A8 LoRA | **已完成** | NAS `outputs/qwen36-35b-a3b-dedup1k-lora-qvo-moe-noK-1ep-20260623T084650Z/` | 250/250 步，final_eval loss=0.0216，ppl=1.0219，adapter 5.32 GiB |
+| 495 held-out pass@1 | 35B dedup-1k adapter | 未跑 | 期望 `reports/qwen36_35b_dedup1k_495_base_vs_adapter_pass1_*.json` | 无 |
+| 495 held-out loss/perplexity | 35B dedup-1k adapter | 未跑 | 期望 `reports/qwen36_35b_dedup1k_495_heldout_loss_*.json` | 无 |
+| 12 题 pass@1 + rubric | 35B W8A8 (0611 adapter) | 无效（旧 `0/12`） | 无有效 JSON | 旧 `0/12` 已废弃 |
+| 12 题 pass@1 + rubric | 27B fallback | 已完成 | memory `2026-06-11` ASI2 记录 | base `8/12`，adapter `8/12` |
+| 12 题 rubric 均分 | 27B fallback | 已完成 | memory `2026-06-11` ASI2 记录 | grammar `3.75` / algorithm `3.5` / code_quality `3.8` / efficiency `4.0` / overall 见原始记录 |
+| 35B dedup-1k 数据质量审计 | 数据 | 已完成 | `reports/quantum_finetune_verified_chat_sft_dedup_1k_code_purity_audit.json` | JSON parse errors 0 / schema 0 / syntax 0 |
+| 35B dedup-1k 数据 tarball | 数据 | 已归档 | `artifacts/asi3_fetch/asi3-35b-finetune-data-20260630-dedup1k.from-asi3.tar.gz` | SHA256 `f5b13626d0309c9ea79225df6650ac25e07c584efa114c852c42f7104fbb58bf` |up1k_495_base_vs_adapter_pass1_*.json` | 无 |
 | 495 held-out loss/perplexity | 35B dedup-1k adapter | 未归档 | 期望 `reports/qwen36_35b_dedup1k_495_heldout_loss_*.json` | 无 |
 | 12 题 pass@1 + rubric | 35B W8A8 (0611 adapter) | 无效（旧 `0/12`） | 无有效 JSON | 旧 `0/12` 已废弃 |
 | 12 题 pass@1 + rubric | 27B fallback | 已完成 | memory `2026-06-11` ASI2 记录 | base `8/12`，adapter `8/12` |
@@ -380,9 +387,13 @@ python3 scripts/run_asi2_35b_pass1_eval.py \
 
 下表把“后续最小动作”拆成可指派、可验收的步骤，并标注当前负责 artifact 和验收标准：
 
-| # | 动作 | 负责脚本 / artifact | 验收标准 |
-| :--- | :--- | :--- | :--- |
-| 1 | 确认 35B dedup-1k SFT 的最终 adapter 路径 | NAS `/root/work/filestorage/outputs/qwen36-35b-a3b-dedup1k-lora-qvo-moe-noK-1ep-<STAMP>/adapter` | adapter 目录存在 `adapter_model.safetensors`、`adapter_config.json` |
+| # | 动作 | 负责脚本 / artifact | 验收标准 | 状态 |
+| :--- | :--- | :--- | :--- | :--- |
+| 1 | 确认 35B dedup-1k SFT 的最终 adapter 路径 | NAS `outputs/qwen36-35b-a3b-dedup1k-lora-qvo-moe-noK-1ep-20260623T084650Z/adapter` | adapter 目录存在 `adapter_model.safetensors`、`adapter_config.json` | **已完成（2026-07-01）** |
+| 2 | 跑 495 held-out CE loss / perplexity | `scripts/run_asi2_35b_heldout_loss_eval.py` | 产出 `reports/qwen36_35b_dedup1k_495_heldout_loss_<DATE>.json`，含 base / adapter loss、delta、`adapter_better` | 待跑 |
+| 3 | 跑 495 held-out pass@1 | `scripts/eval_base_vs_adapter.py` | 产出 `reports/qwen36_35b_dedup1k_495_base_vs_adapter_pass1_<DATE>.json` + `_details.json`，含总 pass@1 和 per-framework pass@1 | 待跑 |
+| 4 | 补跑 12 题 35B corrected pass@1 | `scripts/run_asi2_35b_pass1_eval.py` | 产出 `reports/qwen36_35b_w8a8_pass1_only_eval_<DATE>.json`，含 candidate code、failure details | 待跑 |
+| 5 | 回传 + 上传 S3 + 更新本报告 | `scripts/pull_from_s3.sh`、`scripts/push_to_s3.sh` | 三个结果 JSON + `_details.json` 出现在本地 `reports/` 与 INER S3；本报告第 8 节归档清单从“未归档”更新为实际数字 | 待跑 |`adapter_config.json` |
 | 2 | 跑 495 held-out CE loss / perplexity | `scripts/run_asi2_35b_heldout_loss_eval.py` | 产出 `reports/qwen36_35b_dedup1k_495_heldout_loss_<DATE>.json`，含 base / adapter loss、delta、`adapter_better` |
 | 3 | 跑 495 held-out pass@1 | `scripts/eval_base_vs_adapter.py` | 产出 `reports/qwen36_35b_dedup1k_495_base_vs_adapter_pass1_<DATE>.json` + `_details.json`，含总 pass@1 和 per-framework pass@1 |
 | 4 | 补跑 12 题 35B corrected pass@1 | `scripts/run_asi2_35b_pass1_eval.py` | 产出 `reports/qwen36_35b_w8a8_pass1_only_eval_<DATE>.json`，含 candidate code、failure details |
@@ -390,20 +401,61 @@ python3 scripts/run_asi2_35b_pass1_eval.py \
 
 ## 11. 对外口径
 
-截至 2026-06-30，对外可以表述为：
+截至 2026-07-01，对外可以表述为：
 
 - 35B 的 1k/495 数据和评测管线已经准备好，数据质量与隔离性已核验。
-- 35B dedup-1k LoRA SFT 的 launcher 已经 durability by design，但训练完成后的 adapter 评测结果尚未归档，因此 35B 本身没有可发布的 pass@1 / loss 数字。
+- 35B dedup-1k LoRA SFT 已经在 ASI2 上训练完成（250/250 步，1 epoch，1000 train examples），adapter 已持久化到 NAS，`final_eval` loss = 0.0216、perplexity = 1.0219。
+- 但 35B adapter 的 495 held-out pass@1、495 held-out loss/perplexity、12 题 corrected pass@1 三个评测都还没有跑，因此目前只有训练态指标，没有 pass@1 或 per-framework 改善数字可以发布。
 - 12 题旧 35B `0/12` 已被审计为无效生成路径问题，不可作为模型质量结论。
 - 27B fallback 在同一 12 题上 base / adapter 均为 `8/12`，作为唯一完整结果暂时只能用来佐证“评测管线本身可执行”。
-- 下一步需要补齐 35B adapter 的 495 loss / pass@1 和 corrected 12 题 pass@1，才能给出 35B 模型效果结论。
+- 下一步在 ASI1 或 ASI3 上用 `…/qwen36-35b-a3b-dedup1k-lora-qvo-moe-noK-1ep-20260623T084650Z/adapter` 跑三个评测 harness，才能给出 35B 模型效果结论。
 
 ## 12. 2026-07-01 远程状态核查
+
+### 12.1 初次核查（ASI2 不可达）
 
 2026-07-01 尝试通过 Huanxin browser daemon 远程登录 ASI2 核查训练产物：
 
 - ASI2 环境状态：**已锁定（locked）**，Shell 终端 **已断开（disconnected）**。
 - Huanxin shell endpoint 返回 `code=170022 获取shell终端信息失败`，pod `dl-868c196fb82d3e0b8cfbbe826d8afd0a-r0-7fea445b7d3c-0`。
-- ASI1/AI 与 ASI3 同样返回 `code=170022`，属于平台侧 shell 终端不可用，不是 ASI2 单点故障。
+- 初次核查时 ASI1/AI 与 ASI3 也返回 `code=170022`，但重启 stale daemon 后 ASI1、ASI3 均恢复可用，因此初次报告的“平台侧 shell 不可用”实际是 stale daemon，不是平台故障；ASI2 仍然是 locked。
 - INER S3 `reports/` 与 `outputs/` 列表均未发现 `qwen36_35b_dedup1k_495_*` eval JSON 或 `qwen36-35b-a3b-dedup1k-lora-qvo-moe-noK-1ep-*` adapter 目录。
-- 结论：从本地无法远程确认 35B dedup-1k SFT 是否训练完成、adapter 是否持久化到 NAS。需要 Huanxin shell 恢复后（或直接有 NAS 访问的人）检查 `/root/work/filestorage/outputs/qwen36-35b-a3b-dedup1k-lora-qvo-moe-noK-1ep-<STAMP>/adapter` 是否存在，再跑第 10 节表中的 4 步评测。
+
+### 12.2 ASI1 / ASI3 恢复后的核查（有效结果）
+
+重启 stale daemon 后通过 ASI1、ASI3 远程登录（两者挂载同一 NAS `/root/work/filestorage`），确认 35B dedup-1k SFT 已经训练完成：
+
+- NAS `/root/work/filestorage/outputs/` 下共有 6 个 `qwen36-35b-a3b-dedup1k-lora-*` 目录，只有最新的 `qwen36-35b-a3b-dedup1k-lora-qvo-moe-noK-1ep-20260623T084650Z` 有完整 adapter。
+- 其他 5 个目录（`20260623T024129Z`、`20260623T025253Z`、`20260623T040010Z`、`20260623T061404Z`、`RESUME-step50-20260624T024503Z`）没有 adapter，是更早的失败启动或一次中止的 resume 尝试（后者只有 `train.log`）。
+
+**完成 adapter 路径**：`/root/work/filestorage/outputs/qwen36-35b-a3b-dedup1k-lora-qvo-moe-noK-1ep-20260623T084650Z/adapter`
+
+- `adapter_model.safetensors`：5,716,411,744 字节（约 5.32 GiB）
+- `adapter_config.json`、`chat_template.jinja`、`tokenizer.json`、`tokenizer_config.json`、`processor_config.json`、`README.md` 齐全
+
+**训练完成度**（来自同目录 `metrics.json`）：
+
+- `completed_steps = 250`，`max_steps = 250`（完整跑完 1 epoch）
+- `train_examples = 1000`，`eval_examples = 495`
+- `trainable_parameter_count = 1,429,395,968`（约 1.43B）
+- `final_eval`：**loss = 0.021627799651586694，perplexity = 1.0218633757762108**
+- 训练 loss 轨迹：step 1 = 0.5066 → step 250 = 0.0273（cosine schedule，lr 1e-4 → 0）
+- 训练时间：2026-06-23 08:49:07 UTC → 12:15:40 UTC，约 3 小时 26 分
+
+**run config 关键签名**（来自 `run_config.json` 的 `signature`）：
+
+- `model_name = /root/work/filestorage/qwen35b_decompressed_for_training`
+- `max_length = 512`，`num_epochs = 1`，`max_steps = 250`
+- `per_device_batch_size = 1`，`gradient_accumulation_steps = 4`
+- `learning_rate = 1e-4`，`warmup_steps = None`
+- `lora_rank = 16`，`lora_alpha = 32`，`lora_dropout = 0.0`
+- `target_modules = [q_proj, v_proj, o_proj, gate_proj, up_proj, down_proj]`
+- `train_on_completions_only = True`
+- `device = npu`，`npu_device_map = balanced-layers`，`npu_max_memory_gib = 54`
+
+**eval 结果归档状态**：
+
+- NAS `outputs/` 下未发现任何 35B eval 结果 JSON（`find … -name "*eval*" -o -name "*pass1*" -o -name "*heldout*"` 命中为空）。
+- ASI1 `reports/` 下没有 35b / dedup / pass1 / heldout 相关文件。
+- 因此 495 held-out pass@1、495 held-out loss/perplexity、12 题 corrected pass@1 三个评测都还没有跑。
+- 第 10 节“后续最小动作”的第 1 步“确认 adapter 路径”现在已经完成，可以直接进入第 2~4 步，用 `…/qwen36-35b-a3b-dedup1k-lora-qvo-moe-noK-1ep-20260623T084650Z/adapter` 在 ASI1 或 ASI3 上跑三个评测 harness。
