@@ -1,0 +1,13 @@
+{
+  "source_file": "/Users/daxu/software/data_generation/gpt55_100_en.glm52_soft_distill.jsonl",
+  "source_sha256": "61a526db39bd2fd4667d6fde6bcb426d3855e5a0ada8ec58b0e440cd2acd2ed3",
+  "source_size_bytes": 312497619,
+  "distillation_model": "glm5.2",
+  "teacher_target": "distillation.generated_content (EOS marker stripped)",
+  "system_prompt": "You are a careful quantum software engineering assistant. Use the user's task and any supplied context to produce correct, testable Python or precise repair guidance.",
+  "split_method": "stable_sha256_sorted_90_10",
+  "train_out": 90,
+  "eval_out": 10,
+  "eos_marker_stripped": " userid|>",
+  "notes": "Hard-SFT split derived from GLM5.2 teacher responses. The full top-20 logprob distributions are preserved in the source file for a future soft-distillation (forward-KL) trainer; this split is consumable by training/qwen_sft_peft.py today."
+}
