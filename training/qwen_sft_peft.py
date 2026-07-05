@@ -801,7 +801,7 @@ def chunked_causal_lm_loss(
         logits_chunk = lm_head(flat_hidden[start:end])
         if logits_chunk.dtype not in (torch_module.float32, torch_module.float64):
             logits_chunk = logits_chunk.float()
-        labels_chunk = flat_labels[start:end]
+        labels_chunk = flat_labels[start:end].to(logits_chunk.device)
         chunk_loss = torch_module.nn.functional.cross_entropy(
             logits_chunk,
             labels_chunk,
@@ -1424,7 +1424,26 @@ def main() -> int:
                 print(json.dumps({"stage": "first_backward_done", "batch_index": batch_index}, ensure_ascii=False), flush=True)
 
             if batch_index % args.gradient_accumulation_steps == 0:
-                torch.nn.utils.clip_grad_norm_(trainable_param_tensors, 1.0)
+                # Manual grad-norm clipping that is safe for model-parallel
+                # (balanced-layers) layouts where trainable tensors live on
+                # different NPUs. clip_grad_norm_ tries a single fused
+                # aclnnLinalgVectorNorm across a list of tensors and fails on
+                # Ascend when the list spans devices, so we compute per-tensor
+                # norms on each parameter's own device and aggregate on CPU.
+                total_norm_sq = 0.0
+                for p in trainable_param_tensors:
+                    if p.grad is None:
+                        continue
+                    local_norm = p.grad.detach().float().norm(2).item()
+                    total_norm_sq += local_norm * local_norm
+                total_norm = total_norm_sq ** 0.5
+                clip_coef = 1.0
+                if total_norm > 0:
+                    clip_coef = min(1.0, 1.0 / total_norm)
+                if clip_coef < 1.0:
+                    for p in trainable_param_tensors:
+                        if p.grad is not None:
+                            p.grad.detach().mul_(clip_coef)
                 if batch_index == 1:
                     print(json.dumps({"stage": "first_clip_done", "batch_index": batch_index}, ensure_ascii=False), flush=True)
                 optimizer.step()

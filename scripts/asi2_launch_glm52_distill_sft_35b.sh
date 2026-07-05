@@ -98,13 +98,13 @@ cat > "$OUTPUT_DIR/run_config.json" <<CFG
   "lora_dropout": 0.0,
   "target_modules": "q_proj k_proj v_proj o_proj gate_proj up_proj down_proj",
   "learning_rate": 2e-5,
-  "max_length": 3072,
+  "max_length": 2048,
   "per_device_batch_size": 1,
   "grad_accum": 4,
   "train_on_completions_only": true,
   "train_layernorm": true,
   "checkpoint_interval_seconds": 900,
-  "visible_devices": "torchrun nproc_per_node=${NPROC} DDP",
+  "visible_devices": "single-process python3, npu_device_map=balanced-layers (all 8 NPUs, world_size=1)",
   "output_dir": "$OUTPUT_DIR",
   "distillation_mode": "hard_sft_on_teacher_completion",
   "soft_distill_logprobs_preserved": true,
@@ -163,14 +163,21 @@ if [[ -n "$ADAPTER_INIT" ]]; then
   ADAPTER_ARGS=(--adapter-init "$ADAPTER_INIT")
 fi
 
-nohup torchrun --nproc_per_node="$NPROC" --master_port="$MASTER_PORT" training/qwen_sft_peft.py \
+# 35B bf16 (~70GB) does NOT fit on a single 60GB NPU under DDP (each rank
+# would load the full model). Use single-process sharded loading with the
+# balanced-layers NPU device map instead, matching ASI3.
+NPU_MAX_MEMORY_GIB_VAL="${NPU_MAX_MEMORY_GIB:-54}"
+
+nohup python3 training/qwen_sft_peft.py \
   --model-name "$ACTUAL_MODEL_PATH" \
   --train-file "$TRAIN_FILE" \
   --eval-file "$EVAL_FILE" \
   --output-dir "$OUTPUT_DIR" \
   --overwrite-output-dir \
   --device npu \
-  --max-length 3072 \
+  --npu-device-map balanced-layers \
+  --npu-max-memory-gib "$NPU_MAX_MEMORY_GIB_VAL" \
+  --max-length 2048 \
   --num-epochs 2 \
   --max-steps -1 \
   --per-device-batch-size 1 \
@@ -184,6 +191,7 @@ nohup torchrun --nproc_per_node="$NPROC" --master_port="$MASTER_PORT" training/q
   --lora-dropout 0.0 \
   --lora-backend peft \
   --target-modules q_proj k_proj v_proj o_proj gate_proj up_proj down_proj \
+  --freeze-param-regex '.*\.(mlp\.gate|router)\..*' \
   --train-on-completions-only \
   --gradient-checkpointing \
   --train-layernorm \

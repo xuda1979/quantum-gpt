@@ -89,14 +89,14 @@ cat > "$OUT/run_config.json" <<CFG
   "learning_rate": 1e-4,
   "lr_scheduler": "cosine",
   "warmup_steps": 4,
-  "max_length": 3072,
+  "max_length": 768,
   "per_device_batch_size": 1,
   "grad_accum": 4,
   "train_on_completions_only": true,
   "checkpoint_interval_seconds": 900,
   "attn_implementation": "eager",
   "npu_conv_patch": "scripts/patch_qwen3_5_npu_modeling.py",
-  "visible_devices": "torchrun nproc_per_node=${NPROC} DDP",
+  "visible_devices": "single-process python3, npu_device_map=balanced-layers (all 8 NPUs, world_size=1)",
   "transformers": "5.6.0",
   "huggingface_hub": "1.8.0",
   "output_dir": "$OUT",
@@ -121,14 +121,22 @@ if [[ -n "$ADAPTER_INIT" ]]; then
   ADAPTER_ARGS=(--adapter-init "$ADAPTER_INIT")
 fi
 
-nohup torchrun --nproc_per_node="$NPROC" --master_port="$MASTER_PORT" training/qwen_sft_peft.py \
+# 27B bf16 (~54GB) is too close to the 60GB NPU limit for DDP (each rank
+# loads the full model and OOMs during weight materialization). Use
+# single-process sharded loading with the balanced-layers NPU device map
+# instead, matching the 35B launchers.
+NPU_MAX_MEMORY_GIB_VAL="${NPU_MAX_MEMORY_GIB:-54}"
+
+nohup python3 training/qwen_sft_peft.py \
   --model-name "$MODEL" \
   --train-file "$DATA/train_chatml.jsonl" \
   --eval-file "$DATA/eval_chatml.jsonl" \
   --output-dir "$OUT" \
   --overwrite-output-dir \
   --device npu \
-  --max-length 3072 \
+  --npu-device-map balanced-layers \
+  --npu-max-memory-gib "$NPU_MAX_MEMORY_GIB_VAL" \
+  --max-length 768 \
   --num-epochs 2 \
   --max-steps -1 \
   --per-device-batch-size 1 \
