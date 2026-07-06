@@ -23,7 +23,7 @@ set -euo pipefail
 NAS_ROOT="${NAS_ROOT:-/root/work/software/quantum-gpt}"
 cd "$NAS_ROOT"
 MODEL="${MODEL:-/root/work/filestorage/Qwen3.6-27B}"
-DATA="${DATA:-data/generated/glm52_soft_distill_sft_100}"
+DATA="${DATA:-data/generated/glm52_soft_distill_sft_iter2}"
 RUN_ID="${RUN_ID:-glm52-distill-27b-$(date -u +%Y%m%dT%H%M%SZ)}"
 OUT="${OUT:-$NAS_ROOT/outputs/qg-27b-glm52-distill-sft-${RUN_ID}}"
 LOG="${LOG:-$NAS_ROOT/logs/qg-27b-glm52-distill-sft-${RUN_ID}.log}"
@@ -136,17 +136,17 @@ nohup python3 training/qwen_sft_peft.py \
   --device npu \
   --npu-device-map balanced-layers \
   --npu-max-memory-gib "$NPU_MAX_MEMORY_GIB_VAL" \
-  --max-length 768 \
-  --num-epochs 2 \
-  --max-steps -1 \
+  --max-length "${MAX_LENGTH:-1600}" \
+  --num-epochs "${NUM_EPOCHS:-2}" \
+  --max-steps "${MAX_STEPS:--1}" \
   --per-device-batch-size 1 \
   --gradient-accumulation-steps 4 \
-  --learning-rate 1e-4 \
+  --learning-rate "${LEARNING_RATE:-1e-4}" \
   --warmup-steps 4 \
   --eval-steps 20 \
   --log-steps 1 \
-  --lora-rank 16 \
-  --lora-alpha 32 \
+  --lora-rank "${LORA_RANK:-16}" \
+  --lora-alpha "${LORA_ALPHA:-32}" \
   --lora-dropout 0.05 \
   --lora-backend peft \
   --target-modules q_proj v_proj o_proj gate_proj up_proj down_proj \

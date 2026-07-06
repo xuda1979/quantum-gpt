@@ -1,5 +1,5 @@
 {
-  "archive_version": "model-run-index-v1",
+  "archive_version": "model-run-index-v2",
   "runs": [
     {
       "label": "codefirst-semantic-mix75-true20-e2",
@@ -15,6 +15,41 @@
       "head_commit": "3372a70b66e57a304608b7e38aae6868e4351a3e"
     },
     {
+      "label": "omnicoder9b-semantic-v4-2npu-true20",
+      "output_dir": "outputs/interface-prefix-omnicoder9b-semantic-v4-2npu-true20-20260329T2219CST",
+      "archive_path": "artifacts/model-registry/interface-prefix-omnicoder9b-semantic-v4-2npu-true20-20260329T2219CST.json",
+      "base_model": "models/OmniCoder-9B",
+      "training_method": "LoRA SFT",
+      "train_file": "data/generated/fast-mini-interface-prefix-semantic-v4/train.jsonl",
+      "eval_file": "data/generated/fast-mini-interface-prefix-semantic-v4/eval.jsonl",
+      "completed_steps": 20,
+      "final_eval_loss": 0.3727272283285856,
+      "final_eval_perplexity": 1.4516883063761739,
+      "parent_output_dir": null,
+      "adapter_init": null,
+      "paper_ids": [
+        "timeboxed_eight_npu_grpo",
+        "timeboxed_eight_npu_sft"
+      ],
+      "delivery_manifest": "artifacts/deliveries/omnicoder9b_first_working_adapter_20260330.json",
+      "handoff_manifest": "artifacts/deliveries/omnicoder9b-qual-eval-handoff_20260330T021144Z/handoff_manifest.json",
+      "headline_summary": {
+        "kind": "base_vs_adapter_example_slice",
+        "example_count": 5,
+        "task_ids": [
+          "quantum_measurement_bug_repair",
+          "quantum_stabilizer_tableau_update_repair",
+          "software_session_event_log",
+          "software_session_window_summary"
+        ],
+        "domains": [
+          "quantum",
+          "software"
+        ]
+      },
+      "head_commit": "15961aa8acf184a1d4b64122f91e18ca4781ee34"
+    },
+    {
       "label": "semantic-v4-true20-e2-best",
       "output_dir": "outputs/interface-prefix-semantic-v4-8npu-true20-e2-20260326T1627CST",
       "archive_path": "artifacts/model-registry/interface-prefix-semantic-v4-8npu-true20-e2-20260326T1627CST.json",
@@ -26,6 +61,106 @@
       "final_eval_loss": 0.6986174695193768,
       "final_eval_perplexity": 2.0109705566192857,
       "head_commit": "3372a70b66e57a304608b7e38aae6868e4351a3e"
+    },
+    {
+      "label": "omnicoder9b-quantum-generalization-sft-8npu-fastiter-20260409",
+      "output_dir": "outputs/omnicoder9b-quantum-generalization-sft-8npu-fastiter-20260409T1451CST",
+      "archive_path": "artifacts/model-registry/omnicoder9b-quantum-generalization-sft-8npu-fastiter-20260409T1451CST.json",
+      "base_model": "models/OmniCoder-9B",
+      "training_method": "LoRA SFT",
+      "train_file": "data/generated/omnicoder-quantum-generalization-holdout-v1/train.jsonl",
+      "eval_file": "data/generated/omnicoder-quantum-generalization-holdout-v1/eval.jsonl",
+      "completed_steps": 12,
+      "final_eval_loss": 0.38625643340249854,
+      "final_eval_perplexity": 1.4714619544342373,
+      "parent_output_dir": "outputs/interface-prefix-omnicoder9b-semantic-v4-2npu-true20-20260329T2219CST",
+      "adapter_init": "outputs/interface-prefix-omnicoder9b-semantic-v4-2npu-true20-20260329T2219CST/adapter",
+      "paper_ids": [
+        "ast_anchor_interface_grounding",
+        "verifier_guided_repair_curriculum"
+      ],
+      "delivery_manifest": null,
+      "handoff_manifest": null,
+      "headline_summary": {
+        "kind": "override_summary",
+        "override_passes": 2,
+        "override_total": 4,
+        "override_pass_rate": 0.5
+      },
+      "head_commit": "15961aa8acf184a1d4b64122f91e18ca4781ee34"
+    },
+    {
+      "label": "qg-27b-glm52-distill-sft-iter1-asi1",
+      "iteration": 1,
+      "environment": "ASI1",
+      "output_dir": "outputs/qg-27b-glm52-distill-sft-glm52-distill-27b-20260705T125328Z",
+      "adapter_path": "outputs/qg-27b-glm52-distill-sft-glm52-distill-27b-20260705T125328Z/adapter",
+      "base_model": "Qwen3.6-27B",
+      "training_method": "LoRA SFT (rank 16, alpha 32, balanced-layers NPU)",
+      "dataset": "data/generated/glm52_soft_distill_sft_100",
+      "teacher_model": "glm5.2",
+      "train_file": "data/generated/glm52_soft_distill_sft_100/train_chatml.jsonl",
+      "eval_file": "data/generated/glm52_soft_distill_sft_100/eval_chatml.jsonl",
+      "completed_steps": 44,
+      "total_steps": 44,
+      "adapter_size_mb": 312,
+      "final_eval_loss": null,
+      "final_eval_perplexity": null,
+      "max_length": 768,
+      "learning_rate": "1e-4",
+      "lora_rank": 16,
+      "lora_alpha": 32,
+      "adapter_init": null,
+      "notes": "iter-1; max_length=768 caused 94.4% truncation (diagnosis: fix to 1600 in iter-2)",
+      "head_commit": "f94d05b"
+    },
+    {
+      "label": "qg-35b-glm52-distill-sft-iter1-asi3",
+      "iteration": 1,
+      "environment": "ASI3",
+      "output_dir": "outputs/qg-35b-glm52-distill-sft-glm52-distill-35b-20260705T133302Z",
+      "adapter_path": "outputs/qg-35b-glm52-distill-sft-glm52-distill-35b-20260705T133302Z/adapter",
+      "base_model": "Qwen3.6-35B-A3B",
+      "training_method": "LoRA SFT (rank 16, alpha 32, balanced-layers NPU, W8A8->bf16)",
+      "dataset": "data/generated/glm52_soft_distill_sft_100",
+      "teacher_model": "glm5.2",
+      "train_file": "data/generated/glm52_soft_distill_sft_100/train_chatml.jsonl",
+      "eval_file": "data/generated/glm52_soft_distill_sft_100/eval_chatml.jsonl",
+      "completed_steps": 44,
+      "total_steps": 44,
+      "final_eval_loss": 0.5987,
+      "final_eval_perplexity": 1.82,
+      "max_length": 2048,
+      "learning_rate": "2e-5",
+      "lora_rank": 16,
+      "lora_alpha": 32,
+      "adapter_init": null,
+      "notes": "iter-1; full completion visibility (max_length=2048, 0% truncation)",
+      "head_commit": "f94d05b"
+    },
+    {
+      "label": "qg-35b-glm52-distill-sft-iter1-asi2",
+      "iteration": 1,
+      "environment": "ASI2",
+      "output_dir": "outputs/qg-35b-glm52-distill-sft-glm52-distill-35b-20260705T130000Z",
+      "adapter_path": "outputs/qg-35b-glm52-distill-sft-glm52-distill-35b-20260705T130000Z/adapter",
+      "base_model": "Qwen3.6-35B-A3B",
+      "training_method": "LoRA SFT (rank 16, alpha 32, balanced-layers NPU, W8A8->bf16)",
+      "dataset": "data/generated/glm52_soft_distill_sft_100",
+      "teacher_model": "glm5.2",
+      "train_file": "data/generated/glm52_soft_distill_sft_100/train_chatml.jsonl",
+      "eval_file": "data/generated/glm52_soft_distill_sft_100/eval_chatml.jsonl",
+      "completed_steps": 44,
+      "total_steps": 44,
+      "final_eval_loss": null,
+      "final_eval_perplexity": null,
+      "max_length": 2048,
+      "learning_rate": "2e-5 (resumed from 3e-6 at step 33)",
+      "lora_rank": 16,
+      "lora_alpha": 32,
+      "adapter_init": "outputs/.../checkpoints/step-33/adapter (pod-recycle recovery)",
+      "notes": "iter-1; pod recycled at step 34/44, resumed from step-33 checkpoint",
+      "head_commit": "f94d05b"
     }
   ]
 }

@@ -22,7 +22,7 @@ set -euo pipefail
 NAS_ROOT="${NAS_ROOT:-/root/work/software/quantum-gpt}"
 cd "$NAS_ROOT"
 MODEL_PATH="${MODEL_PATH:-/root/work/filestorage/Qwen3.6-35B-A3B-W8A8}"
-DATA="${DATA:-data/generated/glm52_soft_distill_sft_100}"
+DATA="${DATA:-data/generated/glm52_soft_distill_sft_iter2}"
 RUN_ID="${RUN_ID:-glm52-distill-35b-$(date -u +%Y%m%dT%H%M%SZ)}"
 OUTPUT_DIR="${OUTPUT_DIR:-$NAS_ROOT/outputs/qg-35b-glm52-distill-sft-${RUN_ID}}"
 LOG="${LOG:-$NAS_ROOT/logs/qg-35b-glm52-distill-sft-${RUN_ID}.log}"
@@ -178,11 +178,11 @@ nohup python3 training/qwen_sft_peft.py \
   --npu-device-map balanced-layers \
   --npu-max-memory-gib "$NPU_MAX_MEMORY_GIB_VAL" \
   --max-length 2048 \
-  --num-epochs 2 \
-  --max-steps -1 \
+  --num-epochs "${NUM_EPOCHS:-2}" \
+  --max-steps "${MAX_STEPS:--1}" \
   --per-device-batch-size 1 \
   --gradient-accumulation-steps 4 \
-  --learning-rate 2e-5 \
+  --learning-rate "${LEARNING_RATE:-2e-5}" \
   --warmup-steps 4 \
   --eval-steps 20 \
   --log-steps 1 \
