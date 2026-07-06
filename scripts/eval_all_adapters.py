@@ -67,25 +67,78 @@ def run_eval(base: str, adapter: str, eval_file: str, out_path: str,
     except Exception as e:
         return {"error": str(e), "raw_stderr": r.stderr[-200:]}
 
+def _extract_pass1(res: dict, key: str) -> float | None:
+    """Extract pass@1 from either flat (base_pass1) or nested (base.pass_at_1) format."""
+    # flat keys used by some wrappers
+    flat_keys = [f"{key}_pass1", f"{key}_pass_at_1", f"{key}Pass1"]
+    for k in flat_keys:
+        v = res.get(k)
+        if v is not None:
+            return float(v)
+    # nested format written by eval_base_vs_adapter.py:
+    #   {"base": {"pass_at_1": X, ...}, "adapter": {"pass_at_1": Y, ...}}
+    nested = res.get(key)
+    if isinstance(nested, dict):
+        for nk in ("pass_at_1", "pass1", "pass_at1"):
+            v = nested.get(nk)
+            if v is not None:
+                return float(v)
+    return None
+
+def _extract_n_eval(res: dict) -> int | None:
+    for k in ("n_eval", "total_evaluated", "total"):
+        v = res.get(k)
+        if v is not None:
+            return int(v)
+    # nested
+    for key in ("base", "adapter"):
+        nested = res.get(key)
+        if isinstance(nested, dict):
+            v = nested.get("total")
+            if v is not None:
+                return int(v)
+    return None
+
+def _extract_per_fw(res: dict) -> dict:
+    """Get per-framework breakdown — prefer adapter's numbers."""
+    # nested eval_base_vs_adapter.py format: res["adapter"]["per_framework"]
+    for key in ("adapter", "base"):
+        nested = res.get(key)
+        if isinstance(nested, dict):
+            pf = nested.get("per_framework") or nested.get("by_framework")
+            if pf:
+                return pf
+    return res.get("by_framework", {})
+
 def summarise(results: list[dict]) -> dict:
-    """Aggregate per-adapter dicts into a comparison table."""
+    """Aggregate per-adapter dicts into a comparison table.
+
+    Compatible with both eval_base_vs_adapter.py nested output:
+      {"base": {"pass_at_1": X, "total": N, "per_framework": {...}}, "adapter": {...}}
+    and flat wrappers that write top-level base_pass1 / adapter_pass1.
+    """
     rows = []
     base_pass = None
     for res in results:
-        if "error" in res:
-            rows.append({"adapter": res.get("adapter_path","?"), "error": res["error"]})
+        adapter_label = res.get("adapter_label", "?")
+        if "error" in res and "base" not in res:
+            rows.append({"adapter": adapter_label, "error": res["error"]})
             continue
-        bp = res.get("base_pass1") or res.get("base_pass_at_1")
-        ap = res.get("adapter_pass1") or res.get("adapter_pass_at_1")
+        bp = _extract_pass1(res, "base")
+        ap = _extract_pass1(res, "adapter")
         if base_pass is None and bp is not None:
             base_pass = bp
+        delta_top = res.get("delta_pass_at_1")
+        delta = float(delta_top) if delta_top is not None else (
+            round(ap - bp, 4) if ap is not None and bp is not None else None
+        )
         rows.append({
-            "adapter": res.get("adapter_path","?"),
+            "adapter": adapter_label,
             "base_pass1": bp,
             "adapter_pass1": ap,
-            "delta": round((ap or 0) - (bp or 0), 4) if ap is not None and bp is not None else None,
-            "n_eval": res.get("n_eval") or res.get("total_evaluated"),
-            "by_framework": res.get("by_framework", {}),
+            "delta": delta,
+            "n_eval": _extract_n_eval(res),
+            "by_framework": _extract_per_fw(res),
         })
     return {
         "generated_at": now_utc(),
