@@ -1,0 +1,53 @@
+{
+  "kind": "strict_override_comparison",
+  "baseline": {
+    "label": "Qwen2.5-1.5B base rerun (2026-04-12)",
+    "scorecard": "/Users/daxu/software/quantum-gpt/evals/runs/qwen25-quantum-generalization-holdout-base-rerun-20260412/scorecard.json",
+    "overall_passes": 22,
+    "overall_total": 26,
+    "reference_passes": 22,
+    "reference_total": 22,
+    "override_passes": 0,
+    "override_total": 4,
+    "override_pass_rate": 0.0,
+    "failed_override_task_ids": [
+      "quantum_gate_alias_normalization",
+      "quantum_phase_estimation_circuit",
+      "quantum_qaoa_maxcut",
+      "quantum_superdense_coding"
+    ]
+  },
+  "candidate": {
+    "label": "Qwen2.5-1.5B ai1 enriched continuation rerun (2026-04-12)",
+    "scorecard": "/Users/daxu/software/quantum-gpt/evals/runs/qwen25-quantum-generalization-holdout-ai1-enriched-v1-rerun-20260412T224900CST/scorecard.json",
+    "overall_passes": 22,
+    "overall_total": 26,
+    "reference_passes": 22,
+    "reference_total": 22,
+    "override_passes": 0,
+    "override_total": 4,
+    "override_pass_rate": 0.0,
+    "failed_override_task_ids": [
+      "quantum_gate_alias_normalization",
+      "quantum_phase_estimation_circuit",
+      "quantum_qaoa_maxcut",
+      "quantum_superdense_coding"
+    ]
+  },
+  "strict_override": {
+    "base_passes": 0,
+    "base_total": 4,
+    "adapter_passes": 0,
+    "adapter_total": 4,
+    "adapter_minus_base_passes": 0,
+    "adapter_minus_base_pass_rate": 0.0
+  },
+  "full_scorecard": {
+    "base_passes": 22,
+    "base_total": 26,
+    "candidate_passes": 22,
+    "candidate_total": 26,
+    "candidate_minus_base_passes": 0,
+    "candidate_minus_base_pass_rate": 0.0
+  }
+}

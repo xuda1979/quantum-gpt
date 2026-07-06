@@ -1,0 +1,34 @@
+{
+  "output_dir": "/Users/daxu/software/quantum-gpt/outputs/qwen36-asi1-inline-rl-live-20260531T061103Z",
+  "ok": true,
+  "checks": {
+    "live_status_valid": true,
+    "latest_checkpoint_valid": true,
+    "checkpoint_history_valid": true,
+    "online_eval_latest_valid": true,
+    "online_eval_history_valid": true,
+    "latest_checkpoint_matches_checkpoint_history": true,
+    "latest_checkpoint_matches_live_status": true,
+    "online_eval_latest_matches_online_eval_history": true,
+    "online_eval_latest_matches_live_status": true,
+    "checkpoint_dir_exists": true,
+    "checkpoint_state_valid": true,
+    "runtime_state_valid": true
+  },
+  "artifacts": {
+    "live_status": "/Users/daxu/software/quantum-gpt/outputs/qwen36-asi1-inline-rl-live-20260531T061103Z/live_status.json",
+    "latest_checkpoint": "/Users/daxu/software/quantum-gpt/outputs/qwen36-asi1-inline-rl-live-20260531T061103Z/latest_checkpoint.json",
+    "checkpoint_history": "/Users/daxu/software/quantum-gpt/outputs/qwen36-asi1-inline-rl-live-20260531T061103Z/checkpoint_history.jsonl",
+    "online_eval_latest": "/Users/daxu/software/quantum-gpt/outputs/qwen36-asi1-inline-rl-live-20260531T061103Z/online_eval_latest.json",
+    "online_eval_history": "/Users/daxu/software/quantum-gpt/outputs/qwen36-asi1-inline-rl-live-20260531T061103Z/online_eval_history.jsonl",
+    "checkpoint_dir": "/Users/daxu/software/quantum-gpt/outputs/qwen36-asi1-inline-rl-live-20260531T061103Z/checkpoint-512",
+    "checkpoint_state": "/Users/daxu/software/quantum-gpt/outputs/qwen36-asi1-inline-rl-live-20260531T061103Z/checkpoint-512/checkpoint_state.json",
+    "runtime_state": "/Users/daxu/software/quantum-gpt/outputs/qwen36-asi1-inline-rl-live-20260531T061103Z/checkpoint-512/runtime_state.pt"
+  },
+  "summary": {
+    "status": "completed",
+    "checkpoint_step": 512,
+    "online_eval_step": 512
+  },
+  "errors": []
+}

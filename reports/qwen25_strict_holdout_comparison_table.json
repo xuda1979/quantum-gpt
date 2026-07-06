@@ -1,0 +1,211 @@
+{
+  "kind": "strict_holdout_comparison_table",
+  "generated_at_utc": "2026-04-12T15:16:04.364574+00:00",
+  "input_globs": [
+    "reports/qwen25_strict_holdout_base_vs_*.json"
+  ],
+  "comparison_count": 5,
+  "baseline_consistent": false,
+  "baseline_labels": [
+    "Qwen2.5-1.5B base (rerun 2026-04-12)",
+    "Qwen2.5-1.5B base rerun (2026-04-12)",
+    "qwen25_base_rerun_20260412"
+  ],
+  "baseline_scorecards": [
+    "/Users/daxu/software/quantum-gpt/evals/runs/qwen25-quantum-generalization-holdout-base-rerun-20260412/scorecard.json"
+  ],
+  "table_columns": [
+    "comparison_id",
+    "finetuned_label",
+    "base_strict_score",
+    "finetuned_strict_score",
+    "strict_delta_passes",
+    "strict_delta_percentage_points",
+    "base_full_score",
+    "finetuned_full_score",
+    "full_delta_passes",
+    "full_delta_percentage_points"
+  ],
+  "rows": [
+    {
+      "comparison_id": "qwen25_strict_holdout_base_vs_ai1_enriched_v1_rerun_20260412",
+      "comparison_path": "/Users/daxu/software/quantum-gpt/reports/qwen25_strict_holdout_base_vs_ai1_enriched_v1_rerun_20260412.json",
+      "baseline_label": "Qwen2.5-1.5B base rerun (2026-04-12)",
+      "baseline_scorecard": "/Users/daxu/software/quantum-gpt/evals/runs/qwen25-quantum-generalization-holdout-base-rerun-20260412/scorecard.json",
+      "finetuned_label": "Qwen2.5-1.5B ai1 enriched continuation rerun (2026-04-12)",
+      "finetuned_scorecard": "/Users/daxu/software/quantum-gpt/evals/runs/qwen25-quantum-generalization-holdout-ai1-enriched-v1-rerun-20260412T224900CST/scorecard.json",
+      "base_strict_passes": 0,
+      "base_strict_total": 4,
+      "base_strict_score": "0/4",
+      "finetuned_strict_passes": 0,
+      "finetuned_strict_total": 4,
+      "finetuned_strict_score": "0/4",
+      "strict_delta_passes": 0,
+      "strict_delta_percentage_points": 0.0,
+      "base_full_passes": 22,
+      "base_full_total": 26,
+      "base_full_score": "22/26",
+      "finetuned_full_passes": 22,
+      "finetuned_full_total": 26,
+      "finetuned_full_score": "22/26",
+      "full_delta_passes": 0,
+      "full_delta_percentage_points": 0.0,
+      "baseline_failed_override_task_ids": [
+        "quantum_gate_alias_normalization",
+        "quantum_phase_estimation_circuit",
+        "quantum_qaoa_maxcut",
+        "quantum_superdense_coding"
+      ],
+      "finetuned_failed_override_task_ids": [
+        "quantum_gate_alias_normalization",
+        "quantum_phase_estimation_circuit",
+        "quantum_qaoa_maxcut",
+        "quantum_superdense_coding"
+      ]
+    },
+    {
+      "comparison_id": "qwen25_strict_holdout_base_vs_fastlora_small_20260412",
+      "comparison_path": "/Users/daxu/software/quantum-gpt/reports/qwen25_strict_holdout_base_vs_fastlora_small_20260412.json",
+      "baseline_label": "Qwen2.5-1.5B base (rerun 2026-04-12)",
+      "baseline_scorecard": "/Users/daxu/software/quantum-gpt/evals/runs/qwen25-quantum-generalization-holdout-base-rerun-20260412/scorecard.json",
+      "finetuned_label": "Qwen2.5-1.5B fast-lora small",
+      "finetuned_scorecard": "/Users/daxu/software/quantum-gpt/evals/runs/qwen25-quantum-generalization-holdout-fastlora-small-20260412/scorecard.json",
+      "base_strict_passes": 0,
+      "base_strict_total": 4,
+      "base_strict_score": "0/4",
+      "finetuned_strict_passes": 0,
+      "finetuned_strict_total": 4,
+      "finetuned_strict_score": "0/4",
+      "strict_delta_passes": 0,
+      "strict_delta_percentage_points": 0.0,
+      "base_full_passes": 22,
+      "base_full_total": 26,
+      "base_full_score": "22/26",
+      "finetuned_full_passes": 22,
+      "finetuned_full_total": 26,
+      "finetuned_full_score": "22/26",
+      "full_delta_passes": 0,
+      "full_delta_percentage_points": 0.0,
+      "baseline_failed_override_task_ids": [
+        "quantum_gate_alias_normalization",
+        "quantum_phase_estimation_circuit",
+        "quantum_qaoa_maxcut",
+        "quantum_superdense_coding"
+      ],
+      "finetuned_failed_override_task_ids": [
+        "quantum_gate_alias_normalization",
+        "quantum_phase_estimation_circuit",
+        "quantum_qaoa_maxcut",
+        "quantum_superdense_coding"
+      ]
+    },
+    {
+      "comparison_id": "qwen25_strict_holdout_base_vs_ai1_continue_safe_v2_rerun_20260412",
+      "comparison_path": "/Users/daxu/software/quantum-gpt/reports/qwen25_strict_holdout_base_vs_ai1_continue_safe_v2_rerun_20260412.json",
+      "baseline_label": "qwen25_base_rerun_20260412",
+      "baseline_scorecard": "/Users/daxu/software/quantum-gpt/evals/runs/qwen25-quantum-generalization-holdout-base-rerun-20260412/scorecard.json",
+      "finetuned_label": "qwen25_ai1_continue_safe_v2_rerun_20260412",
+      "finetuned_scorecard": "/Users/daxu/software/quantum-gpt/evals/runs/qwen25-quantum-generalization-holdout-ai1-continue-safe-v2-rerun-20260412T220828CST/scorecard.json",
+      "base_strict_passes": 0,
+      "base_strict_total": 4,
+      "base_strict_score": "0/4",
+      "finetuned_strict_passes": 0,
+      "finetuned_strict_total": 4,
+      "finetuned_strict_score": "0/4",
+      "strict_delta_passes": 0,
+      "strict_delta_percentage_points": 0.0,
+      "base_full_passes": 22,
+      "base_full_total": 26,
+      "base_full_score": "22/26",
+      "finetuned_full_passes": 22,
+      "finetuned_full_total": 26,
+      "finetuned_full_score": "22/26",
+      "full_delta_passes": 0,
+      "full_delta_percentage_points": 0.0,
+      "baseline_failed_override_task_ids": [
+        "quantum_gate_alias_normalization",
+        "quantum_phase_estimation_circuit",
+        "quantum_qaoa_maxcut",
+        "quantum_superdense_coding"
+      ],
+      "finetuned_failed_override_task_ids": [
+        "quantum_gate_alias_normalization",
+        "quantum_phase_estimation_circuit",
+        "quantum_qaoa_maxcut",
+        "quantum_superdense_coding"
+      ]
+    },
+    {
+      "comparison_id": "qwen25_strict_holdout_base_vs_ai1_finetuned_rerun_20260412",
+      "comparison_path": "/Users/daxu/software/quantum-gpt/reports/qwen25_strict_holdout_base_vs_ai1_finetuned_rerun_20260412.json",
+      "baseline_label": "qwen25_base_rerun_20260412",
+      "baseline_scorecard": "/Users/daxu/software/quantum-gpt/evals/runs/qwen25-quantum-generalization-holdout-base-rerun-20260412/scorecard.json",
+      "finetuned_label": "qwen25_ai1_finetuned_rerun_20260412",
+      "finetuned_scorecard": "/Users/daxu/software/quantum-gpt/evals/runs/qwen25-quantum-generalization-holdout-ai1-ft-rerun-20260412T1627CST/scorecard.json",
+      "base_strict_passes": 0,
+      "base_strict_total": 4,
+      "base_strict_score": "0/4",
+      "finetuned_strict_passes": 0,
+      "finetuned_strict_total": 4,
+      "finetuned_strict_score": "0/4",
+      "strict_delta_passes": 0,
+      "strict_delta_percentage_points": 0.0,
+      "base_full_passes": 22,
+      "base_full_total": 26,
+      "base_full_score": "22/26",
+      "finetuned_full_passes": 22,
+      "finetuned_full_total": 26,
+      "finetuned_full_score": "22/26",
+      "full_delta_passes": 0,
+      "full_delta_percentage_points": 0.0,
+      "baseline_failed_override_task_ids": [
+        "quantum_gate_alias_normalization",
+        "quantum_phase_estimation_circuit",
+        "quantum_qaoa_maxcut",
+        "quantum_superdense_coding"
+      ],
+      "finetuned_failed_override_task_ids": [
+        "quantum_gate_alias_normalization",
+        "quantum_phase_estimation_circuit",
+        "quantum_qaoa_maxcut",
+        "quantum_superdense_coding"
+      ]
+    },
+    {
+      "comparison_id": "qwen25_strict_holdout_base_vs_ai1_stage2_rerun_20260412",
+      "comparison_path": "/Users/daxu/software/quantum-gpt/reports/qwen25_strict_holdout_base_vs_ai1_stage2_rerun_20260412.json",
+      "baseline_label": "qwen25_base_rerun_20260412",
+      "baseline_scorecard": "/Users/daxu/software/quantum-gpt/evals/runs/qwen25-quantum-generalization-holdout-base-rerun-20260412/scorecard.json",
+      "finetuned_label": "qwen25_ai1_stage2_rerun_20260412",
+      "finetuned_scorecard": "/Users/daxu/software/quantum-gpt/evals/runs/qwen25-quantum-generalization-holdout-ai1-stage2-rerun-20260412T181013CST/scorecard.json",
+      "base_strict_passes": 0,
+      "base_strict_total": 4,
+      "base_strict_score": "0/4",
+      "finetuned_strict_passes": 0,
+      "finetuned_strict_total": 4,
+      "finetuned_strict_score": "0/4",
+      "strict_delta_passes": 0,
+      "strict_delta_percentage_points": 0.0,
+      "base_full_passes": 22,
+      "base_full_total": 26,
+      "base_full_score": "22/26",
+      "finetuned_full_passes": 22,
+      "finetuned_full_total": 26,
+      "finetuned_full_score": "22/26",
+      "full_delta_passes": 0,
+      "full_delta_percentage_points": 0.0,
+      "baseline_failed_override_task_ids": [
+        "quantum_gate_alias_normalization",
+        "quantum_phase_estimation_circuit",
+        "quantum_qaoa_maxcut",
+        "quantum_superdense_coding"
+      ],
+      "finetuned_failed_override_task_ids": [
+        "quantum_gate_alias_normalization",
+        "quantum_phase_estimation_circuit",
+        "quantum_qaoa_maxcut",
+        "quantum_superdense_coding"
+      ]
+    }
+  ]
+}

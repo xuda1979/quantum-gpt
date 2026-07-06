@@ -1,0 +1,8 @@
+{
+  "id": "quantum_binary_measurement_decoder",
+  "name": "Binary measurement decoder",
+  "domain": "quantum",
+  "category": "algorithm_implementation",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

@@ -1,0 +1,16 @@
+# Hard-only GRPO training task set for strict-recovery iteration.
+# Excludes the easiest train-side tasks that already reached pass_rate=1.0
+# during the v2 smoke (for example bell_pair_construction, qft_phase_pattern).
+# Contains only train-side quantum tasks and must remain disjoint from the
+# strict unseen benchmark tasks.
+quantum_circuit_depth_optimization
+quantum_circuit_phase_repair
+quantum_error_detection_bit_flip
+quantum_gate_alias_registry_cleanup
+quantum_maxcut_partition_ranker
+quantum_measurement_bug_repair
+quantum_pauli_message_codec
+quantum_phase_register_roundtrip
+quantum_stabilizer_tableau_update_repair
+quantum_teleportation_corrections
+quantum_vqe_energy_minimization

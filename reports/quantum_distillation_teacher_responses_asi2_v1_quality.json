@@ -1,0 +1,13 @@
+{
+  "checks": {
+    "count_meets_min": true,
+    "no_duplicate_example_ids": true,
+    "no_quality_errors": true
+  },
+  "count": 200,
+  "duplicate_example_ids": [],
+  "errors": [],
+  "input_jsonl": "/Users/daxu/software/quantum-gpt/data/generated/quantum_distillation_teacher_responses_asi2_v1.jsonl",
+  "min_count": 200,
+  "ok": true
+}

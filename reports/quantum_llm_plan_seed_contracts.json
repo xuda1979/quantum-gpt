@@ -1,0 +1,31 @@
+{
+  "checks": {
+    "no_load_errors": true,
+    "numeric_boundary_marking_ok": true,
+    "provenance_contract_ok": true,
+    "structured_ir_parseability_ok": true
+  },
+  "errors": [],
+  "input": "/Users/daxu/software/quantum-gpt/data/seed/quantum_llm_plan_seed.jsonl",
+  "input_kind": "jsonl",
+  "numeric_boundary": {
+    "missing_marker_count": 0,
+    "missing_markers": [],
+    "records_marked": 8,
+    "records_with_signal": 8
+  },
+  "ok": true,
+  "provenance": {
+    "distinguished_count": 0,
+    "failure_count": 0,
+    "failures": [],
+    "records_requiring_distinction": 0
+  },
+  "records_total": 8,
+  "structured_ir": {
+    "failure_count": 0,
+    "failures": [],
+    "parseable_count": 0,
+    "present_count": 0
+  }
+}

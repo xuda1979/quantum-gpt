@@ -1,0 +1,31 @@
+{
+  "scorecard": "/Users/daxu/software/quantum-gpt/evals/runs/omnicoder-quantum-generalization-holdout-base-omnicoder9b-20260410/scorecard.json",
+  "override_total": 4,
+  "override_passes": 3,
+  "override_failures": 1,
+  "override_pass_rate": 0.75,
+  "domains": {
+    "quantum": 4
+  },
+  "categories": {
+    "algorithm_implementation": 2,
+    "api_normalization": 1,
+    "reasoning": 1
+  },
+  "failed_task_ids": [
+    "quantum_gate_alias_normalization"
+  ],
+  "failed_tasks": [
+    {
+      "id": "quantum_gate_alias_normalization",
+      "name": "Gate alias normalization repair",
+      "domain": "quantum",
+      "category": "api_normalization",
+      "error_type": "api_normalization",
+      "first_detail": "Unknown gate: H — model only mapped lowercase aliases to canonical names; already-canonical uppercase gates (e.g. 'H') were not handled as valid pass-through, causing KeyError/raise on standard gate names",
+      "ai2_raw_error": "Unknown gate: H",
+      "local_fallback_detail": "normalize_gate_sequence(['H', 'cx', 'x']) -> None, expected ['H', 'CX', 'X'] (local re-score used rclone-overwritten candidate)",
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/runs/omnicoder-quantum-generalization-holdout-base-omnicoder9b-20260410/candidates/quantum_gate_alias_normalization.py"
+    }
+  ]
+}

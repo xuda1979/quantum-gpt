@@ -1,0 +1,13 @@
+# Targeted GRPO training task set for strict-recovery iteration.
+# Focuses on train-side analogs that are closest to the current strict-holdout
+# failure modes while remaining disjoint from the strict unseen benchmark ids.
+quantum_bitstring_maxcut_landscape
+quantum_circuit_depth_optimization
+quantum_circuit_phase_repair
+quantum_error_detection_bit_flip
+quantum_gate_alias_casefold_barrier
+quantum_measurement_bug_repair
+quantum_phase_measurement_register
+quantum_stabilizer_tableau_update_repair
+quantum_superdense_pauli_router
+quantum_teleportation_corrections

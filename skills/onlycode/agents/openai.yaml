@@ -1,0 +1,4 @@
+interface:
+  display_name: "Onlycode"
+  short_description: "Silent autonomous coding loop with DONE/BLOCKER results"
+  default_prompt: "Use $onlycode to silently inspect, patch complete files, run focused verification, iterate on failures, and report only DONE or BLOCKER."

@@ -1,0 +1,11 @@
+{
+  "input_jsonl": "/Users/daxu/software/quantum-gpt/data/generated/quantum_distillation_teacher_responses_asi2_v1_high_quality_sft_203_salvaged_v4/all_chatml.jsonl",
+  "invalid_examples": [],
+  "invalid_rows": 0,
+  "min_valid_rows": 203,
+  "ok": true,
+  "reason_counts": {},
+  "rows": 203,
+  "valid_output": "/Users/daxu/software/quantum-gpt/data/generated/quantum_distillation_teacher_responses_asi2_v1_high_quality_sft_203_salvaged_v4_valid/all_chatml.jsonl",
+  "valid_rows": 203
+}

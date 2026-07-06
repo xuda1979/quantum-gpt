@@ -1,0 +1,18 @@
+[17:53:19] loaded 10495 question records from quantum_finetune_verified.jsonl
+[17:53:19] 8991 unique codes to execute (workers=8, timeout=300s)
+[17:54:04] progress 200/8991 unique  fails=0  4.5/s  eta=1957s
+[17:54:38] progress 400/8991 unique  fails=0  5.1/s  eta=1683s
+[17:55:19] progress 600/8991 unique  fails=0  5.0/s  eta=1680s
+[17:55:57] progress 800/8991 unique  fails=0  5.1/s  eta=1620s
+[17:56:33] progress 1000/8991 unique  fails=0  5.2/s  eta=1549s
+[17:57:29] progress 1200/8991 unique  fails=0  4.8/s  eta=1624s
+[17:58:22] progress 1400/8991 unique  fails=0  4.6/s  eta=1640s
+[17:59:01] progress 1600/8991 unique  fails=0  4.7/s  eta=1580s
+[17:59:48] progress 1800/8991 unique  fails=0  4.6/s  eta=1552s
+[18:00:31] progress 2000/8991 unique  fails=0  4.6/s  eta=1510s
+[18:01:05] progress 2200/8991 unique  fails=0  4.7/s  eta=1437s
+[18:01:45] progress 2400/8991 unique  fails=0  4.7/s  eta=1388s
+[18:02:34] progress 2600/8991 unique  fails=0  4.7/s  eta=1364s
+[18:03:14] progress 2800/8991 unique  fails=0  4.7/s  eta=1316s
+[18:04:08] progress 3000/8991 unique  fails=0  4.6/s  eta=1296s
+[18:04:47] progress 3200/8991 unique  fails=0  4.7/s  eta=1244s

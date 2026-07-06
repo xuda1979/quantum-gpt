@@ -1,0 +1,8 @@
+{
+  "id": "quantum_trotterized_hamiltonian_evolution",
+  "name": "Trotterized Hamiltonian time evolution",
+  "domain": "quantum",
+  "category": "algorithm_implementation",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

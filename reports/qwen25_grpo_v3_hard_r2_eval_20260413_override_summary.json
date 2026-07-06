@@ -1,0 +1,73 @@
+{
+  "kind": "override_summary",
+  "scorecard": "/root/root/work/quantum-gpt/evals/runs/qwen25-grpo-strict-recovery-v3-hard-r2-eval-20260413T1923CST/scorecard.json",
+  "verification": {
+    "method": "ai1_direct_huanxin_shell",
+    "verified_on": "2026-04-13",
+    "notes": "Verified from the finished ai1 scorecard and log via direct standalone Huanxin shell access."
+  },
+  "full_total": 26,
+  "full_passes": 25,
+  "full_failures": 1,
+  "full_pass_rate": 0.9615384615384616,
+  "reference_total": 22,
+  "reference_passes": 22,
+  "reference_failures": 0,
+  "reference_pass_rate": 1.0,
+  "override_total": 4,
+  "override_passes": 0,
+  "override_failures": 4,
+  "override_pass_rate": 0.0,
+  "domains": {
+    "quantum": 4
+  },
+  "categories": {
+    "algorithm_implementation": 2,
+    "api_normalization": 1,
+    "reasoning": 1
+  },
+  "failed_task_ids": [
+    "quantum_gate_alias_normalization",
+    "quantum_phase_estimation_circuit",
+    "quantum_qaoa_maxcut",
+    "quantum_superdense_coding"
+  ],
+  "failed_tasks": [
+    {
+      "id": "quantum_gate_alias_normalization",
+      "name": "Gate alias normalization repair",
+      "domain": "quantum",
+      "category": "api_normalization",
+      "error_type": null,
+      "first_detail": "normalize_gate_sequence(['H', 'cx', 'x']) -> ['H', 'CX', 'x'], expected ['H', 'CX', 'X']",
+      "candidate_path": "/root/root/work/quantum-gpt/evals/runs/qwen25-grpo-strict-recovery-v3-hard-r2-eval-20260413T1923CST/candidates/quantum_gate_alias_normalization.py"
+    },
+    {
+      "id": "quantum_phase_estimation_circuit",
+      "name": "Quantum phase estimation unitary eigenvalue extraction",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "error_type": "TypeError",
+      "first_detail": "runner_exception: TypeError: unsupported operand type(s) for ** or pow(): 'int' and 'tuple'",
+      "candidate_path": "/root/root/work/quantum-gpt/evals/runs/qwen25-grpo-strict-recovery-v3-hard-r2-eval-20260413T1923CST/candidates/quantum_phase_estimation_circuit.py"
+    },
+    {
+      "id": "quantum_qaoa_maxcut",
+      "name": "QAOA MaxCut cost function and classical simulation",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "error_type": "NameError",
+      "first_detail": "runner_exception: NameError: name 'signature' is not defined",
+      "candidate_path": "/root/root/work/quantum-gpt/evals/runs/qwen25-grpo-strict-recovery-v3-hard-r2-eval-20260413T1923CST/candidates/quantum_qaoa_maxcut.py"
+    },
+    {
+      "id": "quantum_superdense_coding",
+      "name": "Superdense coding encode/decode",
+      "domain": "quantum",
+      "category": "reasoning",
+      "error_type": "ValueError",
+      "first_detail": "runner_exception: ValueError: opcode must be one of I, X, Z, XZ",
+      "candidate_path": "/root/root/work/quantum-gpt/evals/runs/qwen25-grpo-strict-recovery-v3-hard-r2-eval-20260413T1923CST/candidates/quantum_superdense_coding.py"
+    }
+  ]
+}

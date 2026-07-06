@@ -1,0 +1,252 @@
+{
+  "already_completed": 7,
+  "errors": [
+    {
+      "error": "teacher API HTTP 500: {\"error\":\"Daily limit exceeded\"}",
+      "seed": "asi2_distill_circuit_repair_recipes_repair_02"
+    },
+    {
+      "error": "teacher API HTTP 500: {\"error\":\"Daily limit exceeded\"}",
+      "seed": "asi2_distill_circuit_repair_recipes_agentic_trajectory_03"
+    },
+    {
+      "error": "teacher API HTTP 500: {\"error\":\"Daily limit exceeded\"}",
+      "seed": "asi2_distill_density_matrix_eval_api_optimization_04"
+    },
+    {
+      "error": "teacher API HTTP 500: {\"error\":\"Daily limit exceeded\"}",
+      "seed": "asi2_distill_density_matrix_eval_api_agentic_trajectory_03"
+    },
+    {
+      "error": "teacher API HTTP 500: {\"error\":\"Daily limit exceeded\"}",
+      "seed": "asi2_distill_density_matrix_partial_trace_implementation_01"
+    },
+    {
+      "error": "teacher API HTTP 500: {\"error\":\"Daily limit exceeded\"}",
+      "seed": "asi2_distill_density_matrix_eval_api_repair_02"
+    },
+    {
+      "error": "teacher API HTTP 500: {\"error\":\"Daily limit exceeded\"}",
+      "seed": "asi2_distill_density_matrix_partial_trace_repair_02"
+    },
+    {
+      "error": "teacher API HTTP 500: {\"error\":\"Daily limit exceeded\"}",
+      "seed": "asi2_distill_density_matrix_partial_trace_optimization_04"
+    },
+    {
+      "error": "teacher API HTTP 500: {\"error\":\"Daily limit exceeded\"}",
+      "seed": "asi2_distill_depolarizing_channel_implementation_01"
+    },
+    {
+      "error": "teacher API HTTP 500: {\"error\":\"Daily limit exceeded\"}",
+      "seed": "asi2_distill_density_matrix_partial_trace_agentic_trajectory_03"
+    },
+    {
+      "error": "teacher API HTTP 500: {\"error\":\"Daily limit exceeded\"}",
+      "seed": "asi2_distill_depolarizing_channel_repair_02"
+    },
+    {
+      "error": "teacher API HTTP 500: {\"error\":\"Daily limit exceeded\"}",
+      "seed": "asi2_distill_depolarizing_channel_agentic_trajectory_03"
+    },
+    {
+      "error": "teacher API HTTP 500: {\"error\":\"Daily limit exceeded\"}",
+      "seed": "asi2_distill_error_correction_basics_implementation_01"
+    },
+    {
+      "error": "teacher API HTTP 500: {\"error\":\"Daily limit exceeded\"}",
+      "seed": "asi2_distill_error_correction_basics_repair_02"
+    },
+    {
+      "error": "teacher API HTTP 500: {\"error\":\"Daily limit exceeded\"}",
+      "seed": "asi2_distill_error_correction_basics_agentic_trajectory_03"
+    },
+    {
+      "error": "teacher API HTTP 500: {\"error\":\"Daily limit exceeded\"}",
+      "seed": "asi2_distill_error_correction_basics_optimization_04"
+    },
+    {
+      "error": "teacher API HTTP 500: {\"error\":\"Daily limit exceeded\"}",
+      "seed": "asi2_distill_cirq_basics_optimization_04"
+    },
+    {
+      "error": "teacher API HTTP 500: {\"error\":\"Daily limit exceeded\"}",
+      "seed": "asi2_distill_depolarizing_channel_optimization_04"
+    },
+    {
+      "error": "teacher API HTTP 500: {\"error\":\"Daily limit exceeded\"}",
+      "seed": "asi2_distill_ghz_state_implementation_01"
+    },
+    {
+      "error": "teacher API HTTP 500: {\"error\":\"Daily limit exceeded\"}",
+      "seed": "asi2_distill_density_matrix_eval_api_implementation_01"
+    },
+    {
+      "error": "teacher API HTTP 500: {\"error\":\"Daily limit exceeded\"}",
+      "seed": "asi2_distill_ghz_state_optimization_04"
+    },
+    {
+      "error": "teacher API HTTP 500: {\"error\":\"Daily limit exceeded\"}",
+      "seed": "asi2_distill_ghz_state_repair_02"
+    },
+    {
+      "error": "teacher API HTTP 500: {\"error\":\"Daily limit exceeded\"}",
+      "seed": "asi2_distill_ghz_state_agentic_trajectory_03"
+    },
+    {
+      "error": "teacher API HTTP 500: {\"error\":\"Daily limit exceeded\"}",
+      "seed": "asi2_distill_grover_search_implementation_01"
+    },
+    {
+      "error": "teacher API HTTP 500: {\"error\":\"Daily limit exceeded\"}",
+      "seed": "asi2_distill_grover_search_repair_02"
+    },
+    {
+      "error": "teacher API HTTP 500: {\"error\":\"Daily limit exceeded\"}",
+      "seed": "asi2_distill_grover_search_optimization_04"
+    },
+    {
+      "error": "teacher API HTTP 500: {\"error\":\"Daily limit exceeded\"}",
+      "seed": "asi2_distill_grover_search_agentic_trajectory_03"
+    },
+    {
+      "error": "teacher API HTTP 500: {\"error\":\"Daily limit exceeded\"}",
+      "seed": "asi2_distill_maxcut_classical_helpers_implementation_01"
+    },
+    {
+      "error": "teacher API HTTP 500: {\"error\":\"Daily limit exceeded\"}",
+      "seed": "asi2_distill_maxcut_classical_helpers_repair_02"
+    },
+    {
+      "error": "teacher API HTTP 500: {\"error\":\"Daily limit exceeded\"}",
+      "seed": "asi2_distill_maxcut_classical_helpers_agentic_trajectory_03"
+    },
+    {
+      "error": "teacher API HTTP 500: {\"error\":\"Daily limit exceeded\"}",
+      "seed": "asi2_distill_measurement_and_classical_register_implementation_01"
+    },
+    {
+      "error": "teacher API HTTP 500: {\"error\":\"Daily limit exceeded\"}",
+      "seed": "asi2_distill_measurement_and_classical_register_agentic_trajectory_03"
+    },
+    {
+      "error": "teacher API HTTP 500: {\"error\":\"Daily limit exceeded\"}",
+      "seed": "asi2_distill_measurement_and_classical_register_optimization_04"
+    },
+    {
+      "error": "teacher API HTTP 500: {\"error\":\"Daily limit exceeded\"}",
+      "seed": "asi2_distill_maxcut_classical_helpers_optimization_04"
+    },
+    {
+      "error": "teacher API HTTP 500: {\"error\":\"Daily limit exceeded\"}",
+      "seed": "asi2_distill_pennylane_basics_repair_02"
+    },
+    {
+      "error": "teacher API HTTP 500: {\"error\":\"Daily limit exceeded\"}",
+      "seed": "asi2_distill_pennylane_basics_implementation_01"
+    },
+    {
+      "error": "teacher API HTTP 500: {\"error\":\"Daily limit exceeded\"}",
+      "seed": "asi2_distill_pennylane_basics_agentic_trajectory_03"
+    },
+    {
+      "error": "teacher API HTTP 500: {\"error\":\"Daily limit exceeded\"}",
+      "seed": "asi2_distill_pennylane_basics_optimization_04"
+    },
+    {
+      "error": "teacher API HTTP 500: {\"error\":\"Daily limit exceeded\"}",
+      "seed": "asi2_distill_phase_register_roundtrip_repair_02"
+    },
+    {
+      "error": "teacher API HTTP 500: {\"error\":\"Daily limit exceeded\"}",
+      "seed": "asi2_distill_phase_register_roundtrip_implementation_01"
+    },
+    {
+      "error": "teacher API HTTP 500: {\"error\":\"Daily limit exceeded\"}",
+      "seed": "asi2_distill_phase_register_roundtrip_agentic_trajectory_03"
+    },
+    {
+      "error": "teacher API HTTP 500: {\"error\":\"Daily limit exceeded\"}",
+      "seed": "asi2_distill_phase_register_roundtrip_optimization_04"
+    },
+    {
+      "error": "teacher API HTTP 500: {\"error\":\"Daily limit exceeded\"}",
+      "seed": "asi2_distill_measurement_and_classical_register_repair_02"
+    },
+    {
+      "error": "teacher API HTTP 500: {\"error\":\"Daily limit exceeded\"}",
+      "seed": "asi2_distill_qaoa_maxcut_implementation_01"
+    },
+    {
+      "error": "teacher API HTTP 500: {\"error\":\"Daily limit exceeded\"}",
+      "seed": "asi2_distill_qaoa_maxcut_agentic_trajectory_03"
+    },
+    {
+      "error": "teacher API HTTP 500: {\"error\":\"Daily limit exceeded\"}",
+      "seed": "asi2_distill_qaoa_maxcut_repair_02"
+    },
+    {
+      "error": "teacher API HTTP 500: {\"error\":\"Daily limit exceeded\"}",
+      "seed": "asi2_distill_qaoa_maxcut_optimization_04"
+    },
+    {
+      "error": "teacher API HTTP 500: {\"error\":\"Daily limit exceeded\"}",
+      "seed": "asi2_distill_qiskit_basics_repair_02"
+    },
+    {
+      "error": "teacher API HTTP 500: {\"error\":\"Daily limit exceeded\"}",
+      "seed": "asi2_distill_qiskit_basics_implementation_01"
+    },
+    {
+      "error": "teacher API HTTP 500: {\"error\":\"Daily limit exceeded\"}",
+      "seed": "asi2_distill_qiskit_basics_optimization_04"
+    },
+    {
+      "error": "teacher API HTTP 500: {\"error\":\"Daily limit exceeded\"}",
+      "seed": "asi2_distill_qiskit_basics_agentic_trajectory_03"
+    },
+    {
+      "error": "teacher API HTTP 500: {\"error\":\"Daily limit exceeded\"}",
+      "seed": "asi2_distill_quantum_circuit_construction_patterns_optimization_04"
+    },
+    {
+      "error": "teacher API HTTP 500: {\"error\":\"Daily limit exceeded\"}",
+      "seed": "asi2_distill_quantum_circuit_construction_patterns_repair_02"
+    },
+    {
+      "error": "teacher API HTTP 500: {\"error\":\"Daily limit exceeded\"}",
+      "seed": "asi2_distill_quantum_circuit_construction_patterns_implementation_01"
+    },
+    {
+      "error": "teacher API HTTP 500: {\"error\":\"Daily limit exceeded\"}",
+      "seed": "asi2_distill_quantum_circuit_construction_patterns_agentic_trajectory_03"
+    },
+    {
+      "error": "teacher API HTTP 500: {\"error\":\"Daily limit exceeded\"}",
+      "seed": "asi2_distill_quantum_fourier_transform_repair_02"
+    },
+    {
+      "error": "teacher API HTTP 500: {\"error\":\"Daily limit exceeded\"}",
+      "seed": "asi2_distill_quantum_gates_reference_optimization_04"
+    },
+    {
+      "error": "teacher API HTTP 500: {\"error\":\"Daily limit exceeded\"}",
+      "seed": "asi2_distill_quantum_gates_reference_agentic_trajectory_03"
+    },
+    {
+      "error": "teacher API HTTP 500: {\"error\":\"Daily limit exceeded\"}",
+      "seed": "asi2_distill_quantum_fourier_transform_optimization_04"
+    },
+    {
+      "error": "teacher API HTTP 500: {\"error\":\"Daily limit exceeded\"}",
+      "seed": "asi2_distill_quantum_fourier_transform_agentic_trajectory_03"
+    }
+  ],
+  "generated": 10,
+  "input_jsonl": "/Users/daxu/software/quantum-gpt/data/seed/quantum_distillation_seed_questions_asi2_v1.jsonl",
+  "model": "deepseek-v4-pro",
+  "ok": false,
+  "output_jsonl": "/Users/daxu/software/quantum-gpt/data/generated/quantum_distillation_teacher_responses_asi2_v1.jsonl",
+  "seed_rows": 480,
+  "selected": 473
+}

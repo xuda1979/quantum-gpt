@@ -1,0 +1,52 @@
+import importlib.util
+
+
+def _load(candidate_path: str):
+    spec = importlib.util.spec_from_file_location("candidate", candidate_path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
+def run_tests(candidate_path: str) -> dict:
+    module = _load(candidate_path)
+    failures = []
+
+    expected = {"00": "I", "01": "X", "10": "Z", "11": "XZ"}
+    for bits, label in expected.items():
+        actual_label = module.bits_to_pauli_label(bits)
+        if actual_label != label:
+            failures.append(f"bits_to_pauli_label({bits!r}) -> {actual_label!r}, expected {label!r}")
+        recovered_bits = module.pauli_label_to_bits(label)
+        if recovered_bits != bits:
+            failures.append(f"pauli_label_to_bits({label!r}) -> {recovered_bits!r}, expected {bits!r}")
+
+    if module.canonicalize_pauli_label(" z x ") != "XZ":
+        failures.append("canonicalize_pauli_label should normalize whitespace/casing and canonicalize ZX -> XZ")
+    if module.pauli_label_to_bits("xz") != "11":
+        failures.append("pauli_label_to_bits should accept lowercase non-canonical input and recover the right bits")
+
+    for bad_bits in ("2", "101", ""):
+        try:
+            module.bits_to_pauli_label(bad_bits)
+        except ValueError:
+            pass
+        except Exception as exc:
+            failures.append(f"bits_to_pauli_label({bad_bits!r}) raised {type(exc).__name__}, expected ValueError")
+        else:
+            failures.append(f"bits_to_pauli_label({bad_bits!r}) accepted invalid bits")
+
+    try:
+        module.pauli_label_to_bits("YY")
+    except ValueError:
+        pass
+    except Exception as exc:
+        failures.append(f"pauli_label_to_bits('YY') raised {type(exc).__name__}, expected ValueError")
+    else:
+        failures.append("pauli_label_to_bits('YY') accepted an unknown label")
+
+    return {
+        "passed": not failures,
+        "details": failures or ["Pauli message codec round-trips two-bit messages and normalizes labels correctly"],
+    }

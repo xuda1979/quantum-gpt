@@ -1,0 +1,11 @@
+# Failure-shape-focused GRPO training task set for strict-recovery iteration.
+# This benchmark only includes train-side analogs that closely match the latest
+# observed strict-holdout failure shapes from qwen25 grpo v4 targeted r3.
+quantum_gate_alias_casefold_barrier
+quantum_gate_token_canonicalizer
+quantum_phase_measurement_register
+quantum_binary_measurement_decoder
+quantum_bitstring_maxcut_landscape
+quantum_maxcut_assignment_enumerator
+quantum_superdense_pauli_router
+quantum_superdense_identity_lookup

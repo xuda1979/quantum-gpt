@@ -1,0 +1,364 @@
+{
+  "input_jsonl": "data/generated/quantum_distillation_teacher_responses_asi2_v1_high_quality_sft_203_salvaged_v2/all_chatml.jsonl",
+  "invalid_examples": [
+    {
+      "example_id": "asi2_distill_bell_state_construction_implementation_01_teacher",
+      "reasons": [
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 1
+    },
+    {
+      "example_id": "asi2_distill_binary_measurement_decoders_implementation_01_teacher",
+      "reasons": [
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 4
+    },
+    {
+      "example_id": "asi2_distill_binary_measurement_decoders_agentic_trajectory_03_teacher",
+      "reasons": [
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 6
+    },
+    {
+      "example_id": "asi2_distill_braket_basics_implementation_01_teacher",
+      "reasons": [
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 7
+    },
+    {
+      "example_id": "asi2_distill_density_matrix_partial_trace_implementation_01_teacher",
+      "reasons": [
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 17
+    },
+    {
+      "example_id": "asi2_distill_depolarizing_channel_agentic_trajectory_03_teacher",
+      "reasons": [
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 21
+    },
+    {
+      "example_id": "asi2_distill_error_correction_basics_implementation_01_teacher",
+      "reasons": [
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 22
+    },
+    {
+      "example_id": "asi2_distill_error_correction_basics_agentic_trajectory_03_teacher",
+      "reasons": [
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 24
+    },
+    {
+      "example_id": "asi2_distill_ghz_state_implementation_01_teacher",
+      "reasons": [
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 25
+    },
+    {
+      "example_id": "asi2_distill_qaoa_maxcut_implementation_01_teacher",
+      "reasons": [
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 38
+    },
+    {
+      "example_id": "asi2_distill_quantum_fourier_transform_implementation_01_teacher",
+      "reasons": [
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 47
+    },
+    {
+      "example_id": "asi2_distill_quantum_fourier_transform_repair_02_teacher",
+      "reasons": [
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 48
+    },
+    {
+      "example_id": "asi2_distill_quantum_gates_reference_implementation_01_teacher",
+      "reasons": [
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 50
+    },
+    {
+      "example_id": "asi2_distill_quantum_gates_reference_agentic_trajectory_03_teacher",
+      "reasons": [
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 52
+    },
+    {
+      "example_id": "asi2_distill_quantum_phase_estimation_agentic_trajectory_03_teacher",
+      "reasons": [
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 55
+    },
+    {
+      "example_id": "asi2_distill_stabilizer_formalism_implementation_01_teacher",
+      "reasons": [
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 58
+    },
+    {
+      "example_id": "asi2_distill_state_vector_simulation_implementation_01_teacher",
+      "reasons": [
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 61
+    },
+    {
+      "example_id": "asi2_distill_state_vector_simulation_repair_02_teacher",
+      "reasons": [
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 62
+    },
+    {
+      "example_id": "asi2_distill_superdense_coding_implementation_01_teacher",
+      "reasons": [
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 64
+    },
+    {
+      "example_id": "asi2_distill_superdense_coding_repair_02_teacher",
+      "reasons": [
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 65
+    },
+    {
+      "example_id": "asi2_distill_superdense_coding_agentic_trajectory_03_teacher",
+      "reasons": [
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 66
+    },
+    {
+      "example_id": "asi2_distill_www_arclightquantum_com_isq_docs_latest_6c964d854e_implementation_01_teacher",
+      "reasons": [
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 76
+    },
+    {
+      "example_id": "asi2_distill_www_arclightquantum_com_isq_docs_latest_6c964d854e_repair_02_teacher",
+      "reasons": [
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 77
+    },
+    {
+      "example_id": "asi2_distill_www_arclightquantum_com_isq_docs_latest_6c964d854e_agentic_trajectory_03_teacher",
+      "reasons": [
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 78
+    },
+    {
+      "example_id": "asi2_distill_quantumai_google_cirq_build_16d179920c_repair_02_teacher",
+      "reasons": [
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 80
+    },
+    {
+      "example_id": "asi2_distill_docs_pennylane_ai_en_stable_67f2996149_implementation_01_teacher",
+      "reasons": [
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 90
+    },
+    {
+      "example_id": "asi2_distill_docs_quantinuum_com_tket_api_docs_89c2dae05f_repair_02_teacher",
+      "reasons": [
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 100
+    },
+    {
+      "example_id": "asi2_distill_pyzx_readthedocs_io_en_latest_sources_api_rst_txt_56dad7f660_agentic_trajectory_03_teacher",
+      "reasons": [
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 104
+    },
+    {
+      "example_id": "asi2_distill_www_arclightquantum_com_isq_docs_latest_devsetup_74f70398dd_implementation_01_teacher",
+      "reasons": [
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 113
+    },
+    {
+      "example_id": "asi2_distill_www_arclightquantum_com_isq_docs_latest_devsetup_74f70398dd_repair_02_teacher",
+      "reasons": [
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 114
+    },
+    {
+      "example_id": "asi2_distill_www_arclightquantum_com_isq_docs_latest_devsetup_74f70398dd_agentic_trajectory_03_teacher",
+      "reasons": [
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 115
+    },
+    {
+      "example_id": "asi2_distill_quantumai_google_cirq_build_circuits_7bf9572146_implementation_01_teacher",
+      "reasons": [
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 116
+    },
+    {
+      "example_id": "asi2_distill_quantumai_google_cirq_build_circuits_7bf9572146_agentic_trajectory_03_teacher",
+      "reasons": [
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 118
+    },
+    {
+      "example_id": "asi2_distill_nvidia_github_io_cuda_quantum_latest_applications_python_adapt_vqe_html_e75599de83_implementation_01_teacher",
+      "reasons": [
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 119
+    },
+    {
+      "example_id": "asi2_distill_nvidia_github_io_cuda_quantum_latest_applications_python_adapt_vqe_html_e75599de83_repair_02_teacher",
+      "reasons": [
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 120
+    },
+    {
+      "example_id": "asi2_distill_mitiq_readthedocs_io_en_stable_apidoc_html_a1c8fa34f7_agentic_trajectory_03_teacher",
+      "reasons": [
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 124
+    },
+    {
+      "example_id": "asi2_distill_projectq_readthedocs_io_en_latest_doc_gen_projectq_backends_html_43c0f041e3_implementation_01_teacher",
+      "reasons": [
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 131
+    },
+    {
+      "example_id": "asi2_distill_pyquil_docs_rigetti_com_en_stable_sources_advanced_usage_rst_txt_dbc976383f_implementation_01_teacher",
+      "reasons": [
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 134
+    },
+    {
+      "example_id": "asi2_distill_docs_quantinuum_com_tket_api_docs_backends_html_5d63860d0c_agentic_trajectory_03_teacher",
+      "reasons": [
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 139
+    },
+    {
+      "example_id": "asi2_distill_pyzx_readthedocs_io_en_latest_sources_faq_rst_txt_5af0fb740b_implementation_01_teacher",
+      "reasons": [
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 140
+    },
+    {
+      "example_id": "asi2_distill_qutip_readthedocs_io_en_latest_apidoc_apidoc_html_b512f1ba90_implementation_01_teacher",
+      "reasons": [
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 143
+    },
+    {
+      "example_id": "asi2_distill_tensorcircuit_readthedocs_io_en_latest_api_about_html_6891e0923a_implementation_01_teacher",
+      "reasons": [
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 145
+    },
+    {
+      "example_id": "asi2_distill_docs_aws_amazon_com_braket_latest_developerguide_braket_batching_tasks_html_d3971cdbf7_agentic_trajectory_03_teacher",
+      "reasons": [
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 150
+    },
+    {
+      "example_id": "asi2_distill_www_arclightquantum_com_isq_docs_latest_examples_arith_cdb8862418_implementation_01_teacher",
+      "reasons": [
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 151
+    },
+    {
+      "example_id": "asi2_distill_www_arclightquantum_com_isq_docs_latest_examples_arith_cdb8862418_repair_02_teacher",
+      "reasons": [
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 152
+    },
+    {
+      "example_id": "asi2_distill_www_arclightquantum_com_isq_docs_latest_examples_arith_cdb8862418_agentic_trajectory_03_teacher",
+      "reasons": [
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 153
+    },
+    {
+      "example_id": "asi2_distill_nvidia_github_io_cuda_quantum_latest_applications_python_afqmc_html_6df1a10d7f_repair_02_teacher",
+      "reasons": [
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 156
+    },
+    {
+      "example_id": "asi2_distill_quantumai_google_openfermion_fqe_guide_introduction_8ebdd9b404_implementation_01_teacher",
+      "reasons": [
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 157
+    },
+    {
+      "example_id": "asi2_distill_projectq_readthedocs_io_en_latest_doc_gen_projectq_cengines_html_70e22e6a1b_repair_02_teacher",
+      "reasons": [
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 163
+    },
+    {
+      "example_id": "asi2_distill_learn_microsoft_com_en_us_azure_quantum_azure_quantum_quotas_f41f4cbe13_repair_02_teacher",
+      "reasons": [
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 177
+    }
+  ],
+  "invalid_rows": 58,
+  "min_valid_rows": 203,
+  "ok": false,
+  "reason_counts": {
+    "answer has fewer than three executable non-comment lines": 58
+  },
+  "rows": 203,
+  "valid_output": "data/generated/quantum_distillation_teacher_responses_asi2_v1_high_quality_sft_203_salvaged_v2_valid/all_chatml.jsonl",
+  "valid_rows": 145
+}

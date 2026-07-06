@@ -1,0 +1,4 @@
+interface:
+  display_name: "Huanxin + S3 Ops"
+  short_description: "Operate Huanxin and move files through an S3 relay"
+  default_prompt: "Read TOOLS.md for workspace-specific values, then use the local Huanxin shell wrappers and S3 sync helpers to run remote commands and move files between local disk, S3, and Huanxin."

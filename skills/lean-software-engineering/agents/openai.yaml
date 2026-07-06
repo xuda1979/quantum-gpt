@@ -1,0 +1,4 @@
+interface:
+  display_name: "Lean Software Engineering"
+  short_description: "Minimal talk, strong scripts, fast feedback"
+  default_prompt: "Use minimal self-talk: inspect, patch or script, run focused verification, iterate on failures, and report only the useful result."

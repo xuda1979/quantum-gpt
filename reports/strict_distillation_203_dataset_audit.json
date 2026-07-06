@@ -1,0 +1,415 @@
+{
+  "input_jsonl": "data/generated/quantum_distillation_teacher_responses_asi2_v1_high_quality_sft_203_strict_english_runnable_v1/all_chatml.jsonl",
+  "invalid_examples": [
+    {
+      "example_id": "asi2_distill_bell_state_construction_implementation_01_teacher",
+      "reasons": [
+        "answer is sanitized fallback, not real solution code",
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 1
+    },
+    {
+      "example_id": "asi2_distill_bell_state_construction_repair_02_teacher",
+      "reasons": [
+        "answer is sanitized fallback, not real solution code",
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 2
+    },
+    {
+      "example_id": "asi2_distill_bell_state_construction_agentic_trajectory_03_teacher",
+      "reasons": [
+        "answer is sanitized fallback, not real solution code",
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 3
+    },
+    {
+      "example_id": "asi2_distill_binary_measurement_decoders_implementation_01_teacher",
+      "reasons": [
+        "answer is sanitized fallback, not real solution code",
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 4
+    },
+    {
+      "example_id": "asi2_distill_binary_measurement_decoders_agentic_trajectory_03_teacher",
+      "reasons": [
+        "answer is sanitized fallback, not real solution code",
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 6
+    },
+    {
+      "example_id": "asi2_distill_braket_basics_implementation_01_teacher",
+      "reasons": [
+        "answer is sanitized fallback, not real solution code",
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 7
+    },
+    {
+      "example_id": "asi2_distill_circuit_repair_recipes_implementation_01_teacher",
+      "reasons": [
+        "answer is sanitized fallback, not real solution code",
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 10
+    },
+    {
+      "example_id": "asi2_distill_density_matrix_eval_api_implementation_01_teacher",
+      "reasons": [
+        "answer is sanitized fallback, not real solution code",
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 16
+    },
+    {
+      "example_id": "asi2_distill_density_matrix_partial_trace_implementation_01_teacher",
+      "reasons": [
+        "answer is sanitized fallback, not real solution code",
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 17
+    },
+    {
+      "example_id": "asi2_distill_density_matrix_partial_trace_agentic_trajectory_03_teacher",
+      "reasons": [
+        "answer is sanitized fallback, not real solution code",
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 18
+    },
+    {
+      "example_id": "asi2_distill_depolarizing_channel_implementation_01_teacher",
+      "reasons": [
+        "answer is sanitized fallback, not real solution code",
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 19
+    },
+    {
+      "example_id": "asi2_distill_depolarizing_channel_repair_02_teacher",
+      "reasons": [
+        "answer is sanitized fallback, not real solution code",
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 20
+    },
+    {
+      "example_id": "asi2_distill_depolarizing_channel_agentic_trajectory_03_teacher",
+      "reasons": [
+        "answer is sanitized fallback, not real solution code",
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 21
+    },
+    {
+      "example_id": "asi2_distill_error_correction_basics_implementation_01_teacher",
+      "reasons": [
+        "answer is sanitized fallback, not real solution code",
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 22
+    },
+    {
+      "example_id": "asi2_distill_error_correction_basics_repair_02_teacher",
+      "reasons": [
+        "answer is sanitized fallback, not real solution code",
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 23
+    },
+    {
+      "example_id": "asi2_distill_error_correction_basics_agentic_trajectory_03_teacher",
+      "reasons": [
+        "answer is sanitized fallback, not real solution code",
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 24
+    },
+    {
+      "example_id": "asi2_distill_ghz_state_implementation_01_teacher",
+      "reasons": [
+        "answer is sanitized fallback, not real solution code",
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 25
+    },
+    {
+      "example_id": "asi2_distill_grover_search_implementation_01_teacher",
+      "reasons": [
+        "answer is sanitized fallback, not real solution code",
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 28
+    },
+    {
+      "example_id": "asi2_distill_grover_search_repair_02_teacher",
+      "reasons": [
+        "answer is sanitized fallback, not real solution code",
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 29
+    },
+    {
+      "example_id": "asi2_distill_maxcut_classical_helpers_agentic_trajectory_03_teacher",
+      "reasons": [
+        "answer is sanitized fallback, not real solution code",
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 30
+    },
+    {
+      "example_id": "asi2_distill_measurement_and_classical_register_repair_02_teacher",
+      "reasons": [
+        "answer is sanitized fallback, not real solution code",
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 32
+    },
+    {
+      "example_id": "asi2_distill_pennylane_basics_implementation_01_teacher",
+      "reasons": [
+        "answer is sanitized fallback, not real solution code",
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 33
+    },
+    {
+      "example_id": "asi2_distill_phase_register_roundtrip_implementation_01_teacher",
+      "reasons": [
+        "answer is sanitized fallback, not real solution code",
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 35
+    },
+    {
+      "example_id": "asi2_distill_phase_register_roundtrip_repair_02_teacher",
+      "reasons": [
+        "answer is sanitized fallback, not real solution code",
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 36
+    },
+    {
+      "example_id": "asi2_distill_phase_register_roundtrip_agentic_trajectory_03_teacher",
+      "reasons": [
+        "answer is sanitized fallback, not real solution code",
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 37
+    },
+    {
+      "example_id": "asi2_distill_qaoa_maxcut_implementation_01_teacher",
+      "reasons": [
+        "answer is sanitized fallback, not real solution code",
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 38
+    },
+    {
+      "example_id": "asi2_distill_qaoa_maxcut_repair_02_teacher",
+      "reasons": [
+        "answer is sanitized fallback, not real solution code",
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 39
+    },
+    {
+      "example_id": "asi2_distill_qaoa_maxcut_agentic_trajectory_03_teacher",
+      "reasons": [
+        "answer is sanitized fallback, not real solution code",
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 40
+    },
+    {
+      "example_id": "asi2_distill_quantum_circuit_construction_patterns_implementation_01_teacher",
+      "reasons": [
+        "answer is sanitized fallback, not real solution code",
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 44
+    },
+    {
+      "example_id": "asi2_distill_quantum_circuit_construction_patterns_repair_02_teacher",
+      "reasons": [
+        "answer is sanitized fallback, not real solution code",
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 45
+    },
+    {
+      "example_id": "asi2_distill_quantum_circuit_construction_patterns_agentic_trajectory_03_teacher",
+      "reasons": [
+        "answer is sanitized fallback, not real solution code",
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 46
+    },
+    {
+      "example_id": "asi2_distill_quantum_fourier_transform_implementation_01_teacher",
+      "reasons": [
+        "answer is sanitized fallback, not real solution code",
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 47
+    },
+    {
+      "example_id": "asi2_distill_quantum_fourier_transform_repair_02_teacher",
+      "reasons": [
+        "answer is sanitized fallback, not real solution code",
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 48
+    },
+    {
+      "example_id": "asi2_distill_quantum_fourier_transform_agentic_trajectory_03_teacher",
+      "reasons": [
+        "answer is sanitized fallback, not real solution code",
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 49
+    },
+    {
+      "example_id": "asi2_distill_quantum_gates_reference_implementation_01_teacher",
+      "reasons": [
+        "answer is sanitized fallback, not real solution code",
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 50
+    },
+    {
+      "example_id": "asi2_distill_quantum_gates_reference_repair_02_teacher",
+      "reasons": [
+        "answer is sanitized fallback, not real solution code",
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 51
+    },
+    {
+      "example_id": "asi2_distill_quantum_gates_reference_agentic_trajectory_03_teacher",
+      "reasons": [
+        "answer is sanitized fallback, not real solution code",
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 52
+    },
+    {
+      "example_id": "asi2_distill_quantum_phase_estimation_implementation_01_teacher",
+      "reasons": [
+        "answer is sanitized fallback, not real solution code",
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 53
+    },
+    {
+      "example_id": "asi2_distill_quantum_phase_estimation_agentic_trajectory_03_teacher",
+      "reasons": [
+        "answer is sanitized fallback, not real solution code",
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 55
+    },
+    {
+      "example_id": "asi2_distill_quantum_teleportation_implementation_01_teacher",
+      "reasons": [
+        "answer is sanitized fallback, not real solution code",
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 56
+    },
+    {
+      "example_id": "asi2_distill_quantum_teleportation_repair_02_teacher",
+      "reasons": [
+        "answer is sanitized fallback, not real solution code",
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 57
+    },
+    {
+      "example_id": "asi2_distill_stabilizer_formalism_implementation_01_teacher",
+      "reasons": [
+        "answer is sanitized fallback, not real solution code",
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 58
+    },
+    {
+      "example_id": "asi2_distill_stabilizer_formalism_repair_02_teacher",
+      "reasons": [
+        "answer is sanitized fallback, not real solution code",
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 59
+    },
+    {
+      "example_id": "asi2_distill_stabilizer_formalism_agentic_trajectory_03_teacher",
+      "reasons": [
+        "answer is sanitized fallback, not real solution code",
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 60
+    },
+    {
+      "example_id": "asi2_distill_state_vector_simulation_implementation_01_teacher",
+      "reasons": [
+        "answer is sanitized fallback, not real solution code",
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 61
+    },
+    {
+      "example_id": "asi2_distill_state_vector_simulation_repair_02_teacher",
+      "reasons": [
+        "answer is sanitized fallback, not real solution code",
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 62
+    },
+    {
+      "example_id": "asi2_distill_superdense_coding_implementation_01_teacher",
+      "reasons": [
+        "answer is sanitized fallback, not real solution code",
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 64
+    },
+    {
+      "example_id": "asi2_distill_superdense_coding_repair_02_teacher",
+      "reasons": [
+        "answer is sanitized fallback, not real solution code",
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 65
+    },
+    {
+      "example_id": "asi2_distill_superdense_coding_agentic_trajectory_03_teacher",
+      "reasons": [
+        "answer is sanitized fallback, not real solution code",
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 66
+    },
+    {
+      "example_id": "asi2_distill_trotter_decomposition_implementation_01_teacher",
+      "reasons": [
+        "answer is sanitized fallback, not real solution code",
+        "answer has fewer than three executable non-comment lines"
+      ],
+      "row": 67
+    }
+  ],
+  "invalid_rows": 126,
+  "min_valid_rows": 203,
+  "ok": false,
+  "reason_counts": {
+    "answer has fewer than three executable non-comment lines": 126,
+    "answer is sanitized fallback, not real solution code": 126
+  },
+  "rows": 203,
+  "valid_output": "data/generated/quantum_distillation_teacher_responses_asi2_v1_high_quality_sft_203_strict_valid_subset_v1/all_chatml.jsonl",
+  "valid_rows": 77
+}

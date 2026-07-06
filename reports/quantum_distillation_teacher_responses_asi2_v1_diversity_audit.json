@@ -1,0 +1,67 @@
+{
+  "chatml_rows": 203,
+  "errors": [],
+  "eval_rows": 20,
+  "generated_categories": {
+    "algorithm_implementation": 59,
+    "error_correction": 9,
+    "hardware_compilation": 33,
+    "library_api_grounding": 47,
+    "noise_and_mitigation": 22,
+    "quantum_engineering": 33
+  },
+  "generated_frameworks": {
+    "None": 56,
+    "braket": 15,
+    "cirq": 25,
+    "cuda-quantum": 12,
+    "isq": 12,
+    "mitiq": 6,
+    "pennylane": 16,
+    "pyquil": 6,
+    "pyzx": 14,
+    "qiskit": 30,
+    "qsharp": 3,
+    "qutip": 8
+  },
+  "generated_rows": 203,
+  "generated_source_doc_count": 73,
+  "generated_task_types": {
+    "agentic_trajectory": 59,
+    "implementation": 72,
+    "optimization": 3,
+    "repair": 69
+  },
+  "ok": true,
+  "seed_categories": {
+    "algorithm_implementation": 124,
+    "error_correction": 12,
+    "hardware_compilation": 76,
+    "library_api_grounding": 144,
+    "noise_and_mitigation": 52,
+    "quantum_engineering": 72
+  },
+  "seed_frameworks": {
+    "None": 108,
+    "braket": 32,
+    "cirq": 56,
+    "cuda-quantum": 24,
+    "isq": 28,
+    "mitiq": 24,
+    "pennylane": 32,
+    "pyquil": 24,
+    "pyzx": 32,
+    "qiskit": 72,
+    "qsharp": 24,
+    "qutip": 24
+  },
+  "seed_rows": 480,
+  "seed_source_doc_count": 120,
+  "seed_task_types": {
+    "agentic_trajectory": 120,
+    "implementation": 120,
+    "optimization": 120,
+    "repair": 120
+  },
+  "train_rows": 183
+}
