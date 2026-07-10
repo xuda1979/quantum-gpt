@@ -30,6 +30,12 @@ publish time.
 6. **Task-suite pinning** — a `suite.lock.json` pins the exact task set
    + per-task hashes used by a run. No silent task edits between
    iterations.
+7. **Full candidate recording** — every candidate code sample generated
+   by a base model or adapter is recorded in full (text + SHA-256) in
+   the ledger's `sample` table AND written to
+   `run_dir/candidates/<task_id>.s<idx>.py`. The `candidates`
+   subcommand lists, exports, or prints them. Nothing generated is
+   ever discarded.
 
 ## Layout
 
@@ -84,6 +90,11 @@ python -m evals.trust.cli.main verify \
 python -m evals.trust.cli.main audit \
     --run evals/trust/runs/iter3-<timestamp>/ \
     --report evals/RUN_SUMMARY.md
+
+# List / export / inspect all generated candidate code
+python -m evals.trust.cli.main candidates --run evals/trust/runs/iter3-<timestamp>/
+python -m evals.trust.cli.main candidates --run evals/trust/runs/iter3-<timestamp>/ --export ./out/
+python -m evals.trust.cli.main candidates --run evals/trust/runs/iter3-<timestamp>/ --show quantum_grover_oracle_diffusion
 
 # Reproduce a run from its recipe
 python -m evals.trust.cli.main reproduce \
