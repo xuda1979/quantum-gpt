@@ -1,0 +1,39 @@
+# Trustable Evaluation Report — {{ model_label }}
+
+- **run_hash**: `{{ run_hash }}`
+- **suite_hash**: `{{ suite_hash }}`
+- **git_commit**: `{{ git_commit }}`
+- **k**: {{ k }}  **temperature**: {{ temperature }}  **seed**: {{ seed }}
+- **python**: `{{ python_version }}` on `{{ platform }}`
+
+## Summary
+
+- n_tasks: **{{ n_tasks }}**
+- n_pass: **{{ n_pass }}**
+- pass_at_1: **{{ pass_at_1 }}**
+
+## Per-task
+
+| task_id | domain | category | n_pass_det | pass_at_1 |
+|---|---|---|---|---|
+{{#each by_task}}
+| {{ task_id }} | {{ domain }} | {{ category }} | {{ n_pass_det }} | {{ pass_at_1 }} |
+{{/each}}
+
+## Disagreements
+
+- {{ disagreements.length }} tasks with judge disagreement: {{ disagreements }}
+
+## Reproduction
+
+```bash
+python -m evals.trust.cli.main reproduce --run {{ run_dir }}
+```
+
+## Audit
+
+This report must pass `quantum_eval audit` before publication:
+
+```bash
+python -m evals.trust.cli.main audit --run {{ run_dir }} --report <this-file>
+```

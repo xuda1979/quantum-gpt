@@ -15,3 +15,7 @@ page-shot.png
 artifacts/quantum-rag/*.pkl.gz
 artifacts/quantum-rag/answer-cache.jsonl
 artifacts/quantum-rag/qwen36-*.json
+
+# Python bytecode
+__pycache__/
+*.pyc
