@@ -57,6 +57,14 @@ if [[ $GIT_ONLY -eq 0 ]]; then
     --exclude "outputs/**" --exclude "models/**" --exclude "logs/**" \
     --exclude "data/generated/**" --exclude "artifacts/runtime-bundles/**" \
     --exclude "browser-automation/profile*/**" --exclude ".venv*/**" \
+    --exclude ".local-python/**" --exclude ".local/**" \
+    --exclude ".cache/**" --exclude ".pytest_cache/**" \
+    --exclude ".parallel_runs/**" --exclude ".run_specs/**" \
+    --exclude ".huanxin_shell_connections/**" \
+    --exclude ".huanxin_training_jobs/**" \
+    --exclude ".alphaqubit_asi3_transfer/**" \
+    --exclude ".clawhub/**" --exclude ".openclaw/**" \
+    --exclude "tmp/**" --exclude "tmp-webkit-profile/**" \
     --exclude ".git/**" 2>&1 | tail -5 || true
 
   # 1b. Adapters + run configs + metrics (the "important files").
