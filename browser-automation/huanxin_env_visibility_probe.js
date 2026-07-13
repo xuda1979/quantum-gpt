@@ -2,7 +2,8 @@ const { ensureProfileDir } = require('./huanxin_profile');
 const { chromium } = require('playwright');
 const { launchPersistentContext } = require('./huanxin_browser_launch');
 
-const URL = 'https://aihuanxin.cn/kunlun/kl-web?poolId=1&projectId=3ed7854b946a47b1a49ad754baa76cd3#/train-dev';
+const URL = process.env.HUANXIN_TRAIN_DEV_URL ||
+  'https://aihuanxin.cn/kunlun/kl-web?poolId=6&projectId=21b4208dde424e96b159362ef49c9c96#/train-dev/environment/dl-9a5a098accce31c28cf4c6ca23391341?name=AI';
 
 async function collect(page) {
   return page.evaluate(() => {
@@ -14,6 +15,7 @@ async function collect(page) {
       title: document.title,
       url: location.href,
       visibleHasAi1: visibleText.includes('ai1'),
+      visibleHasAI: visibleText.includes('AI'),
       visibleHasAi2: visibleText.includes('ai2'),
       visibleHasEmpty: visibleText.includes('暂无开发环境'),
       visibleHasOnlyMine: visibleText.includes('仅我创建'),
@@ -50,15 +52,7 @@ async function tryClearOnlyMine(page) {
 
 async function main() {
   const { profileDir } = ensureProfileDir();
-  const headless = process.env.HUANXIN_HEADLESS !== '0';
-  const launch = headless
-    ? await launchPersistentContext(profileDir)
-    : { context: await chromium.launchPersistentContext(profileDir, {
-        headless: false,
-        executablePath: chromium.executablePath(),
-        viewport: { width: 1600, height: 1000 },
-        slowMo: 50,
-      }) };
+  const launch = await launchPersistentContext(profileDir);
   const context = launch.context;
 
   try {

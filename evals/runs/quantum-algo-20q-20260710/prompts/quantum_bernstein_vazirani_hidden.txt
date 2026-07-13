@@ -1,0 +1,7 @@
+Write a complete, runnable Python program using Qiskit that:
+1. Implements the Bernstein-Vazirani algorithm to find a hidden bitstring s = "101" (3 bits).
+2. Oracle: f(x) = s . x mod 2 (i.e. f = x0 XOR x2).
+3. In `def main()`, uses StatevectorSampler (1000 shots) and prints the recovered hidden bitstring (in natural order, so it should read "101").
+Output exactly:
+  Hidden string: <3-char bitstring>
+Call main() under `if __name__ == "__main__":`.

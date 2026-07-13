@@ -60,6 +60,19 @@ Use the primitive interface for current Qiskit algorithm classes such as
 `qiskit_algorithms.QAOA`. Use AerSimulator when you need a backend-like
 simulator result object and counts through `get_counts`.
 
+For algorithm-level reproducibility, use
+`from qiskit_algorithms.utils import algorithm_globals` before assigning
+`algorithm_globals.random_seed`. For sampler reproducibility, prefer explicit
+sampler seeds such as `StatevectorSampler(seed=42)`.
+
+## Qiskit algorithms versus circuit/kernel APIs
+
+`qiskit_algorithms.minimum_eigensolvers.QAOA` is not a `QuantumCircuit` constructor or CUDA-Q kernel factory. It receives a sampler, an optimizer,
+`reps`, and optional algorithm parameters such as `initial_point`. Do not pass
+graph size, qubit-count, or layer-count kernel arguments to that constructor;
+Qiskit algorithm classes get problem size from the operator or optimization
+problem they solve.
+
 ## Endianness gotcha
 Qiskit displays bitstrings with qubit 0 as the *rightmost* character
 (little-endian). The Statevector vector index k = sum_i b_i * 2^i where
@@ -73,5 +86,10 @@ b_i is the value of qubit i.
 - Optimizers such as `COBYLA` live in `qiskit_algorithms.optimizers`, while
   algorithm classes such as `QAOA` should be imported from explicit algorithm
   submodules such as `qiskit_algorithms.minimum_eigensolvers`.
+- Qiskit `QAOA` is an algorithm wrapper, not a circuit/kernel constructor; set
+  QAOA depth with `reps` and let the solved operator or optimization problem
+  determine the qubit count.
+- Import `algorithm_globals` before assigning `algorithm_globals.random_seed`;
+  otherwise the code raises `NameError` before any algorithm executes.
 - `qiskit_optimization.algorithms` is for optimizers/wrappers such as
   `MinimumEigenOptimizer`; it is not the import path for `QAOA`.

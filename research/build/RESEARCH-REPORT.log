@@ -1,4 +1,4 @@
-This is XeTeX, Version 3.141592653-2.6-0.999998 (TeX Live 2026) (preloaded format=xelatex 2026.3.1)  10 APR 2026 16:55
+This is XeTeX, Version 3.141592653-2.6-0.999998 (TeX Live 2026) (preloaded format=xelatex 2026.4.12)  13 APR 2026 22:22
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -6,10 +6,10 @@ entering extended mode
 **/Users/daxu/software/quantum-gpt/research/RESEARCH-REPORT.tex
 (/Users/daxu/software/quantum-gpt/research/RESEARCH-REPORT.tex
 LaTeX2e <2025-11-01>
-L3 programming layer <2026-01-19>
-(/usr/local/texlive/2026basic/texmf-dist/tex/latex/base/article.cls
+L3 programming layer <2026-03-20>
+(/Users/daxu/Library/texmf/tex/latex/base/article.cls
 Document Class: article 2025/01/22 v1.4n Standard LaTeX document class
-(/usr/local/texlive/2026basic/texmf-dist/tex/latex/base/size11.clo
+(/Users/daxu/Library/texmf/tex/latex/base/size11.clo
 File: size11.clo 2025/01/22 v1.4n Standard LaTeX file (size option)
 )
 \c@part=\count271
@@ -22,12 +22,12 @@ File: size11.clo 2025/01/22 v1.4n Standard LaTeX file (size option)
 \c@table=\count278
 \abovecaptionskip=\skip49
 \belowcaptionskip=\skip50
-\bibindent=\dimen148
+\bibindent=\dimen150
 )
 (/usr/local/texlive/2026basic/texmf-dist/tex/latex/geometry/geometry.sty
 Package: geometry 2020/01/02 v5.9 Page Geometry
 
-(/usr/local/texlive/2026basic/texmf-dist/tex/latex/graphics/keyval.sty
+(/Users/daxu/Library/texmf/tex/latex/graphics/keyval.sty
 Package: keyval 2022/05/29 v1.15 key=value parser (DPC)
 \KV@toks@=\toks17
 )
@@ -40,24 +40,23 @@ Package: iftex 2024/12/12 v1.0g TeX engine tests
 \Gm@cnth=\count279
 \Gm@cntv=\count280
 \c@Gm@tempcnt=\count281
-\Gm@bindingoffset=\dimen149
-\Gm@wd@mp=\dimen150
-\Gm@odd@mp=\dimen151
-\Gm@even@mp=\dimen152
-\Gm@layoutwidth=\dimen153
-\Gm@layoutheight=\dimen154
-\Gm@layouthoffset=\dimen155
-\Gm@layoutvoffset=\dimen156
+\Gm@bindingoffset=\dimen151
+\Gm@wd@mp=\dimen152
+\Gm@odd@mp=\dimen153
+\Gm@even@mp=\dimen154
+\Gm@layoutwidth=\dimen155
+\Gm@layoutheight=\dimen156
+\Gm@layouthoffset=\dimen157
+\Gm@layoutvoffset=\dimen158
 \Gm@dimlist=\toks18
 )
 (/usr/local/texlive/2026basic/texmf-dist/tex/latex/fontspec/fontspec.sty
 (/usr/local/texlive/2026basic/texmf-dist/tex/latex/l3packages/xparse/xparse.sty
-(/usr/local/texlive/2026basic/texmf-dist/tex/latex/l3kernel/expl3.sty
-Package: expl3 2026-01-19 L3 programming layer (loader) 
+(/Users/daxu/Library/texmf/tex/latex/l3kernel/expl3.sty
+Package: expl3 2026-03-20 L3 programming layer (loader)
 
-(/usr/local/texlive/2026basic/texmf-dist/tex/latex/l3backend/l3backend-xetex.de
-f
-File: l3backend-xetex.def 2025-10-09 L3 backend support: XeTeX
+(/Users/daxu/Library/texmf/tex/latex/l3backend/l3backend-xetex.def
+File: l3backend-xetex.def 2026-02-18 L3 backend support: XeTeX
 \g__graphics_track_int=\count282
 \g__pdfannot_backend_int=\count283
 \g__pdfannot_backend_link_int=\count284
@@ -80,11 +79,11 @@ X
 \l__fontspec_emdef_int=\count293
 \l__fontspec_strong_int=\count294
 \l__fontspec_strongdef_int=\count295
-\l__fontspec_tmpa_dim=\dimen157
-\l__fontspec_tmpb_dim=\dimen158
-\l__fontspec_tmpc_dim=\dimen159
+\l__fontspec_tmpa_dim=\dimen159
+\l__fontspec_tmpb_dim=\dimen160
+\l__fontspec_tmpc_dim=\dimen161
 
-(/usr/local/texlive/2026basic/texmf-dist/tex/latex/base/fontenc.sty
+(/Users/daxu/Library/texmf/tex/latex/base/fontenc.sty
 Package: fontenc 2025/07/18 v2.1d Standard LaTeX package
 )
 (/usr/local/texlive/2026basic/texmf-dist/tex/latex/fontspec/fontspec.cfg)))
@@ -99,7 +98,7 @@ Package xcolor Info: Driver file: xetex.def on input line 274.
 (/usr/local/texlive/2026basic/texmf-dist/tex/latex/graphics-def/xetex.def
 File: xetex.def 2025/11/01 v5.0p Graphics/color driver for xetex
 )
-(/usr/local/texlive/2026basic/texmf-dist/tex/latex/graphics/mathcolor.ltx)
+(/Users/daxu/Library/texmf/tex/latex/graphics/mathcolor.ltx)
 Package xcolor Info: Model `cmy' substituted by `cmy0' on input line 1349.
 Package xcolor Info: Model `RGB' extended on input line 1365.
 Package xcolor Info: Model `HTML' substituted by `rgb' on input line 1367.
@@ -109,13 +108,13 @@ Package xcolor Info: Model `HSB' substituted by `hsb' on input line 1370.
 Package xcolor Info: Model `Gray' substituted by `gray' on input line 1371.
 Package xcolor Info: Model `wave' substituted by `hsb' on input line 1372.
 )
-(/usr/local/texlive/2026basic/texmf-dist/tex/latex/graphics/graphicx.sty
+(/Users/daxu/Library/texmf/tex/latex/graphics/graphicx.sty
 Package: graphicx 2024/12/31 v1.2e Enhanced LaTeX Graphics (DPC,SPQR)
 
-(/usr/local/texlive/2026basic/texmf-dist/tex/latex/graphics/graphics.sty
+(/Users/daxu/Library/texmf/tex/latex/graphics/graphics.sty
 Package: graphics 2024/08/06 v1.4g Standard LaTeX Graphics (DPC,SPQR)
 
-(/usr/local/texlive/2026basic/texmf-dist/tex/latex/graphics/trig.sty
+(/Users/daxu/Library/texmf/tex/latex/graphics/trig.sty
 Package: trig 2023/12/02 v1.11 sin cos tan (DPC)
 )
 (/usr/local/texlive/2026basic/texmf-dist/tex/latex/graphics-cfg/graphics.cfg
@@ -123,8 +122,8 @@ File: graphics.cfg 2016/06/04 v1.11 sample graphics configuration
 )
 Package graphics Info: Driver file: xetex.def on input line 106.
 )
-\Gin@req@height=\dimen160
-\Gin@req@width=\dimen161
+\Gin@req@height=\dimen162
+\Gin@req@width=\dimen163
 ) (/usr/local/texlive/2026basic/texmf-dist/tex/latex/hyperref/hyperref.sty
 Package: hyperref 2026-01-29 v7.01p Hypertext links for LaTeX
 
@@ -177,7 +176,7 @@ Package: etoolbox 2025/10/02 v2.5m e-TeX tools for LaTeX (JAW)
 Package: stringenc 2019/11/29 v1.12 Convert strings between diff. encodings (HO
 )
 )
-\@linkdim=\dimen162
+\@linkdim=\dimen164
 \Hy@linkcounter=\count298
 \Hy@pagecounter=\count299
 
@@ -206,7 +205,7 @@ Package hyperref Info: Bookmarks ON on input line 4468.
 Package: url 2013/09/16  ver 3.4  Verb mode for urls, etc.
 )
 LaTeX Info: Redefining \url on input line 4807.
-\XeTeXLinkMargin=\dimen163
+\XeTeXLinkMargin=\dimen165
 
 (/usr/local/texlive/2026basic/texmf-dist/tex/generic/bitset/bitset.sty
 Package: bitset 2019/12/09 v1.3 Handle bit-vector datatype (HO)
@@ -216,8 +215,8 @@ Package: bigintcalc 2019/12/15 v1.5 Expandable calculations on big integers (HO
 )
 ))
 \Fld@menulength=\count302
-\Field@Width=\dimen164
-\Fld@charsize=\dimen165
+\Field@Width=\dimen166
+\Fld@charsize=\dimen167
 Package hyperref Info: Hyper figures OFF on input line 6084.
 Package hyperref Info: Link nesting OFF on input line 6089.
 Package hyperref Info: Hyper index ON on input line 6092.
@@ -253,32 +252,32 @@ Package uniquecounter Info: New unique counter `rerunfilecheck' on input line 2
 )
 (/usr/local/texlive/2026basic/texmf-dist/tex/latex/booktabs/booktabs.sty
 Package: booktabs 2020/01/12 v1.61803398 Publication quality tables
-\heavyrulewidth=\dimen166
-\lightrulewidth=\dimen167
-\cmidrulewidth=\dimen168
-\belowrulesep=\dimen169
-\belowbottomsep=\dimen170
-\aboverulesep=\dimen171
-\abovetopsep=\dimen172
-\cmidrulesep=\dimen173
-\cmidrulekern=\dimen174
-\defaultaddspace=\dimen175
+\heavyrulewidth=\dimen168
+\lightrulewidth=\dimen169
+\cmidrulewidth=\dimen170
+\belowrulesep=\dimen171
+\belowbottomsep=\dimen172
+\aboverulesep=\dimen173
+\abovetopsep=\dimen174
+\cmidrulesep=\dimen175
+\cmidrulekern=\dimen176
+\defaultaddspace=\dimen177
 \@cmidla=\count310
 \@cmidlb=\count311
-\@aboverulesep=\dimen176
-\@belowrulesep=\dimen177
+\@aboverulesep=\dimen178
+\@belowrulesep=\dimen179
 \@thisruleclass=\count312
 \@lastruleclass=\count313
-\@thisrulewidth=\dimen178
+\@thisrulewidth=\dimen180
 )
-(/usr/local/texlive/2026basic/texmf-dist/tex/latex/tools/longtable.sty
+(/Users/daxu/Library/texmf/tex/latex/tools/longtable.sty
 Package: longtable 2025-10-13 v4.24 Multi-page Table package (DPC)
 \LTleft=\skip52
 \LTright=\skip53
 \LTpre=\skip54
 \LTpost=\skip55
 \LTchunksize=\count314
-\LTcapwidth=\dimen179
+\LTcapwidth=\dimen181
 \LT@head=\box54
 \LT@firsthead=\box55
 \LT@foot=\box56
@@ -290,24 +289,24 @@ Package: longtable 2025-10-13 v4.24 Multi-page Table package (DPC)
 \c@LT@chunks=\count318
 \LT@p@ftn=\toks19
 )
-(/usr/local/texlive/2026basic/texmf-dist/tex/latex/tools/tabularx.sty
+(/Users/daxu/Library/texmf/tex/latex/tools/tabularx.sty
 Package: tabularx 2023/12/11 v2.12a `tabularx' package (DPC)
 
-(/usr/local/texlive/2026basic/texmf-dist/tex/latex/tools/array.sty
+(/Users/daxu/Library/texmf/tex/latex/tools/array.sty
 Package: array 2025/09/25 v2.6n Tabular extension package (FMi)
-\col@sep=\dimen180
+\col@sep=\dimen182
 \ar@mcellbox=\box59
-\extrarowheight=\dimen181
+\extrarowheight=\dimen183
 \NC@list=\toks20
 \extratabsurround=\skip56
 \backup@length=\skip57
 \ar@cellbox=\box60
 )
-\TX@col@width=\dimen182
-\TX@old@table=\dimen183
-\TX@old@col=\dimen184
-\TX@target=\dimen185
-\TX@delta=\dimen186
+\TX@col@width=\dimen184
+\TX@old@table=\dimen185
+\TX@old@col=\dimen186
+\TX@target=\dimen187
+\TX@delta=\dimen188
 \TX@cols=\count319
 \TX@ftn=\toks21
 )
@@ -317,8 +316,8 @@ Package: array 2025/09/25 v2.6n Tabular extension package (FMi)
 (/usr/local/texlive/2026basic/texmf-dist/tex/generic/pgf/utilities/pgfutil-comm
 on.tex
 \pgfutil@everybye=\toks22
-\pgfutil@tempdima=\dimen187
-\pgfutil@tempdimb=\dimen188
+\pgfutil@tempdima=\dimen189
+\pgfutil@tempdimb=\dimen190
 )
 (/usr/local/texlive/2026basic/texmf-dist/tex/generic/pgf/utilities/pgfutil-late
 x.def
@@ -329,7 +328,7 @@ tex (/usr/local/texlive/2026basic/texmf-dist/tex/generic/pgf/pgf.revision.tex)
 Package: pgfrcs 2025-08-29 v3.1.11a (3.1.11a)
 ))
 Package: pgf 2025-08-29 v3.1.11a (3.1.11a)
- (/usr/local/texlive/2026basic/texmf-dist/tex/latex/pgf/basiclayer/pgfcore.sty 
+ (/usr/local/texlive/2026basic/texmf-dist/tex/latex/pgf/basiclayer/pgfcore.sty
 (/usr/local/texlive/2026basic/texmf-dist/tex/latex/pgf/systemlayer/pgfsys.sty
 (/usr/local/texlive/2026basic/texmf-dist/tex/generic/pgf/systemlayer/pgfsys.cod
 e.tex
@@ -344,16 +343,16 @@ Package: pgfsys 2025-08-29 v3.1.11a (3.1.11a)
 ryfiltered.code.tex
 \pgfkeys@tmptoks=\toks25
 ))
-\pgf@x=\dimen189
-\pgf@y=\dimen190
-\pgf@xa=\dimen191
-\pgf@ya=\dimen192
-\pgf@xb=\dimen193
-\pgf@yb=\dimen194
-\pgf@xc=\dimen195
-\pgf@yc=\dimen196
-\pgf@xd=\dimen197
-\pgf@yd=\dimen198
+\pgf@x=\dimen191
+\pgf@y=\dimen192
+\pgf@xa=\dimen193
+\pgf@ya=\dimen194
+\pgf@xb=\dimen195
+\pgf@yb=\dimen196
+\pgf@xc=\dimen197
+\pgf@yc=\dimen198
+\pgf@xd=\dimen199
+\pgf@yd=\dimen256
 \w@pgf@writea=\write3
 \r@pgf@reada=\read2
 \c@pgf@counta=\count320
@@ -403,7 +402,7 @@ Package: pgfcore 2025-08-29 v3.1.11a (3.1.11a)
 tex)
 (/usr/local/texlive/2026basic/texmf-dist/tex/generic/pgf/math/pgfmathparser.cod
 e.tex
-\pgfmath@dimen=\dimen199
+\pgfmath@dimen=\dimen257
 \pgfmath@count=\count328
 \pgfmath@box=\box62
 \pgfmath@toks=\toks29
@@ -438,32 +437,32 @@ tex)
 (/usr/local/texlive/2026basic/texmf-dist/tex/generic/pgf/basiclayer/pgfcorepoin
 ts.code.tex
 File: pgfcorepoints.code.tex 2025-08-29 v3.1.11a (3.1.11a)
-\pgf@picminx=\dimen256
-\pgf@picmaxx=\dimen257
-\pgf@picminy=\dimen258
-\pgf@picmaxy=\dimen259
-\pgf@pathminx=\dimen260
-\pgf@pathmaxx=\dimen261
-\pgf@pathminy=\dimen262
-\pgf@pathmaxy=\dimen263
-\pgf@xx=\dimen264
-\pgf@xy=\dimen265
-\pgf@yx=\dimen266
-\pgf@yy=\dimen267
-\pgf@zx=\dimen268
-\pgf@zy=\dimen269
+\pgf@picminx=\dimen258
+\pgf@picmaxx=\dimen259
+\pgf@picminy=\dimen260
+\pgf@picmaxy=\dimen261
+\pgf@pathminx=\dimen262
+\pgf@pathmaxx=\dimen263
+\pgf@pathminy=\dimen264
+\pgf@pathmaxy=\dimen265
+\pgf@xx=\dimen266
+\pgf@xy=\dimen267
+\pgf@yx=\dimen268
+\pgf@yy=\dimen269
+\pgf@zx=\dimen270
+\pgf@zy=\dimen271
 )
 (/usr/local/texlive/2026basic/texmf-dist/tex/generic/pgf/basiclayer/pgfcorepath
 construct.code.tex
 File: pgfcorepathconstruct.code.tex 2025-08-29 v3.1.11a (3.1.11a)
-\pgf@path@lastx=\dimen270
-\pgf@path@lasty=\dimen271
+\pgf@path@lastx=\dimen272
+\pgf@path@lasty=\dimen273
 )
 (/usr/local/texlive/2026basic/texmf-dist/tex/generic/pgf/basiclayer/pgfcorepath
 usage.code.tex
 File: pgfcorepathusage.code.tex 2025-08-29 v3.1.11a (3.1.11a)
-\pgf@shorten@end@additional=\dimen272
-\pgf@shorten@start@additional=\dimen273
+\pgf@shorten@end@additional=\dimen274
+\pgf@shorten@start@additional=\dimen275
 )
 (/usr/local/texlive/2026basic/texmf-dist/tex/generic/pgf/basiclayer/pgfcorescop
 es.code.tex
@@ -476,14 +475,14 @@ File: pgfcorescopes.code.tex 2025-08-29 v3.1.11a (3.1.11a)
 (/usr/local/texlive/2026basic/texmf-dist/tex/generic/pgf/basiclayer/pgfcoregrap
 hicstate.code.tex
 File: pgfcoregraphicstate.code.tex 2025-08-29 v3.1.11a (3.1.11a)
-\pgflinewidth=\dimen274
+\pgflinewidth=\dimen276
 )
 (/usr/local/texlive/2026basic/texmf-dist/tex/generic/pgf/basiclayer/pgfcoretran
 sformations.code.tex
 File: pgfcoretransformations.code.tex 2025-08-29 v3.1.11a (3.1.11a)
-\pgf@pt@x=\dimen275
-\pgf@pt@y=\dimen276
-\pgf@pt@temp=\dimen277
+\pgf@pt@x=\dimen277
+\pgf@pt@y=\dimen278
+\pgf@pt@temp=\dimen279
 )
 (/usr/local/texlive/2026basic/texmf-dist/tex/generic/pgf/basiclayer/pgfcorequic
 k.code.tex
@@ -500,12 +499,12 @@ File: pgfcorepathprocessing.code.tex 2025-08-29 v3.1.11a (3.1.11a)
 (/usr/local/texlive/2026basic/texmf-dist/tex/generic/pgf/basiclayer/pgfcorearro
 ws.code.tex
 File: pgfcorearrows.code.tex 2025-08-29 v3.1.11a (3.1.11a)
-\pgfarrowsep=\dimen278
+\pgfarrowsep=\dimen280
 )
 (/usr/local/texlive/2026basic/texmf-dist/tex/generic/pgf/basiclayer/pgfcoreshad
 e.code.tex
 File: pgfcoreshade.code.tex 2025-08-29 v3.1.11a (3.1.11a)
-\pgf@max=\dimen279
+\pgf@max=\dimen281
 \pgf@sys@shading@range@num=\count331
 \pgf@shadingcount=\count332
 )
@@ -546,8 +545,8 @@ File: pgfmoduleplot.code.tex 2025-08-29 v3.1.11a (3.1.11a)
 (/usr/local/texlive/2026basic/texmf-dist/tex/latex/pgf/compatibility/pgfcomp-ve
 rsion-0-65.sty
 Package: pgfcomp-version-0-65 2025-08-29 v3.1.11a (3.1.11a)
-\pgf@nodesepstart=\dimen280
-\pgf@nodesepend=\dimen281
+\pgf@nodesepstart=\dimen282
+\pgf@nodesepend=\dimen283
 )
 (/usr/local/texlive/2026basic/texmf-dist/tex/latex/pgf/compatibility/pgfcomp-ve
 rsion-1-18.sty
@@ -562,8 +561,8 @@ Package: pgfcomp-version-1-18 2025-08-29 v3.1.11a (3.1.11a)
 (/usr/local/texlive/2026basic/texmf-dist/tex/generic/pgf/utilities/pgffor.code.
 tex
 Package: pgffor 2025-08-29 v3.1.11a (3.1.11a)
-\pgffor@iter=\dimen282
-\pgffor@skip=\dimen283
+\pgffor@iter=\dimen284
+\pgffor@skip=\dimen285
 \pgffor@stack=\toks32
 \pgffor@toks=\toks33
 ))
@@ -575,16 +574,16 @@ Package: tikz 2025-08-29 v3.1.11a (3.1.11a)
 othandlers.code.tex
 File: pgflibraryplothandlers.code.tex 2025-08-29 v3.1.11a (3.1.11a)
 \pgf@plot@mark@count=\count333
-\pgfplotmarksize=\dimen284
+\pgfplotmarksize=\dimen286
 )
-\tikz@lastx=\dimen285
-\tikz@lasty=\dimen286
-\tikz@lastxsaved=\dimen287
-\tikz@lastysaved=\dimen288
-\tikz@lastmovetox=\dimen289
-\tikz@lastmovetoy=\dimen290
-\tikzleveldistance=\dimen291
-\tikzsiblingdistance=\dimen292
+\tikz@lastx=\dimen287
+\tikz@lasty=\dimen288
+\tikz@lastxsaved=\dimen289
+\tikz@lastysaved=\dimen290
+\tikz@lastmovetox=\dimen291
+\tikz@lastmovetoy=\dimen292
+\tikzleveldistance=\dimen293
+\tikzsiblingdistance=\dimen294
 \tikz@figbox=\box68
 \tikz@figbox@bg=\box69
 \tikz@tempbox=\box70
@@ -614,44 +613,42 @@ File: tikzlibrarypositioning.code.tex 2025-08-29 v3.1.11a (3.1.11a)
 Package hyperref Info: Option `colorlinks' set `true' on input line 22.
 Package hyperref Info: Option `unicode' set `true' on input line 22.
 
-Package fontspec Info: 
-(fontspec)             Could not resolve font "PingFang SC/I" (it probably
+Package fontspec Info:
+(fontspec)             Could not resolve font "Songti SC/I" (it probably
 (fontspec)             doesn't exist).
 
 
-Package fontspec Info: 
-(fontspec)             Font family 'PingFangSC(0)' created for font 'PingFang
-(fontspec)             SC' with options [Ligatures=TeX].
-(fontspec)              
+Package fontspec Info:
+(fontspec)             Font family 'SongtiSC(0)' created for font 'Songti SC'
+(fontspec)             with options [Ligatures=TeX].
+(fontspec)
 (fontspec)              This font family consists of the following NFSS
 (fontspec)             series/shapes:
-(fontspec)              
-(fontspec)             - 'normal' (m/n) with NFSS spec.: <->"PingFang
-(fontspec)             SC/OT:script=latn;language=dflt;mapping=tex-text;"
-(fontspec)             - 'bold' (b/n) with NFSS spec.: <->"PingFang
-(fontspec)             SC/B/OT:script=latn;language=dflt;mapping=tex-text;"
-(fontspec)             - 'bold italic' (b/it) with NFSS spec.: <->"PingFang
-(fontspec)             SC/BI/OT:script=latn;language=dflt;mapping=tex-text;"
+(fontspec)
+(fontspec)             - 'normal' (m/n) with NFSS spec.: <->"Songti
+(fontspec)             SC/AAT:mapping=tex-text;"
+(fontspec)             - 'bold' (b/n) with NFSS spec.: <->"Songti
+(fontspec)             SC/B/AAT:mapping=tex-text;"
+(fontspec)             - 'bold italic' (b/it) with NFSS spec.: <->"Songti
+(fontspec)             SC/BI/AAT:mapping=tex-text;"
 
 
-Package fontspec Info: 
-(fontspec)             Could not resolve font "PingFang SC/I" (it probably
+Package fontspec Info:
+(fontspec)             Could not resolve font "Songti SC/I" (it probably
 (fontspec)             doesn't exist).
 
 
-Package fontspec Info: 
-(fontspec)             Font family 'PingFangSC(1)' created for font 'PingFang
-(fontspec)             SC' with options [].
-(fontspec)              
+Package fontspec Info:
+(fontspec)             Font family 'SongtiSC(1)' created for font 'Songti SC'
+(fontspec)             with options [].
+(fontspec)
 (fontspec)              This font family consists of the following NFSS
 (fontspec)             series/shapes:
-(fontspec)              
-(fontspec)             - 'normal' (m/n) with NFSS spec.: <->"PingFang
-(fontspec)             SC/OT:script=latn;language=dflt;"
-(fontspec)             - 'bold' (b/n) with NFSS spec.: <->"PingFang
-(fontspec)             SC/B/OT:script=latn;language=dflt;"
-(fontspec)             - 'bold italic' (b/it) with NFSS spec.: <->"PingFang
-(fontspec)             SC/BI/OT:script=latn;language=dflt;"
+(fontspec)
+(fontspec)             - 'normal' (m/n) with NFSS spec.: <->"Songti SC/AAT"
+(fontspec)             - 'bold' (b/n) with NFSS spec.: <->"Songti SC/B/AAT"
+(fontspec)             - 'bold italic' (b/it) with NFSS spec.: <->"Songti
+(fontspec)             SC/BI/AAT"
 
 
 (/Users/daxu/software/quantum-gpt/research/build/RESEARCH-REPORT.aux)
@@ -685,7 +682,7 @@ LaTeX Font Info:    ... okay on input line 65.
 * paper: a4paper
 * layout: <same size as paper>
 * layoutoffset:(h,v)=(0.0pt,0.0pt)
-* modes: 
+* modes:
 * h-part:(L,W,R)=(72.26999pt, 452.9679pt, 72.26999pt)
 * v-part:(T,H,B)=(72.26999pt, 700.50687pt, 72.26999pt)
 * \paperwidth=597.50787pt
@@ -713,7 +710,7 @@ LaTeX Font Info:    ... okay on input line 65.
 * (1in=72.27pt=25.4mm, 1cm=28.453pt)
 
 
-Package fontspec Info: 
+Package fontspec Info:
 (fontspec)             Adjusting the maths setup (use [no-math] to avoid
 (fontspec)             this).
 
@@ -747,31 +744,28 @@ LaTeX Font Info:    Redeclaring symbol font `operators' on input line 65.
 LaTeX Font Info:    Encoding `OT1' has changed to `TU' for symbol font
 (Font)              `operators' in the math version `normal' on input line 65.
 LaTeX Font Info:    Overwriting symbol font `operators' in version `normal'
-(Font)                  OT1/cmr/m/n --> TU/PingFangSC(0)/m/n on input line 65.
+(Font)                  OT1/cmr/m/n --> TU/SongtiSC(0)/m/n on input line 65.
 LaTeX Font Info:    Encoding `OT1' has changed to `TU' for symbol font
 (Font)              `operators' in the math version `bold' on input line 65.
 LaTeX Font Info:    Overwriting symbol font `operators' in version `bold'
-(Font)                  OT1/cmr/bx/n --> TU/PingFangSC(0)/m/n on input line 65.
-
+(Font)                  OT1/cmr/bx/n --> TU/SongtiSC(0)/m/n on input line 65.
 LaTeX Font Info:    Overwriting symbol font `operators' in version `normal'
-(Font)                  TU/PingFangSC(0)/m/n --> TU/PingFangSC(0)/m/n on input 
-line 65.
+(Font)                  TU/SongtiSC(0)/m/n --> TU/SongtiSC(0)/m/n on input line
+ 65.
 LaTeX Font Info:    Overwriting math alphabet `\mathit' in version `normal'
-(Font)                  OT1/cmr/m/it --> TU/PingFangSC(0)/m/it on input line 65
-.
+(Font)                  OT1/cmr/m/it --> TU/SongtiSC(0)/m/it on input line 65.
 LaTeX Font Info:    Overwriting math alphabet `\mathbf' in version `normal'
-(Font)                  OT1/cmr/bx/n --> TU/PingFangSC(0)/b/n on input line 65.
-
+(Font)                  OT1/cmr/bx/n --> TU/SongtiSC(0)/b/n on input line 65.
 LaTeX Font Info:    Overwriting math alphabet `\mathsf' in version `normal'
 (Font)                  OT1/cmss/m/n --> TU/lmss/m/n on input line 65.
 LaTeX Font Info:    Overwriting math alphabet `\mathtt' in version `normal'
 (Font)                  OT1/cmtt/m/n --> TU/lmtt/m/n on input line 65.
 LaTeX Font Info:    Overwriting symbol font `operators' in version `bold'
-(Font)                  TU/PingFangSC(0)/m/n --> TU/PingFangSC(0)/b/n on input 
-line 65.
+(Font)                  TU/SongtiSC(0)/m/n --> TU/SongtiSC(0)/b/n on input line
+ 65.
 LaTeX Font Info:    Overwriting math alphabet `\mathit' in version `bold'
-(Font)                  OT1/cmr/bx/it --> TU/PingFangSC(0)/b/it on input line 6
-5.
+(Font)                  OT1/cmr/bx/it --> TU/SongtiSC(0)/b/it on input line 65.
+
 LaTeX Font Info:    Overwriting math alphabet `\mathsf' in version `bold'
 (Font)                  OT1/cmss/bx/n --> TU/lmss/b/n on input line 65.
 LaTeX Font Info:    Overwriting math alphabet `\mathtt' in version `bold'
@@ -799,91 +793,70 @@ LaTeX Font Info:    External font `cmex10' loaded for size
 
  [4] [5
 
-] [6] [7]
+] [6]
 LaTeX Font Info:    Font shape `TU/lmtt/bx/n' in size <10.95> not available
-(Font)              Font shape `TU/lmtt/b/n' tried instead on input line 247.
+(Font)              Font shape `TU/lmtt/b/n' tried instead on input line 303.
 LaTeX Font Info:    Font shape `TU/lmtt/bx/n' in size <9> not available
-(Font)              Font shape `TU/lmtt/b/n' tried instead on input line 247.
- [8
+(Font)              Font shape `TU/lmtt/b/n' tried instead on input line 303.
+ [7
 
-] [9] [10] [11] [12] [13] [14] [15] [16
+] [8] [9] [10] [11] [12] [13] [14] [15
 
-] [17]
-[18] [19] [20] [21] [22] [23] [24] [25
+] [16] [17]
+[18] [19] [20] [21] [22] [23
 
-] [26] [27] [28] [29]
-Overfull \hbox (4.7098pt too wide) in paragraph at lines 1245--1245
-[]|\TU/PingFangSC(0)/m/n/8 1024/504| 
- []
-
-
-Overfull \hbox (4.7098pt too wide) in paragraph at lines 1245--1245
-[]|\TU/PingFangSC(0)/m/n/8 1440/504| 
- []
-
-
-Overfull \hbox (6.3018pt too wide) in paragraph at lines 1245--1245
-[]|\TU/PingFangSC(0)/m/n/8 2208/552| 
- []
-
-
-Overfull \hbox (4.7098pt too wide) in paragraph at lines 1245--1245
-[]|\TU/PingFangSC(0)/m/n/8 1536/504| 
- []
-
-[30
-
-]
-ignored: Infinite glue shrinkage found in box being split [31]
+] [24] [25]
 LaTeX Font Info:    Font shape `TU/lmtt/bx/n' in size <10> not available
-(Font)              Font shape `TU/lmtt/b/n' tried instead on input line 1296.
- [32] [33] [34] [35
+(Font)              Font shape `TU/lmtt/b/n' tried instead on input line 1177.
+ [26
 
-] [36] [37] [38] [39] [40] [41] [42] [43] [44
+] [27] [28] [29] [30
+
+] [31] [32]
+[33] [34] [35
+
+] [36]
+ignored: Infinite glue shrinkage found in box being split [37] [38] [39
 
 ]
-[45]
-ignored: Infinite glue shrinkage found in box being split [46] [47]
-ignored: Infinite glue shr
-inkage found in box being split [48
+ignored: Infinite glue shrinkage found in box being split [40] [41] [42]
+ignored: Infinite glue s
+hrinkage found in box being split [43]
+ignored: Infinite glue shrinkage found in box bein
+g split [44] [45] [46
+
+] [47]
+ignored: Infinite glue shrinkage found in box being split
+[48
 
 ]
-ignored: Infinite glue shrinkage found in box being split [49] [50] [51] [52] [53] [54]
- [55
+ignored: Infinite glue shrinkage found in box being split [49]
+ignored: Infinite glue shrinkage f
+ound in box being split [50]
+ignored: Infinite glue shrinkage found in box being split [5
+1]
+ignored: Infinite glue shrinkage found in box being split [52] [53] [54] [55
 
 ] [56]
 ignored: Infinite glue shrinkage found in box being split [57
 
-]
-ignored: Infinite glue shrinkage found in box being split [58]
-Overfull \hbox (17.72914pt too wide) in paragraph at lines 2359--2359
-[][][][][][][][][][][][][][][][][]$| 
- []
-
-
-ignored: Infinite glue shrinkage found in box being split [59] [60] [61] [62
-
-] [63]
-ignored: Infinite glue shrinkage found in box being split [64
-
-]
-ignored: Infinite glue shrinkage found in box being split [65] [66]
+] [58] [59]
 (/Users/daxu/software/quantum-gpt/research/build/RESEARCH-REPORT.aux)
  ***********
 LaTeX2e <2025-11-01>
-L3 programming layer <2026-01-19>
+L3 programming layer <2026-03-20>
  ***********
 Package rerunfilecheck Info: File `RESEARCH-REPORT.out' has not changed.
-(rerunfilecheck)             Checksum: 790275D4A67B8DA6631824A4BB4CA6C4;18584.
- ) 
+(rerunfilecheck)             Checksum: 48C5DEC79E9D75F41FE5501A965D723F;17350.
+ )
 Here is how much of TeX's memory you used:
- 22189 strings out of 469709
- 463374 string characters out of 5466024
- 985926 words of memory out of 5000000
- 50466 multiletter control sequences out of 15000+600000
- 631996 words of font info for 86 fonts, out of 8000000 for 9000
+ 22192 strings out of 469533
+ 462150 string characters out of 5463838
+ 1042387 words of memory out of 5000000
+ 50646 multiletter control sequences out of 15000+600000
+ 631988 words of font info for 85 fonts, out of 8000000 for 9000
  319 hyphenation exceptions out of 8191
- 84i,12n,95p,699b,856s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 84i,12n,94p,683b,855s stack positions out of 10000i,1000n,20000p,200000b,200000s
 
 Output written on /Users/daxu/software/quantum-gpt/research/build/RESEARCH-REPO
-RT.pdf (67 pages).
+RT.pdf (60 pages).

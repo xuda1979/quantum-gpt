@@ -1,0 +1,9 @@
+{
+  "id": "quantum_qiskit_qft_entangled",
+  "name": "Qiskit QFT on a 3-qubit entangled GHZ state",
+  "domain": "quantum",
+  "category": "algorithm_implementation",
+  "framework": "qiskit",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

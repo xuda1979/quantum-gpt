@@ -1,0 +1,7 @@
+{
+  "id": "quantum_bit_flip_code_recovery",
+  "title": "3-qubit bit-flip code with X error on qubit 1",
+  "expected_substrings": [
+    "P(majority=1) = 1.000"
+  ]
+}

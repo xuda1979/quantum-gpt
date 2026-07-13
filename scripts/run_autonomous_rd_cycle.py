@@ -5,12 +5,12 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
-import os
 
 ROOT = Path(__file__).resolve().parents[1]
 import sys
@@ -113,12 +113,25 @@ TARGETS: dict[str, TargetSpec] = {
         expected_family_substring="qwen",
         readiness_note="OmniCoder 9B is the current verified fallback lane for productive ai2 iteration while Gemma 4 remains transfer- or backend-blocked.",
     ),
+    "qwen36-27b": TargetSpec(
+        target_id="qwen36-27b",
+        model_id="Qwen/Qwen3.6-27B",
+        audit_artifact="artifacts/model-source-audit-qwen36-27b.json",
+        local_model_dir="models/Qwen3.6-27B",
+        train_file="data/generated/omnicoder-quantum-generalization-holdout-v1/train.jsonl",
+        eval_file="data/generated/omnicoder-quantum-generalization-holdout-v1/eval.jsonl",
+        manifest_file="data/generated/omnicoder-quantum-generalization-holdout-v1/manifest.json",
+        benchmark_file="evals/benchmarks/quantum_generalization_holdout_v1.txt",
+        eval_run_dir="evals/runs/omnicoder-quantum-generalization-holdout-v1-clean",
+        expected_family_substring="qwen",
+        readiness_note="Qwen3.6-27B is the user-selected default base model for all next-round SFT and reinforcement-learning training on Huanxin AI.",
+    ),
 }
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--target", choices=sorted(TARGETS), default="omnicoder9b")
+    parser.add_argument("--target", choices=sorted(TARGETS), default="qwen36-27b")
     parser.add_argument("--report-prefix", default="autonomous_rd_cycle")
     parser.add_argument("--run-local-gates", action="store_true")
     parser.add_argument("--run-gemma-audit", action="store_true")
@@ -211,9 +224,7 @@ def inspect_snapshot_state(target: TargetSpec) -> dict[str, Any]:
                     "path": path.relative_to(snapshot_dir).as_posix(),
                     "size_bytes": size_bytes,
                     "size_human": _format_size(size_bytes),
-                    "modified_at_utc": datetime.fromtimestamp(
-                        mtime or 0, timezone.utc
-                    ).isoformat(),
+                    "modified_at_utc": datetime.fromtimestamp(mtime or 0, timezone.utc).isoformat(),
                 }
             )
 
@@ -249,7 +260,9 @@ def inspect_snapshot_state(target: TargetSpec) -> dict[str, Any]:
     observed_weight_progress_ratio = None
     observed_weight_progress_percent = None
     if indexed_weight_total_bytes:
-        observed_weight_progress_ratio = min(1.0, observed_weight_bytes / indexed_weight_total_bytes)
+        observed_weight_progress_ratio = min(
+            1.0, observed_weight_bytes / indexed_weight_total_bytes
+        )
         observed_weight_progress_percent = _format_percent(observed_weight_progress_ratio)
 
     recent_download_activity = False
@@ -275,7 +288,9 @@ def inspect_snapshot_state(target: TargetSpec) -> dict[str, Any]:
         "incomplete_total_bytes": incomplete_total_bytes,
         "incomplete_total_human": _format_size(incomplete_total_bytes),
         "indexed_weight_total_bytes": indexed_weight_total_bytes,
-        "indexed_weight_total_human": _format_size(indexed_weight_total_bytes) if indexed_weight_total_bytes else None,
+        "indexed_weight_total_human": _format_size(indexed_weight_total_bytes)
+        if indexed_weight_total_bytes
+        else None,
         "observed_weight_bytes": observed_weight_bytes,
         "observed_weight_human": _format_size(observed_weight_bytes),
         "observed_weight_progress_ratio": observed_weight_progress_ratio,
@@ -305,16 +320,32 @@ def build_subsystem_status(target: TargetSpec) -> list[dict[str, Any]]:
         },
         {
             "name": "holdout_integrity",
-            "ready": all(path_exists(path) for path in [target.train_file, target.eval_file, target.manifest_file]),
-            "paths": [target.train_file, target.eval_file, target.manifest_file, "scripts/verify_holdout_dataset.py"],
+            "ready": all(
+                path_exists(path)
+                for path in [target.train_file, target.eval_file, target.manifest_file]
+            ),
+            "paths": [
+                target.train_file,
+                target.eval_file,
+                target.manifest_file,
+                "scripts/verify_holdout_dataset.py",
+            ],
         },
         {
             "name": "paper_router_warmup",
-            "ready": bool(paper_router_plan is not None and paper_router_plan.get("paper_dataset_ready")),
+            "ready": bool(
+                paper_router_plan is not None and paper_router_plan.get("paper_dataset_ready")
+            ),
             "paths": [
-                paper_router_plan["command_sheet"] if paper_router_plan is not None else default_paper_router_paths["command_sheet"],
-                paper_router_plan["paper_train_file"] if paper_router_plan is not None else default_paper_router_paths["train_file"],
-                paper_router_plan["paper_eval_file"] if paper_router_plan is not None else default_paper_router_paths["eval_file"],
+                paper_router_plan["command_sheet"]
+                if paper_router_plan is not None
+                else default_paper_router_paths["command_sheet"],
+                paper_router_plan["paper_train_file"]
+                if paper_router_plan is not None
+                else default_paper_router_paths["train_file"],
+                paper_router_plan["paper_eval_file"]
+                if paper_router_plan is not None
+                else default_paper_router_paths["eval_file"],
                 "scripts/build_paper_sft_dataset.py",
                 "scripts/render_timeboxed_scaleup_commands.py",
             ],
@@ -385,6 +416,22 @@ def build_subsystem_status(target: TargetSpec) -> list[dict[str, Any]]:
 
 
 def build_stakeholder_questions(target: TargetSpec) -> list[dict[str, str]]:
+    is_gemma_target = target.target_id.startswith("gemma4-")
+    blocker_question = (
+        "What is the current blocker to Gemma 4 finetuning?"
+        if is_gemma_target
+        else "What is the current blocker to unattended finetuning on the active target?"
+    )
+    blocker_answer = (
+        "ai2 access is repaired, but the local stack still blocks Gemma 4 at runtime bootstrap plus trainer/backend preflight: the newer Transformers runtime must install cleanly, and the current text-only AutoModelForCausalLM path still needs a processor-aware conditional-generation backend."
+        if is_gemma_target
+        else f"ai2 access is repaired, but unattended continuation on {target.model_id} still depends on the active local gates plus the delivery health of the selected lineage."
+    )
+    snapshot_question = (
+        "How much of a large Gemma snapshot is actually present right now?"
+        if is_gemma_target
+        else "How much of the active target snapshot is actually present right now?"
+    )
     questions = [
         {
             "question": "How do we know the eval set is not leaking into training?",
@@ -403,11 +450,11 @@ def build_stakeholder_questions(target: TargetSpec) -> list[dict[str, str]]:
             "answer": "The cycle emits a report, a command sheet, and references to run artifacts and paper files for each iteration.",
         },
         {
-            "question": "What is the current blocker to Gemma 4 finetuning?",
-            "answer": "ai2 access is repaired, but the local stack still blocks Gemma 4 at runtime bootstrap plus trainer/backend preflight: the newer Transformers runtime must install cleanly, and the current text-only AutoModelForCausalLM path still needs a processor-aware conditional-generation backend.",
+            "question": blocker_question,
+            "answer": blocker_answer,
         },
         {
-            "question": "How much of a large Gemma snapshot is actually present right now?",
+            "question": snapshot_question,
             "answer": "The cycle-state artifact now reports indexed total weight bytes, observed downloaded bytes, a progress percentage, and whether incomplete shard activity still looks live or stale.",
         },
         {
@@ -418,11 +465,11 @@ def build_stakeholder_questions(target: TargetSpec) -> list[dict[str, str]]:
     if target.fallback_target_id:
         fallback_target = TARGETS[target.fallback_target_id]
         questions.append(
-        {
-            "question": "What happens if Gemma stays blocked but we still want productive remote iteration?",
-            "answer": f"The control plane can recommend the verified fallback lane `{fallback_target.target_id}` targeting {fallback_target.model_id}, and the fast-iteration launcher profile now keeps that loop short once local eval and holdout integrity have passed.",
-        }
-    )
+            {
+                "question": "What happens if Gemma stays blocked but we still want productive remote iteration?",
+                "answer": f"The control plane can recommend the verified fallback lane `{fallback_target.target_id}` targeting {fallback_target.model_id}, and the fast-iteration launcher profile now keeps that loop short once local eval and holdout integrity have passed.",
+            }
+        )
     return questions
 
 
@@ -430,12 +477,11 @@ def build_commands(target: TargetSpec) -> dict[str, str]:
     paper_router_plan = load_paper_router_plan(target)
     default_paper_router_paths = _default_paper_router_paths(target)
     gemma_python_probe_command = (
-        "python3 scripts/resolve_python_interpreter.py "
-        f"--min-version {GEMMA_LOCAL_MIN_PYTHON}"
+        "python3 scripts/resolve_python_interpreter.py " f"--min-version {GEMMA_LOCAL_MIN_PYTHON}"
     )
     gemma_python_prefix = (
-        "PYTHON_BIN=\"$(python3 scripts/resolve_python_interpreter.py "
-        f"--min-version {GEMMA_LOCAL_MIN_PYTHON} --print-path)\" && "
+        'PYTHON_BIN="$(python3 scripts/resolve_python_interpreter.py '
+        f'--min-version {GEMMA_LOCAL_MIN_PYTHON} --print-path)" && '
     )
     commands = {
         "local_eval_gate": "python3 evals/runner/run_eval.py",
@@ -478,12 +524,11 @@ def build_commands(target: TargetSpec) -> dict[str, str]:
         ),
         "gemma_python_probe": gemma_python_probe_command,
         "gemma_runtime_bootstrap": (
-            gemma_python_prefix +
-            "\"$PYTHON_BIN\" -m pip install -r training/requirements-gemma4-runtime.txt"
+            gemma_python_prefix
+            + '"$PYTHON_BIN" -m pip install -r training/requirements-gemma4-runtime.txt'
         ),
         "gemma_smoke": (
-            gemma_python_prefix +
-            "\"$PYTHON_BIN\" training/huanxin_cpu_smoke.py "
+            gemma_python_prefix + '"$PYTHON_BIN" training/huanxin_cpu_smoke.py '
             f"--model-name {target.local_model_dir} "
             "--dataset data/seed/splits-auto-seed/train.jsonl "
             "--max-samples 1"
@@ -699,12 +744,17 @@ def load_paper_router_plan(target: TargetSpec) -> dict[str, Any] | None:
             if isinstance(json_payload, dict) and json_payload.get("paper_router_warmup")
             else build_default_paper_router_warmup_command(target)
         ),
-        "paper_dataset_dir": str(resolved_config.get("paper_output_dir") or defaults["dataset_dir"]),
+        "paper_dataset_dir": str(
+            resolved_config.get("paper_output_dir") or defaults["dataset_dir"]
+        ),
         "paper_train_file": train_file,
         "paper_eval_file": eval_file,
         "paper_train_rows": train_rows,
         "paper_eval_rows": eval_rows,
-        "paper_dataset_ready": train_rows is not None and train_rows > 0 and eval_rows is not None and eval_rows > 0,
+        "paper_dataset_ready": train_rows is not None
+        and train_rows > 0
+        and eval_rows is not None
+        and eval_rows > 0,
         "resolved_config": resolved_config,
     }
 
@@ -717,10 +767,14 @@ def build_moe_expert_routing_prep(target: TargetSpec) -> dict[str, Any]:
     paper_router_plan = load_paper_router_plan(target)
     default_router_paths = _default_paper_router_paths(target)
     paper_router_command_sheet = (
-        paper_router_plan["command_sheet"] if paper_router_plan is not None else default_router_paths["command_sheet"]
+        paper_router_plan["command_sheet"]
+        if paper_router_plan is not None
+        else default_router_paths["command_sheet"]
     )
     paper_router_dataset_dir = (
-        paper_router_plan["paper_dataset_dir"] if paper_router_plan is not None else default_router_paths["dataset_dir"]
+        paper_router_plan["paper_dataset_dir"]
+        if paper_router_plan is not None
+        else default_router_paths["dataset_dir"]
     )
     inspect_output_path = ROOT / inspect_output
     manifest_output_path = ROOT / manifest_output
@@ -870,7 +924,7 @@ def remote_launcher_has_gemma_guard(target: TargetSpec) -> bool:
     local_name = Path(target.local_model_dir).name
     return (
         local_name in launcher_text
-        and "if [[ \"$TARGET\" == gemma4-* ]]; then" in launcher_text
+        and 'if [[ "$TARGET" == gemma4-* ]]; then' in launcher_text
         and "conditional-generation backend" in launcher_text
     )
 
@@ -943,6 +997,424 @@ def load_cached_snapshot_verify_summary(target: TargetSpec) -> dict[str, Any] | 
     }
 
 
+def model_registry_index_path() -> Path:
+    return ROOT / "artifacts" / "model-registry" / "index.json"
+
+
+def delivery_registry_index_path() -> Path:
+    return ROOT / "artifacts" / "delivery-registry" / "index.json"
+
+
+def _parse_manifest_identifier(path_str: str | None) -> str | None:
+    if not path_str:
+        return None
+    path = Path(path_str)
+    if path.name == "handoff_manifest.json":
+        return path.parent.name
+    if path.suffix == ".json":
+        return path.stem
+    return path.name
+
+
+def _extract_strict_holdout_summary(
+    headline_summary: dict[str, Any] | None,
+    result_artifacts: list[dict[str, Any]],
+) -> dict[str, Any] | None:
+    if isinstance(headline_summary, dict) and headline_summary.get("kind") == "override_summary":
+        passes = headline_summary.get("override_passes")
+        total = headline_summary.get("override_total")
+        pass_rate = headline_summary.get("override_pass_rate")
+        if isinstance(passes, int) and isinstance(total, int) and total > 0:
+            if not isinstance(pass_rate, (int, float)):
+                pass_rate = passes / total
+            return {
+                "source": "headline_summary",
+                "kind": "override_summary",
+                "passes": passes,
+                "total": total,
+                "pass_rate": pass_rate,
+            }
+
+    for artifact in result_artifacts:
+        summary = artifact.get("summary")
+        if not isinstance(summary, dict):
+            continue
+        if summary.get("kind") != "strict_override_comparison":
+            continue
+        passes = summary.get("adapter_passes")
+        total = summary.get("adapter_total")
+        if isinstance(passes, int) and isinstance(total, int) and total > 0:
+            return {
+                "source": artifact.get("path"),
+                "kind": "strict_override_comparison",
+                "passes": passes,
+                "total": total,
+                "pass_rate": passes / total,
+            }
+    return None
+
+
+def _extract_strict_holdout_comparison(
+    result_artifacts: list[dict[str, Any]],
+) -> dict[str, Any] | None:
+    for artifact in result_artifacts:
+        summary = artifact.get("summary")
+        if not isinstance(summary, dict):
+            continue
+        if summary.get("kind") != "strict_override_comparison":
+            continue
+        base_passes = summary.get("base_passes")
+        base_total = summary.get("base_total")
+        adapter_passes = summary.get("adapter_passes")
+        adapter_total = summary.get("adapter_total")
+        if not all(
+            isinstance(value, int)
+            for value in (base_passes, base_total, adapter_passes, adapter_total)
+        ):
+            continue
+        payload = {
+            "source": artifact.get("path"),
+            "kind": "strict_override_comparison",
+            "base_passes": base_passes,
+            "base_total": base_total,
+            "adapter_passes": adapter_passes,
+            "adapter_total": adapter_total,
+            "adapter_minus_base_passes": summary.get("adapter_minus_base_passes"),
+            "adapter_minus_base_pass_rate": summary.get("adapter_minus_base_pass_rate"),
+        }
+        if base_total > 0:
+            payload["base_pass_rate"] = base_passes / base_total
+        if adapter_total > 0:
+            payload["adapter_pass_rate"] = adapter_passes / adapter_total
+        return payload
+    return None
+
+
+def _collect_delivery_issues_for_run(
+    run_entry: dict[str, Any],
+    archive_payload: dict[str, Any] | None,
+    delivery_issues: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    linked_artifacts = (
+        archive_payload.get("linked_artifacts") if isinstance(archive_payload, dict) else {}
+    )
+    if not isinstance(linked_artifacts, dict):
+        linked_artifacts = {}
+    delivery_manifest = run_entry.get("delivery_manifest")
+    handoff_manifest = run_entry.get("handoff_manifest")
+    linked_delivery = linked_artifacts.get("delivery_manifest")
+    linked_handoff = linked_artifacts.get("handoff_manifest")
+    if not delivery_manifest and isinstance(linked_delivery, dict):
+        delivery_manifest = linked_delivery.get("path")
+    if not handoff_manifest and isinstance(linked_handoff, dict):
+        handoff_manifest = linked_handoff.get("path")
+
+    candidate_identifiers = {
+        identifier
+        for identifier in (
+            _parse_manifest_identifier(delivery_manifest),
+            _parse_manifest_identifier(handoff_manifest),
+        )
+        if identifier
+    }
+    candidate_prefixes = [
+        value
+        for value in (
+            run_entry.get("output_dir"),
+            run_entry.get("adapter_init"),
+            run_entry.get("parent_output_dir"),
+        )
+        if isinstance(value, str) and value
+    ]
+
+    matched: list[dict[str, Any]] = []
+    for issue in delivery_issues:
+        if not isinstance(issue, dict):
+            continue
+        identifier = issue.get("identifier")
+        target = issue.get("target")
+        if identifier in candidate_identifiers:
+            matched.append(issue)
+            continue
+        if isinstance(target, str) and any(
+            target.startswith(prefix) for prefix in candidate_prefixes
+        ):
+            matched.append(issue)
+    return matched
+
+
+def _run_sort_key(summary: dict[str, Any]) -> tuple[Any, ...]:
+    strict_summary = summary.get("strict_holdout_summary") or {}
+    strict_pass_rate = strict_summary.get("pass_rate")
+    if not isinstance(strict_pass_rate, (int, float)):
+        strict_pass_rate = -1.0
+    final_eval_loss = summary.get("final_eval_loss")
+    loss_score = (
+        -float(final_eval_loss) if isinstance(final_eval_loss, (int, float)) else float("-inf")
+    )
+    completed_steps = summary.get("completed_steps")
+    if not isinstance(completed_steps, int):
+        completed_steps = -1
+    archived_at = summary.get("archived_at_utc") or ""
+    return (
+        strict_pass_rate,
+        1 if summary.get("delivery_ready") else 0,
+        loss_score,
+        completed_steps,
+        archived_at,
+    )
+
+
+def build_autonomous_evolution_state(
+    target: TargetSpec, commands: dict[str, str]
+) -> dict[str, Any]:
+    model_registry_index = model_registry_index_path()
+    delivery_registry_index = delivery_registry_index_path()
+    state: dict[str, Any] = {
+        "registry_sources": {
+            "model_registry": {
+                "path": model_registry_index.relative_to(ROOT).as_posix(),
+                "exists": model_registry_index.exists(),
+            },
+            "delivery_registry": {
+                "path": delivery_registry_index.relative_to(ROOT).as_posix(),
+                "exists": delivery_registry_index.exists(),
+            },
+        },
+        "tracked_run_count": 0,
+        "delivery_issue_count": 0,
+        "best_runnable_run": None,
+        "best_delivery_ready_run": None,
+        "best_strict_holdout_run": None,
+        "latest_children_by_parent": [],
+        "delivery_blockers": [],
+        "next_recommended_action": {
+            "kind": "inspect_registries",
+            "reason": "The model and delivery registries must exist before unattended best-run selection can be trusted.",
+            "command": "python3 scripts/build_delivery_registry.py",
+        },
+    }
+
+    model_registry = _load_json_if_exists(model_registry_index)
+    delivery_registry = _load_json_if_exists(delivery_registry_index)
+    delivery_issues = delivery_registry.get("issues") if isinstance(delivery_registry, dict) else []
+    if not isinstance(delivery_issues, list):
+        delivery_issues = []
+
+    if isinstance(model_registry, dict):
+        state["registry_sources"]["model_registry"]["archive_version"] = model_registry.get(
+            "archive_version"
+        )
+    if isinstance(delivery_registry, dict):
+        state["registry_sources"]["delivery_registry"]["generated_at_utc"] = delivery_registry.get(
+            "generated_at_utc"
+        )
+        summary = delivery_registry.get("summary")
+        if isinstance(summary, dict):
+            state["delivery_issue_count"] = summary.get("issue_count", len(delivery_issues))
+    if not state["delivery_issue_count"]:
+        state["delivery_issue_count"] = len(delivery_issues)
+
+    runs: list[dict[str, Any]] = []
+    run_entries = model_registry.get("runs") if isinstance(model_registry, dict) else []
+    if isinstance(run_entries, list):
+        for run_entry in run_entries:
+            if not isinstance(run_entry, dict):
+                continue
+            archive_path_str = run_entry.get("archive_path")
+            archive_payload = (
+                _load_json_if_exists(ROOT / archive_path_str)
+                if isinstance(archive_path_str, str)
+                else None
+            )
+            archive_evaluation = (
+                archive_payload.get("evaluation") if isinstance(archive_payload, dict) else {}
+            )
+            if not isinstance(archive_evaluation, dict):
+                archive_evaluation = {}
+            result_artifacts = archive_evaluation.get("result_artifacts")
+            if not isinstance(result_artifacts, list):
+                result_artifacts = []
+            headline_summary = archive_evaluation.get("headline_summary")
+            if not isinstance(headline_summary, dict):
+                headline_summary = run_entry.get("headline_summary")
+            if not isinstance(headline_summary, dict):
+                headline_summary = None
+
+            linked_artifacts = (
+                archive_payload.get("linked_artifacts") if isinstance(archive_payload, dict) else {}
+            )
+            if not isinstance(linked_artifacts, dict):
+                linked_artifacts = {}
+            archive_storage = (
+                archive_payload.get("storage") if isinstance(archive_payload, dict) else {}
+            )
+            if not isinstance(archive_storage, dict):
+                archive_storage = {}
+            linked_delivery = linked_artifacts.get("delivery_manifest")
+            linked_handoff = linked_artifacts.get("handoff_manifest")
+            delivery_manifest = run_entry.get("delivery_manifest")
+            handoff_manifest = run_entry.get("handoff_manifest")
+            if not delivery_manifest and isinstance(linked_delivery, dict):
+                delivery_manifest = linked_delivery.get("path")
+            if not handoff_manifest and isinstance(linked_handoff, dict):
+                handoff_manifest = linked_handoff.get("path")
+
+            local_output_dir_exists = path_exists(str(run_entry.get("output_dir") or ""))
+            # A directory existing is not the same as the weights existing: old
+            # runs often keep metrics.json/run_config.json locally while the
+            # adapter safetensors were cleaned. Reachability must track the
+            # actual weights, which may live on a remote NAS or S3 recorded in
+            # the archive/index storage block. Without this, the framework
+            # silently ranks a weightless stale run above better archived runs.
+            output_dir_str = str(run_entry.get("output_dir") or "")
+            local_adapter_exists = bool(output_dir_str) and path_exists(f"{output_dir_str}/adapter")
+            storage_locations = archive_storage.get("locations")
+            if not isinstance(storage_locations, list):
+                storage_locations = run_entry.get("storage_locations")
+            if not isinstance(storage_locations, list):
+                storage_locations = []
+            storage_reachable = (
+                bool(archive_storage.get("weights_reachable"))
+                or bool(run_entry.get("weights_reachable"))
+                or bool(storage_locations)
+            )
+            offsite_backup = bool(archive_storage.get("offsite_backup")) or bool(
+                run_entry.get("offsite_backup")
+            )
+            weights_reachable = local_adapter_exists or storage_reachable
+
+            run_summary = {
+                "label": run_entry.get("label"),
+                "output_dir": run_entry.get("output_dir"),
+                "archive_path": archive_path_str,
+                "archived_at_utc": archive_payload.get("archived_at_utc")
+                if isinstance(archive_payload, dict)
+                else None,
+                "base_model": run_entry.get("base_model"),
+                "training_method": run_entry.get("training_method"),
+                "completed_steps": run_entry.get("completed_steps"),
+                "final_eval_loss": run_entry.get("final_eval_loss"),
+                "final_eval_perplexity": run_entry.get("final_eval_perplexity"),
+                "parent_output_dir": run_entry.get("parent_output_dir"),
+                "adapter_init": run_entry.get("adapter_init"),
+                "paper_ids": run_entry.get("paper_ids") or [],
+                "headline_summary": headline_summary,
+                "strict_holdout_summary": _extract_strict_holdout_summary(
+                    headline_summary, result_artifacts
+                ),
+                "strict_holdout_comparison": _extract_strict_holdout_comparison(result_artifacts),
+                "delivery_manifest": delivery_manifest,
+                "handoff_manifest": handoff_manifest,
+                "local_output_dir_exists": local_output_dir_exists,
+                "local_adapter_exists": local_adapter_exists,
+                "storage_locations": storage_locations,
+                "offsite_backup": offsite_backup,
+                "weights_reachable": weights_reachable,
+                # Retained for backward compatibility: now means "weights are
+                # reachable anywhere we track" rather than "local dir exists".
+                "has_output_dir": weights_reachable,
+            }
+            run_delivery_issues = _collect_delivery_issues_for_run(
+                run_entry, archive_payload, delivery_issues
+            )
+            run_summary["delivery_issues"] = run_delivery_issues
+            run_summary["delivery_issue_count"] = len(run_delivery_issues)
+            run_summary["delivery_ready"] = bool(
+                run_summary["has_output_dir"]
+                and delivery_manifest
+                and len(run_delivery_issues) == 0
+            )
+            runs.append(run_summary)
+
+    state["tracked_run_count"] = len(runs)
+    state["delivery_blockers"] = delivery_issues
+
+    runnable_runs = [run for run in runs if run.get("weights_reachable")]
+    if runnable_runs:
+        state["best_runnable_run"] = max(runnable_runs, key=_run_sort_key)
+
+    delivery_ready_runs = [run for run in runs if run.get("delivery_ready")]
+    if delivery_ready_runs:
+        state["best_delivery_ready_run"] = max(delivery_ready_runs, key=_run_sort_key)
+
+    strict_runs = [run for run in runnable_runs if run.get("strict_holdout_summary")]
+    if strict_runs:
+        state["best_strict_holdout_run"] = max(strict_runs, key=_run_sort_key)
+
+    latest_by_parent: dict[str, dict[str, Any]] = {}
+    for run in runs:
+        parent_output_dir = run.get("parent_output_dir")
+        if not isinstance(parent_output_dir, str) or not parent_output_dir:
+            continue
+        current = latest_by_parent.get(parent_output_dir)
+        if current is None or _run_sort_key(run) > _run_sort_key(current):
+            latest_by_parent[parent_output_dir] = run
+    state["latest_children_by_parent"] = [
+        {
+            "parent_output_dir": parent_output_dir,
+            "latest_child": latest_by_parent[parent_output_dir],
+        }
+        for parent_output_dir in sorted(latest_by_parent)
+    ]
+
+    if delivery_issues:
+        focus_run = state.get("best_strict_holdout_run") or state.get("best_runnable_run")
+        focus_delivery_manifest = (
+            focus_run.get("delivery_manifest") if isinstance(focus_run, dict) else None
+        )
+        if not focus_delivery_manifest and isinstance(focus_run, dict):
+            parent_output_dir = focus_run.get("parent_output_dir")
+            parent_run = next(
+                (run for run in runs if run.get("output_dir") == parent_output_dir),
+                None,
+            )
+            if isinstance(parent_run, dict):
+                focus_delivery_manifest = parent_run.get("delivery_manifest")
+        recommended_command = (
+            f"python3 scripts/build_delivery_artifact.py {focus_delivery_manifest} --check-only"
+            if isinstance(focus_delivery_manifest, str) and focus_delivery_manifest
+            else "python3 scripts/build_delivery_registry.py"
+        )
+        state["next_recommended_action"] = {
+            "kind": "repair_or_supersede_delivery",
+            "reason": (
+                "Delivery registry still has unresolved blockers, so unattended promotion should repair "
+                "or formally supersede the affected delivery chain before relying on it."
+            ),
+            "command": recommended_command,
+        }
+    elif (
+        state.get("best_strict_holdout_run") is None and state.get("best_runnable_run") is not None
+    ):
+        state["next_recommended_action"] = {
+            "kind": "produce_strict_holdout_signal",
+            "reason": "No tracked run has a machine-readable strict-holdout headline yet, so unattended selection is still under-instrumented.",
+            "command": None,
+        }
+    elif state.get("best_strict_holdout_run") is not None:
+        best_strict = state["best_strict_holdout_run"]
+        state["next_recommended_action"] = {
+            "kind": "queue_next_child_iteration",
+            "reason": (
+                f"{best_strict['label']} is the current best strict-holdout run with "
+                f"{best_strict['strict_holdout_summary']['passes']}/{best_strict['strict_holdout_summary']['total']} "
+                "tracked strict passes, so it is the right parent for the next unattended iteration."
+            ),
+            "command": commands.get("remote_job_queue"),
+            "candidate_parent_output_dir": best_strict.get("output_dir"),
+        }
+    elif state.get("best_runnable_run") is not None:
+        state["next_recommended_action"] = {
+            "kind": "continue_from_best_runnable_run",
+            "reason": "A tracked runnable run exists, but the controller still lacks a strict-holdout headline for fully evidence-backed unattended promotion.",
+            "command": commands.get("remote_job_queue"),
+            "candidate_parent_output_dir": state["best_runnable_run"].get("output_dir"),
+        }
+
+    return state
+
+
 def derive_cycle_state(
     target: TargetSpec,
     commands: dict[str, str],
@@ -953,6 +1425,9 @@ def derive_cycle_state(
     snapshot_state = inspect_snapshot_state(target)
     paper_router_plan = load_paper_router_plan(target)
     local_python_resolution = resolve_python_interpreter()
+    snapshot_label = (
+        "Gemma snapshot" if target.target_id.startswith("gemma4-") else "target snapshot"
+    )
 
     def append_command_stage(name: str, *, blocking_reason: str, success_note: str) -> None:
         result = execution_by_name.get(name)
@@ -985,7 +1460,7 @@ def derive_cycle_state(
 
     append_command_stage(
         "local_eval_gate",
-        blocking_reason="The full local eval suite must pass before remote Gemma work is credible.",
+        blocking_reason="The full local eval suite must pass before remote work on the active target is credible.",
         success_note="Local eval gate passed in this iteration.",
     )
     append_command_stage(
@@ -1004,7 +1479,7 @@ def derive_cycle_state(
                 "blocking": False,
                 "command": commands["gemma_audit"],
                 "result": summarize_result(gemma_audit_result),
-                "reason": "Gemma source audit succeeded for this iteration.",
+                "reason": "Target model source audit succeeded for this iteration.",
             }
         )
     elif cached_audit_summary is not None:
@@ -1013,21 +1488,21 @@ def derive_cycle_state(
             "status": "passed",
             "blocking": False,
             "command": commands["gemma_audit"],
-            "reason": "Gemma source audit is satisfied by a cached verified local artifact for this target.",
+            "reason": "Target model source audit is satisfied by a cached verified local artifact for this target.",
             "evidence": cached_audit_summary,
         }
         if gemma_audit_result is not None:
             stage_payload["result"] = summarize_result(gemma_audit_result)
             stage_payload["reason"] = (
-                "Gemma source audit is satisfied by a cached verified local artifact for this target; "
+                "Target model source audit is satisfied by a cached verified local artifact for this target; "
                 "the live refresh path failed in this iteration."
             )
         stages.append(stage_payload)
     else:
         append_command_stage(
             "gemma_audit",
-            blocking_reason="Gemma source audit has not yet succeeded for this iteration.",
-            success_note="Gemma source audit succeeded for this iteration.",
+            blocking_reason="Target model source audit has not yet succeeded for this iteration.",
+            success_note="Target model source audit succeeded for this iteration.",
         )
 
     snapshot_verify = execution_by_name.get("gemma_snapshot_verify")
@@ -1042,9 +1517,11 @@ def derive_cycle_state(
         }
         if snapshot_status != "passed":
             snapshot_stage["next_action"] = commands["gemma_snapshot_verify"]
-            snapshot_stage["reason"] = "Local Gemma snapshot exists but verification did not pass."
+            snapshot_stage["reason"] = (
+                f"The local {snapshot_label} exists but verification did not pass."
+            )
         else:
-            snapshot_stage["reason"] = "Local Gemma snapshot exists and verified."
+            snapshot_stage["reason"] = f"The local {snapshot_label} exists and verified."
         stages.append(snapshot_stage)
     elif cached_snapshot_verify_summary is not None:
         stages.append(
@@ -1053,7 +1530,7 @@ def derive_cycle_state(
                 "status": "passed",
                 "blocking": False,
                 "command": commands["gemma_snapshot_verify"],
-                "reason": "Local Gemma snapshot verification is satisfied by a cached successful handoff artifact for this target.",
+                "reason": f"Local {snapshot_label} verification is satisfied by a cached successful handoff artifact for this target.",
                 "evidence": cached_snapshot_verify_summary,
             }
         )
@@ -1065,22 +1542,24 @@ def derive_cycle_state(
                 "blocking": True,
                 "command": commands["gemma_snapshot_verify"],
                 "next_action": commands["gemma_snapshot_verify"],
-                "reason": "Local Gemma snapshot is present but still needs offline verification.",
+                "reason": f"The local {snapshot_label} is present but still needs offline verification.",
                 "evidence": snapshot_state,
             }
         )
     elif snapshot_state["exists"]:
-        reason = "Local Gemma snapshot metadata is present, but model weights are still missing."
+        reason = (
+            f"The local {snapshot_label} metadata is present, but model weights are still missing."
+        )
         if snapshot_state["has_incomplete_weight_files"]:
             progress = snapshot_state.get("observed_weight_progress_percent")
             if snapshot_state.get("recent_download_activity"):
                 reason = (
-                    "Local Gemma snapshot acquisition is in flight with recent shard activity, "
+                    f"Local {snapshot_label} acquisition is in flight with recent shard activity, "
                     "but model weights are not fully present or verified yet."
                 )
             else:
                 reason = (
-                    "Local Gemma snapshot acquisition is only partially materialized and recent shard activity is stale, "
+                    f"Local {snapshot_label} acquisition is only partially materialized and recent shard activity is stale, "
                     "so the downloader likely needs a resume/retry before remote sync."
                 )
             if progress:
@@ -1105,7 +1584,7 @@ def derive_cycle_state(
                 "blocking": True,
                 "command": commands["gemma_snapshot_acquire"],
                 "next_action": commands["gemma_snapshot_acquire"],
-                "reason": "Local Gemma snapshot is missing, so remote sync cannot start yet.",
+                "reason": f"The local {snapshot_label} is missing, so remote sync cannot start yet.",
                 "evidence": snapshot_state,
             }
         )
@@ -1126,9 +1605,7 @@ def derive_cycle_state(
             local_python_stage["status"] = "blocked"
             local_python_stage["blocking"] = True
             local_python_stage["next_action"] = commands["gemma_python_probe"]
-            reason = (
-                f"No local Python >= {GEMMA_LOCAL_MIN_PYTHON} interpreter was found for Gemma runtime bootstrap."
-            )
+            reason = f"No local Python >= {GEMMA_LOCAL_MIN_PYTHON} interpreter was found for Gemma runtime bootstrap."
             install_command = local_python_resolution.get("install_command")
             if install_command:
                 reason += f" Suggested install command: {install_command}."
@@ -1192,8 +1669,8 @@ def derive_cycle_state(
 
     append_command_stage(
         "gemma_smoke",
-        blocking_reason="Gemma trainer/backend preflight has not yet passed on the local stack.",
-        success_note="Gemma trainer/backend preflight passed on the local stack.",
+        blocking_reason="Target-model trainer/backend preflight has not yet passed on the local stack.",
+        success_note="Target-model trainer/backend preflight passed on the local stack.",
     )
 
     if target.target_id.startswith("gemma4-"):
@@ -1251,6 +1728,8 @@ def derive_cycle_state(
         "command": commands["remote_job_queue"],
         "reason": (
             "Remote launcher is target-aware for Gemma and now exits early with a concrete preflight blocker instead of pretending launch readiness."
+            if remote_ready and remote_guarded and target.target_id.startswith("gemma4-")
+            else "Remote launcher is parameterized for the active target and its current preflight checks."
             if remote_ready and remote_guarded
             else "Remote launcher is parameterized for the active target."
             if remote_ready
@@ -1272,14 +1751,18 @@ def derive_cycle_state(
         "current_stage": first_blocking["stage"] if first_blocking else "complete",
         "last_completed_stage": passed_stages[-1] if passed_stages else None,
         "next_action": first_blocking.get("next_action") if first_blocking else None,
-        "stop_reason": first_blocking["reason"] if first_blocking else "All current local preflight stages passed.",
+        "stop_reason": first_blocking["reason"]
+        if first_blocking
+        else "All current local preflight stages passed.",
         "ready_for_remote_finetune": first_blocking is None,
         "stages": stages,
     }
+    cycle_state["autonomous_evolution_state"] = build_autonomous_evolution_state(target, commands)
     if (
         target.fallback_target_id
         and first_blocking is not None
-        and first_blocking["stage"] in {
+        and first_blocking["stage"]
+        in {
             "gemma_snapshot_acquire",
             "gemma_snapshot_verify",
             "gemma_local_python_gate",
@@ -1309,10 +1792,14 @@ def evaluate_readiness(target: TargetSpec, cycle_state: dict[str, Any]) -> dict[
     autonomous_paper = ROOT / "research" / "papers" / "autonomous_rd_cycle_system" / "paper.md"
     blocker = cycle_state["stop_reason"]
     if cycle_state["current_stage"] == "remote_launcher_gate":
-        blocker = "Gemma 4 remote finetuning remains blocked because the remote launcher is still OmniCoder-specific."
+        blocker = (
+            "Gemma 4 remote finetuning remains blocked because the remote launcher is still OmniCoder-specific."
+            if target.target_id.startswith("gemma4-")
+            else "Remote finetuning remains blocked because the remote launcher is not yet aligned with the active target."
+        )
     elif cycle_state["current_stage"] == "paper_router_warmup":
         blocker = (
-            "The verified Gemma snapshot, paper-router dataset, and warmup command are in place; "
+            "The verified target snapshot, paper-router dataset, and warmup command are in place; "
             "sync code/model to ai2 and launch the recorded router warmup."
         )
     return {
@@ -1324,9 +1811,18 @@ def evaluate_readiness(target: TargetSpec, cycle_state: dict[str, Any]) -> dict[
         "next_action": cycle_state["next_action"],
         "fallback_ready": cycle_state.get("fallback_ready", False),
         "fallback_next_action": cycle_state.get("fallback_next_action"),
+        "autonomous_evolution_next_action": (
+            cycle_state.get("autonomous_evolution_state", {})
+            .get("next_recommended_action", {})
+            .get("command")
+        ),
         "evidence_paths": [
-            str(gemma_paper.relative_to(ROOT)) if gemma_paper.exists() else "research/papers/gemma4_text_path_enablement/paper.md",
-            str(autonomous_paper.relative_to(ROOT)) if autonomous_paper.exists() else "research/papers/autonomous_rd_cycle_system/paper.md",
+            str(gemma_paper.relative_to(ROOT))
+            if gemma_paper.exists()
+            else "research/papers/gemma4_text_path_enablement/paper.md",
+            str(autonomous_paper.relative_to(ROOT))
+            if autonomous_paper.exists()
+            else "research/papers/autonomous_rd_cycle_system/paper.md",
             "scripts/queue_ai2_timeboxed_pipeline.sh",
             _default_paper_router_paths(target)["command_sheet"],
         ],
@@ -1342,10 +1838,18 @@ def render_markdown(payload: dict[str, Any]) -> str:
         f"- status: `{payload['readiness']['status']}`",
         f"- current_stage: `{payload['cycle_state']['current_stage']}`",
         f"- blocker: {payload['readiness']['blocker']}",
-        f"- next_action: `{payload['cycle_state']['next_action']}`" if payload["cycle_state"]["next_action"] else "- next_action: none",
+        f"- next_action: `{payload['cycle_state']['next_action']}`"
+        if payload["cycle_state"]["next_action"]
+        else "- next_action: none",
         f"- fallback_next_action: `{payload['cycle_state']['fallback_next_action']}`"
         if payload["cycle_state"].get("fallback_next_action")
         else "- fallback_next_action: none",
+        f"- autonomous_next_action: `{payload['cycle_state']['autonomous_evolution_state']['next_recommended_action']['command']}`"
+        if payload["cycle_state"]
+        .get("autonomous_evolution_state", {})
+        .get("next_recommended_action", {})
+        .get("command")
+        else "- autonomous_next_action: none",
         f"- note: {payload['target']['readiness_note']}",
         "",
         "## Cycle State",
@@ -1376,7 +1880,9 @@ def render_markdown(payload: dict[str, Any]) -> str:
             if evidence.get("weight_files"):
                 lines.append(f"  evidence_weight_files: `{', '.join(evidence['weight_files'])}`")
             if evidence.get("incomplete_weight_files"):
-                incomplete_paths = ", ".join(item["path"] for item in evidence["incomplete_weight_files"])
+                incomplete_paths = ", ".join(
+                    item["path"] for item in evidence["incomplete_weight_files"]
+                )
                 lines.append(f"  evidence_incomplete_files: `{incomplete_paths}`")
             if evidence.get("total_size_human"):
                 lines.append(f"  evidence_total_size: `{evidence['total_size_human']}`")
@@ -1385,17 +1891,23 @@ def render_markdown(payload: dict[str, Any]) -> str:
             if evidence.get("selected_path"):
                 lines.append(f"  evidence_selected_python: `{evidence['selected_path']}`")
             if evidence.get("selected_version"):
-                lines.append(f"  evidence_selected_python_version: `{evidence['selected_version']}`")
+                lines.append(
+                    f"  evidence_selected_python_version: `{evidence['selected_version']}`"
+                )
             if evidence.get("install_command"):
                 lines.append(f"  evidence_install_command: `{evidence['install_command']}`")
             if evidence.get("timestamp_utc"):
                 lines.append(f"  evidence_timestamp_utc: `{evidence['timestamp_utc']}`")
             if evidence.get("indexed_weight_total_human"):
-                lines.append(f"  evidence_indexed_weight_total: `{evidence['indexed_weight_total_human']}`")
+                lines.append(
+                    f"  evidence_indexed_weight_total: `{evidence['indexed_weight_total_human']}`"
+                )
             if evidence.get("observed_weight_human"):
                 lines.append(f"  evidence_observed_weight: `{evidence['observed_weight_human']}`")
             if evidence.get("observed_weight_progress_percent"):
-                lines.append(f"  evidence_weight_progress: `{evidence['observed_weight_progress_percent']}`")
+                lines.append(
+                    f"  evidence_weight_progress: `{evidence['observed_weight_progress_percent']}`"
+                )
             if evidence.get("recent_download_activity") is not None:
                 lines.append(
                     f"  evidence_recent_download_activity: `{str(bool(evidence['recent_download_activity'])).lower()}`"
@@ -1422,10 +1934,72 @@ def render_markdown(payload: dict[str, Any]) -> str:
                 f"- fallback_next_action: `{payload['cycle_state']['fallback_next_action']}`",
             ]
         )
-    lines.extend([
-        "",
-        "## Stakeholder Questions",
-    ])
+    evolution_state = payload["cycle_state"].get("autonomous_evolution_state", {})
+    lines.extend(
+        [
+            "",
+            "## Autonomous Evolution State",
+            f"- tracked_run_count: `{evolution_state.get('tracked_run_count')}`",
+            f"- delivery_issue_count: `{evolution_state.get('delivery_issue_count')}`",
+        ]
+    )
+    best_runnable_run = evolution_state.get("best_runnable_run")
+    if isinstance(best_runnable_run, dict):
+        strict_summary = best_runnable_run.get("strict_holdout_summary") or {}
+        strict_fragment = ""
+        if strict_summary.get("passes") is not None and strict_summary.get("total") is not None:
+            strict_fragment = (
+                f", strict_holdout={strict_summary['passes']}/{strict_summary['total']}"
+            )
+        lines.append(
+            f"- best_runnable_run: `{best_runnable_run.get('label')}` ({best_runnable_run.get('output_dir')}{strict_fragment})"
+        )
+    else:
+        lines.append("- best_runnable_run: none")
+    best_delivery_ready_run = evolution_state.get("best_delivery_ready_run")
+    if isinstance(best_delivery_ready_run, dict):
+        lines.append(
+            f"- best_delivery_ready_run: `{best_delivery_ready_run.get('label')}` ({best_delivery_ready_run.get('output_dir')})"
+        )
+    else:
+        lines.append("- best_delivery_ready_run: none")
+    best_strict_run = evolution_state.get("best_strict_holdout_run")
+    if isinstance(best_strict_run, dict):
+        strict_summary = best_strict_run.get("strict_holdout_summary") or {}
+        lines.append(
+            f"- best_strict_holdout_run: `{best_strict_run.get('label')}` "
+            f"({strict_summary.get('passes')}/{strict_summary.get('total')})"
+        )
+    else:
+        lines.append("- best_strict_holdout_run: none")
+    next_recommended_action = evolution_state.get("next_recommended_action") or {}
+    lines.append(f"- autonomous_action_kind: `{next_recommended_action.get('kind')}`")
+    lines.append(f"- autonomous_action_reason: {next_recommended_action.get('reason')}")
+    if next_recommended_action.get("command"):
+        lines.append(f"- autonomous_action_command: `{next_recommended_action['command']}`")
+    for child_mapping in evolution_state.get("latest_children_by_parent") or []:
+        if not isinstance(child_mapping, dict):
+            continue
+        latest_child = child_mapping.get("latest_child")
+        if not isinstance(latest_child, dict):
+            continue
+        lines.append(
+            f"- latest_child[{child_mapping.get('parent_output_dir')}]: "
+            f"`{latest_child.get('label')}`"
+        )
+    for blocker in evolution_state.get("delivery_blockers") or []:
+        if not isinstance(blocker, dict):
+            continue
+        lines.append(
+            f"- delivery_blocker[{blocker.get('identifier')}]: "
+            f"`{blocker.get('problem')}` -> `{blocker.get('target')}`"
+        )
+    lines.extend(
+        [
+            "",
+            "## Stakeholder Questions",
+        ]
+    )
     for item in payload["stakeholder_questions"]:
         lines.append(f"- Q: {item['question']}")
         lines.append(f"  A: {item['answer']}")
@@ -1462,10 +2036,18 @@ def render_markdown(payload: dict[str, Any]) -> str:
             f"- inspection_matched_module_count: `{moe_prep['inspection_summary'].get('matched_module_count')}`"
         )
     if moe_prep.get("paper_router_plan"):
-        lines.append(f"- paper_router_train_file: `{moe_prep['paper_router_plan'].get('paper_train_file')}`")
-        lines.append(f"- paper_router_eval_file: `{moe_prep['paper_router_plan'].get('paper_eval_file')}`")
-        lines.append(f"- paper_router_train_rows: `{moe_prep['paper_router_plan'].get('paper_train_rows')}`")
-        lines.append(f"- paper_router_eval_rows: `{moe_prep['paper_router_plan'].get('paper_eval_rows')}`")
+        lines.append(
+            f"- paper_router_train_file: `{moe_prep['paper_router_plan'].get('paper_train_file')}`"
+        )
+        lines.append(
+            f"- paper_router_eval_file: `{moe_prep['paper_router_plan'].get('paper_eval_file')}`"
+        )
+        lines.append(
+            f"- paper_router_train_rows: `{moe_prep['paper_router_plan'].get('paper_train_rows')}`"
+        )
+        lines.append(
+            f"- paper_router_eval_rows: `{moe_prep['paper_router_plan'].get('paper_eval_rows')}`"
+        )
     lines.extend(["", "## Gating Commands"])
     for key, command in payload["commands"].items():
         lines.append(f"- `{key}`: `{command}`")
@@ -1503,17 +2085,25 @@ def main() -> int:
 
     if args.run_gemma_audit:
         result = run_command(["bash", "-lc", commands["gemma_audit"]])
-        execution_results.append({"name": "gemma_audit", **result, "command": commands["gemma_audit"]})
+        execution_results.append(
+            {"name": "gemma_audit", **result, "command": commands["gemma_audit"]}
+        )
 
     if args.run_gemma_runtime_bootstrap:
         result = run_command(["bash", "-lc", commands["gemma_runtime_bootstrap"]])
         execution_results.append(
-            {"name": "gemma_runtime_bootstrap", **result, "command": commands["gemma_runtime_bootstrap"]}
+            {
+                "name": "gemma_runtime_bootstrap",
+                **result,
+                "command": commands["gemma_runtime_bootstrap"],
+            }
         )
 
     if args.run_gemma_smoke:
         result = run_command(["bash", "-lc", commands["gemma_smoke"]])
-        execution_results.append({"name": "gemma_smoke", **result, "command": commands["gemma_smoke"]})
+        execution_results.append(
+            {"name": "gemma_smoke", **result, "command": commands["gemma_smoke"]}
+        )
 
     cycle_state = derive_cycle_state(target, commands, execution_results)
     payload = {
@@ -1525,6 +2115,7 @@ def main() -> int:
             "readiness_note": target.readiness_note,
         },
         "cycle_state": cycle_state,
+        "autonomous_evolution_state": cycle_state.get("autonomous_evolution_state"),
         "subsystems": build_subsystem_status(target),
         "moe_expert_routing_prep": build_moe_expert_routing_prep(target),
         "stakeholder_questions": build_stakeholder_questions(target),
@@ -1543,7 +2134,9 @@ def main() -> int:
 
     json_path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     md_path.write_text(render_markdown(payload), encoding="utf-8")
-    state_path.write_text(json.dumps(cycle_state, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    state_path.write_text(
+        json.dumps(cycle_state, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+    )
     command_sheet_path.write_text(
         "\n".join(
             [

@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-REMOTE_ROOT="${AI2_JOB_REMOTE_ROOT:-/root/root/work/quantum-gpt}"
+REMOTE_ROOT="${AI2_JOB_REMOTE_ROOT:-/root/work/quantum-gpt}"
 SHELL_WRAPPER="${AI2_JOB_SHELL_WRAPPER:-$ROOT_DIR/scripts/ai2_shell.sh}"
 META_DIR="${AI2_JOB_META_DIR:-$ROOT_DIR/.huanxin_jobs}"
 TAIL_LINES_DEFAULT="${HUANXIN_JOB_TAIL_LINES:-40}"

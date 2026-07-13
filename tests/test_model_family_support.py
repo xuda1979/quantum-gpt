@@ -6,26 +6,33 @@ import sys
 from pathlib import Path
 from types import SimpleNamespace
 
+import torch
+
 import scripts.run_base_vs_adapter_eval as run_base_vs_adapter_eval
 import scripts.run_hf_pass1_eval as run_hf_pass1_eval
 import scripts.serve_openai_chat_adapter as serve_openai_chat_adapter
-import torch
 import training.grpo_trainer as grpo_trainer
 import training.huanxin_cpu_smoke as huanxin_cpu_smoke
 import training.inspect_moe_target_modules as inspect_moe_target_modules
 import training.qwen_sft_peft as qwen_sft_peft
+from training.acquire_public_qwen_snapshot import PUBLIC_MODELS, candidate_hf_endpoints
+from training.audit_model_source import resolve_model_info_url
+from training.huanxin_cpu_smoke import runtime_autoconfig_requires_upgrade
+from training.model_backend import (
+    build_runtime_upgrade_message,
+    run_text_forward_preflight,
+    select_transformers_model_loader,
+)
+from training.model_family_preflight import (
+    inference_backend_preflight_block,
+    trainer_backend_preflight_block,
+)
+from training.qwen_sft_peft import resolve_lora_target_modules
 from training.text_preprocessor_backend import (
     TextPreprocessorBackend,
     build_supervised_text_example,
     pad_supervised_text_batch,
 )
-from training.acquire_public_qwen_snapshot import PUBLIC_MODELS
-from training.acquire_public_qwen_snapshot import candidate_hf_endpoints
-from training.audit_model_source import resolve_model_info_url
-from training.huanxin_cpu_smoke import runtime_autoconfig_requires_upgrade
-from training.model_backend import build_runtime_upgrade_message, run_text_forward_preflight
-from training.model_family_preflight import inference_backend_preflight_block
-from training.qwen_sft_peft import resolve_lora_target_modules, trainer_backend_preflight_block
 from training.verify_qwen_snapshot import collect_indexed_weight_shards, metadata_family_hit
 
 
@@ -67,7 +74,9 @@ class _FakeTokenizer:
             payload["attention_mask"] = [1] * token_count
         return payload
 
-    def pad(self, features: list[dict[str, list[int]]], padding: bool, return_tensors: str) -> dict[str, torch.Tensor]:
+    def pad(
+        self, features: list[dict[str, list[int]]], padding: bool, return_tensors: str
+    ) -> dict[str, torch.Tensor]:
         del padding, return_tensors
         max_len = max(len(item["input_ids"]) for item in features)
         input_rows = []
@@ -86,7 +95,9 @@ class _FakeProcessor:
     def __init__(self, tokenizer: _FakeTokenizer) -> None:
         self.tokenizer = tokenizer
 
-    def apply_chat_template(self, messages: list[dict[str, str]], tokenize: bool, add_generation_prompt: bool) -> str:
+    def apply_chat_template(
+        self, messages: list[dict[str, str]], tokenize: bool, add_generation_prompt: bool
+    ) -> str:
         del tokenize, add_generation_prompt
         return " ".join(f"{message['role']}:{message['content']}" for message in messages)
 
@@ -108,6 +119,25 @@ class _FakeConditionalGenerationModel:
         self.seen_kwargs = kwargs
         loss = kwargs["input_ids"].float().mean() / 10.0
         return SimpleNamespace(loss=loss)
+
+
+class _FakeAutoConfig:
+    @staticmethod
+    def from_pretrained(model_name: str, trust_remote_code: bool):
+        del model_name, trust_remote_code
+        return SimpleNamespace(__class__=SimpleNamespace(__name__="FakeConfig"))
+
+
+class _FakeCausalLoader:
+    pass
+
+
+class _FakeImageTextLoader:
+    pass
+
+
+class _FakeTransformersModule:
+    AutoModelForImageTextToText = _FakeImageTextLoader
 
 
 class _FakeParameter:
@@ -150,9 +180,16 @@ def test_resolve_lora_target_modules_supports_full_name_regex_selection() -> Non
 
 
 def test_inspect_moe_helpers_extract_expert_index_and_parameter_count() -> None:
-    assert inspect_moe_target_modules.extract_expert_index("model.layers.0.block_sparse_moe.experts.17.w1") == "17"
+    assert (
+        inspect_moe_target_modules.extract_expert_index(
+            "model.layers.0.block_sparse_moe.experts.17.w1"
+        )
+        == "17"
+    )
     assert inspect_moe_target_modules.extract_expert_index("model.layers.0.router") is None
-    assert inspect_moe_target_modules.module_parameter_count(_FakeModuleWithParameters(3, 5, 7)) == 15
+    assert (
+        inspect_moe_target_modules.module_parameter_count(_FakeModuleWithParameters(3, 5, 7)) == 15
+    )
 
 
 def test_build_target_manifest_records_exact_router_and_expert_names() -> None:
@@ -186,9 +223,13 @@ def test_build_target_manifest_records_exact_router_and_expert_names() -> None:
     assert manifest["selection_mode"] == "structural-discovery-only"
     assert manifest["strategy"] == "router_warmup_then_frequency_guided_esft"
     assert manifest["router_module_names"] == ["model.layers.0.block_sparse_moe.router"]
-    assert manifest["router_target_module_regex"] == [r"^model\.layers\.0\.block_sparse_moe\.router$"]
+    assert manifest["router_target_module_regex"] == [
+        r"^model\.layers\.0\.block_sparse_moe\.router$"
+    ]
     assert manifest["expert_index_pool"] == ["0", "1"]
-    assert manifest["expert_module_names_by_index"]["0"] == ["model.layers.0.block_sparse_moe.experts.0.w1"]
+    assert manifest["expert_module_names_by_index"]["0"] == [
+        "model.layers.0.block_sparse_moe.experts.0.w1"
+    ]
 
 
 def test_metadata_family_hit_is_generic_not_qwen_only() -> None:
@@ -201,22 +242,22 @@ def test_runtime_upgrade_detection_matches_gemma4_unrecognized_architecture() ->
     assert runtime_autoconfig_requires_upgrade("gemma4", exc) is True
 
 
-def test_trainer_backend_preflight_blocks_gemma4_conditional_generation_path() -> None:
+def test_trainer_backend_preflight_allows_gemma4_conditional_generation_path() -> None:
     blocker = trainer_backend_preflight_block("gemma4", ["Gemma4ForConditionalGeneration"])
-    assert blocker is not None
-    assert "conditional-generation" in blocker
-    assert "AutoModelForCausalLM" in blocker
+    assert blocker is None
     assert trainer_backend_preflight_block("qwen3_5", ["Qwen3_5ForConditionalGeneration"]) is None
 
 
-def test_inference_backend_preflight_uses_inference_specific_wording() -> None:
+def test_inference_backend_preflight_allows_gemma4_conditional_generation_path() -> None:
     blocker = inference_backend_preflight_block("gemma4", ["Gemma4ForConditionalGeneration"])
-    assert blocker is not None
-    assert "serves and evaluates" in blocker
-    assert "TaskType.CAUSAL_LM" not in blocker
+    assert blocker is None
 
 
 def test_public_models_exposes_gemma4_targets() -> None:
+    assert PUBLIC_MODELS["qwen36-27b"]["model_id"] == "Qwen/Qwen3.6-27B"
+    assert PUBLIC_MODELS["qwen36-27b"]["remote_model_dir"].endswith(
+        "/root/software/quantum-gpt/models/Qwen3.6-27B"
+    )
     assert PUBLIC_MODELS["gemma4-e2b-it"]["model_id"] == "google/gemma-4-E2B-it"
     assert PUBLIC_MODELS["gemma4-e4b-it"]["expected_family_substring"] == "gemma"
     assert PUBLIC_MODELS["gemma4-26b-a4b-it"]["model_id"] == "google/gemma-4-26B-A4B-it"
@@ -228,7 +269,10 @@ def test_candidate_hf_endpoints_prefers_official_then_mirror() -> None:
 
 
 def test_candidate_hf_endpoints_deduplicates_explicit_mirror() -> None:
-    assert candidate_hf_endpoints("https://hf-mirror.com/") == ["https://hf-mirror.com", "https://huggingface.co"]
+    assert candidate_hf_endpoints("https://hf-mirror.com/") == [
+        "https://hf-mirror.com",
+        "https://huggingface.co",
+    ]
 
 
 def test_resolve_model_info_url_honors_endpoint_override() -> None:
@@ -245,7 +289,9 @@ def test_verify_snapshot_detects_missing_shards_from_weight_index(tmp_path: Path
         '{"model_type":"gemma4","architectures":["Gemma4ForConditionalGeneration"]}\n',
         encoding="utf-8",
     )
-    (snapshot_dir / "tokenizer_config.json").write_text('{"tokenizer_class":"PreTrainedTokenizerFast"}\n', encoding="utf-8")
+    (snapshot_dir / "tokenizer_config.json").write_text(
+        '{"tokenizer_class":"PreTrainedTokenizerFast"}\n', encoding="utf-8"
+    )
     (snapshot_dir / "processor_config.json").write_text("{}\n", encoding="utf-8")
     (snapshot_dir / "chat_template.jinja").write_text("{{ messages }}\n", encoding="utf-8")
     (snapshot_dir / "model.safetensors.index.json").write_text(
@@ -315,6 +361,45 @@ def test_run_text_forward_preflight_returns_loss_and_restores_training_mode() ->
     assert model.seen_kwargs is not None
 
 
+def test_select_transformers_model_loader_prefers_image_text_for_qwen36(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "training.model_backend.load_model_config_metadata",
+        lambda model_name: {
+            "model_type": "qwen3_5",
+            "architectures": ["Qwen3_5ForConditionalGeneration"],
+        },
+    )
+
+    loader, runtime_compat, metadata = select_transformers_model_loader(
+        "models/Qwen3.6-27B",
+        auto_config_cls=_FakeAutoConfig,
+        auto_model_for_causal_lm_cls=_FakeCausalLoader,
+        transformers_module=_FakeTransformersModule,
+    )
+
+    assert loader is _FakeImageTextLoader
+    assert runtime_compat is not None
+    assert metadata["model_loader_reason"] == "conditional_generation_image_text"
+    assert metadata["config_model_type"] == "qwen3_5"
+
+
+def test_qwen_sft_peft_uses_conditional_generation_loader_path() -> None:
+    source = Path("training/qwen_sft_peft.py").read_text(encoding="utf-8")
+
+    assert "select_transformers_model_loader" in source
+    assert "model_loader.from_pretrained" in source
+    assert "AutoModelForCausalLM.from_pretrained(args.model_name" not in source
+    assert "balanced_npu_text_only_causal_lm" not in source
+
+
+def test_pass1_eval_uses_selected_loader_path() -> None:
+    source = Path("scripts/run_asi2_35b_pass1_eval.py").read_text(encoding="utf-8")
+
+    assert "select_transformers_model_loader" in source
+    assert "model_loader.from_pretrained" in source
+    assert "AutoModelForCausalLM.from_pretrained(str(model_path)" not in source
+
+
 def test_huanxin_cpu_smoke_help_runs_as_script_entrypoint() -> None:
     root = Path(__file__).resolve().parents[1]
     completed = subprocess.run(
@@ -344,23 +429,33 @@ def test_huanxin_cpu_smoke_uses_shared_runtime_probe() -> None:
 
 def test_huanxin_cpu_smoke_loads_text_backend_before_gemma_backend_block() -> None:
     source = inspect.getsource(huanxin_cpu_smoke.main)
-    assert source.index("text_preprocessor = load_text_preprocessor_backend") < source.index('summary["stage"] = "trainer_backend_preflight"')
-    assert source.index('summary["stage"] = "text_batch_preflight"') < source.index('summary["stage"] = "trainer_backend_preflight"')
+    assert source.index("text_preprocessor = load_text_preprocessor_backend") < source.index(
+        'summary["stage"] = "trainer_backend_preflight"'
+    )
+    assert source.index('summary["stage"] = "text_batch_preflight"') < source.index(
+        'summary["stage"] = "trainer_backend_preflight"'
+    )
 
 
-def test_qwen_sft_peft_loads_text_preprocessor_before_gemma_backend_block() -> None:
+def test_qwen_sft_peft_loads_text_preprocessor_before_model_load() -> None:
     source = inspect.getsource(qwen_sft_peft.main)
-    assert source.index("text_preprocessor = load_text_preprocessor_backend") < source.index('"stage": "trainer_backend_preflight"')
+    assert source.index("text_preprocessor = load_text_preprocessor_backend") < source.index(
+        '"stage": "model_load_start"'
+    )
 
 
 def test_qwen_sft_peft_runs_text_forward_preflight_before_ddp_wrap() -> None:
     source = inspect.getsource(qwen_sft_peft.main)
-    assert source.index('"stage": "text_forward_preflight"') < source.index('"stage": "ddp_wrapped"')
+    assert source.index('"stage": "text_forward_preflight"') < source.index(
+        '"stage": "ddp_wrapped"'
+    )
 
 
 def test_grpo_trainer_runs_text_forward_preflight_before_ddp_wrap() -> None:
     source = inspect.getsource(grpo_trainer.main)
-    assert source.index('"stage": "text_forward_preflight"') < source.index('"stage": "ddp_wrapped"')
+    assert source.index('"stage": "text_forward_preflight"') < source.index(
+        '"stage": "ddp_wrapped"'
+    )
 
 
 def test_runtime_upgrade_message_includes_checkpoint_transformers_hint() -> None:
@@ -394,5 +489,9 @@ def test_runtime_upgrade_message_mentions_python_floor_for_gemma4_source_path() 
 
 def test_eval_and_serve_entrypoints_use_shared_causal_lm_preflight() -> None:
     assert "load_causal_lm_with_text_backend_preflight" in inspect.getsource(run_hf_pass1_eval)
-    assert "load_causal_lm_with_text_backend_preflight" in inspect.getsource(run_base_vs_adapter_eval)
-    assert "load_causal_lm_with_text_backend_preflight" in inspect.getsource(serve_openai_chat_adapter)
+    assert "load_causal_lm_with_text_backend_preflight" in inspect.getsource(
+        run_base_vs_adapter_eval
+    )
+    assert "load_causal_lm_with_text_backend_preflight" in inspect.getsource(
+        serve_openai_chat_adapter
+    )

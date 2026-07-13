@@ -1,0 +1,9 @@
+{
+  "id": "quantum_pennylane_qml_iris_classification",
+  "name": "PennyLane quantum kernel logistic regression on Iris (2-class subset)",
+  "domain": "quantum",
+  "category": "quantum_ml",
+  "framework": "pennylane",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

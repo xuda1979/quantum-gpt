@@ -14,17 +14,15 @@ import hashlib
 import html
 import json
 import re
-import sys
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
 from collections import deque
+from collections.abc import Iterable
 from dataclasses import dataclass
 from html.parser import HTMLParser
 from pathlib import Path
-from typing import Iterable
-
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_SOURCES = ROOT / "configs" / "quantum_doc_sources.json"
@@ -68,6 +66,36 @@ BLOCK_TAGS = {
 }
 
 SKIP_TAGS = {"script", "style", "svg", "canvas", "noscript"}
+
+STATIC_PATH_SEGMENTS = {
+    "_images",
+    "_static",
+    "assets",
+    "css",
+    "fonts",
+    "images",
+    "img",
+    "js",
+    "static",
+}
+
+STATIC_EXTENSIONS = {
+    ".css",
+    ".gif",
+    ".ico",
+    ".jpeg",
+    ".jpg",
+    ".js",
+    ".map",
+    ".pdf",
+    ".png",
+    ".svg",
+    ".ttf",
+    ".webp",
+    ".woff",
+    ".woff2",
+    ".zip",
+}
 
 
 @dataclass(frozen=True)
@@ -156,11 +184,22 @@ def canonicalize_url(url: str) -> str:
     return urllib.parse.urlunsplit((scheme, netloc, path, query, ""))
 
 
+def is_static_asset_url(url: str) -> bool:
+    parsed = urllib.parse.urlsplit(url)
+    path = parsed.path.lower()
+    parts = {part for part in path.split("/") if part}
+    if parts & STATIC_PATH_SEGMENTS:
+        return True
+    return any(path.endswith(extension) for extension in STATIC_EXTENSIONS)
+
+
 def is_allowed_url(url: str, source: DocSource) -> bool:
     parsed = urllib.parse.urlsplit(url)
     if parsed.scheme not in {"http", "https", "file"}:
         return False
     canonical = canonicalize_url(url)
+    if is_static_asset_url(canonical):
+        return False
     return any(canonical.startswith(prefix) for prefix in source.allowed_prefixes)
 
 
@@ -203,9 +242,7 @@ def fetch_page(url: str, source: DocSource, *, timeout: float) -> FetchedPage:
         extractor.feed(raw_html)
         links = tuple(
             dict.fromkeys(
-                canonicalize_url(link)
-                for link in extractor.links
-                if is_allowed_url(link, source)
+                canonicalize_url(link) for link in extractor.links if is_allowed_url(link, source)
             )
         )
         return FetchedPage(
@@ -218,7 +255,11 @@ def fetch_page(url: str, source: DocSource, *, timeout: float) -> FetchedPage:
             fetched_at=fetched_at,
         )
 
-    if "text/" in lowered_type or url.endswith((".md", ".txt", ".rst")):
+    if (
+        url.endswith((".md", ".txt", ".rst"))
+        or "text/plain" in lowered_type
+        or "text/markdown" in lowered_type
+    ):
         text = decode_body(body, content_type).strip()
         return FetchedPage(
             source=source,
@@ -262,7 +303,9 @@ def load_sources(path: Path) -> list[DocSource]:
                 source_id=str(item["id"]),
                 name=str(item["name"]),
                 seeds=tuple(canonicalize_url(str(url)) for url in item.get("seeds", [])),
-                allowed_prefixes=tuple(canonicalize_url(str(url)) for url in item.get("allowed_prefixes", [])),
+                allowed_prefixes=tuple(
+                    canonicalize_url(str(url)) for url in item.get("allowed_prefixes", [])
+                ),
             )
         )
     return sources
@@ -337,8 +380,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--sources", type=Path, default=DEFAULT_SOURCES)
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
     parser.add_argument("--manifest-json", type=Path, default=DEFAULT_MANIFEST)
-    parser.add_argument("--source", action="append", default=[], help="Source id to crawl; repeatable.")
-    parser.add_argument("--max-pages-per-source", type=int, default=0, help="0 means no explicit page cap.")
+    parser.add_argument(
+        "--source", action="append", default=[], help="Source id to crawl; repeatable."
+    )
+    parser.add_argument(
+        "--max-pages-per-source", type=int, default=0, help="0 means no explicit page cap."
+    )
     parser.add_argument("--max-depth", type=int, default=8)
     parser.add_argument("--timeout", type=float, default=30.0)
     parser.add_argument("--sleep-seconds", type=float, default=0.15)
@@ -375,7 +422,9 @@ def main() -> int:
         "results": results,
     }
     args.manifest_json.parent.mkdir(parents=True, exist_ok=True)
-    args.manifest_json.write_text(json.dumps(summary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    args.manifest_json.write_text(
+        json.dumps(summary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
     print(json.dumps(summary, ensure_ascii=False, indent=2))
     return 0
 

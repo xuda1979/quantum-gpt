@@ -1,0 +1,125 @@
+# Qwen2.5 strict recovery v5 failure-shape r4c command sheet
+# Generated on 2026-04-14 after qwen25 grpo v4 targeted r3 still measured 0/4
+# on the strict-holdout override subset.
+#
+# Starting point:
+# - latest measured adapter:
+#   outputs/qwen25-grpo-strict-recovery-v4-targeted-r3-20260413T2246CST/adapter
+# - latest measured strict result:
+#   0/4 strict override, 30/34 full scorecard
+# - latest failed override task ids:
+#   quantum_gate_alias_normalization
+#   quantum_phase_estimation_circuit
+#   quantum_qaoa_maxcut
+#   quantum_superdense_coding
+#
+# New training focus:
+# - quantum_gate_token_canonicalizer
+# - quantum_binary_measurement_decoder
+# - quantum_maxcut_assignment_enumerator
+# - quantum_superdense_identity_lookup
+
+## Local validation
+python3 -m pytest -q \
+  tests/test_quantum_grpo_failure_shape_support_tasks.py \
+  tests/test_grpo_training_benchmark_v5.py
+
+## Sync v5 benchmark, new failure-shape tasks, and trainer dependencies
+bash scripts/push_to_s3.sh \
+  training/grpo_trainer.py \
+  training/grpo_utils.py \
+  scripts/launch_qwen25_grpo_background.py \
+  evals/tasks/quantum/gate_token_canonicalizer \
+  evals/tasks/quantum/binary_measurement_decoder \
+  evals/tasks/quantum/maxcut_assignment_enumerator \
+  evals/tasks/quantum/superdense_identity_lookup \
+  evals/benchmarks/quantum_grpo_training_v5_failure_shape_disjoint.txt
+
+## AI1 targeted sync
+bash scripts/ai1_shell.sh "cd /root/work/quantum-gpt && \
+  rclone copy 'nm-aihuanxin:jtdlp-3ed7854b946a47b1a49ad754baa76cd3/quantum-qwen25-coder-main/training' training \
+    --include 'grpo_trainer.py' \
+    --include 'grpo_utils.py' \
+    --progress && \
+  rclone copy 'nm-aihuanxin:jtdlp-3ed7854b946a47b1a49ad754baa76cd3/quantum-qwen25-coder-main/scripts' scripts \
+    --include 'launch_qwen25_grpo_background.py' --progress && \
+  rclone copy 'nm-aihuanxin:jtdlp-3ed7854b946a47b1a49ad754baa76cd3/quantum-qwen25-coder-main/evals/benchmarks' evals/benchmarks \
+    --include 'quantum_grpo_training_v5_failure_shape_disjoint.txt' --progress && \
+  rclone copy 'nm-aihuanxin:jtdlp-3ed7854b946a47b1a49ad754baa76cd3/quantum-qwen25-coder-main/evals/tasks/quantum' evals/tasks/quantum \
+    --include 'gate_token_canonicalizer/**' \
+    --include 'binary_measurement_decoder/**' \
+    --include 'maxcut_assignment_enumerator/**' \
+    --include 'superdense_identity_lookup/**' \
+    --progress"
+
+## Launch GRPO r4c from the r3 adapter
+bash scripts/ai1_shell.sh "cd /root/work/quantum-gpt && nohup env \
+  PYTORCH_NPU_ALLOC_CONF=max_split_size_mb:256 \
+  TOKENIZERS_PARALLELISM=false \
+  ASCEND_RT_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 \
+  torchrun --nproc_per_node=8 --master_port=29531 training/grpo_trainer.py \
+    --model-name models/Qwen2.5-1.5B-Instruct \
+    --adapter-init outputs/qwen25-grpo-strict-recovery-v4-targeted-r3-20260413T2246CST/adapter \
+    --benchmark-file evals/benchmarks/quantum_grpo_training_v5_failure_shape_disjoint.txt \
+    --domain-filter quantum \
+    --output-dir outputs/qwen25-grpo-strict-recovery-v5-failure-shape-r4c-20260414TXXXXCST \
+    --device npu \
+    --group-size 8 \
+    --grpo-steps 8 \
+    --max-new-tokens 192 \
+    --max-seq-length 1024 \
+    --temperature 0.8 \
+    --adaptive-temp-step 0.15 \
+    --adaptive-temp-max 1.4 \
+    --lr 1e-5 \
+    --kl-coeff 0.05 \
+    --reward-pass-weight 0.6 \
+    --reward-syntax-weight 0.1 \
+    --reward-interface-weight 0.15 \
+    --reward-verifier-weight 0.15 \
+    --reward-brevity-weight 0.05 \
+    --reward-import-hygiene-weight 0.05 \
+    --ratio-clip-log-delta 8.0 \
+    --logit-clip 50.0 \
+    --min-reward-std 0.02 \
+    --quantum-priority 1.5 \
+    --curriculum-uncertainty-bonus 0.35 \
+    --log-steps 1 \
+    > /tmp/qwen25_grpo_v5_failure_shape_r4c.log 2>&1 < /dev/null &"
+
+## Prepare a clean strict-holdout eval run dir using the same scaffold as the measured base rerun
+bash scripts/ai1_shell.sh "cd /root/work/quantum-gpt && \
+  mkdir -p evals/runs/qwen25-grpo-strict-recovery-v5-failure-shape-r4c-eval-20260414TXXXXCST/prompts \
+           evals/runs/qwen25-grpo-strict-recovery-v5-failure-shape-r4c-eval-20260414TXXXXCST/candidates && \
+  cp evals/runs/qwen25-quantum-generalization-holdout-base-rerun-20260412/manifest.json \
+     evals/runs/qwen25-grpo-strict-recovery-v5-failure-shape-r4c-eval-20260414TXXXXCST/ && \
+  cp evals/runs/qwen25-quantum-generalization-holdout-base-rerun-20260412/SYSTEM_PROMPT.txt \
+     evals/runs/qwen25-grpo-strict-recovery-v5-failure-shape-r4c-eval-20260414TXXXXCST/ && \
+  cp evals/runs/qwen25-quantum-generalization-holdout-base-rerun-20260412/README.txt \
+     evals/runs/qwen25-grpo-strict-recovery-v5-failure-shape-r4c-eval-20260414TXXXXCST/ && \
+  cp evals/runs/qwen25-quantum-generalization-holdout-base-rerun-20260412/candidate-map.json \
+     evals/runs/qwen25-grpo-strict-recovery-v5-failure-shape-r4c-eval-20260414TXXXXCST/ && \
+  cp evals/runs/qwen25-quantum-generalization-holdout-base-rerun-20260412/prompts/*.txt \
+     evals/runs/qwen25-grpo-strict-recovery-v5-failure-shape-r4c-eval-20260414TXXXXCST/prompts/"
+
+## Evaluate the finished r4c adapter on the same strict holdout
+bash scripts/ai1_shell.sh "cd /root/work/quantum-gpt && python3 scripts/run_hf_pass1_eval.py \
+  --run-dir evals/runs/qwen25-grpo-strict-recovery-v5-failure-shape-r4c-eval-20260414TXXXXCST \
+  --base-model models/Qwen2.5-1.5B-Instruct \
+  --adapter outputs/qwen25-grpo-strict-recovery-v5-failure-shape-r4c-20260414TXXXXCST/adapter \
+  --device npu \
+  --token-budget-preset quantum_heavy \
+  --score"
+
+## Compare against the same base and gate regression
+python3 scripts/build_strict_scorecard_comparison.py \
+  --baseline-scorecard evals/runs/qwen25-quantum-generalization-holdout-base-rerun-20260412/scorecard.json \
+  --baseline-label qwen25_base_rerun_20260412 \
+  --candidate-scorecard evals/runs/qwen25-grpo-strict-recovery-v5-failure-shape-r4c-eval-20260414TXXXXCST/scorecard.json \
+  --candidate-label qwen25_grpo_v5_failure_shape_r4c_20260414 \
+  --output reports/qwen25_strict_holdout_base_vs_ai1_grpo_v5_failure_shape_r4c_20260414.json
+
+python3 scripts/assert_no_strict_holdout_regression.py \
+  --comparison reports/qwen25_strict_holdout_base_vs_ai1_grpo_v5_failure_shape_r4c_20260414.json \
+  --min-strict-delta-passes 0 \
+  --output reports/qwen25_grpo_v5_failure_shape_r4c_regression_gate_20260414.json

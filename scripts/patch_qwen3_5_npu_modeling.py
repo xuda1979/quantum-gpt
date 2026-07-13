@@ -20,6 +20,7 @@ Two Ascend operators fail in the hybrid Qwen3.5 backward pass:
 Safe to run repeatedly. Meant to run once at the start of every training launch
 because the in-container transformers install is ephemeral.
 """
+
 import sys
 
 OLD = "                mixed_qkv = F.silu(self.conv1d(mixed_qkv)[:, :, :seq_len])\n"
@@ -40,16 +41,19 @@ NEW = (
     "                    _acc = _term if _acc is None else _acc + _term\n"
     "                mixed_qkv = F.silu(_acc)\n"
 )
-MARKER = "_acc = self.conv1d.bias"
+MARKER = "# NPU fix: Ascend Conv2DBackpropInput"
 
 
 def find_modeling_path():
     import os
+
     import transformers
 
     path = os.path.join(
         os.path.dirname(transformers.__file__),
-        "models", "qwen3_5", "modeling_qwen3_5.py",
+        "models",
+        "qwen3_5",
+        "modeling_qwen3_5.py",
     )
     if not os.path.exists(path):
         raise SystemExit("modeling file not found at %s" % path)
@@ -68,6 +72,7 @@ def main():
     src = src.replace(OLD, NEW, 1)
     open(path, "w", encoding="utf-8").write(src)
     import ast
+
     ast.parse(open(path, encoding="utf-8").read())
     print("PATCHED_OK %s" % path)
     return 0

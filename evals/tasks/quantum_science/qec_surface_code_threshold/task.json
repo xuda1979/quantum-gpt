@@ -1,0 +1,11 @@
+{
+  "id": "quantum_science_qec_surface_code_threshold",
+  "name": "The surface code has an error threshold of approximately 1 p...",
+  "domain": "quantum_science",
+  "category": "limitation",
+  "level": "L5",
+  "field": "qec",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py",
+  "question": "The surface code has an error threshold of approximately 1 percent for the depolarizing noise model. Explain why the threshold exists, what physical assumptions it depends on, and what happens to the logical error rate as the code distance d increases above and below the threshold."
+}

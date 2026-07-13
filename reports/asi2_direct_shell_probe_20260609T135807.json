@@ -1,0 +1,30 @@
+{
+  "ok": false,
+  "envName": "ASI2",
+  "envConfig": {
+    "config_loaded": true,
+    "config_source": "/Users/daxu/software/quantum-gpt/.huanxin_envs.json",
+    "daemon_port": 19004,
+    "env_id": "dl-868c196fb82d3e0b8cfbbe826d8afd0a",
+    "env_name": "ASI2",
+    "train_dev_base_url": "https://aihuanxin.cn/kunlun/kl-web?poolId=6&projectId=21b4208dde424e96b159362ef49c9c96#/train-dev",
+    "train_dev_url": "https://aihuanxin.cn/kunlun/kl-web?poolId=6&projectId=21b4208dde424e96b159362ef49c9c96#/train-dev/environment/dl-868c196fb82d3e0b8cfbbe826d8afd0a?name=ASI2"
+  },
+  "browserMode": "headless",
+  "launchFallbackUsed": false,
+  "afterAuth": {
+    "title": "焕新社区",
+    "url": "https://aihuanxin.cn/kunlun/kl-web?poolId=6&projectId=21b4208dde424e96b159362ef49c9c96#/train-dev/environment/dl-868c196fb82d3e0b8cfbbe826d8afd0a?name=ASI2&state=9ff8d908-5505-4c5b-94c9-08eba47fbbd0&session_state=b3c2d704-0bc5-4e5d-8805-4efd762c10e1&code=40540160-60d6-4b16-8601-87b75622e836.b3c2d704-0bc5-4e5d-8805-4efd762c10e1.55d54dd3-6a72-4b47-b302-151bd26477bc",
+    "bodyPreview": "哈尔滨-1 帮助中心 xuda2025 我的项目 21b4208dde424e96b159362ef49c9c96 项目空间详情 模型广场 模型训练 开发环境 训练任务 模型调优 有监督微调 模型推理 推理服务 应用接入 调用统计 资产管理 模型管理 镜像管理 文件管理 数据集管理 运营运维 用量管理 告警管理 操作日志 项目空间管理/ 模型训练/ 开发环境/ 开发环境详情/ 打开环境 ASI2 所有开发环境合计可最多占用0卡，超出将无法启动，请提交训练任务；开发环境使用完毕后请及时手动停止，如长时间闲置，将被自动回收，状态更新为已锁定；在运行镜像中安装软件及依赖后，请务必及时进行“保存镜像”操作，以实现镜像持久化保存，否则，当开发环境被停止或锁定后，相关安装文件将丢失无法找回 Jupyter VSCode Shell终端 可视化 保存镜像 任务列表 提交任务"
+  },
+  "terminalInfo": {
+    "ok": false,
+    "blocker": "missing_pod",
+    "detail": {
+      "ok": false,
+      "status": 403,
+      "text": "RBAC: access denied",
+      "json": null
+    }
+  }
+}

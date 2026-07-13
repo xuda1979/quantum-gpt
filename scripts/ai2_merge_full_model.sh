@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT_DIR="${AI2_REMOTE_ROOT:-/root/root/work/quantum-gpt}"
+ROOT_DIR="${AI2_REMOTE_ROOT:-/root/work/quantum-gpt}"
 RUN_DIR="$ROOT_DIR/outputs/omnicoder9b-quantum-generalization-sft-8npu-fastiter-20260409T1451CST"
 LOG_PATH="/tmp/omnicoder_merge_full.log"
 OUTPUT_DIR="$RUN_DIR/merged_full"

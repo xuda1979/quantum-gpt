@@ -6,7 +6,6 @@ import shutil
 import subprocess
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts" / "ai2_job.sh"
 FIXTURE_JOB_ID = "omnicoder-8npu-fast-sft-20260409T065250Z"
@@ -112,7 +111,7 @@ def test_status_falls_back_to_scorecard_summary_without_status_markers(tmp_path:
                 "Overall: 24/26 passed",
                 "  quantum: 11/13 passed",
                 "  software: 13/13 passed",
-                "Scorecard written to: /root/root/work/quantum-gpt/evals/runs/omnicoder-fastiter/scorecard.json",
+                "Scorecard written to: /root/work/quantum-gpt/evals/runs/omnicoder-fastiter/scorecard.json",
                 "__OPENCLAW_JOB_LOG_END__",
                 "__AI2_RUN_123__",
             ]

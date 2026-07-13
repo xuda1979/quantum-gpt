@@ -202,5 +202,17 @@
       "stage": "tokenizer_json_parse"
     }
   },
-  "current_blocker": "A fair OmniCoder-9B base strict holdout comparison is still missing. The old 4.44.0 qwen3_5-recognition blocker has been narrowed materially: ai2 now has the repo-local qwen3_5 runtime bundle, and remote probes can move past missing-model-type errors. The remaining blocker is dependency skew inside the bundle path itself. Without bundled overlay-site-packages, ai2 fails on huggingface_hub.dataclasses.strict; with bundled overlay-site-packages, peft expects transformers.HybridCache; and after bypassing peft for a base-only runner, the remote tokenizers stack still cannot parse OmniCoder's tokenizer.json (ModelWrapper schema mismatch). The next required step is a Linux/aarch64-compatible runtime bundle that is internally consistent across transformers + huggingface_hub + tokenizers for OmniCoder, or a dedicated base-only eval entrypoint that also avoids the current tokenizer-json incompatibility."
+  "current_blocker": "Superseded later on 2026-04-10. This artifact records the last blocker before the successful prefill-based bypass. The fair OmniCoder-9B base strict holdout comparison is no longer missing: the real same-protocol base result was later obtained via local tokenizer/prefill, ai2 NPU generation from input_ids, and local decode/score.",
+  "resolution_summary": {
+    "resolved_on": "2026-04-10",
+    "strict_override": "3/4",
+    "full_scorecard": "25/26",
+    "remaining_failed_task": "quantum_gate_alias_normalization",
+    "resolved_by_artifacts": [
+      "reports/omnicoder9b_quantum_generalization_holdout_base_ai2_20260410_override_summary.json",
+      "reports/omnicoder9b_quantum_generalization_holdout_base_ai2_20260410_summary.json",
+      "reports/strict_holdout_base_vs_adapter_comparison_20260410.json",
+      "evals/runs/omnicoder-quantum-generalization-holdout-base-omnicoder9b-20260410/scorecard.json"
+    ]
+  }
 }

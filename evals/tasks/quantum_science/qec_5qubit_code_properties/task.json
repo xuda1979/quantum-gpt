@@ -1,0 +1,11 @@
+{
+  "id": "quantum_science_qec_5qubit_code_properties",
+  "name": "Explain the properties of the 5-qubit perfect code. Why is i...",
+  "domain": "quantum_science",
+  "category": "concept",
+  "level": "L1",
+  "field": "qec",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py",
+  "question": "Explain the properties of the 5-qubit perfect code. Why is it the smallest code that corrects any single-qubit error, and what does perfect mean in this context?"
+}

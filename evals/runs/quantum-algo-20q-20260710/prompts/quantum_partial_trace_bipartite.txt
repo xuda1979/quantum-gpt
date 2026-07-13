@@ -1,0 +1,9 @@
+Write a complete, runnable Python program using Qiskit that:
+1. Builds a 3-qubit GHZ state |000> + |111> (apply H on q0, then CX q0->q1, CX q1->q2).
+2. Uses qiskit.quantum_info.DensityMatrix and partial_trace over qubits [1, 2] to get the reduced density matrix rho_A on qubit 0.
+3. In `def main()`, prints the 2x2 reduced density matrix (real parts, 4 decimals) and its purity Tr(rho_A^2).
+Output exactly:
+  Reduced density matrix:
+    [[<a>, <b>], [<c>, <d>]]
+  Purity = <value rounded to 6 decimals>
+Call main() under `if __name__ == "__main__":`.

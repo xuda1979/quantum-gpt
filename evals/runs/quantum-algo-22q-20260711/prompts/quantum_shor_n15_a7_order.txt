@@ -1,0 +1,21 @@
+Write a complete, runnable Python program using Qiskit 2.x that:
+1. Implements Shor's order-finding for N = 15 with base a = 7. Use 4 counting
+   qubits and 4 function-evaluation qubits. Function register starts in |1>
+   (|0001>). For a=7 mod 15 the cycle is 1 -> 7 -> 4 -> 13 -> 1 (period 4).
+   Implement controlled-U^(2^i) for a=7 using controlled-SWAP gates: one
+   application of U is `cswap(ctl, q0, q2); cswap(ctl, q1, q3)` on the 4-qubit
+   function register (q0 is LSB). Apply U^(2^i mod 4) times controlled by
+   counting qubit i.
+2. After the controlled-U^x block, apply the inverse QFT to the 4 counting
+   qubits, then measure them.
+3. Use StatevectorSampler (>= 2000 shots). For each non-zero measured value,
+   compute phase = value / 16 and use
+   `fractions.Fraction(phase).limit_denominator(15)` to extract a candidate
+   period. Verify by checking `pow(7, r, 15) == 1`. Fall back to brute force
+   if no candidate works.
+4. Once r = 4 is found, compute gcd(7^(r/2) - 1, 15) and gcd(7^(r/2) + 1, 15)
+   to get factors 3 and 5.
+5. In `def main()`, prints:
+     order r = 4
+     factors = 3,5
+Call main() under `if __name__ == "__main__":`.

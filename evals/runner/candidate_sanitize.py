@@ -31,6 +31,22 @@ def _remove_standalone_fence_lines(text: str) -> str:
     return "\n".join(lines).strip()
 
 
+def _strip_known_terminal_markers(text: str) -> str:
+    stripped = text.strip()
+    terminal_markers = (
+        "<|im_end|>",
+        "<|endoftext|>",
+    )
+    changed = True
+    while changed and stripped:
+        changed = False
+        for marker in terminal_markers:
+            if stripped.endswith(marker):
+                stripped = stripped[: -len(marker)].rstrip()
+                changed = True
+    return stripped
+
+
 def _longest_parseable_python_prefix(text: str) -> str:
     stripped = text.strip()
     if not stripped:
@@ -61,5 +77,6 @@ def sanitize_candidate_text(text: str) -> str:
     elif "```" in stripped:
         stripped = stripped.split("```", 1)[0].rstrip()
     stripped = _remove_standalone_fence_lines(stripped)
+    stripped = _strip_known_terminal_markers(stripped)
     stripped = _longest_parseable_python_prefix(stripped)
     return stripped + ("\n" if stripped else "")

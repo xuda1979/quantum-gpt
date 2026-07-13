@@ -29,8 +29,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -38,7 +36,7 @@ PASS_SYMBOL = "✅"
 FAIL_SYMBOL = "❌"
 FIXED_SYMBOL = "🔧"
 BROKEN_SYMBOL = "💥"
-SAME_SYMBOL   = "─"
+SAME_SYMBOL = "─"
 
 
 def _load(path: Path) -> dict[str, Any]:
@@ -57,9 +55,23 @@ def _get_results_v2(data: dict[str, Any], model_key: str) -> dict[str, dict[str,
 
 
 def _get_results_v1(data: dict[str, Any], model_key: str) -> dict[str, dict[str, Any]]:
-    """Return {task_id: record} for schema_version=1 output (legacy format)."""
-    records = data.get("records", [])
-    return {r["task_id"]: r for r in records if r.get("model") == model_key}
+    """Return {task_id: record} for schema_version=1 output (legacy format).
+
+    Two legacy shapes are supported:
+      A) `records` is a list of records, each carrying `task_id` and `model`.
+      B) `results` is a list of records, each carrying `id` (and no `model`
+         because the file describes a single model — the v1 scorecard format
+         produced by the old `score.py`).
+    For shape B the `model_key` argument is ignored.
+    """
+    records = data.get("records")
+    if isinstance(records, list):
+        return {r["task_id"]: r for r in records if r.get("model") == model_key}
+    # v1 scorecard shape: results is a list of per-task records keyed by `id`
+    recs = data.get("results")
+    if isinstance(recs, list):
+        return {r["id"]: r for r in recs if "id" in r}
+    return {}
 
 
 def get_results(data: dict[str, Any], model_key: str) -> dict[str, dict[str, Any]]:
@@ -101,11 +113,12 @@ def _fmt_pass(n_pass: int, n_total: int) -> str:
 # compare: base vs adapter in a single eval output
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def cmd_compare(args: argparse.Namespace) -> None:
     data = _load(args.eval)
-    base_recs    = get_results(data, "base")
+    base_recs = get_results(data, "base")
     adapter_recs = get_results(data, "adapter")
-    base_sum    = get_summary(data, "base")
+    base_sum = get_summary(data, "base")
     adapter_sum = get_summary(data, "adapter")
 
     all_tasks = sorted(set(base_recs) | set(adapter_recs))
@@ -129,8 +142,8 @@ def cmd_compare(args: argparse.Namespace) -> None:
         ar = adapter_recs.get(tid)
         bp = task_passed(br) if br else None
         ap = task_passed(ar) if ar else None
-        dom  = (br or ar or {}).get("domain", "?")[:10]
-        cat  = (br or ar or {}).get("category", "?")[:25]
+        dom = (br or ar or {}).get("domain", "?")[:10]
+        cat = (br or ar or {}).get("category", "?")[:25]
         bsym = (PASS_SYMBOL if bp else FAIL_SYMBOL) if bp is not None else "?"
         asym = (PASS_SYMBOL if ap else FAIL_SYMBOL) if ap is not None else "?"
         if bp is None or ap is None:
@@ -172,6 +185,7 @@ def cmd_compare(args: argparse.Namespace) -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 # trend: compare adapter pass@1 across multiple eval runs
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def cmd_trend(args: argparse.Namespace) -> None:
     runs: list[tuple[str, dict[str, Any]]] = []
@@ -227,6 +241,7 @@ def cmd_trend(args: argparse.Namespace) -> None:
 # failures: show failure details for a model
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def cmd_failures(args: argparse.Namespace) -> None:
     data = _load(args.eval)
     recs = get_results(data, args.model)
@@ -258,7 +273,9 @@ def cmd_failures(args: argparse.Namespace) -> None:
             for d in details[:5]:
                 print(f"    {d[:120]}")
         # code head
-        code_head = rec.get("code_head") or (rec.get("samples", [{}])[0].get("code_head") if rec.get("samples") else None)
+        code_head = rec.get("code_head") or (
+            rec.get("samples", [{}])[0].get("code_head") if rec.get("samples") else None
+        )
         if code_head:
             print(f"  generated code (first 200 chars):\n    {code_head[:200]!r}")
     print()
@@ -268,11 +285,12 @@ def cmd_failures(args: argparse.Namespace) -> None:
 # json-diff: machine-readable diff between base and adapter
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def cmd_json_diff(args: argparse.Namespace) -> None:
     data = _load(args.eval)
-    base_recs    = get_results(data, "base")
+    base_recs = get_results(data, "base")
     adapter_recs = get_results(data, "adapter")
-    all_tasks    = sorted(set(base_recs) | set(adapter_recs))
+    all_tasks = sorted(set(base_recs) | set(adapter_recs))
 
     out: list[dict[str, Any]] = []
     for tid in all_tasks:
@@ -283,18 +301,24 @@ def cmd_json_diff(args: argparse.Namespace) -> None:
         if bp is None and ap is None:
             continue
         change: str
-        if ap is True  and bp is False: change = "fixed"
-        elif ap is False and bp is True: change = "broken"
-        elif ap is True  and bp is True: change = "both_pass"
-        else:                            change = "both_fail"
-        out.append({
-            "task_id": tid,
-            "domain":  (br or ar or {}).get("domain"),
-            "category":(br or ar or {}).get("category"),
-            "base_pass": bp,
-            "adapter_pass": ap,
-            "change": change,
-        })
+        if ap is True and bp is False:
+            change = "fixed"
+        elif ap is False and bp is True:
+            change = "broken"
+        elif ap is True and bp is True:
+            change = "both_pass"
+        else:
+            change = "both_fail"
+        out.append(
+            {
+                "task_id": tid,
+                "domain": (br or ar or {}).get("domain"),
+                "category": (br or ar or {}).get("category"),
+                "base_pass": bp,
+                "adapter_pass": ap,
+                "change": change,
+            }
+        )
 
     print(json.dumps(out, indent=2, ensure_ascii=False))
 
@@ -303,10 +327,9 @@ def cmd_json_diff(args: argparse.Namespace) -> None:
 # CLI wiring
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def build_parser() -> argparse.ArgumentParser:
-    root = argparse.ArgumentParser(
-        description="Offline analysis of quantum-gpt eval outputs"
-    )
+    root = argparse.ArgumentParser(description="Offline analysis of quantum-gpt eval outputs")
     sub = root.add_subparsers(dest="cmd", required=True)
 
     # compare
@@ -320,7 +343,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     # failures
     p_fail = sub.add_parser("failures", help="Show failure details for a model in one eval file")
-    p_fail.add_argument("--eval",  type=Path, required=True)
+    p_fail.add_argument("--eval", type=Path, required=True)
     p_fail.add_argument("--model", default="adapter", choices=["base", "adapter"])
 
     # json-diff
@@ -334,9 +357,9 @@ def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
     dispatch = {
-        "compare":   cmd_compare,
-        "trend":     cmd_trend,
-        "failures":  cmd_failures,
+        "compare": cmd_compare,
+        "trend": cmd_trend,
+        "failures": cmd_failures,
         "json-diff": cmd_json_diff,
     }
     dispatch[args.cmd](args)

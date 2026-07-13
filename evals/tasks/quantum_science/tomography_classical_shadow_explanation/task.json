@@ -1,0 +1,11 @@
+{
+  "id": "quantum_science_tomography_classical_shadow_explanation",
+  "name": "Explain classical shadow tomography. How does a random Cliff...",
+  "domain": "quantum_science",
+  "category": "concept",
+  "level": "L1",
+  "field": "tomography",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py",
+  "question": "Explain classical shadow tomography. How does a random Clifford measurement let us estimate many linear functions of a quantum state with far fewer measurements than full state tomography? What is the snapshot representation and how are predictors formed from it?"
+}

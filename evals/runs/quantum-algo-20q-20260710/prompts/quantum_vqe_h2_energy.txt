@@ -1,0 +1,7 @@
+Write a complete, runnable Python program using Qiskit + qiskit_algorithms that:
+1. Defines the 2-qubit H2 Hamiltonian: H = -1.052373*II + 0.397937*ZI - 0.397937*IZ - 0.011280*ZZ + 0.180931*XX (Pauli strings read left-to-right as qubit-1, qubit-0).
+2. Uses VQE from qiskit_algorithms.minimum_eigensolvers with StatevectorEstimator, a 2-layer Ry+CX ansatz on 2 qubits (6 parameters), and COBYLA(maxiter=400).
+3. In `def main()`, prints the VQE optimum energy rounded to 4 decimals.
+Output exactly:
+  VQE energy = <value>
+Call main() under `if __name__ == "__main__":`.

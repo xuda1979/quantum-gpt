@@ -1,0 +1,11 @@
+{
+  "id": "quantum_science_qec_stabilizer_formalism_basics",
+  "name": "Explain the stabilizer formalism for quantum error-correctin...",
+  "domain": "quantum_science",
+  "category": "concept",
+  "level": "L1",
+  "field": "qec",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py",
+  "question": "Explain the stabilizer formalism for quantum error-correcting codes. Define a stabilizer group, the codespace it defines, and how measuring the stabilizer generators detects (but does not reveal) the logical state. Use the 3-qubit bit-flip code as a concrete example."
+}

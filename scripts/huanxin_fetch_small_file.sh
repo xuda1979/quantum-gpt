@@ -4,7 +4,7 @@ set -euo pipefail
 usage() {
   cat >&2 <<'EOF'
 Usage:
-  scripts/huanxin_fetch_small_file.sh <ai1|ai2> <remote-path> <local-path> [max-bytes]
+  scripts/huanxin_fetch_small_file.sh <env-name> <remote-path> <local-path> [max-bytes]
 
 Fetch a small remote file through the Huanxin shell and write it locally.
 Intended for metrics, configs, logs, and small JSON reports when remote -> S3 is failing.
@@ -22,13 +22,10 @@ LOCAL_PATH="$3"
 MAX_BYTES="${4:-524288}"
 WAIT_MS="${HUANXIN_WAIT_MS:-180000}"
 
-case "$ENV_NAME" in
-  ai1|ai2) ;;
-  *)
-    echo "Unsupported env: $ENV_NAME" >&2
-    exit 1
-    ;;
-esac
+if [[ -z "$ENV_NAME" || "$ENV_NAME" == -* ]]; then
+  echo "Unsupported env: $ENV_NAME" >&2
+  exit 1
+fi
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"

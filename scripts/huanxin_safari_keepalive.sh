@@ -1,34 +1,38 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-TRAIN_DEV_URL="https://aihuanxin.cn/kunlun/kl-web?poolId=1&projectId=3ed7854b946a47b1a49ad754baa76cd3#/train-dev"
-URL_PREFIX="${TRAIN_DEV_URL%%#*}"
+TRAIN_DEV_URL="${HUANXIN_TRAIN_DEV_URL:-https://aihuanxin.cn/kunlun/kl-web?poolId=6&projectId=21b4208dde424e96b159362ef49c9c96#/train-dev/environment/dl-9a5a098accce31c28cf4c6ca23391341?name=AI}"
 SAFARI_APP_ID="${HUANXIN_SAFARI_APP_ID:-com.apple.Safari}"
 SAFARI_APP_PATH="${HUANXIN_SAFARI_APP_PATH:-/Applications/Safari.app}"
-OSASCRIPT_TIMEOUT_SEC="${HUANXIN_KEEPALIVE_OSASCRIPT_TIMEOUT_SEC:-20}"
+OSASCRIPT_TIMEOUT_SEC="${HUANXIN_KEEPALIVE_OSASCRIPT_TIMEOUT_SEC:-60}"
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+MANUAL_MODE_LOCK="$ROOT_DIR/.huanxin_manual_mode"
+AUTOMATION_ENABLE_FILE="$ROOT_DIR/.huanxin_automation_enabled"
+if [[ ! -f "$AUTOMATION_ENABLE_FILE" || -f "$MANUAL_MODE_LOCK" ]]; then
+  echo "{\"ok\":false,\"error\":\"huanxin_automation_disabled\",\"lock_path\":\"$MANUAL_MODE_LOCK\",\"enable_path\":\"$AUTOMATION_ENABLE_FILE\"}"
+  exit 125
+fi
 CALLBACK_FILE="${HUANXIN_LATEST_CALLBACK_FILE:-/tmp/huanxin-safari-latest-callback.json}"
 REPAIR_SCRIPT="${HUANXIN_PROFILE_REPAIR_SCRIPT:-$ROOT_DIR/scripts/repair_huanxin_browser_profile.sh}"
 REPAIR_LOG_FILE="${HUANXIN_PROFILE_REPAIR_LOG_FILE:-/tmp/huanxin-browser-profile-repair.log}"
 REPAIR_LOCK_FILE="${HUANXIN_PROFILE_REPAIR_LOCK_FILE:-/tmp/huanxin-browser-profile-repair.lock}"
 LAST_RELAYED_CALLBACK_FILE="${HUANXIN_LAST_RELAYED_CALLBACK_FILE:-/tmp/huanxin-browser-profile-last-callback.txt}"
-BACKGROUND_PROFILE_REPAIR="${HUANXIN_BACKGROUND_PROFILE_REPAIR:-1}"
+BACKGROUND_PROFILE_REPAIR="${HUANXIN_BACKGROUND_PROFILE_REPAIR:-0}"
 REPAIR_MIN_INTERVAL_SEC="${HUANXIN_PROFILE_REPAIR_MIN_INTERVAL_SEC:-45}"
 REPAIR_LOCK_STALE_SEC="${HUANXIN_PROFILE_REPAIR_LOCK_STALE_SEC:-900}"
 LAST_REPAIR_STARTED_FILE="${HUANXIN_PROFILE_REPAIR_LAST_STARTED_FILE:-/tmp/huanxin-browser-profile-repair.last_started}"
-DAEMON_HEALTH_URL="${HUANXIN_DAEMON_HEALTH_URL:-http://127.0.0.1:19002/health}"
-FORCE_REPAIR_ON_DAEMON_DRIFT="${HUANXIN_FORCE_REPAIR_ON_DAEMON_DRIFT:-1}"
+DAEMON_HEALTH_URL="${HUANXIN_DAEMON_HEALTH_URL:-http://127.0.0.1:19006/health}"
+FORCE_REPAIR_ON_DAEMON_DRIFT="${HUANXIN_FORCE_REPAIR_ON_DAEMON_DRIFT:-0}"
 REFRESH=0
 ACTIVATE=0
 TRAIN_DEV_URL_JSON="$(/usr/bin/python3 -c 'import json,sys; print(json.dumps(sys.argv[1]))' "$TRAIN_DEV_URL")"
-URL_PREFIX_JSON="$(/usr/bin/python3 -c 'import json,sys; print(json.dumps(sys.argv[1]))' "$URL_PREFIX")"
 SAFARI_APP_ID_JSON="$(/usr/bin/python3 -c 'import json,sys; print(json.dumps(sys.argv[1]))' "$SAFARI_APP_ID")"
 SAFARI_APP_PATH_JSON="$(/usr/bin/python3 -c 'import json,sys; print(json.dumps(sys.argv[1]))' "$SAFARI_APP_PATH")"
 
 safari_jxa_binding() {
   cat <<JXA
 let safari = null;
-for (const candidate of [$SAFARI_APP_ID_JSON, $SAFARI_APP_PATH_JSON, "Safari"]) {
+for (const candidate of [$SAFARI_APP_ID_JSON, "Safari"]) {
   try {
     safari = Application(candidate);
     const _ = safari.name();
@@ -37,6 +41,46 @@ for (const candidate of [$SAFARI_APP_ID_JSON, $SAFARI_APP_PATH_JSON, "Safari"]) 
 }
 if (!safari) {
   throw new Error("Safari application could not be resolved via bundle id, path, or app name.");
+}
+JXA
+}
+
+huanxin_app_surface_helpers_jxa() {
+  cat <<'JXA'
+function normalizeHuanxinAppSurface(rawUrl) {
+  const value = String(rawUrl || '');
+  if (!value) {
+    return '';
+  }
+
+  const hashIndex = value.indexOf('#');
+  if (hashIndex === -1) {
+    return value;
+  }
+
+  const beforeHash = value.slice(0, hashIndex);
+  const hash = value.slice(hashIndex + 1);
+  const queryIndex = hash.indexOf('?');
+  const hashPath = queryIndex === -1 ? hash : hash.slice(0, queryIndex);
+  const hashQuery = queryIndex === -1 ? '' : hash.slice(queryIndex + 1);
+  const transientKeys = new Set(['state', 'session_state', 'code']);
+  const stableParts = hashQuery
+    .split('&')
+    .filter(Boolean)
+    .filter((part) => {
+      const key = part.split('=', 1)[0] || '';
+      return !transientKeys.has(key);
+    })
+    .sort();
+  return stableParts.length
+    ? `${beforeHash}#${hashPath}?${stableParts.join('&')}`
+    : `${beforeHash}#${hashPath}`;
+}
+
+function isExpectedHuanxinAppSurface(candidateUrl, targetUrl) {
+  const stableCandidate = normalizeHuanxinAppSurface(candidateUrl);
+  const stableTarget = normalizeHuanxinAppSurface(targetUrl);
+  return Boolean(stableCandidate) && stableCandidate === stableTarget;
 }
 JXA
 }
@@ -100,15 +144,15 @@ PY
 scan_for_train_dev_tab_json() {
   run_jxa "$(cat <<JXA
 $(safari_jxa_binding)
+$(huanxin_app_surface_helpers_jxa)
 const target = $TRAIN_DEV_URL_JSON;
-const prefix = $URL_PREFIX_JSON;
 const wins = safari.windows();
 let result = { found: false, target };
 for (let w = 0; w < wins.length; w += 1) {
   const tabs = wins[w].tabs();
   for (let t = 0; t < tabs.length; t += 1) {
     const url = tabs[t].url();
-    if (url === target || String(url || '').startsWith(prefix)) {
+    if (isExpectedHuanxinAppSurface(url, target)) {
       result = { found: true, window: w + 1, tab: t + 1, url, title: tabs[t].name() };
       break;
     }
@@ -124,10 +168,20 @@ JXA
 
 open_train_dev_tab() {
   /usr/bin/osascript <<APPLESCRIPT
-tell application POSIX file "${SAFARI_APP_PATH}"
-  activate
-  open location ${TRAIN_DEV_URL_JSON}
-end tell
+set targetUrl to ${TRAIN_DEV_URL_JSON}
+try
+  tell application id "${SAFARI_APP_ID}"
+    activate
+    open location targetUrl
+  end tell
+on error
+  try
+    tell application "Safari"
+      activate
+      open location targetUrl
+    end tell
+  end try
+end try
 APPLESCRIPT
   sleep 3
 }
@@ -353,8 +407,8 @@ if [[ "$REFRESH" -eq 1 || "$ACTIVATE" -eq 1 ]]; then
   REFRESHED_JSON="$(
   run_jxa "$(cat <<JXA
 const safari = Application($SAFARI_APP_ID_JSON);
+$(huanxin_app_surface_helpers_jxa)
 const target = $TRAIN_DEV_URL_JSON;
-const prefix = $URL_PREFIX_JSON;
 const found = $FOUND_JSON;
 const win = safari.windows()[found.window - 1];
 const tab = win.tabs()[found.tab - 1];
@@ -362,9 +416,10 @@ win.currentTab = tab;
 if (${ACTIVATE}) safari.activate();
 let refreshed = false;
 const currentUrl = String(found.url || '');
+const onExpectedSurface = isExpectedHuanxinAppSurface(currentUrl, target);
 const refreshUrl =
   currentUrl &&
-  currentUrl.startsWith(prefix) &&
+  onExpectedSurface &&
   !currentUrl.includes('/auth/realms/') &&
   !currentUrl.includes('openid-connect/auth')
     ? currentUrl
@@ -402,7 +457,7 @@ console.log(JSON.stringify({
   title: tab.name(),
   target_url: refreshUrl,
   refresh_url: refreshUrl,
-  on_expected_surface: finalUrl === target || finalUrl.startsWith(prefix),
+  on_expected_surface: isExpectedHuanxinAppSurface(finalUrl, target),
   redirect_samples: samples
 }));
 JXA

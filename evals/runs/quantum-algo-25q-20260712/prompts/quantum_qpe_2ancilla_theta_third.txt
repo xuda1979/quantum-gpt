@@ -1,0 +1,12 @@
+Write a complete, runnable Python program using Qiskit 2.x that:
+1. Implements standard Quantum Phase Estimation with m=2 ancilla qubits and 1 target.
+2. The target unitary is U = diag(1, exp(i*2*pi*(1/3))), whose eigenstate |1> has eigenvalue exp(i*2*pi/3).
+3. Initializes the target in |1>, applies H to all ancillas, applies controlled-U^(2^k) for k=0,1,
+   then applies the inverse QFT on the 2 ancillas.
+4. Measures the 2 ancillas with StatevectorSampler (>= 4000 shots).
+5. In `def main()`, prints the most-measured 2-bit string (MSB = highest-index measured qubit, LSB = qubit 0)
+   and the float phase = int(bits, 2) / 4:
+     phase_bits = <2 chars>
+     phase_float = <value rounded to 3 decimals>
+   Expected: phase_bits = 01 and phase_float = 0.250 (the nearest 2-bit fraction to 1/3).
+Call main() under `if __name__ == "__main__":`.

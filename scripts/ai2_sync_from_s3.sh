@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 S3_ROOT="nm-aihuanxin:jtdlp-3ed7854b946a47b1a49ad754baa76cd3/quantum-qwen25-coder-main"
-REMOTE_ROOT="${AI2_REMOTE_ROOT:-/root/root/work/quantum-gpt}"
+REMOTE_ROOT="${AI2_REMOTE_ROOT:-/root/work/quantum-gpt}"
 
 cd "$ROOT_DIR"
 

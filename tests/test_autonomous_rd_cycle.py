@@ -11,9 +11,9 @@ from scripts.run_autonomous_rd_cycle import (
     build_commands,
     build_gates,
     build_moe_expert_routing_prep,
+    build_stakeholder_questions,
     load_cached_snapshot_verify_summary,
     load_paper_router_plan,
-    build_stakeholder_questions,
 )
 
 
@@ -29,7 +29,9 @@ def test_build_commands_defaults_to_gemma_targets() -> None:
     assert "google/gemma-4-31B-it" in commands["gemma_audit"]
     assert "--model-name models/gemma-4-31B-it" in commands["gemma_smoke"]
     assert "scripts/ai2_sync_model_from_s3.sh gemma-4-31B-it" == commands["remote_model_sync"]
-    assert "scripts/relay_model_snapshot_to_s3.sh gemma-4-31B-it" == commands["gemma_snapshot_relay"]
+    assert (
+        "scripts/relay_model_snapshot_to_s3.sh gemma-4-31B-it" == commands["gemma_snapshot_relay"]
+    )
     assert (
         "scripts/queue_ai2_timeboxed_pipeline.sh --target gemma4-31b-it --iteration-profile fast --visible-devices 6,7 --nproc-per-node 2 --required-idle-npus 2 --stage-only"
         == commands["remote_job_queue"]
@@ -44,12 +46,18 @@ def test_build_commands_support_gemma_26b_a4b_target() -> None:
     target = TARGETS["gemma4-26b-a4b-it"]
     commands = build_commands(target)
     assert "google/gemma-4-26B-A4B-it" in commands["gemma_audit"]
-    assert commands["gemma_python_probe"] == "python3 scripts/resolve_python_interpreter.py --min-version 3.10"
+    assert (
+        commands["gemma_python_probe"]
+        == "python3 scripts/resolve_python_interpreter.py --min-version 3.10"
+    )
     assert "--print-path" in commands["gemma_runtime_bootstrap"]
     assert "--print-path" in commands["gemma_smoke"]
     assert "--model-name models/gemma-4-26B-A4B-it" in commands["gemma_smoke"]
     assert "scripts/ai2_sync_model_from_s3.sh gemma-4-26B-A4B-it" == commands["remote_model_sync"]
-    assert "render_timeboxed_scaleup_commands.py --target gemma4-26b-a4b-it" in commands["paper_router_plan"]
+    assert (
+        "render_timeboxed_scaleup_commands.py --target gemma4-26b-a4b-it"
+        in commands["paper_router_plan"]
+    )
     assert (
         "scripts/queue_ai2_timeboxed_pipeline.sh --target gemma4-26b-a4b-it --iteration-profile fast --visible-devices 6,7 --nproc-per-node 2 --required-idle-npus 2 --stage-only"
         == commands["remote_job_queue"]
@@ -123,15 +131,18 @@ def test_stakeholder_questions_cover_eval_and_blocker_concerns() -> None:
     assert "fallback lane" in rendered
 
 
-def test_derive_cycle_state_marks_partial_snapshot_as_in_flight(tmp_path: Path, monkeypatch) -> None:
+def test_derive_cycle_state_marks_partial_snapshot_as_in_flight(
+    tmp_path: Path, monkeypatch
+) -> None:
     target = TARGETS["gemma4-31b-it"]
     local_snapshot = tmp_path / target.local_model_dir
     download_dir = local_snapshot / ".cache" / "huggingface" / "download"
     download_dir.mkdir(parents=True, exist_ok=True)
     (local_snapshot / "config.json").write_text('{"model_type":"gemma4"}\n', encoding="utf-8")
-    (
-        local_snapshot / "model.safetensors.index.json"
-    ).write_text('{"metadata":{"total_size":4096},"weight_map":{"foo":"model-00001-of-00002.safetensors"}}\n', encoding="utf-8")
+    (local_snapshot / "model.safetensors.index.json").write_text(
+        '{"metadata":{"total_size":4096},"weight_map":{"foo":"model-00001-of-00002.safetensors"}}\n',
+        encoding="utf-8",
+    )
     (local_snapshot / "processor_config.json").write_text("{}\n", encoding="utf-8")
     (download_dir / "model.safetensors.incomplete").write_bytes(b"x" * 1024)
 
@@ -142,15 +153,28 @@ def test_derive_cycle_state_marks_partial_snapshot_as_in_flight(tmp_path: Path, 
 
     assert "gemma_snapshot_acquire" in stage_by_name
     assert "in flight" in stage_by_name["gemma_snapshot_acquire"]["reason"].lower()
-    assert stage_by_name["gemma_snapshot_acquire"]["evidence"]["has_incomplete_weight_files"] is True
-    assert stage_by_name["gemma_snapshot_acquire"]["evidence"]["observed_weight_progress_percent"] == "25.0%"
+    assert (
+        stage_by_name["gemma_snapshot_acquire"]["evidence"]["has_incomplete_weight_files"] is True
+    )
+    assert (
+        stage_by_name["gemma_snapshot_acquire"]["evidence"]["observed_weight_progress_percent"]
+        == "25.0%"
+    )
     assert stage_by_name["gemma_snapshot_acquire"]["evidence"]["recent_download_activity"] is True
-    assert stage_by_name["gemma_snapshot_acquire"]["parallel_action"] == build_commands(target)["gemma_snapshot_relay"]
-    assert stage_by_name["remote_launcher_gate"]["evidence"]["launcher_path"] == "scripts/queue_ai2_timeboxed_pipeline.sh"
+    assert (
+        stage_by_name["gemma_snapshot_acquire"]["parallel_action"]
+        == build_commands(target)["gemma_snapshot_relay"]
+    )
+    assert (
+        stage_by_name["remote_launcher_gate"]["evidence"]["launcher_path"]
+        == "scripts/queue_ai2_timeboxed_pipeline.sh"
+    )
     assert cycle_state["fallback_ready"] is False
 
 
-def test_derive_cycle_state_blocks_on_missing_local_python_for_gemma(tmp_path: Path, monkeypatch) -> None:
+def test_derive_cycle_state_blocks_on_missing_local_python_for_gemma(
+    tmp_path: Path, monkeypatch
+) -> None:
     target = TARGETS["gemma4-26b-a4b-it"]
     snapshot_dir = tmp_path / target.local_model_dir
     snapshot_dir.mkdir(parents=True, exist_ok=True)
@@ -190,15 +214,18 @@ def test_derive_cycle_state_blocks_on_missing_local_python_for_gemma(tmp_path: P
     assert cycle_state["fallback_ready"] is False
 
 
-def test_build_moe_expert_routing_prep_waits_for_snapshot_completion(tmp_path: Path, monkeypatch) -> None:
+def test_build_moe_expert_routing_prep_waits_for_snapshot_completion(
+    tmp_path: Path, monkeypatch
+) -> None:
     target = TARGETS["gemma4-26b-a4b-it"]
     local_snapshot = tmp_path / target.local_model_dir
     download_dir = local_snapshot / ".cache" / "huggingface" / "download"
     download_dir.mkdir(parents=True, exist_ok=True)
     (local_snapshot / "config.json").write_text('{"model_type":"gemma4"}\n', encoding="utf-8")
-    (
-        local_snapshot / "model.safetensors.index.json"
-    ).write_text('{"metadata":{"total_size":4096},"weight_map":{"foo":"model-00001-of-00002.safetensors"}}\n', encoding="utf-8")
+    (local_snapshot / "model.safetensors.index.json").write_text(
+        '{"metadata":{"total_size":4096},"weight_map":{"foo":"model-00001-of-00002.safetensors"}}\n',
+        encoding="utf-8",
+    )
     (download_dir / "model.safetensors.incomplete").write_bytes(b"x" * 1024)
 
     monkeypatch.setattr(autonomous_rd_cycle, "ROOT", tmp_path)
@@ -228,7 +255,9 @@ def test_build_moe_expert_routing_prep_uses_recorded_manifest_when_available(
         + "\n",
         encoding="utf-8",
     )
-    command_sheet_path = tmp_path / "artifacts" / f"{target.target_id}-paper-router-command-sheet.txt"
+    command_sheet_path = (
+        tmp_path / "artifacts" / f"{target.target_id}-paper-router-command-sheet.txt"
+    )
     command_sheet_path.write_text(
         "# Timeboxed 8-NPU Scale-Up Command Sheet\n\n## JSON\n"
         + json.dumps(
@@ -327,7 +356,9 @@ def test_derive_cycle_state_promotes_paper_router_warmup_after_snapshot_verify(
         + "\n",
         encoding="utf-8",
     )
-    command_sheet_path = tmp_path / "artifacts" / f"{target.target_id}-paper-router-command-sheet.txt"
+    command_sheet_path = (
+        tmp_path / "artifacts" / f"{target.target_id}-paper-router-command-sheet.txt"
+    )
     command_sheet_path.write_text(
         "# Timeboxed 8-NPU Scale-Up Command Sheet\n\n## JSON\n"
         + json.dumps(
@@ -573,7 +604,9 @@ def test_load_cached_snapshot_verify_summary_uses_handoff_manifest(
     monkeypatch.setattr(autonomous_rd_cycle, "ROOT", tmp_path)
     summary = load_cached_snapshot_verify_summary(target)
     assert summary is not None
-    assert summary["handoff_manifest"] == f"artifacts/{target.target_id}-local-snapshot-handoff.json"
+    assert (
+        summary["handoff_manifest"] == f"artifacts/{target.target_id}-local-snapshot-handoff.json"
+    )
     assert summary["config_model_type"] == "gemma4"
 
 
@@ -642,9 +675,10 @@ def test_derive_cycle_state_uses_cached_audit_artifact_when_live_refresh_fails(
     download_dir = local_snapshot / ".cache" / "huggingface" / "download"
     download_dir.mkdir(parents=True, exist_ok=True)
     (local_snapshot / "config.json").write_text('{"model_type":"gemma4"}\n', encoding="utf-8")
-    (
-        local_snapshot / "model.safetensors.index.json"
-    ).write_text('{"metadata":{"total_size":4096},"weight_map":{"foo":"model-00001-of-00002.safetensors"}}\n', encoding="utf-8")
+    (local_snapshot / "model.safetensors.index.json").write_text(
+        '{"metadata":{"total_size":4096},"weight_map":{"foo":"model-00001-of-00002.safetensors"}}\n',
+        encoding="utf-8",
+    )
     (download_dir / "model.safetensors.incomplete").write_bytes(b"x" * 1024)
 
     audit_artifact = tmp_path / target.audit_artifact
@@ -697,9 +731,10 @@ def test_derive_cycle_state_emits_omnicoder_fallback_when_gemma_blocked_after_lo
     download_dir = local_snapshot / ".cache" / "huggingface" / "download"
     download_dir.mkdir(parents=True, exist_ok=True)
     (local_snapshot / "config.json").write_text('{"model_type":"gemma4"}\n', encoding="utf-8")
-    (
-        local_snapshot / "model.safetensors.index.json"
-    ).write_text('{"metadata":{"total_size":4096},"weight_map":{"foo":"model-00001-of-00002.safetensors"}}\n', encoding="utf-8")
+    (local_snapshot / "model.safetensors.index.json").write_text(
+        '{"metadata":{"total_size":4096},"weight_map":{"foo":"model-00001-of-00002.safetensors"}}\n',
+        encoding="utf-8",
+    )
     (download_dir / "model.safetensors.incomplete").write_bytes(b"x" * 1024)
 
     audit_artifact = tmp_path / target.audit_artifact
@@ -748,6 +783,270 @@ def test_derive_cycle_state_emits_omnicoder_fallback_when_gemma_blocked_after_lo
     assert cycle_state["fallback_next_action"] == commands["fallback_remote_job_queue"]
 
 
+def test_derive_cycle_state_builds_registry_backed_autonomous_evolution_state(
+    tmp_path: Path, monkeypatch
+) -> None:
+    target = TARGETS["omnicoder9b"]
+    parent_output_dir = (
+        "outputs/interface-prefix-omnicoder9b-semantic-v4-2npu-true20-20260329T2219CST"
+    )
+    child_output_dir = (
+        "outputs/omnicoder9b-quantum-generalization-sft-8npu-fastiter-20260409T1451CST"
+    )
+
+    (tmp_path / parent_output_dir / "adapter").mkdir(parents=True, exist_ok=True)
+    # A delivery-ready run must have actual adapter weights present, not just an
+    # empty output dir: reachability now tracks the weights, not the directory.
+    (tmp_path / child_output_dir / "adapter").mkdir(parents=True, exist_ok=True)
+
+    model_registry_dir = tmp_path / "artifacts" / "model-registry"
+    model_registry_dir.mkdir(parents=True, exist_ok=True)
+    (model_registry_dir / "index.json").write_text(
+        json.dumps(
+            {
+                "archive_version": "model-run-index-v2",
+                "runs": [
+                    {
+                        "label": "omnicoder9b-semantic-v4-2npu-true20",
+                        "output_dir": parent_output_dir,
+                        "archive_path": "artifacts/model-registry/parent.json",
+                        "base_model": "models/OmniCoder-9B",
+                        "training_method": "LoRA SFT",
+                        "completed_steps": 20,
+                        "final_eval_loss": 0.37,
+                        "final_eval_perplexity": 1.45,
+                        "delivery_manifest": "artifacts/deliveries/omnicoder9b_first_working_adapter_20260330.json",
+                        "handoff_manifest": "artifacts/deliveries/omnicoder9b-qual-eval-handoff_20260330T021144Z/handoff_manifest.json",
+                    },
+                    {
+                        "label": "omnicoder9b-quantum-generalization-sft-8npu-fastiter-20260409",
+                        "output_dir": child_output_dir,
+                        "archive_path": "artifacts/model-registry/child.json",
+                        "base_model": "models/OmniCoder-9B",
+                        "training_method": "LoRA SFT",
+                        "completed_steps": 12,
+                        "final_eval_loss": 0.38,
+                        "final_eval_perplexity": 1.47,
+                        "parent_output_dir": parent_output_dir,
+                        "adapter_init": f"{parent_output_dir}/adapter",
+                        "headline_summary": {
+                            "kind": "override_summary",
+                            "override_passes": 2,
+                            "override_total": 4,
+                            "override_pass_rate": 0.5,
+                        },
+                    },
+                ],
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (model_registry_dir / "parent.json").write_text(
+        json.dumps(
+            {
+                "archived_at_utc": "2026-04-09T00:00:00+00:00",
+                "linked_artifacts": {
+                    "delivery_manifest": {
+                        "path": "artifacts/deliveries/omnicoder9b_first_working_adapter_20260330.json"
+                    },
+                    "handoff_manifest": {
+                        "path": "artifacts/deliveries/omnicoder9b-qual-eval-handoff_20260330T021144Z/handoff_manifest.json"
+                    },
+                },
+                "evaluation": {
+                    "headline_summary": {
+                        "kind": "base_vs_adapter_example_slice",
+                        "example_count": 5,
+                    },
+                    "result_artifacts": [],
+                },
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (model_registry_dir / "child.json").write_text(
+        json.dumps(
+            {
+                "archived_at_utc": "2026-04-10T00:00:00+00:00",
+                "linked_artifacts": {
+                    "delivery_manifest": None,
+                    "handoff_manifest": None,
+                },
+                "evaluation": {
+                    "headline_summary": {
+                        "kind": "override_summary",
+                        "override_passes": 2,
+                        "override_total": 4,
+                        "override_pass_rate": 0.5,
+                    },
+                    "result_artifacts": [
+                        {
+                            "path": "reports/strict_holdout_base_vs_adapter_comparison_20260410.json",
+                            "summary": {
+                                "kind": "strict_override_comparison",
+                                "base_passes": 3,
+                                "base_total": 4,
+                                "adapter_passes": 2,
+                                "adapter_total": 4,
+                                "adapter_minus_base_passes": -1,
+                                "adapter_minus_base_pass_rate": -0.25,
+                            },
+                        }
+                    ],
+                },
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    delivery_registry_dir = tmp_path / "artifacts" / "delivery-registry"
+    delivery_registry_dir.mkdir(parents=True, exist_ok=True)
+    (delivery_registry_dir / "index.json").write_text(
+        json.dumps(
+            {
+                "generated_at_utc": "2026-04-11T06:20:08+00:00",
+                "summary": {"issue_count": 2},
+                "issues": [
+                    {
+                        "scope": "deliveries",
+                        "identifier": "omnicoder9b_first_working_adapter_20260330",
+                        "problem": "missing-adapter-weights",
+                        "target": f"{parent_output_dir}/adapter/adapter_model.safetensors",
+                    },
+                    {
+                        "scope": "deliveries",
+                        "identifier": "omnicoder9b_first_working_adapter_20260330",
+                        "problem": "missing-delivery-artifact",
+                        "target": "artifacts/deliveries/omnicoder9b_first_working_adapter_20260330.tar.gz",
+                    },
+                ],
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(autonomous_rd_cycle, "ROOT", tmp_path)
+    cycle_state = autonomous_rd_cycle.derive_cycle_state(target, build_commands(target), [])
+    evolution_state = cycle_state["autonomous_evolution_state"]
+
+    assert evolution_state["tracked_run_count"] == 2
+    assert evolution_state["delivery_issue_count"] == 2
+    assert evolution_state["best_runnable_run"]["label"] == (
+        "omnicoder9b-quantum-generalization-sft-8npu-fastiter-20260409"
+    )
+    assert evolution_state["best_strict_holdout_run"]["label"] == (
+        "omnicoder9b-quantum-generalization-sft-8npu-fastiter-20260409"
+    )
+    assert evolution_state["latest_children_by_parent"] == [
+        {
+            "parent_output_dir": parent_output_dir,
+            "latest_child": evolution_state["best_runnable_run"],
+        }
+    ]
+    assert (
+        evolution_state["best_strict_holdout_run"]["strict_holdout_comparison"]["base_passes"] == 3
+    )
+    assert evolution_state["next_recommended_action"]["kind"] == "repair_or_supersede_delivery"
+    assert evolution_state["next_recommended_action"]["command"] == (
+        "python3 scripts/build_delivery_artifact.py "
+        "artifacts/deliveries/omnicoder9b_first_working_adapter_20260330.json --check-only"
+    )
+
+
+def test_autonomous_evolution_state_prefers_queueing_child_when_delivery_chain_is_clean(
+    tmp_path: Path, monkeypatch
+) -> None:
+    target = TARGETS["omnicoder9b"]
+    output_dir = "outputs/omnicoder9b-quantum-generalization-sft-8npu-fastiter-20260409T1451CST"
+    # Adapter weights must be present for the run to count as reachable/runnable.
+    (tmp_path / output_dir / "adapter").mkdir(parents=True, exist_ok=True)
+
+    model_registry_dir = tmp_path / "artifacts" / "model-registry"
+    model_registry_dir.mkdir(parents=True, exist_ok=True)
+    (model_registry_dir / "index.json").write_text(
+        json.dumps(
+            {
+                "archive_version": "model-run-index-v2",
+                "runs": [
+                    {
+                        "label": "omnicoder9b-quantum-generalization-sft-8npu-fastiter-20260409",
+                        "output_dir": output_dir,
+                        "archive_path": "artifacts/model-registry/child.json",
+                        "base_model": "models/OmniCoder-9B",
+                        "training_method": "LoRA SFT",
+                        "completed_steps": 12,
+                        "final_eval_loss": 0.38,
+                        "final_eval_perplexity": 1.47,
+                        "delivery_manifest": "artifacts/deliveries/clean-fastiter.json",
+                        "headline_summary": {
+                            "kind": "override_summary",
+                            "override_passes": 3,
+                            "override_total": 4,
+                            "override_pass_rate": 0.75,
+                        },
+                    }
+                ],
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (model_registry_dir / "child.json").write_text(
+        json.dumps(
+            {
+                "archived_at_utc": "2026-04-10T00:00:00+00:00",
+                "linked_artifacts": {
+                    "delivery_manifest": {"path": "artifacts/deliveries/clean-fastiter.json"},
+                    "handoff_manifest": None,
+                },
+                "evaluation": {
+                    "headline_summary": {
+                        "kind": "override_summary",
+                        "override_passes": 3,
+                        "override_total": 4,
+                        "override_pass_rate": 0.75,
+                    },
+                    "result_artifacts": [],
+                },
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    delivery_registry_dir = tmp_path / "artifacts" / "delivery-registry"
+    delivery_registry_dir.mkdir(parents=True, exist_ok=True)
+    (delivery_registry_dir / "index.json").write_text(
+        json.dumps(
+            {
+                "generated_at_utc": "2026-04-11T06:20:08+00:00",
+                "summary": {"issue_count": 0},
+                "issues": [],
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(autonomous_rd_cycle, "ROOT", tmp_path)
+    cycle_state = autonomous_rd_cycle.derive_cycle_state(target, build_commands(target), [])
+    evolution_state = cycle_state["autonomous_evolution_state"]
+
+    assert evolution_state["best_delivery_ready_run"]["label"] == (
+        "omnicoder9b-quantum-generalization-sft-8npu-fastiter-20260409"
+    )
+    assert evolution_state["next_recommended_action"]["kind"] == "queue_next_child_iteration"
+    assert (
+        evolution_state["next_recommended_action"]["command"]
+        == build_commands(target)["remote_job_queue"]
+    )
+    assert evolution_state["next_recommended_action"]["candidate_parent_output_dir"] == output_dir
+
+
 def test_main_emits_machine_readable_staged_gemma_preflight_results(
     tmp_path: Path,
     monkeypatch,
@@ -774,7 +1073,12 @@ def test_main_emits_machine_readable_staged_gemma_preflight_results(
     )
 
     staged_results = {
-        commands["local_eval_gate"]: {"ok": True, "exit_code": 0, "stdout": '{"gate":"local_quality_gate","ok":true}\n', "stderr": ""},
+        commands["local_eval_gate"]: {
+            "ok": True,
+            "exit_code": 0,
+            "stdout": '{"gate":"local_quality_gate","ok":true}\n',
+            "stderr": "",
+        },
         commands["holdout_integrity"]: {
             "ok": True,
             "exit_code": 0,
@@ -859,7 +1163,10 @@ def test_main_emits_machine_readable_staged_gemma_preflight_results(
         "gemma_smoke",
     ]
     assert [result["command"] for result in execution_results] == executed_commands
-    assert all({"name", "command", "ok", "exit_code", "stdout", "stderr"} <= result.keys() for result in execution_results)
+    assert all(
+        {"name", "command", "ok", "exit_code", "stdout", "stderr"} <= result.keys()
+        for result in execution_results
+    )
 
     result_by_name = {result["name"]: result for result in execution_results}
     assert result_by_name["local_eval_gate"]["ok"] is True
@@ -870,7 +1177,9 @@ def test_main_emits_machine_readable_staged_gemma_preflight_results(
     assert '"state":"passed"' in result_by_name["gemma_audit"]["stdout"]
     assert result_by_name["gemma_runtime_bootstrap"]["ok"] is False
     assert result_by_name["gemma_runtime_bootstrap"]["exit_code"] == 1
-    assert "Could not resolve host: github.com" in result_by_name["gemma_runtime_bootstrap"]["stderr"]
+    assert (
+        "Could not resolve host: github.com" in result_by_name["gemma_runtime_bootstrap"]["stderr"]
+    )
     assert result_by_name["gemma_smoke"]["ok"] is False
     assert result_by_name["gemma_smoke"]["exit_code"] == 2
     assert '"state":"blocked"' in result_by_name["gemma_smoke"]["stdout"]
@@ -899,5 +1208,7 @@ def test_main_emits_machine_readable_staged_gemma_preflight_results(
     assert "gemma snapshot" in payload["readiness"]["blocker"].lower()
     assert payload["cycle_state"]["fallback_ready"] is True
     assert payload["cycle_state"]["fallback_target"]["target_id"] == "omnicoder9b"
-    assert payload["moe_expert_routing_prep"]["strategy"] == "router_warmup_then_frequency_guided_esft"
+    assert (
+        payload["moe_expert_routing_prep"]["strategy"] == "router_warmup_then_frequency_guided_esft"
+    )
     assert "inspection_command" in payload["moe_expert_routing_prep"]

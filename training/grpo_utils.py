@@ -4,6 +4,7 @@ import ast
 import json
 import math
 import re
+import sys
 from collections import Counter
 from collections.abc import Mapping
 from dataclasses import dataclass, field
@@ -101,7 +102,9 @@ def load_grpo_step_metrics_jsonl(path: Path) -> list[dict[str, Any]]:
 
 
 def build_grpo_metrics_payload_from_jsonl(path: Path, *, planned_steps: int) -> dict[str, Any]:
-    return build_grpo_metrics_payload(load_grpo_step_metrics_jsonl(path), planned_steps=planned_steps)
+    return build_grpo_metrics_payload(
+        load_grpo_step_metrics_jsonl(path), planned_steps=planned_steps
+    )
 
 
 def build_grpo_step_record(
@@ -164,9 +167,13 @@ def build_grpo_step_record(
     return record
 
 
-def build_grpo_metrics_payload(records: list[dict[str, Any]], *, planned_steps: int) -> dict[str, Any]:
+def build_grpo_metrics_payload(
+    records: list[dict[str, Any]], *, planned_steps: int
+) -> dict[str, Any]:
     skipped_records = [record for record in records if bool(record.get("skipped"))]
-    skip_reasons = Counter(str(record.get("reason")) for record in skipped_records if record.get("reason"))
+    skip_reasons = Counter(
+        str(record.get("reason")) for record in skipped_records if record.get("reason")
+    )
     updated_steps = sum(1 for record in records if not bool(record.get("skipped")))
     last_recorded_step = records[-1].get("step") if records else None
     return {
@@ -183,7 +190,9 @@ def build_grpo_metrics_payload(records: list[dict[str, Any]], *, planned_steps: 
 
 
 def build_grpo_metrics_payload_from_jsonl(path: Path, *, planned_steps: int) -> dict[str, Any]:
-    return build_grpo_metrics_payload(load_grpo_step_metrics_jsonl(path), planned_steps=planned_steps)
+    return build_grpo_metrics_payload(
+        load_grpo_step_metrics_jsonl(path), planned_steps=planned_steps
+    )
 
 
 def summarize_python_interface(source: str) -> list[str]:
@@ -213,7 +222,9 @@ def summarize_python_interface(source: str) -> list[str]:
             if node.args.kwonlyargs:
                 if node.args.vararg is None:
                     args.append("*")
-                for kwarg, default in zip(node.args.kwonlyargs, node.args.kw_defaults):
+                for kwarg, default in zip(
+                    node.args.kwonlyargs, node.args.kw_defaults, strict=False
+                ):
                     kwarg_text = kwarg.arg
                     if kwarg.annotation is not None:
                         kwarg_text += f": {ast.unparse(kwarg.annotation)}"
@@ -312,7 +323,7 @@ def _normalize_signature(signature: str) -> str:
 def _extract_symbol_name(signature: str) -> str:
     text = signature.strip()
     if text.startswith("class "):
-        return text[len("class "):].split("(", 1)[0].split(":", 1)[0].strip().lower()
+        return text[len("class ") :].split("(", 1)[0].split(":", 1)[0].strip().lower()
     return text.split("(", 1)[0].strip().lower()
 
 
@@ -346,6 +357,18 @@ def _safe_details(result: dict | None) -> list[str]:
     return details
 
 
+def _has_runtime_failure(details: list[str]) -> bool:
+    runtime_markers = (
+        "AttributeError:",
+        "ImportError:",
+        "ModuleNotFoundError:",
+        "NameError:",
+        "TypeError:",
+        "unsupported operand type",
+    )
+    return any(any(marker in detail for marker in runtime_markers) for detail in details)
+
+
 def brevity_reward(code: str, target_lines: int = 40) -> float:
     """Reward concise solutions: 1.0 at target_lines, decaying for longer code.
 
@@ -362,6 +385,86 @@ def brevity_reward(code: str, target_lines: int = 40) -> float:
     return max(0.0, math.exp(-0.7 * (n - target_lines) / max(target_lines, 1)))
 
 
+def _stdlib_module_roots() -> set[str]:
+    roots = set(sys.builtin_module_names)
+    stdlib_names = getattr(sys, "stdlib_module_names", None)
+    if stdlib_names:
+        roots.update(stdlib_names)
+    roots.update(
+        {
+            "abc",
+            "argparse",
+            "bisect",
+            "collections",
+            "copy",
+            "csv",
+            "dataclasses",
+            "datetime",
+            "functools",
+            "heapq",
+            "importlib",
+            "itertools",
+            "json",
+            "math",
+            "operator",
+            "pathlib",
+            "random",
+            "re",
+            "statistics",
+            "string",
+            "typing",
+        }
+    )
+    return roots
+
+
+def import_hygiene_score(
+    code: str,
+    *,
+    single_file_expected: bool,
+    allowed_import_roots: list[str] | None = None,
+) -> float:
+    if not single_file_expected:
+        return 1.0
+    if not code.strip():
+        return 0.0
+    try:
+        tree = ast.parse(code)
+    except Exception:
+        return 0.0
+
+    allowed_roots = set(allowed_import_roots or [])
+    allowed_roots.update(_stdlib_module_roots())
+
+    imported_roots: list[str] = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                root = alias.name.split(".", 1)[0]
+                if root:
+                    imported_roots.append(root)
+        elif isinstance(node, ast.ImportFrom):
+            if node.level:
+                imported_roots.append(".")
+                continue
+            module_name = node.module or ""
+            root = module_name.split(".", 1)[0]
+            if root:
+                imported_roots.append(root)
+
+    if not imported_roots:
+        return 1.0
+
+    violations = 0
+    for root in imported_roots:
+        if root == ".":
+            violations += 1
+            continue
+        if root not in allowed_roots:
+            violations += 1
+    return max(0.0, 1.0 - violations / max(1, len(imported_roots)))
+
+
 def build_reward_breakdown(
     *,
     code: str,
@@ -374,6 +477,9 @@ def build_reward_breakdown(
     verifier_weight: float,
     brevity_weight: float = 0.0,
     brevity_target_lines: int = 40,
+    import_hygiene_weight: float = 0.0,
+    single_file_expected: bool = False,
+    allowed_import_roots: list[str] | None = None,
 ) -> dict[str, float | int | bool]:
     syntax_ok = False
     if code.strip():
@@ -384,24 +490,47 @@ def build_reward_breakdown(
             syntax_ok = False
 
     candidate_interface = summarize_python_interface(code) if syntax_ok else []
-    interface_reward = interface_match_score(required_interface, candidate_interface) if syntax_ok else 0.0
+    interface_reward = (
+        interface_match_score(required_interface, candidate_interface) if syntax_ok else 0.0
+    )
 
     passed = bool(result.get("passed")) if isinstance(result, dict) else False
     details = _safe_details(result)
     failure_count = 0 if passed else max(1, len(details))
     capped_budget = max(1, detail_budget)
-    verifier_reward = 1.0 if passed else max(0.0, 1.0 - min(failure_count, capped_budget) / capped_budget)
+    verifier_reward = (
+        1.0 if passed else max(0.0, 1.0 - min(failure_count, capped_budget) / capped_budget)
+    )
+    if not passed and _has_runtime_failure(details):
+        verifier_reward = 0.0
     pass_reward = 1.0 if passed else 0.0
     syntax_reward = 1.0 if syntax_ok else 0.0
     brevity_score = brevity_reward(code, target_lines=brevity_target_lines) if syntax_ok else 0.0
+    import_hygiene = (
+        import_hygiene_score(
+            code,
+            single_file_expected=single_file_expected,
+            allowed_import_roots=allowed_import_roots,
+        )
+        if syntax_ok
+        else 0.0
+    )
 
-    weight_sum = pass_weight + syntax_weight + interface_weight + verifier_weight + brevity_weight
+    weight_sum = (
+        pass_weight
+        + syntax_weight
+        + interface_weight
+        + verifier_weight
+        + brevity_weight
+        + import_hygiene_weight
+    )
     total_reward = (
         pass_weight * pass_reward
         + syntax_weight * syntax_reward
         + interface_weight * interface_reward
         + verifier_weight * verifier_reward
         + brevity_weight * brevity_score
+        + import_hygiene_weight * import_hygiene
     ) / max(weight_sum, 1e-8)
 
     return {
@@ -411,6 +540,7 @@ def build_reward_breakdown(
         "interface_reward": interface_reward,
         "verifier_reward": verifier_reward,
         "brevity_reward": brevity_score,
+        "import_hygiene_reward": import_hygiene,
         "failure_count": failure_count,
         "detail_budget": capped_budget,
         "total_reward": total_reward,
@@ -458,7 +588,9 @@ def stable_grpo_loss(
     kl_coeff: float,
     ratio_clip_log_delta: float,
 ) -> torch.Tensor:
-    finite_mask = torch.isfinite(log_probs) & torch.isfinite(old_log_probs) & torch.isfinite(advantages)
+    finite_mask = (
+        torch.isfinite(log_probs) & torch.isfinite(old_log_probs) & torch.isfinite(advantages)
+    )
     if not finite_mask.any():
         return log_probs.new_tensor(float("nan"))
 
@@ -473,10 +605,14 @@ def stable_grpo_loss(
     ratio = torch.exp(log_ratio)
     pg_loss = -(ratio * safe_advantages).mean()
 
-    kl = (safe_old_log_probs - safe_log_probs).clamp(
-        -ratio_clip_log_delta,
-        ratio_clip_log_delta,
-    ).mean()
+    kl = (
+        (safe_old_log_probs - safe_log_probs)
+        .clamp(
+            -ratio_clip_log_delta,
+            ratio_clip_log_delta,
+        )
+        .mean()
+    )
     total = pg_loss + kl_coeff * kl
     if not torch.isfinite(total):
         return log_probs.new_tensor(float("nan"))
@@ -516,7 +652,9 @@ def reward_signal_stats(
     syntax_std = float(syntax_rewards.std(unbiased=False).item())
     interface_std = float(interface_rewards.std(unbiased=False).item())
     verifier_std = float(verifier_rewards.std(unbiased=False).item())
-    brevity_std = float(brevity_rewards.std(unbiased=False).item()) if brevity_rewards is not None else 0.0
+    brevity_std = (
+        float(brevity_rewards.std(unbiased=False).item()) if brevity_rewards is not None else 0.0
+    )
     signal_std = max(reward_std, pass_std, syntax_std, interface_std, verifier_std, brevity_std)
     result = {
         "reward_std": reward_std,
@@ -534,6 +672,7 @@ def reward_signal_stats(
 # ---------------------------------------------------------------------------
 # Adaptive temperature escalation
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class AdaptiveTemperatureState:
@@ -589,7 +728,7 @@ class AdaptiveTemperatureState:
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "AdaptiveTemperatureState":
+    def from_dict(cls, data: dict[str, Any]) -> AdaptiveTemperatureState:
         return cls(
             base_temp=float(data.get("base_temp", 0.8)),
             step_size=float(data.get("step_size", 0.15)),

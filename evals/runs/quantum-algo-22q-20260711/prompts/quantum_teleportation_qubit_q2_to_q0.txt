@@ -1,0 +1,29 @@
+Write a complete, runnable Python program using Qiskit 2.x that:
+1. Implements quantum teleportation of an arbitrary single-qubit state from
+   qubit q2 to qubit q0 using a shared Bell pair on qubits q0 and q1.
+2. The state to teleport is |+> = (|0>+|1>)/sqrt(2), prepared by applying
+   H to q2 (which starts in |0>).
+3. The protocol:
+   - Prepare Bell pair |Phi+> on q0, q1: H on q0, CX(0, 1).
+   - Bell measurement on q2, q1: CX(2, 1), H on q2, measure q1 and q2.
+   - Classically-controlled corrections on q0: if q1 measurement is 1,
+     apply X to q0; if q2 measurement is 1, apply Z to q0. (Use
+     `qc.measure` then `qc.z` / `qc.x` conditioned on the classical bits
+     via `if_test`, or equivalently use `qc.cx` and `qc.cz` with classical
+     bits — since this is a StatevectorSampler simulation, use the
+     `c_if`-style conditional or simply apply the corrections as
+     classical-controlled gates.)
+   - For simplicity, use the post-measurement-correction-free approach:
+     use `Statevector` simulation to verify the final state of q0 (after
+     tracing out q1, q2) matches |+><+|. Or use the deferred-measurement
+     approach: apply CX(q1, q0) and CZ(q2, q0) directly (without
+     measuring) and compare the final statevector.
+4. Use qiskit.quantum_info.Statevector to compute the final statevector
+   of the full 3-qubit circuit (using deferred measurement — i.e. apply
+   CX(q1, q0) and CZ(q2, q0) instead of measuring). Compute the fidelity
+   of q0 (after tracing out q1, q2) with |+>.
+5. In `def main()`, prints:
+     fidelity = <value rounded to 3 decimals>
+     teleported: True   (if fidelity >= 0.999 else False)
+   Expected: fidelity = 1.000 and teleported: True.
+Call main() under `if __name__ == "__main__":`.

@@ -1,0 +1,17 @@
+Write a complete, runnable Python program using Qiskit 2.x that:
+1. Implements Simon's algorithm for a 3-bit function f: {0,1}^3 -> {0,1}^3
+   with hidden period s = "011" (so f(x) = f(x XOR s) for all x). Define
+   f explicitly as f(x) = min(x, x XOR s) (a 2-to-1 function with period s).
+2. Builds the standard Simon circuit: 3 input qubits + 3 output qubits,
+   Hadamards on input, compute f into output (use X gates and multi-
+   controlled X / Toffoli gates to write f(x) to the output register for
+   each input x), Hadamards on input, then measure input.
+3. Uses StatevectorSampler (>= 2000 shots), collects measured 3-bit input
+   strings, and recovers s via Gaussian elimination over GF(2) (solving
+   y . s = 0 mod 2 for all measured y). If the linear system is rank
+   deficient, fall back to enumerating non-zero candidates s' that satisfy
+   y . s' = 0 for all measured y AND f(x) = f(x XOR s') for all x.
+4. In `def main()`, prints:
+     period = <3-bit string>
+   Expected: period = 011.
+Call main() under `if __name__ == "__main__":`.

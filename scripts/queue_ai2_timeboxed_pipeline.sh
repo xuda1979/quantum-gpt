@@ -5,7 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DEFAULT_REQS="training/requirements-huanxin-cpu.txt"
 GEMMA_REQS="training/requirements-gemma4-runtime.txt"
 S3_ROOT="nm-aihuanxin:jtdlp-3ed7854b946a47b1a49ad754baa76cd3/quantum-qwen25-coder-main"
-REMOTE_ROOT="/root/root/work/quantum-gpt"
+REMOTE_ROOT="/root/work/quantum-gpt"
 WAIT_MS="${HUANXIN_WAIT_MS:-180000}"
 ITERATION_PROFILE="${ITERATION_PROFILE:-fast}"
 TIMEOUT_SEC="${TIMEOUT_SEC:-}"
@@ -295,25 +295,11 @@ apply_target_defaults
 SFT_COMMAND="$(build_sft_command)"
 GRPO_COMMAND="$(build_grpo_command)"
 
+# Gemma 4 remote launch blocker removed 2026-04-13:
+# transformers >= 5.6.0.dev0 supports AutoModelForCausalLM for Gemma4ForConditionalGeneration text-only use.
+# Ensure the remote runtime has the same upgraded stack before launching.
 if [[ "$TARGET" == gemma4-* ]]; then
-  cat >&2 <<EOF
-Gemma 4 remote launch is blocked in this repo.
-
-Reason:
-- training/qwen_sft_peft.py is still a text-only AutoModelForCausalLM + TaskType.CAUSAL_LM path
-- Gemma 4 checkpoints advertise Gemma4ForConditionalGeneration
-- the current local smoke still fails at runtime_compat before any remote launch would be credible
-
-Next step:
-1. python3 scripts/resolve_python_interpreter.py --min-version 3.10
-2. PYTHON_BIN="$(python3 scripts/resolve_python_interpreter.py --min-version 3.10 --print-path)"
-3. "$PYTHON_BIN" -m pip install -r ${GEMMA_REQS}
-4. "$PYTHON_BIN" training/huanxin_cpu_smoke.py --model-name ${MODEL_NAME} --dataset data/seed/splits-auto-seed/train.jsonl
-5. If runtime passes, implement and validate a processor-aware conditional-generation backend before retrying launch.
-
-See: research/papers/gemma4_text_path_enablement/paper.md
-EOF
-  exit 2
+  echo "INFO: Gemma 4 target selected. Ensure remote has transformers >= 5.5.0 (pip install git+https://github.com/huggingface/transformers.git)." >&2
 fi
 
 stage_paths=(

@@ -9,32 +9,113 @@ incorrect code with the teacher's critique + corrected answer, and preserve
 the teacher's per-token logprobs so a downstream trainer can do logit-level
 distillation.
 
+## RL-with-verifier mode (Option A)
+
+The pipeline now runs as a **closed-loop RL algorithm with a verifier in the
+loop** rather than a fixed offline dataset generator. The verifier is the
+sandboxed Python interpreter in `scripts/code_exec_sandbox.py`. The loop is:
+
+1. **Sample a (framework, topic, difficulty) contract.** When a weakness
+   report from the previous batch is available, the sampler biases toward
+   the student's weak cells (see `WeaknessReport` in
+   `scripts/rl_distill_pipeline.py` and `scripts/analyze_batch_weakness.py`).
+2. **Student proposes a question** for that contract; the teacher validates
+   it via the qgate.
+3. **Student answers its own question** (writes the code).
+4. **Verifier executes the student's code** in a sandboxed subprocess and
+   records `{verdict, stdout, stderr, exit_code, runtime_ms}`.
+5. **Teacher grades the answer grounded in the execution result** (it sees
+   the real stderr/stdout, so its critique references real runtime errors).
+6. **Teacher produces a corrected answer** with per-token logprobs.
+7. **Verifier executes the teacher's corrected code** as a double-
+   confirmation gate. Only if the corrected code runs to `PASS` is the
+   sample admitted to the SFT buffer. Otherwise the row is written to
+   `rejected.jsonl` with both execution logs for auditability.
+8. The scalar reward is computed with the **real execution signal as the
+   dominant weight** (`w_student_exec_pass=0.45`, `w_teacher_exec_pass=0.20`
+   when the sandbox is enabled; the teacher-judgment and confidence weights
+   shrink accordingly). This is the verifier-in-the-loop reward that GRPO
+   or reward-weighted SFT optimizes against.
+
+**Training loop parameters (per the user's spec):**
+- Batch size: **100 samples per round** (`--target-buffer-size 100`).
+- Checkpoint cadence: **every 2 hours** (`--checkpoint-interval-seconds 7200`
+  on the trainer).
+- Stop condition: **student execution pass-rate ≥ 99%** over the last 100
+  samples (`--pass-rate-stop 0.99 --pass-rate-window 100`).
+- Environments: **ASI1 (Qwen3.6-27B), ASI2 + ASI3 (Qwen3.6-35B-A3B)** all
+  run in parallel.
+- Adapters + important files: written to **NAS** (`$NAS_ROOT/outputs/...`),
+  not local disk.
+
+**Question diversity + weakness-aware generation:**
+- The base distribution spans 8 frameworks × 10 topics × 3 difficulties.
+- Between batches, the orchestrator runs
+  `scripts/analyze_batch_weakness.py` to emit a per-cell pass-rate report.
+- The next batch's pipeline reloads the report and blends the prior with
+  the inverse-pass-rate distribution (`alpha=0.4`), so the student is
+  nudged toward its weakest cells without losing coverage.
+- Questions are still **proposed by the student first, then corrected by
+  the teacher** (the student is the question proposer; the teacher is the
+  answerer/corrector), exactly as requested.
+
 ## Dataset shape
 
 For each question in the pool:
 
 1. The student adapter is asked to write code for the question.
-2. The teacher (GLM5.2) is asked to evaluate correctness:
-   - If a test harness is available, the harness is run first and its result
-     is treated as ground truth. If the harness says the code is correct,
-     the sample is `accepted`.
-   - Otherwise (or when no harness exists), the teacher judges correctness
-     via a structured JSON response.
-3. If the student's code is judged **correct (100%)**, the pipeline moves on
-   to the next question. The teacher is still asked to confirm the answer
-   with logprobs so the student can distill the teacher's confidence.
-4. If the student's code is **incorrect**, the teacher is asked again
+2. **The student's code is actually executed** before any teacher judgment.
+   The runner writes the code to a temp file and runs it in a sandboxed
+   Python environment (timeout: 30 s, memory: 1 GiB). The execution
+   produces one of:
+   - `PASS` — the code ran to completion with exit code 0 and, when a
+     test harness is available, the harness assertions all passed.
+   - `FAIL: <stderr tail>` — the code raised an exception, failed an
+     assertion, or returned a wrong value. The full traceback is
+     captured.
+   - `ERROR: <reason>` — the code could not be executed at all (syntax
+     error, missing dependency, timeout, OOM). The reason is captured.
+   The raw `stdout`, `stderr`, `exit_code`, and `runtime_ms` are stored
+   alongside the verdict. This execution evidence is **mandatory** and
+   is the ground truth that gates every downstream decision.
+3. The teacher (GLM5.2) is then asked to evaluate correctness. The
+   teacher is **given the execution result** (verdict + stderr/stdout
+   excerpt) so its judgment is grounded in real runtime behavior, not
+   text-only inspection. The teacher returns a structured JSON response.
+4. If the student's code is judged **correct (100%) AND the execution
+   verdict is `PASS`**, the pipeline moves on to the next question. The
+   teacher is still asked to confirm the answer with logprobs so the
+   student can distill the teacher's confidence.
+5. If the student's code is **not correct** (teacher-judged incorrect,
+   or execution verdict != `PASS`), the teacher is asked again
    (with `logprobs=True`) to provide:
-   - a one-paragraph critique of where the student's answer is wrong, and
+   - a one-paragraph critique of where the student's answer is wrong
+     (referencing the execution error when present), and
    - a corrected, complete answer in a single ```python``` block.
-5. The final SFT sample is:
+6. **The teacher's corrected code is then executed in the same sandbox**
+   as a double-confirmation gate. Only if this second execution returns
+   `PASS` is the corrected sample admitted into the SFT set. If the
+   teacher's correction also fails to run, the sample is marked
+   `rejected` and written to `rejected.jsonl` with both the student and
+   teacher execution logs, so the failure is auditable and the row is
+   not silently dropped. A sample is never admitted on the teacher's
+   text judgment alone.
+7. The final SFT sample is:
    - **system**: the teacher's system prompt
    - **user**: `Question:\n{question}\n\nStudent code:\n\`\`\`python\n{student_code}\n\`\`\`\n\nDo you think the code is correct?`
    - **assistant**: the teacher's critique + corrected answer
    - **teacher_logits**: per-token `{token, logprob, top_logprobs:[{token, logprob}]}` for the assistant target (used for soft distillation)
-   - **status**: `accepted` or `corrected`
-   - **teacher_eval**: the structured JSON evaluation (`is_correct`, `issues`, `correct_answer`, `confidence`)
-   - **harness_result**: the test-harness result, if a harness was available
+   - **status**: `accepted`, `corrected`, or `rejected`
+   - **teacher_eval**: the structured JSON evaluation. **Must** include:
+     - `is_correct` (bool): teacher's judgment
+     - `issues` (list[str]): diagnosed problems, each referencing the
+       execution evidence when present (e.g. `"NameError on line 12:
+       'qc' is not defined (see student_exec.stderr)"`)
+     - `correct_answer` (str): the teacher's corrected code block
+     - `confidence` (float in [0,1]): teacher's confidence
+     - `student_exec` (obj, **mandatory**): `{verdict: "PASS"|"FAIL"|"ERROR", stdout: str, stderr: str, exit_code: int, runtime_ms: int}` — the real execution result of the student's code
+     - `teacher_exec` (obj, **mandatory when status=="corrected"**): same shape as `student_exec`, the real execution result of the teacher's corrected code. Must be `PASS` for the sample to be admitted; otherwise `status="rejected"`.
+   - **harness_result**: the test-harness result, if a harness was available (kept for backward compatibility; superseded by `teacher_eval.student_exec` / `teacher_eval.teacher_exec`)
 
 ## Layout
 
@@ -52,9 +133,10 @@ data/generated/self_correcting_distill/
   questions_pool_manifest.json
 data/generated/self_correcting_distill_{27b,35b}_v1/
   student_answers.jsonl                 # raw student responses
-  teacher_evals.jsonl                   # structured teacher evals
-  train_chatml_with_logits.jsonl        # the SFT samples with teacher logits
-  pipeline_report.json                  # progress / acceptance counters
+  teacher_evals.jsonl                   # structured teacher evals (incl. student_exec + teacher_exec)
+  train_chatml_with_logits.jsonl        # admitted SFT samples with teacher logits (status in {accepted, corrected})
+  rejected.jsonl                        # rows where teacher's correction also failed execution (status=rejected)
+  pipeline_report.json                  # progress / acceptance / rejection counters
 ```
 
 ## Running

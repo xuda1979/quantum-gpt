@@ -7,7 +7,7 @@ import scripts.render_timeboxed_scaleup_commands as render_timeboxed_scaleup_com
 
 def _args(**overrides: str | None) -> argparse.Namespace:
     defaults = {
-        "target": "omnicoder9b",
+        "target": render_timeboxed_scaleup_commands.DEFAULT_TARGET,
         "iteration_profile": "fast",
         "model_name": None,
         "train_file": None,
@@ -32,8 +32,32 @@ def _args(**overrides: str | None) -> argparse.Namespace:
     return argparse.Namespace(**defaults)
 
 
-def test_default_omnicoder_render_preserves_current_paths() -> None:
+def test_default_qwen36_render_uses_next_round_base_model() -> None:
     config = render_timeboxed_scaleup_commands.resolve_target_config(_args())
+    bootstrap = render_timeboxed_scaleup_commands.build_bootstrap_command(config)
+    paper_router = render_timeboxed_scaleup_commands.build_paper_router_warmup_command(config)
+    sft = render_timeboxed_scaleup_commands.build_sft_command(config)
+    grpo = render_timeboxed_scaleup_commands.build_grpo_command(config)
+    assert "training/requirements-huanxin-cpu.txt" in bootstrap
+    assert config["iteration_profile"] == "fast"
+    assert config["model_name"] == "models/Qwen3.6-27B"
+    assert "models/Qwen3.6-27B" in paper_router
+    assert "models/Qwen3.6-27B" in sft
+    assert "models/Qwen3.6-27B" in grpo
+    assert "--output-dir outputs/qwen36-27b-quantum-generalization-sft-8npu-true40-fastiter" in sft
+    assert "--adapter-init" not in sft
+    assert "outputs/qwen36-27b-quantum-generalization-sft-8npu-true40/adapter" in grpo
+    assert "--output-dir outputs/qwen36-27b-quantum-generalization-grpo-8npu-true8-fastiter" in grpo
+    assert "--max-steps 12" in sft
+    assert "--eval-steps 6" in sft
+    assert "--log-steps 1" in sft
+    assert "--group-size 2" in grpo
+    assert "--grpo-steps 2" in grpo
+    assert "--max-new-tokens 96" in grpo
+
+
+def test_omnicoder_render_preserves_current_paths() -> None:
+    config = render_timeboxed_scaleup_commands.resolve_target_config(_args(target="omnicoder9b"))
     bootstrap = render_timeboxed_scaleup_commands.build_bootstrap_command(config)
     sft = render_timeboxed_scaleup_commands.build_sft_command(config)
     grpo = render_timeboxed_scaleup_commands.build_grpo_command(config)
@@ -41,9 +65,17 @@ def test_default_omnicoder_render_preserves_current_paths() -> None:
     assert config["iteration_profile"] == "fast"
     assert "models/OmniCoder-9B" in sft
     assert "--output-dir outputs/omnicoder9b-quantum-generalization-sft-8npu-true40-fastiter" in sft
-    assert "outputs/interface-prefix-omnicoder9b-semantic-v4-2npu-true20-20260329T2219CST/adapter" in sft
-    assert "outputs/interface-prefix-omnicoder9b-semantic-v4-2npu-true20-20260329T2219CST/adapter" in grpo
-    assert "--output-dir outputs/omnicoder9b-quantum-generalization-grpo-8npu-true8-fastiter" in grpo
+    assert (
+        "outputs/interface-prefix-omnicoder9b-semantic-v4-2npu-true20-20260329T2219CST/adapter"
+        in sft
+    )
+    assert (
+        "outputs/interface-prefix-omnicoder9b-semantic-v4-2npu-true20-20260329T2219CST/adapter"
+        in grpo
+    )
+    assert (
+        "--output-dir outputs/omnicoder9b-quantum-generalization-grpo-8npu-true8-fastiter" in grpo
+    )
     assert "--max-steps 12" in sft
     assert "--eval-steps 6" in sft
     assert "--log-steps 1" in sft
@@ -53,7 +85,9 @@ def test_default_omnicoder_render_preserves_current_paths() -> None:
 
 
 def test_standard_profile_preserves_longer_omnicoder_paths() -> None:
-    config = render_timeboxed_scaleup_commands.resolve_target_config(_args(iteration_profile="standard"))
+    config = render_timeboxed_scaleup_commands.resolve_target_config(
+        _args(target="omnicoder9b", iteration_profile="standard")
+    )
     sft = render_timeboxed_scaleup_commands.build_sft_command(config)
     grpo = render_timeboxed_scaleup_commands.build_grpo_command(config)
     assert config["iteration_profile"] == "standard"
@@ -91,7 +125,9 @@ def test_gemma_e4b_render_uses_gemma_paths() -> None:
 
 
 def test_gemma_26b_a4b_render_uses_gemma_paths() -> None:
-    config = render_timeboxed_scaleup_commands.resolve_target_config(_args(target="gemma4-26b-a4b-it"))
+    config = render_timeboxed_scaleup_commands.resolve_target_config(
+        _args(target="gemma4-26b-a4b-it")
+    )
     bootstrap = render_timeboxed_scaleup_commands.build_bootstrap_command(config)
     paper_dataset = render_timeboxed_scaleup_commands.build_paper_dataset_command(config)
     router_warmup = render_timeboxed_scaleup_commands.build_paper_router_warmup_command(config)
@@ -109,8 +145,8 @@ def test_gemma_26b_a4b_render_uses_gemma_paths() -> None:
     assert "outputs/gemma4-26b-a4b-it-quantum-paper-router-warmup-fastiter" in router_warmup
     assert "models/gemma-4-26B-A4B-it" in sft
     assert "models/gemma-4-26B-A4B-it" in grpo
-    assert "outputs/gemma4-26b-a4b-it-quantum-generalization-sft-8npu-true40-fastiter" in sft
-    assert "outputs/gemma4-26b-a4b-it-quantum-generalization-grpo-8npu-true8-fastiter" in grpo
+    assert "outputs/gemma4-26b-a4b-it-curriculum-sft-v1-fastiter" in sft
+    assert "outputs/gemma4-26b-a4b-it-curriculum-grpo-v1-fastiter" in grpo
     assert "--max-steps 8" in router_warmup
     assert "--max-steps 12" in sft
 

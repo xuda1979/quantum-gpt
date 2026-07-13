@@ -1,0 +1,8 @@
+{
+  "id": "quantum_density_matrix_pure_state",
+  "title": "Density matrix purity of a Bell state",
+  "expected_substrings": [
+    "Purity = 1.000000",
+    "Entropy = 0.000000"
+  ]
+}

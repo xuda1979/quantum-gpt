@@ -62,6 +62,10 @@ async function clickByVisibleText(page, text) {
 }
 
 async function submitIfRequested(page, submitShortcut) {
+  if (submitShortcut === 'enter') {
+    await page.keyboard.press('Enter');
+    return;
+  }
   if (submitShortcut === 'cmd-enter') {
     await page.keyboard.press('Meta+Enter');
     return;

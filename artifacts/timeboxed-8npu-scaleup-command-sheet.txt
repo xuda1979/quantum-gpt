@@ -1,7 +1,7 @@
 # Timeboxed 8-NPU Scale-Up Command Sheet
-# target: omnicoder9b
+# target: qwen36-27b
 # iteration_profile: fast
-# target: under 45 minutes per run, fast-iteration prioritized, all 8 NPUs when available
+# target: under 45 minutes per run, fast-iteration prioritized on 2 NPUs; standard 8-NPU scale-up remains available
 
 ## Bootstrap
 python3 -m pip install --upgrade pip
@@ -16,12 +16,12 @@ python3 scripts/build_paper_sft_dataset.py \
 ## Paper Router Warmup
 PYTORCH_NPU_ALLOC_CONF=max_split_size_mb:256 \
 TOKENIZERS_PARALLELISM=false \
-ASCEND_RT_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 \
-torchrun --nproc_per_node=8 training/qwen_sft_peft.py \
-  --model-name models/OmniCoder-9B \
+ASCEND_RT_VISIBLE_DEVICES=6,7 \
+torchrun --nproc_per_node=2 training/qwen_sft_peft.py \
+  --model-name models/Qwen3.6-27B \
   --train-file data/generated/quantum-paper-router-warmup-v1/messages/quantum_paper_router_warmup_messages_train.jsonl \
   --eval-file data/generated/quantum-paper-router-warmup-v1/messages/quantum_paper_router_warmup_messages_valid.jsonl \
-  --output-dir outputs/omnicoder9b-quantum-paper-router-warmup-fastiter \
+  --output-dir outputs/qwen36-27b-quantum-paper-router-warmup-fastiter \
   --device npu \
   --max-length 1024 \
   --per-device-batch-size 1 \
@@ -31,20 +31,17 @@ torchrun --nproc_per_node=8 training/qwen_sft_peft.py \
   --max-steps 8 \
   --eval-steps 8 \
   --log-steps 1 \
-  --train-on-completions-only \
-  --target-module-regex '(?:^|\.)(?:router|gate)(?:$|\.)' \
-  --trainable-param-regex 'lora_'
+  --train-on-completions-only
 
 ## SFT
 PYTORCH_NPU_ALLOC_CONF=max_split_size_mb:256 \
 TOKENIZERS_PARALLELISM=false \
-ASCEND_RT_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 \
-torchrun --nproc_per_node=8 training/qwen_sft_peft.py \
-  --model-name models/OmniCoder-9B \
-  --adapter-init outputs/interface-prefix-omnicoder9b-semantic-v4-2npu-true20-20260329T2219CST/adapter \
+ASCEND_RT_VISIBLE_DEVICES=6,7 \
+torchrun --nproc_per_node=2 training/qwen_sft_peft.py \
+  --model-name models/Qwen3.6-27B \
   --train-file data/generated/omnicoder-quantum-generalization-holdout-v1/train.jsonl \
   --eval-file data/generated/omnicoder-quantum-generalization-holdout-v1/eval.jsonl \
-  --output-dir outputs/omnicoder9b-quantum-generalization-sft-8npu-true40-fastiter \
+  --output-dir outputs/qwen36-27b-quantum-generalization-sft-8npu-true40-fastiter \
   --device npu \
   --max-length 512 \
   --per-device-batch-size 1 \
@@ -60,13 +57,13 @@ torchrun --nproc_per_node=8 training/qwen_sft_peft.py \
 ## GRPO
 PYTORCH_NPU_ALLOC_CONF=max_split_size_mb:256 \
 TOKENIZERS_PARALLELISM=false \
-ASCEND_RT_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 \
-torchrun --nproc_per_node=8 --master_port=29531 training/grpo_trainer.py \
-  --model-name models/OmniCoder-9B \
-  --adapter-init outputs/interface-prefix-omnicoder9b-semantic-v4-2npu-true20-20260329T2219CST/adapter \
+ASCEND_RT_VISIBLE_DEVICES=6,7 \
+torchrun --nproc_per_node=2 --master_port=29531 training/grpo_trainer.py \
+  --model-name models/Qwen3.6-27B \
+  --adapter-init outputs/qwen36-27b-quantum-generalization-sft-8npu-true40/adapter \
   --benchmark-file evals/benchmarks/quantum_generalization_holdout_v1.txt \
   --domain-filter quantum \
-  --output-dir outputs/omnicoder9b-quantum-generalization-grpo-8npu-true8-fastiter \
+  --output-dir outputs/qwen36-27b-quantum-generalization-grpo-8npu-true8-fastiter \
   --device npu \
   --group-size 2 \
   --grpo-steps 2 \
@@ -91,10 +88,10 @@ torchrun --nproc_per_node=8 --master_port=29531 training/grpo_trainer.py \
 
 ## JSON
 {
-  "target": "omnicoder9b",
+  "target": "qwen36-27b",
   "resolved_config": {
     "bootstrap_requirements": "training/requirements-huanxin-cpu.txt",
-    "model_name": "models/OmniCoder-9B",
+    "model_name": "models/Qwen3.6-27B",
     "train_file": "data/generated/omnicoder-quantum-generalization-holdout-v1/train.jsonl",
     "eval_file": "data/generated/omnicoder-quantum-generalization-holdout-v1/eval.jsonl",
     "benchmark_file": "evals/benchmarks/quantum_generalization_holdout_v1.txt",
@@ -103,16 +100,19 @@ torchrun --nproc_per_node=8 --master_port=29531 training/grpo_trainer.py \
     "paper_dataset_name": "quantum_paper_router_warmup",
     "paper_train_file": "data/generated/quantum-paper-router-warmup-v1/messages/quantum_paper_router_warmup_messages_train.jsonl",
     "paper_eval_file": "data/generated/quantum-paper-router-warmup-v1/messages/quantum_paper_router_warmup_messages_valid.jsonl",
-    "paper_router_output_dir": "outputs/omnicoder9b-quantum-paper-router-warmup-fastiter",
-    "paper_router_target_module_regex": "(?:^|\\.)(?:router|gate)(?:$|\\.)",
-    "paper_router_trainable_param_regex": "lora_",
+    "paper_router_output_dir": "outputs/qwen36-27b-quantum-paper-router-warmup-fastiter",
+    "paper_router_target_module_regex": null,
+    "paper_router_trainable_param_regex": null,
     "paper_router_freeze_param_regex": null,
-    "sft_adapter_init": "outputs/interface-prefix-omnicoder9b-semantic-v4-2npu-true20-20260329T2219CST/adapter",
-    "grpo_adapter_init": "outputs/interface-prefix-omnicoder9b-semantic-v4-2npu-true20-20260329T2219CST/adapter",
-    "sft_output_dir": "outputs/omnicoder9b-quantum-generalization-sft-8npu-true40-fastiter",
-    "grpo_output_dir": "outputs/omnicoder9b-quantum-generalization-grpo-8npu-true8-fastiter",
+    "sft_adapter_init": null,
+    "grpo_adapter_init": "outputs/qwen36-27b-quantum-generalization-sft-8npu-true40/adapter",
+    "sft_output_dir": "outputs/qwen36-27b-quantum-generalization-sft-8npu-true40-fastiter",
+    "grpo_output_dir": "outputs/qwen36-27b-quantum-generalization-grpo-8npu-true8-fastiter",
     "iteration_profile": "fast",
-    "profile_headline": "under 45 minutes per run, fast-iteration prioritized, all 8 NPUs when available",
+    "profile_headline": "under 45 minutes per run, fast-iteration prioritized on 2 NPUs; standard 8-NPU scale-up remains available",
+    "visible_devices": "6,7",
+    "nproc_per_node": "2",
+    "required_idle_npus": "2",
     "paper_router_max_steps": "8",
     "paper_router_eval_steps": "8",
     "paper_router_log_steps": "1",
@@ -128,9 +128,9 @@ torchrun --nproc_per_node=8 --master_port=29531 training/grpo_trainer.py \
   },
   "bootstrap": "python3 -m pip install --upgrade pip\npython3 -m pip install -r training/requirements-huanxin-cpu.txt",
   "paper_dataset": "python3 scripts/build_paper_sft_dataset.py \\\n  paper \\\n  --output-dir data/generated/quantum-paper-router-warmup-v1 \\\n  --dataset-name quantum_paper_router_warmup",
-  "paper_router_warmup": "PYTORCH_NPU_ALLOC_CONF=max_split_size_mb:256 \\\nTOKENIZERS_PARALLELISM=false \\\nASCEND_RT_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 \\\ntorchrun --nproc_per_node=8 training/qwen_sft_peft.py \\\n  --model-name models/OmniCoder-9B \\\n  --train-file data/generated/quantum-paper-router-warmup-v1/messages/quantum_paper_router_warmup_messages_train.jsonl \\\n  --eval-file data/generated/quantum-paper-router-warmup-v1/messages/quantum_paper_router_warmup_messages_valid.jsonl \\\n  --output-dir outputs/omnicoder9b-quantum-paper-router-warmup-fastiter \\\n  --device npu \\\n  --max-length 1024 \\\n  --per-device-batch-size 1 \\\n  --gradient-accumulation-steps 2 \\\n  --learning-rate 1e-4 \\\n  --num-epochs 1 \\\n  --max-steps 8 \\\n  --eval-steps 8 \\\n  --log-steps 1 \\\n  --train-on-completions-only \\\n  --target-module-regex '(?:^|\\.)(?:router|gate)(?:$|\\.)' \\\n  --trainable-param-regex 'lora_'",
-  "sft": "PYTORCH_NPU_ALLOC_CONF=max_split_size_mb:256 \\\nTOKENIZERS_PARALLELISM=false \\\nASCEND_RT_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 \\\ntorchrun --nproc_per_node=8 training/qwen_sft_peft.py \\\n  --model-name models/OmniCoder-9B \\\n  --adapter-init outputs/interface-prefix-omnicoder9b-semantic-v4-2npu-true20-20260329T2219CST/adapter \\\n  --train-file data/generated/omnicoder-quantum-generalization-holdout-v1/train.jsonl \\\n  --eval-file data/generated/omnicoder-quantum-generalization-holdout-v1/eval.jsonl \\\n  --output-dir outputs/omnicoder9b-quantum-generalization-sft-8npu-true40-fastiter \\\n  --device npu \\\n  --max-length 512 \\\n  --per-device-batch-size 1 \\\n  --gradient-accumulation-steps 2 \\\n  --learning-rate 2e-4 \\\n  --num-epochs 1 \\\n  --max-steps 12 \\\n  --eval-steps 6 \\\n  --log-steps 1 \\\n  --train-on-completions-only \\\n  --research-methods verifier_guided_repair_curriculum ast_anchor_interface_grounding",
-  "grpo": "PYTORCH_NPU_ALLOC_CONF=max_split_size_mb:256 \\\nTOKENIZERS_PARALLELISM=false \\\nASCEND_RT_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 \\\ntorchrun --nproc_per_node=8 --master_port=29531 training/grpo_trainer.py \\\n  --model-name models/OmniCoder-9B \\\n  --adapter-init outputs/interface-prefix-omnicoder9b-semantic-v4-2npu-true20-20260329T2219CST/adapter \\\n  --benchmark-file evals/benchmarks/quantum_generalization_holdout_v1.txt \\\n  --domain-filter quantum \\\n  --output-dir outputs/omnicoder9b-quantum-generalization-grpo-8npu-true8-fastiter \\\n  --device npu \\\n  --group-size 2 \\\n  --grpo-steps 2 \\\n  --max-new-tokens 96 \\\n  --max-seq-length 1536 \\\n  --temperature 0.4 \\\n  --lr 5e-6 \\\n  --kl-coeff 0.05 \\\n  --reward-pass-weight 0.6 \\\n  --reward-syntax-weight 0.1 \\\n  --reward-interface-weight 0.15 \\\n  --reward-verifier-weight 0.15 \\\n  --ratio-clip-log-delta 4.0 \\\n  --logit-clip 30.0 \\\n  --min-reward-std 0.02 \\\n  --curriculum-ema-decay 0.8 \\\n  --curriculum-min-weight 0.1 \\\n  --quantum-priority 1.1 \\\n  --curriculum-uncertainty-bonus 0.2 \\\n  --log-steps 1 \\\n  --research-methods clause_aware_verifier_reward ast_anchor_interface_grounding",
+  "paper_router_warmup": "PYTORCH_NPU_ALLOC_CONF=max_split_size_mb:256 \\\nTOKENIZERS_PARALLELISM=false \\\nASCEND_RT_VISIBLE_DEVICES=6,7 \\\ntorchrun --nproc_per_node=2 training/qwen_sft_peft.py \\\n  --model-name models/Qwen3.6-27B \\\n  --train-file data/generated/quantum-paper-router-warmup-v1/messages/quantum_paper_router_warmup_messages_train.jsonl \\\n  --eval-file data/generated/quantum-paper-router-warmup-v1/messages/quantum_paper_router_warmup_messages_valid.jsonl \\\n  --output-dir outputs/qwen36-27b-quantum-paper-router-warmup-fastiter \\\n  --device npu \\\n  --max-length 1024 \\\n  --per-device-batch-size 1 \\\n  --gradient-accumulation-steps 2 \\\n  --learning-rate 1e-4 \\\n  --num-epochs 1 \\\n  --max-steps 8 \\\n  --eval-steps 8 \\\n  --log-steps 1 \\\n  --train-on-completions-only",
+  "sft": "PYTORCH_NPU_ALLOC_CONF=max_split_size_mb:256 \\\nTOKENIZERS_PARALLELISM=false \\\nASCEND_RT_VISIBLE_DEVICES=6,7 \\\ntorchrun --nproc_per_node=2 training/qwen_sft_peft.py \\\n  --model-name models/Qwen3.6-27B \\\n  --train-file data/generated/omnicoder-quantum-generalization-holdout-v1/train.jsonl \\\n  --eval-file data/generated/omnicoder-quantum-generalization-holdout-v1/eval.jsonl \\\n  --output-dir outputs/qwen36-27b-quantum-generalization-sft-8npu-true40-fastiter \\\n  --device npu \\\n  --max-length 512 \\\n  --per-device-batch-size 1 \\\n  --gradient-accumulation-steps 2 \\\n  --learning-rate 2e-4 \\\n  --num-epochs 1 \\\n  --max-steps 12 \\\n  --eval-steps 6 \\\n  --log-steps 1 \\\n  --train-on-completions-only \\\n  --research-methods verifier_guided_repair_curriculum ast_anchor_interface_grounding",
+  "grpo": "PYTORCH_NPU_ALLOC_CONF=max_split_size_mb:256 \\\nTOKENIZERS_PARALLELISM=false \\\nASCEND_RT_VISIBLE_DEVICES=6,7 \\\ntorchrun --nproc_per_node=2 --master_port=29531 training/grpo_trainer.py \\\n  --model-name models/Qwen3.6-27B \\\n  --adapter-init outputs/qwen36-27b-quantum-generalization-sft-8npu-true40/adapter \\\n  --benchmark-file evals/benchmarks/quantum_generalization_holdout_v1.txt \\\n  --domain-filter quantum \\\n  --output-dir outputs/qwen36-27b-quantum-generalization-grpo-8npu-true8-fastiter \\\n  --device npu \\\n  --group-size 2 \\\n  --grpo-steps 2 \\\n  --max-new-tokens 96 \\\n  --max-seq-length 1536 \\\n  --temperature 0.4 \\\n  --lr 5e-6 \\\n  --kl-coeff 0.05 \\\n  --reward-pass-weight 0.6 \\\n  --reward-syntax-weight 0.1 \\\n  --reward-interface-weight 0.15 \\\n  --reward-verifier-weight 0.15 \\\n  --ratio-clip-log-delta 4.0 \\\n  --logit-clip 30.0 \\\n  --min-reward-std 0.02 \\\n  --curriculum-ema-decay 0.8 \\\n  --curriculum-min-weight 0.1 \\\n  --quantum-priority 1.1 \\\n  --curriculum-uncertainty-bonus 0.2 \\\n  --log-steps 1 \\\n  --research-methods clause_aware_verifier_reward ast_anchor_interface_grounding",
   "papers": [
     "research/papers/timeboxed_eight_npu_sft/paper.md",
     "research/papers/timeboxed_eight_npu_grpo/paper.md",

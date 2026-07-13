@@ -1,0 +1,8 @@
+{
+  "id": "quantum_qaoa_maxcut_triangle",
+  "title": "QAOA Max-Cut on a triangle graph",
+  "expected_substrings": [
+    "Binary solution: ",
+    "Max-cut value: 2"
+  ]
+}

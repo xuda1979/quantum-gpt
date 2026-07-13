@@ -10,6 +10,7 @@ Build an R&D program for a quantum-coding LLM that can write high-quality quantu
 - Next-round base model for all SFT and reinforcement-learning training: **Qwen3.6-27B** (`Qwen/Qwen3.6-27B`, local/remote path `models/Qwen3.6-27B`)
 - Historical/alternate target: **OmniCoder-9B** (`models/OmniCoder-9B`), retained for comparison and legacy adapter analysis
 - Near-term orchestration model: yunwu/gpt-5.4
+- Codex `--model glm5.2` / `-m glm5.2` is a special alias for Huanxin GLM5.2 through the Claude provider/profile setting, not yunwu.
 - Training hardware: Huanxin `AI` train-dev environment
 
 ## Current Objective

@@ -1,0 +1,11 @@
+{
+  "id": "quantum_science_error_mitigation_zne_explanation",
+  "name": "Step through Zero-Noise Extrapolation (ZNE) error mitigation...",
+  "domain": "quantum_science",
+  "category": "walkthrough",
+  "level": "L3",
+  "field": "error_mitigation",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py",
+  "question": "Step through Zero-Noise Extrapolation (ZNE) error mitigation. Explain how the quantum circuit is run at amplified noise levels (e.g. by folding gates), how the expectation value is measured at each level, and how the zero-noise value is extrapolated."
+}

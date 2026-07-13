@@ -25,7 +25,13 @@ from typing import Any
 import torch
 import transformers
 from peft import PeftModel
-from transformers import AutoConfig, AutoModelForCausalLM, AutoProcessor, AutoTokenizer, PreTrainedTokenizerFast
+from transformers import (
+    AutoConfig,
+    AutoModelForCausalLM,
+    AutoProcessor,
+    AutoTokenizer,
+    PreTrainedTokenizerFast,
+)
 
 # This transformers build logs ``Model config {config}`` at INFO during
 # AutoConfig.from_pretrained, which triggers PretrainedConfig.__repr__ ->
@@ -78,10 +84,12 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from training.runtime_overlay import register_qwen35_moe_runtime
-from training.text_preprocessor_backend import load_text_preprocessor_backend
 from training.model_backend import select_transformers_model_loader
-
+from training.runtime_overlay import (
+    apply_transformers_peft_compat_shims,
+    register_qwen35_moe_runtime,
+)
+from training.text_preprocessor_backend import load_text_preprocessor_backend
 
 TASK_IDS = [
     "quantum_gate_alias_normalization",
@@ -147,7 +155,9 @@ def config_get(config: Any, key: str) -> Any:
 
 def build_balanced_npu_layer_device_map(config: Any, devices: list[int]) -> dict[str, int]:
     text_config = config_get(config, "text_config") or config_get(config, "llm_config") or config
-    num_layers = config_get(text_config, "num_hidden_layers") or config_get(text_config, "num_layers")
+    num_layers = config_get(text_config, "num_hidden_layers") or config_get(
+        text_config, "num_layers"
+    )
     if not num_layers:
         raise SystemExit("Cannot build device map: num_hidden_layers missing from config")
     ordinals = list(range(len(devices)))
@@ -180,7 +190,9 @@ def build_balanced_npu_layer_device_map(config: Any, devices: list[int]) -> dict
     return device_map
 
 
-def filter_device_map_to_existing_modules(device_map: dict[str, int], model_loader: Any, model_config: Any) -> dict[str, int]:
+def filter_device_map_to_existing_modules(
+    device_map: dict[str, int], model_loader: Any, model_config: Any
+) -> dict[str, int]:
     """Prune device_map keys that match no submodule of the model.
 
     Strict accelerate builds raise "device_map keys do not match any submodules"
@@ -200,12 +212,19 @@ def filter_device_map_to_existing_modules(device_map: dict[str, int], model_load
         filtered = {key: dev for key, dev in device_map.items() if key in valid_names}
         return filtered or device_map
     except Exception as exc:  # noqa: BLE001
-        print(json.dumps({"stage": "device_map_filter_skipped", "error": f"{type(exc).__name__}: {exc}"}), flush=True)
+        print(
+            json.dumps(
+                {"stage": "device_map_filter_skipped", "error": f"{type(exc).__name__}: {exc}"}
+            ),
+            flush=True,
+        )
         return device_map
 
 
 def load_backend(model_path: Path):
-    backend = load_text_preprocessor_backend(str(model_path), AutoTokenizer, AutoProcessor, PreTrainedTokenizerFast)
+    backend = load_text_preprocessor_backend(
+        str(model_path), AutoTokenizer, AutoProcessor, PreTrainedTokenizerFast
+    )
     tokenizer = backend.text_backend
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
@@ -252,6 +271,8 @@ def load_35b_model(model_path: Path, args: argparse.Namespace):
         auto_config_cls=AutoConfig,
         auto_model_for_causal_lm_cls=AutoModelForCausalLM,
     )
+    # Apply compat shims BEFORE model loading to prevent OOM from caching_allocator_warmup
+    apply_transformers_peft_compat_shims(transformers)
     model_config = AutoConfig.from_pretrained(str(model_path), trust_remote_code=True)
     _coerce_sub_configs(model_config)
     devices = visible_npus()
@@ -296,22 +317,33 @@ def first_parameter_device(model: Any, fallback: str) -> Any:
 
 def render_prompt(backend: Any, prompt: str) -> str:
     messages = [
-        {"role": "system", "content": "Return only a complete Python candidate.py file. No markdown. No explanation."},
+        {
+            "role": "system",
+            "content": "Return only a complete Python candidate.py file. No markdown. No explanation.",
+        },
         {"role": "user", "content": prompt},
     ]
     renderer = backend.render_backend
     if hasattr(renderer, "apply_chat_template"):
         try:
-            return renderer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True, enable_thinking=False)
+            return renderer.apply_chat_template(
+                messages, tokenize=False, add_generation_prompt=True, enable_thinking=False
+            )
         except TypeError:
-            return renderer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+            return renderer.apply_chat_template(
+                messages, tokenize=False, add_generation_prompt=True
+            )
     return "\n\n".join(f"{m['role'].upper()}: {m['content']}" for m in messages)
 
 
 def build_prompt(task_dir: Path, meta: dict[str, Any]) -> str:
     tests = (task_dir / meta.get("test_file", "tests.py")).read_text(encoding="utf-8")
     candidate_name = meta.get("candidate_file", "candidate.py")
-    existing = (task_dir / candidate_name).read_text(encoding="utf-8") if (task_dir / candidate_name).exists() else ""
+    existing = (
+        (task_dir / candidate_name).read_text(encoding="utf-8")
+        if (task_dir / candidate_name).exists()
+        else ""
+    )
     return (
         f"Task: {meta['name']}\n"
         f"Domain: {meta['domain']}\n"
@@ -336,7 +368,9 @@ def sanitize_code(text: str) -> str:
     return value + "\n"
 
 
-def generate_code(model: Any, backend: Any, prompt: str, device: Any, max_new_tokens: int) -> tuple[str, str]:
+def generate_code(
+    model: Any, backend: Any, prompt: str, device: Any, max_new_tokens: int
+) -> tuple[str, str]:
     prompt_text = render_prompt(backend, prompt)
     tokens = backend.text_backend(prompt_text, return_tensors="pt")
     prompt_len = tokens["input_ids"].shape[1]
@@ -349,7 +383,9 @@ def generate_code(model: Any, backend: Any, prompt: str, device: Any, max_new_to
             pad_token_id=backend.text_backend.eos_token_id,
             eos_token_id=backend.text_backend.eos_token_id,
         )
-    raw = backend.text_backend.decode(output[0, prompt_len:].detach().cpu(), skip_special_tokens=True)
+    raw = backend.text_backend.decode(
+        output[0, prompt_len:].detach().cpu(), skip_special_tokens=True
+    )
     return sanitize_code(raw), raw
 
 
@@ -362,7 +398,9 @@ def load_test_module(path: Path):
     return module
 
 
-def run_single_file_test(task_dir: Path, meta: dict[str, Any], code: str, out_path: Path) -> dict[str, Any]:
+def run_single_file_test(
+    task_dir: Path, meta: dict[str, Any], code: str, out_path: Path
+) -> dict[str, Any]:
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(code, encoding="utf-8")
     try:
@@ -373,13 +411,26 @@ def run_single_file_test(task_dir: Path, meta: dict[str, Any], code: str, out_pa
         return {"passed": False, "details": [f"{type(exc).__name__}: {exc}"]}
 
 
-def run_model(model_name: str, model: Any, backend: Any, tasks: list[tuple[Path, dict[str, Any]]], args: argparse.Namespace) -> list[dict[str, Any]]:
+def run_model(
+    model_name: str,
+    model: Any,
+    backend: Any,
+    tasks: list[tuple[Path, dict[str, Any]]],
+    args: argparse.Namespace,
+) -> list[dict[str, Any]]:
     records = []
     device = first_parameter_device(model, args.device)
     for index, (task_json, meta) in enumerate(tasks, 1):
-        print(json.dumps({"stage": "generate", "model": model_name, "index": index, "task": meta["id"]}), flush=True)
+        print(
+            json.dumps(
+                {"stage": "generate", "model": model_name, "index": index, "task": meta["id"]}
+            ),
+            flush=True,
+        )
         task_dir = task_json.parent
-        code, raw = generate_code(model, backend, build_prompt(task_dir, meta), device, args.max_new_tokens)
+        code, raw = generate_code(
+            model, backend, build_prompt(task_dir, meta), device, args.max_new_tokens
+        )
         candidate_path = args.output.parent / "pass1_candidates" / model_name / f"{meta['id']}.py"
         result = run_single_file_test(task_dir, meta, code, candidate_path)
         records.append(
@@ -407,13 +458,20 @@ def summarize(records: list[dict[str, Any]]) -> dict[str, Any]:
         by_model[record["model"]].append(record)
     for model_name, items in by_model.items():
         passed = sum(1 for item in items if item["passed"])
-        out[model_name] = {"pass_at_1": f"{passed}/{len(items)}", "pass_rate": passed / max(1, len(items)), "by_domain": {}}
+        out[model_name] = {
+            "pass_at_1": f"{passed}/{len(items)}",
+            "pass_rate": passed / max(1, len(items)),
+            "by_domain": {},
+        }
         domains: dict[str, list[dict[str, Any]]] = defaultdict(list)
         for item in items:
             domains[item["domain"]].append(item)
         for domain, subset in domains.items():
             domain_passed = sum(1 for item in subset if item["passed"])
-            out[model_name]["by_domain"][domain] = {"pass_at_1": f"{domain_passed}/{len(subset)}", "pass_rate": domain_passed / max(1, len(subset))}
+            out[model_name]["by_domain"][domain] = {
+                "pass_at_1": f"{domain_passed}/{len(subset)}",
+                "pass_rate": domain_passed / max(1, len(subset)),
+            }
     return out
 
 
@@ -458,7 +516,13 @@ def main() -> int:
     tmp = args.output.with_suffix(args.output.suffix + ".tmp")
     tmp.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     tmp.replace(args.output)
-    print(json.dumps({"stage": "done", "output": str(args.output), "summary": payload["summary"]}, ensure_ascii=False), flush=True)
+    print(
+        json.dumps(
+            {"stage": "done", "output": str(args.output), "summary": payload["summary"]},
+            ensure_ascii=False,
+        ),
+        flush=True,
+    )
     return 0
 
 

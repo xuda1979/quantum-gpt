@@ -1,0 +1,38 @@
+{
+  "name": "agentic_private_bench_v1",
+  "purpose": "contamination-resistant private software-engineering benchmark",
+  "holdout_policy": {
+    "trainable": false,
+    "teacher_visible": false,
+    "prompt_tuning_visible": false,
+    "freeze_by_repo_sha": true,
+    "hidden_tests_required": true
+  },
+  "target_counts": {
+    "bug_fixes": 300,
+    "multi_file_refactors": 150,
+    "feature_additions": 150,
+    "test_additions": 100,
+    "ci_build_failures": 100,
+    "frontend_browser_tasks": 100,
+    "security_hardening": 100
+  },
+  "metrics": [
+    "pass_at_1",
+    "pass_at_k",
+    "four_of_four_reliability",
+    "tool_efficiency",
+    "patch_size",
+    "test_discipline",
+    "regression_risk",
+    "blind_human_review_score"
+  ],
+  "public_comparison_layer": [
+    "SWE-Bench Pro Public",
+    "Terminal-Bench 2.0",
+    "LiveCodeBench",
+    "SWE-bench Multilingual",
+    "OSWorld or browser-task subset",
+    "BFCL or ToolBench-style function calling"
+  ]
+}

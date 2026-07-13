@@ -1,0 +1,8 @@
+{
+  "id": "software_regex_capturing_group_extractor",
+  "name": "Regex named-capturing-group extractor for log-like lines",
+  "domain": "software",
+  "category": "string_parsing",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

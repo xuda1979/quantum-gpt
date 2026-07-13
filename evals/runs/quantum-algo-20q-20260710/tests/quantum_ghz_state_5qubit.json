@@ -1,0 +1,7 @@
+{
+  "id": "quantum_ghz_state_5qubit",
+  "title": "5-qubit GHZ state measurement",
+  "expected_substrings": [
+    "P(all-0 or all-1) ="
+  ]
+}

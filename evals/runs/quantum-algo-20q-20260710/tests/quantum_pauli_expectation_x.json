@@ -1,0 +1,7 @@
+{
+  "id": "quantum_pauli_expectation_x",
+  "title": "<X> expectation value for |+>",
+  "expected_substrings": [
+    "<X> = 1.000000"
+  ]
+}

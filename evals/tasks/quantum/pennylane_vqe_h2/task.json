@@ -1,0 +1,9 @@
+{
+  "id": "quantum_pennylane_vqe_h2",
+  "name": "PennyLane VQE ground-state energy of H2",
+  "domain": "quantum",
+  "category": "algorithm_implementation",
+  "framework": "pennylane",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

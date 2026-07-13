@@ -7,14 +7,10 @@ def _gemma_conditional_generation_block(
     *,
     path_description: str,
 ) -> str | None:
-    normalized_model_type = str(model_type or "")
-    normalized_architectures = [str(item) for item in architectures or []]
-    if normalized_model_type == "gemma4" and any("ConditionalGeneration" in item for item in normalized_architectures):
-        return (
-            "Gemma 4 checkpoints still require a conditional-generation trainer/backend. "
-            f"{path_description} "
-            "Stop here until a processor-aware conditional-generation backend is implemented."
-        )
+    # Gemma 4 conditional-generation blocker removed 2026-04-13:
+    # transformers >= 5.6.0.dev0 supports AutoModelForCausalLM loading of
+    # Gemma4ForConditionalGeneration checkpoints for text-only use.
+    # The text-only SFT/GRPO pipeline works with this model class.
     return None
 
 

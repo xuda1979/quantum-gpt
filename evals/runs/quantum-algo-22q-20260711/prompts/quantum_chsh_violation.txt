@@ -1,0 +1,16 @@
+Write a complete, runnable Python program using Qiskit 2.x that:
+1. Prepares a Bell state |Phi+> = (|00> + |11>) / sqrt(2) on qubits q0, q1.
+2. Computes the CHSH correlation S = |E(a,b) - E(a,b') + E(a',b) + E(a',b')|
+   where E(theta_a, theta_b) = <sigma_X(theta_a) ⊗ sigma_X(theta_b)> and
+   sigma_X(theta) = cos(theta) X + sin(theta) Z. The optimal angles for
+   |Phi+> are a = 0, a' = pi/2, b = pi/4, b' = -pi/4, giving S = 2*sqrt(2).
+3. For each of the 4 angle pairs (a,b), (a,b'), (a',b), (a',b'), estimate
+   the correlation E by measuring the Bell state in the corresponding
+   product bases: apply RY(-2*theta) to each qubit then measure in Z basis,
+   and compute E = (count_00 + count_11 - count_01 - count_10) / total_shots.
+4. Use StatevectorSampler (>= 2000 shots per angle pair).
+5. In `def main()`, prints:
+     S = <value rounded to 3 decimals>
+     violation: True   (if S > 2.0 else False)
+   Expected: S = 2.828 (approximately) and violation: True.
+Call main() under `if __name__ == "__main__":`.

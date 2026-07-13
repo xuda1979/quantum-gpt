@@ -1,0 +1,45 @@
+{
+  "checked_at": "2026-06-10T13:52:58.328757+00:00",
+  "task": {
+    "name": "as1-isq-sft3-104157",
+    "id": "dt-5415f685ac5c46e686badc0ea212c0df",
+    "status_code": 6,
+    "status": "failed",
+    "submitTime": "2026-06-10 18:42:50",
+    "startTime": "2026-06-10 18:42:55",
+    "endTime": "2026-06-10 18:43:18",
+    "useTime": "00:00:23",
+    "resources": {
+      "cpu": 20,
+      "gpu": 3,
+      "mem": 240,
+      "gpuType": "昇腾910B"
+    }
+  },
+  "dataset": {
+    "raw_rows": 5611,
+    "train_rows": 4488,
+    "eval_rows": 1123,
+    "raw_sha256": "a1a1c69102062c157881f451fd701f836fb40fb4ce858b64200b5a34c843db4f",
+    "train_sha256": "3b2002b4def2646d0d1f4c868ce0523aa34490024ce28b9e191d59d4a9fdf393",
+    "eval_sha256": "ab7dbc3173a2fdf3d9320657d90a78396e52fb3fc4e73461a6de47986248a695"
+  },
+  "training_result": {
+    "finetuned_adapter_available": false,
+    "metrics_available": false,
+    "evaluation_comparison_available": false,
+    "reason": "training task failed before producing adapter/metrics; pod log UI returned no stdout lines for the failed pod"
+  },
+  "observed_failure": {
+    "pod": "dt-5415f685ac5c46e686badc0ea212c0df-master-49d096b39e1c-0",
+    "pod_status": 6,
+    "isOomKilled": 0,
+    "pod_log_response": "code=0 loadMore=false; UI body says currently no logs",
+    "likely_first_blocker": "submitted command performs rclone copy from INER S3 inside task pod; previous ASI1 task pods timed out against INER endpoint, and this failed before trainer marker/metrics"
+  },
+  "next_fix": [
+    "avoid task-pod INER pull; materialize code/data in ASI1 dev filesystem or use Huanxin dataset/file mount",
+    "launch SFT only after remote root contains training/qwen_sft_peft.py and train/eval JSONL",
+    "then run base and adapter eval on data/generated/isq-cot-sft-80-20-v1/eval_chatml.jsonl"
+  ]
+}

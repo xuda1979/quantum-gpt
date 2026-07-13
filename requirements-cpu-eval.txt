@@ -1,0 +1,42 @@
+# CPU-only local eval + verifier stack for quantum-gpt.
+#
+# Purpose: pin the packages used to *execute and verify* candidate quantum
+# code locally so that the local pass/fail signal matches the NPU-side
+# verifier in evals/subsystem/harness.py. This is NOT a training
+# requirements file — training deps live in training/requirements-*.txt.
+#
+# Install:
+#   uv pip install -r requirements-cpu-eval.txt
+# or:
+#   python3 -m pip install -r requirements-cpu-eval.txt
+#
+# Python: >=3.10 (developed on 3.11/3.12; 3.14 verified for eval-only).
+
+# --- Core scientific stack ---
+numpy>=1.24,<3.0
+scipy>=1.10
+networkx>=3.0
+sympy>=1.12
+
+# --- Quantum frameworks (eval verifiers) ---
+# Pin major versions so symbol locations stay stable across local and NPU runs.
+qiskit>=1.2,<3.0
+qiskit-aer>=0.14
+pennylane>=0.36
+cirq>=1.4
+
+# --- Data + schema ---
+pydantic>=2.5
+jsonschema>=4.20
+
+# --- Eval harness deps ---
+# tqdm and requests are already common; pin loosely.
+tqdm>=4.66
+requests>=2.31
+
+# --- Test + lint tooling ---
+pytest>=8.0
+ruff>=0.6
+
+# --- Optional but useful for local inspection ---
+huggingface-hub>=0.34

@@ -6,6 +6,8 @@ from __future__ import annotations
 import argparse
 import base64
 import json
+import re
+import shlex
 import subprocess
 import sys
 import time
@@ -21,7 +23,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--run-dir",
         type=Path,
-        default=ROOT / "evals/runs/omnicoder-quantum-generalization-holdout-base-omnicoder9b-20260410",
+        default=ROOT
+        / "evals/runs/omnicoder-quantum-generalization-holdout-base-omnicoder9b-20260410",
     )
     parser.add_argument("--base-model", type=Path, default=ROOT / "models/OmniCoder-9B")
     parser.add_argument(
@@ -35,6 +38,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--remote-log", default="/tmp/omnicoder_base_prefill_eval.log")
     parser.add_argument("--remote-prefill-json", default="/tmp/omnicoder_base_prefill_payload.json")
     parser.add_argument("--remote-output-json", default="/tmp/omnicoder_base_prefill_outputs.json")
+    parser.add_argument("--remote-eval-py", default="/tmp/omnicoder_base_prefill_eval.py")
     parser.add_argument("--timeout-seconds", type=int, default=3600)
     return parser.parse_args()
 
@@ -46,14 +50,14 @@ def run_local(cmd: list[str], *, cwd: Path = ROOT) -> subprocess.CompletedProces
 def ai2_exec(command: str, *, wait_ms: int = 30000, timeout_ms: int = 45000) -> dict:
     result = run_local(
         [
-            sys.executable,
-            str(ROOT / "scripts/ai2_ipc_request.py"),
-            "--command",
-            command,
+            "node",
+            str(ROOT / "browser-automation/huanxin_shell_exec.js"),
+            "ai2",
+            "--require-daemon",
             "--wait-ms",
             str(wait_ms),
-            "--timeout-ms",
-            str(timeout_ms),
+            "--command",
+            command,
         ]
     )
     return json.loads(result.stdout)
@@ -65,11 +69,61 @@ def ensure_ok(response: dict) -> dict:
     return response
 
 
+def extract_ai2_output(response: dict) -> str:
+    after = response.get("after")
+    if isinstance(after, str):
+        matches = list(
+            re.finditer(
+                r"(?ms)^(__OC_[A-Za-z0-9_]+_START__)\n(.*?)\n^(__OC_[A-Za-z0-9_]+_END__)$",
+                after,
+            )
+        )
+        if matches:
+            return matches[-1].group(2).strip()
+    direct_output = response.get("output")
+    if isinstance(direct_output, str) and direct_output.strip():
+        return direct_output.strip()
+    return ""
+
+
+def ai2_exec_output(command: str, *, wait_ms: int = 30000, timeout_ms: int = 45000) -> str:
+    return extract_ai2_output(ensure_ok(ai2_exec(command, wait_ms=wait_ms, timeout_ms=timeout_ms)))
+
+
+def upload_file_b64_in_chunks(
+    local_path: Path, remote_path: str, *, chunk_size: int = 8000
+) -> None:
+    payload_b64 = base64.b64encode(local_path.read_bytes()).decode("ascii")
+    ai2_exec_output(f": > {shlex.quote(remote_path)}.b64", wait_ms=15000, timeout_ms=30000)
+    for start in range(0, len(payload_b64), chunk_size):
+        chunk = payload_b64[start : start + chunk_size]
+        append_cmd = (
+            f"python3 -c \"from pathlib import Path; "
+            f"Path({(remote_path + '.b64')!r}).open('a', encoding='ascii').write({chunk!r})\""
+        )
+        ai2_exec_output(append_cmd, wait_ms=15000, timeout_ms=30000)
+    decode_cmd = (
+        "python3 -c \"import base64; from pathlib import Path; "
+        f"src=Path({(remote_path + '.b64')!r}); "
+        f"dst=Path({remote_path!r}); "
+        "dst.write_bytes(base64.b64decode(src.read_text(encoding='ascii'))); "
+        "print(dst.stat().st_size)\""
+    )
+    size_output = ai2_exec_output(decode_cmd, wait_ms=15000, timeout_ms=30000)
+    if str(local_path.stat().st_size) not in size_output:
+        raise RuntimeError(
+            f"Remote write size mismatch for {remote_path}: expected {local_path.stat().st_size}, got {size_output!r}"
+        )
+
+
 def main() -> int:
     args = parse_args()
 
     local_prefill_json = Path("/private/tmp/omnicoder_base_prefill_local.json")
     local_remote_outputs_json = Path("/private/tmp/omnicoder_base_prefill_outputs_remote.json")
+    local_remote_eval_py = Path("/private/tmp/omnicoder_base_prefill_eval_remote.py")
+    remote_eval_pyc = f"{args.remote_eval_py}c"
+    remote_runtime_overlay = "/root/work/quantum-gpt/training/runtime_overlay.py"
 
     prepare = run_local(
         [
@@ -85,30 +139,14 @@ def main() -> int:
     )
     print(prepare.stdout.strip())
 
-    payload = json.loads(local_prefill_json.read_text(encoding="utf-8"))
-    min_payload = {
-        "pad_token_id": payload["pad_token_id"],
-        "eos_token_id": payload["eos_token_id"],
-        "records": [
-            {
-                "task_id": record["task_id"],
-                "candidate_file": record["candidate_file"],
-                "input_ids": record["input_ids"],
-            }
-            for record in payload["records"]
-        ],
-    }
-    payload_b64 = base64.b64encode(
-        json.dumps(min_payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
-    ).decode("ascii")
-
-    write_payload_cmd = (
-        "cd /root/root/work/quantum-gpt && "
-        f"python3 -c 'import base64,pathlib; pathlib.Path(\"{args.remote_prefill_json}\").write_bytes(base64.b64decode(\"{payload_b64}\"))' && "
-        f"python3 -c 'import json; obj=json.load(open(\"{args.remote_prefill_json}\")); print(obj[\"pad_token_id\"], obj[\"eos_token_id\"], len(obj[\"records\"]))'"
+    upload_file_b64_in_chunks(ROOT / "training/runtime_overlay.py", remote_runtime_overlay)
+    upload_file_b64_in_chunks(local_prefill_json, args.remote_prefill_json)
+    verify_payload_cmd = (
+        'python3 -c "import json; '
+        f"obj=json.load(open({args.remote_prefill_json!r}, encoding='utf-8')); "
+        "print(obj['pad_token_id'], obj['eos_token_id'], len(obj['records']))\""
     )
-    write_response = ensure_ok(ai2_exec(write_payload_cmd, wait_ms=30000, timeout_ms=60000))
-    print(write_response["output"].strip())
+    print(ai2_exec_output(verify_payload_cmd, wait_ms=15000, timeout_ms=30000))
 
     remote_eval_code = f"""
 import json
@@ -135,7 +173,7 @@ outputs = []
 for index, record in enumerate(payload['records'], start=1):
     print(json.dumps({{'stage': 'generate', 'index': index, 'total': len(payload['records']), 'task_id': record['task_id']}}, ensure_ascii=False), flush=True)
     input_ids = torch.tensor([record['input_ids']], dtype=torch.long, device={args.device!r})
-    attention_mask = torch.ones_like(input_ids)
+    attention_mask = torch.tensor([record['attention_mask']], dtype=torch.long, device={args.device!r})
     with torch.inference_mode():
         generated = model.generate(
             input_ids=input_ids,
@@ -156,41 +194,48 @@ Path({args.remote_output_json!r}).write_text(
 )
 print(json.dumps({{'stage': 'done', 'output_json': {args.remote_output_json!r}}}, ensure_ascii=False), flush=True)
 """
-    remote_eval_b64 = base64.b64encode(remote_eval_code.encode("utf-8")).decode("ascii")
+    local_remote_eval_py.write_text(remote_eval_code, encoding="utf-8")
+    upload_file_b64_in_chunks(local_remote_eval_py, args.remote_eval_py)
+
     launch_cmd = (
-        "cd /root/root/work/quantum-gpt && "
-        f"rm -f {args.remote_log} {args.remote_output_json} && "
-        "export QUANTUM_TRANSFORMERS_RUNTIME_SRC=/root/root/work/quantum-gpt/artifacts/runtime-bundles/omnicoder-qwen35-runtime-c585eea/transformers-src/src && "
+        "cd /root/work/quantum-gpt && "
+        f"rm -f {shlex.quote(args.remote_log)} {shlex.quote(args.remote_output_json)} {shlex.quote(remote_eval_pyc)} && "
+        "export QUANTUM_TRANSFORMERS_RUNTIME_SRC=/root/work/quantum-gpt/artifacts/runtime-bundles/omnicoder-qwen35-runtime-c585eea/transformers-src/src && "
         "export QUANTUM_HF_HUB_COMPAT_VERSION=1.8.0 && "
         "export QUANTUM_RUNTIME_HTTPX_STUB=0 && "
         f"export ASCEND_RT_VISIBLE_DEVICES={args.visible_devices} && "
-        f"nohup python3 -c 'import base64; exec(base64.b64decode(\"{remote_eval_b64}\"))' > {args.remote_log} 2>&1 < /dev/null & "
+        f"nohup python3 {shlex.quote(args.remote_eval_py)} "
+        f"> {shlex.quote(args.remote_log)} 2>&1 < /dev/null & "
         "echo PID:$!"
     )
-    launch_response = ensure_ok(ai2_exec(launch_cmd, wait_ms=15000, timeout_ms=45000))
-    print(launch_response["output"].strip())
+    print(ai2_exec_output(launch_cmd, wait_ms=15000, timeout_ms=45000))
 
     started = time.time()
     while True:
         status_cmd = (
-            "cd /root/root/work/quantum-gpt && "
-            f"if [ -f {args.remote_output_json} ]; then echo OUTPUT_READY; fi && "
-            f"tail -n 80 {args.remote_log} 2>/dev/null || echo NO_LOG"
+            "cd /root/work/quantum-gpt && "
+            f"if [ -f {shlex.quote(args.remote_output_json)} ]; then echo OUTPUT_READY; fi; "
+            f"tail -n 80 {shlex.quote(args.remote_log)} 2>/dev/null || echo NO_LOG"
         )
-        status_response = ensure_ok(ai2_exec(status_cmd, wait_ms=15000, timeout_ms=45000))
-        status_output = status_response.get("output", "")
+        status_output = ai2_exec_output(status_cmd, wait_ms=15000, timeout_ms=45000)
         print(status_output.strip())
         if "OUTPUT_READY" in status_output and '"stage": "done"' in status_output:
             break
-        if "Traceback" in status_output or "ERR99999" in status_output or "Exception:" in status_output:
+        if (
+            "Traceback" in status_output
+            or "ERR99999" in status_output
+            or "Exception:" in status_output
+        ):
             raise RuntimeError(status_output)
         if time.time() - started > args.timeout_seconds:
             raise TimeoutError(f"Timed out waiting for remote eval after {args.timeout_seconds}s")
         time.sleep(args.poll_interval)
 
-    fetch_cmd = f"cat {args.remote_output_json}"
-    fetch_response = ensure_ok(ai2_exec(fetch_cmd, wait_ms=15000, timeout_ms=45000))
-    local_remote_outputs_json.write_text(fetch_response["output"], encoding="utf-8")
+    fetch_cmd = f"cat {shlex.quote(args.remote_output_json)}"
+    local_remote_outputs_json.write_text(
+        ai2_exec_output(fetch_cmd, wait_ms=15000, timeout_ms=45000),
+        encoding="utf-8",
+    )
 
     decode = run_local(
         [

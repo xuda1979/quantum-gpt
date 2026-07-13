@@ -1,0 +1,572 @@
+{
+  "n_tasks": 56,
+  "n_pass": 47,
+  "pass_at_1": 0.8393,
+  "by_task": [
+    {
+      "task_id": "quantum_bell_pair_construction",
+      "name": "Bell pair construction",
+      "domain": "quantum",
+      "category": "circuit_construction",
+      "n_samples": 1,
+      "n_pass_det": 1,
+      "n_pass_llm": 0,
+      "pass_at_1": 1.0
+    },
+    {
+      "task_id": "quantum_binary_measurement_decoder",
+      "name": "Binary measurement decoder",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "n_samples": 1,
+      "n_pass_det": 1,
+      "n_pass_llm": 0,
+      "pass_at_1": 1.0
+    },
+    {
+      "task_id": "quantum_bitstring_maxcut_landscape",
+      "name": "Bitstring MaxCut landscape",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "n_samples": 1,
+      "n_pass_det": 1,
+      "n_pass_llm": 0,
+      "pass_at_1": 1.0
+    },
+    {
+      "task_id": "quantum_braket_bell_state",
+      "name": "Amazon Braket Bell state preparation and parity check",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "n_samples": 1,
+      "n_pass_det": 0,
+      "n_pass_llm": 0,
+      "pass_at_1": 0.0
+    },
+    {
+      "task_id": "quantum_channel_depolarizing",
+      "name": "Depolarizing quantum channel simulation",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "n_samples": 1,
+      "n_pass_det": 1,
+      "n_pass_llm": 0,
+      "pass_at_1": 1.0
+    },
+    {
+      "task_id": "quantum_circuit_depth_optimization",
+      "name": "Greedy circuit depth optimization via ASAP scheduling",
+      "domain": "quantum",
+      "category": "circuit_optimization",
+      "n_samples": 1,
+      "n_pass_det": 1,
+      "n_pass_llm": 0,
+      "pass_at_1": 1.0
+    },
+    {
+      "task_id": "quantum_circuit_phase_repair",
+      "name": "Circuit phase repair from noisy gate stream",
+      "domain": "quantum",
+      "category": "debug_repair",
+      "n_samples": 1,
+      "n_pass_det": 1,
+      "n_pass_llm": 0,
+      "pass_at_1": 1.0
+    },
+    {
+      "task_id": "quantum_cirq_qaoa_line",
+      "name": "Cirq QAOA on a 4-node line graph MaxCut",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "n_samples": 1,
+      "n_pass_det": 0,
+      "n_pass_llm": 0,
+      "pass_at_1": 0.0
+    },
+    {
+      "task_id": "quantum_density_matrix_partial_trace",
+      "name": "Density matrix construction and partial trace",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "n_samples": 1,
+      "n_pass_det": 1,
+      "n_pass_llm": 0,
+      "pass_at_1": 1.0
+    },
+    {
+      "task_id": "quantum_error_correction_shor_9qubit",
+      "name": "Shor 9-qubit error correction code simulation",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "n_samples": 1,
+      "n_pass_det": 1,
+      "n_pass_llm": 0,
+      "pass_at_1": 1.0
+    },
+    {
+      "task_id": "quantum_error_detection_bit_flip",
+      "name": "Quantum Bit-Flip Error Detection",
+      "domain": "quantum",
+      "category": "debug_repair",
+      "n_samples": 1,
+      "n_pass_det": 1,
+      "n_pass_llm": 0,
+      "pass_at_1": 1.0
+    },
+    {
+      "task_id": "quantum_gate_alias_casefold_barrier",
+      "name": "Gate alias casefold barrier",
+      "domain": "quantum",
+      "category": "api_normalization",
+      "n_samples": 1,
+      "n_pass_det": 1,
+      "n_pass_llm": 0,
+      "pass_at_1": 1.0
+    },
+    {
+      "task_id": "quantum_gate_alias_normalization",
+      "name": "Gate alias normalization repair",
+      "domain": "quantum",
+      "category": "api_normalization",
+      "n_samples": 1,
+      "n_pass_det": 1,
+      "n_pass_llm": 0,
+      "pass_at_1": 1.0
+    },
+    {
+      "task_id": "quantum_gate_alias_registry_cleanup",
+      "name": "Gate alias registry cleanup",
+      "domain": "quantum",
+      "category": "api_normalization",
+      "n_samples": 1,
+      "n_pass_det": 1,
+      "n_pass_llm": 0,
+      "pass_at_1": 1.0
+    },
+    {
+      "task_id": "quantum_gate_token_canonicalizer",
+      "name": "Gate token canonicalizer",
+      "domain": "quantum",
+      "category": "api_normalization",
+      "n_samples": 1,
+      "n_pass_det": 1,
+      "n_pass_llm": 0,
+      "pass_at_1": 1.0
+    },
+    {
+      "task_id": "quantum_ghz_state_witness",
+      "name": "GHZ state preparation and entanglement witness",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "n_samples": 1,
+      "n_pass_det": 1,
+      "n_pass_llm": 0,
+      "pass_at_1": 1.0
+    },
+    {
+      "task_id": "quantum_grover_oracle_diffusion",
+      "name": "Grover oracle and diffusion operator simulation",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "n_samples": 1,
+      "n_pass_det": 1,
+      "n_pass_llm": 0,
+      "pass_at_1": 1.0
+    },
+    {
+      "task_id": "quantum_maxcut_assignment_enumerator",
+      "name": "MaxCut assignment enumerator",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "n_samples": 1,
+      "n_pass_det": 1,
+      "n_pass_llm": 0,
+      "pass_at_1": 1.0
+    },
+    {
+      "task_id": "quantum_maxcut_partition_ranker",
+      "name": "MaxCut partition ranking from Ising-style assignments",
+      "domain": "quantum",
+      "category": "algorithm_reasoning",
+      "n_samples": 1,
+      "n_pass_det": 1,
+      "n_pass_llm": 0,
+      "pass_at_1": 1.0
+    },
+    {
+      "task_id": "quantum_measurement_bug_repair",
+      "name": "Measurement mapping bug repair",
+      "domain": "quantum",
+      "category": "debug_repair",
+      "n_samples": 1,
+      "n_pass_det": 1,
+      "n_pass_llm": 0,
+      "pass_at_1": 1.0
+    },
+    {
+      "task_id": "quantum_pauli_message_codec",
+      "name": "Pauli label codec for two-bit messages",
+      "domain": "quantum",
+      "category": "api_normalization",
+      "n_samples": 1,
+      "n_pass_det": 1,
+      "n_pass_llm": 0,
+      "pass_at_1": 1.0
+    },
+    {
+      "task_id": "quantum_pennylane_qml_iris_classification",
+      "name": "PennyLane quantum kernel logistic regression on Iris (2-class subset)",
+      "domain": "quantum",
+      "category": "quantum_ml",
+      "n_samples": 1,
+      "n_pass_det": 0,
+      "n_pass_llm": 0,
+      "pass_at_1": 0.0
+    },
+    {
+      "task_id": "quantum_pennylane_vqe_h2",
+      "name": "PennyLane VQE ground-state energy of H2",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "n_samples": 1,
+      "n_pass_det": 0,
+      "n_pass_llm": 0,
+      "pass_at_1": 0.0
+    },
+    {
+      "task_id": "quantum_phase_estimation_circuit",
+      "name": "Quantum phase estimation unitary eigenvalue extraction",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "n_samples": 1,
+      "n_pass_det": 1,
+      "n_pass_llm": 0,
+      "pass_at_1": 1.0
+    },
+    {
+      "task_id": "quantum_phase_measurement_register",
+      "name": "Phase measurement register",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "n_samples": 1,
+      "n_pass_det": 1,
+      "n_pass_llm": 0,
+      "pass_at_1": 1.0
+    },
+    {
+      "task_id": "quantum_phase_register_roundtrip",
+      "name": "Phase register round-trip utility",
+      "domain": "quantum",
+      "category": "interface_contract",
+      "n_samples": 1,
+      "n_pass_det": 1,
+      "n_pass_llm": 0,
+      "pass_at_1": 1.0
+    },
+    {
+      "task_id": "quantum_qaoa_maxcut",
+      "name": "QAOA MaxCut cost function and classical simulation",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "n_samples": 1,
+      "n_pass_det": 1,
+      "n_pass_llm": 0,
+      "pass_at_1": 1.0
+    },
+    {
+      "task_id": "quantum_qaoa_maxcut_5cycle",
+      "name": "QAOA Max-Cut on a 5-vertex undirected cycle graph",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "n_samples": 1,
+      "n_pass_det": 0,
+      "n_pass_llm": 0,
+      "pass_at_1": 0.0
+    },
+    {
+      "task_id": "quantum_qft_phase_pattern",
+      "name": "QFT phase pattern",
+      "domain": "quantum",
+      "category": "algorithm_reasoning",
+      "n_samples": 1,
+      "n_pass_det": 1,
+      "n_pass_llm": 0,
+      "pass_at_1": 1.0
+    },
+    {
+      "task_id": "quantum_qiskit_qft_entangled",
+      "name": "Qiskit QFT on a 3-qubit entangled GHZ state",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "n_samples": 1,
+      "n_pass_det": 0,
+      "n_pass_llm": 0,
+      "pass_at_1": 0.0
+    },
+    {
+      "task_id": "quantum_qiskit_stabilizer_5qubit_code",
+      "name": "Qiskit [[5,1,3]] five-qubit stabilizer code table",
+      "domain": "quantum",
+      "category": "quantum_error_correction",
+      "n_samples": 1,
+      "n_pass_det": 0,
+      "n_pass_llm": 0,
+      "pass_at_1": 0.0
+    },
+    {
+      "task_id": "quantum_stabilizer_tableau_update_repair",
+      "name": "Stabilizer tableau single-qubit update repair",
+      "domain": "quantum",
+      "category": "debug_repair",
+      "n_samples": 1,
+      "n_pass_det": 1,
+      "n_pass_llm": 0,
+      "pass_at_1": 1.0
+    },
+    {
+      "task_id": "quantum_superdense_coding",
+      "name": "Superdense coding encode/decode",
+      "domain": "quantum",
+      "category": "reasoning",
+      "n_samples": 1,
+      "n_pass_det": 1,
+      "n_pass_llm": 0,
+      "pass_at_1": 1.0
+    },
+    {
+      "task_id": "quantum_superdense_identity_lookup",
+      "name": "Superdense identity lookup",
+      "domain": "quantum",
+      "category": "reasoning",
+      "n_samples": 1,
+      "n_pass_det": 1,
+      "n_pass_llm": 0,
+      "pass_at_1": 1.0
+    },
+    {
+      "task_id": "quantum_superdense_pauli_router",
+      "name": "Superdense Pauli router",
+      "domain": "quantum",
+      "category": "reasoning",
+      "n_samples": 1,
+      "n_pass_det": 1,
+      "n_pass_llm": 0,
+      "pass_at_1": 1.0
+    },
+    {
+      "task_id": "quantum_teleportation_corrections",
+      "name": "Teleportation correction mapping",
+      "domain": "quantum",
+      "category": "protocol_logic",
+      "n_samples": 1,
+      "n_pass_det": 1,
+      "n_pass_llm": 0,
+      "pass_at_1": 1.0
+    },
+    {
+      "task_id": "quantum_trotterized_hamiltonian_evolution",
+      "name": "Trotterized Hamiltonian time evolution",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "n_samples": 1,
+      "n_pass_det": 1,
+      "n_pass_llm": 0,
+      "pass_at_1": 1.0
+    },
+    {
+      "task_id": "quantum_vqe_energy_minimization",
+      "name": "VQE energy expectation from parameterized ansatz",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "n_samples": 1,
+      "n_pass_det": 1,
+      "n_pass_llm": 0,
+      "pass_at_1": 1.0
+    },
+    {
+      "task_id": "software_async_task_timeout_retry",
+      "name": "Async task runner with per-task timeout and exponential-backoff retry",
+      "domain": "software",
+      "category": "concurrency",
+      "n_samples": 1,
+      "n_pass_det": 1,
+      "n_pass_llm": 0,
+      "pass_at_1": 1.0
+    },
+    {
+      "task_id": "software_config_merge",
+      "name": "Configuration merge semantics",
+      "domain": "software",
+      "category": "data_transforms",
+      "n_samples": 1,
+      "n_pass_det": 1,
+      "n_pass_llm": 0,
+      "pass_at_1": 1.0
+    },
+    {
+      "task_id": "software_docstring_contract",
+      "name": "Docstring contract preservation",
+      "domain": "software",
+      "category": "api_quality",
+      "n_samples": 1,
+      "n_pass_det": 1,
+      "n_pass_llm": 0,
+      "pass_at_1": 1.0
+    },
+    {
+      "task_id": "software_duplicate_logic_refactor",
+      "name": "Duplicate logic refactor",
+      "domain": "software",
+      "category": "refactor",
+      "n_samples": 1,
+      "n_pass_det": 1,
+      "n_pass_llm": 0,
+      "pass_at_1": 1.0
+    },
+    {
+      "task_id": "software_json_schema_validator",
+      "name": "Minimal JSON Schema validator supporting type, properties, required, items",
+      "domain": "software",
+      "category": "data_validation",
+      "n_samples": 1,
+      "n_pass_det": 1,
+      "n_pass_llm": 0,
+      "pass_at_1": 1.0
+    },
+    {
+      "task_id": "software_log_parser_aggregator",
+      "name": "Log parser with level-count aggregation and time-window grouping",
+      "domain": "software",
+      "category": "data_processing",
+      "n_samples": 1,
+      "n_pass_det": 1,
+      "n_pass_llm": 0,
+      "pass_at_1": 1.0
+    },
+    {
+      "task_id": "software_multifile_patch_conflict_repair",
+      "name": "Multifile patch conflict repair",
+      "domain": "software",
+      "category": "multifile_repair",
+      "n_samples": 1,
+      "n_pass_det": 1,
+      "n_pass_llm": 0,
+      "pass_at_1": 1.0
+    },
+    {
+      "task_id": "software_off_by_one_bugfix",
+      "name": "Off-by-one bug fix",
+      "domain": "software",
+      "category": "bugfix",
+      "n_samples": 1,
+      "n_pass_det": 1,
+      "n_pass_llm": 0,
+      "pass_at_1": 1.0
+    },
+    {
+      "task_id": "software_parser_regression_tests",
+      "name": "Parser regression tests",
+      "domain": "software",
+      "category": "test_writing",
+      "n_samples": 1,
+      "n_pass_det": 1,
+      "n_pass_llm": 0,
+      "pass_at_1": 1.0
+    },
+    {
+      "task_id": "software_patch_application_conflict_resolver",
+      "name": "Patch application conflict resolver",
+      "domain": "software",
+      "category": "stateful_logic",
+      "n_samples": 1,
+      "n_pass_det": 1,
+      "n_pass_llm": 0,
+      "pass_at_1": 1.0
+    },
+    {
+      "task_id": "software_regex_capturing_group_extractor",
+      "name": "Regex named-capturing-group extractor for log-like lines",
+      "domain": "software",
+      "category": "string_parsing",
+      "n_samples": 1,
+      "n_pass_det": 1,
+      "n_pass_llm": 0,
+      "pass_at_1": 1.0
+    },
+    {
+      "task_id": "software_retry_decorator",
+      "name": "Configurable retry decorator with exponential backoff",
+      "domain": "software",
+      "category": "design_pattern",
+      "n_samples": 1,
+      "n_pass_det": 1,
+      "n_pass_llm": 0,
+      "pass_at_1": 1.0
+    },
+    {
+      "task_id": "software_session_event_log",
+      "name": "Session event log state machine",
+      "domain": "software",
+      "category": "stateful_logic",
+      "n_samples": 1,
+      "n_pass_det": 1,
+      "n_pass_llm": 0,
+      "pass_at_1": 1.0
+    },
+    {
+      "task_id": "software_session_window_summary",
+      "name": "Session window summary with ordered history",
+      "domain": "software",
+      "category": "stateful_logic",
+      "n_samples": 1,
+      "n_pass_det": 1,
+      "n_pass_llm": 0,
+      "pass_at_1": 1.0
+    },
+    {
+      "task_id": "software_sql_join_resolver",
+      "name": "Tiny SQL SELECT-FROM-JOIN resolver over in-memory tables",
+      "domain": "software",
+      "category": "data_processing",
+      "n_samples": 1,
+      "n_pass_det": 1,
+      "n_pass_llm": 0,
+      "pass_at_1": 1.0
+    },
+    {
+      "task_id": "software_tree_serialization",
+      "name": "N-ary tree serialization and deserialization",
+      "domain": "software",
+      "category": "data_structures",
+      "n_samples": 1,
+      "n_pass_det": 1,
+      "n_pass_llm": 0,
+      "pass_at_1": 1.0
+    },
+    {
+      "task_id": "software_workspace_patch_bundle_repair",
+      "name": "Workspace patch bundle repair",
+      "domain": "software",
+      "category": "workspace_repair",
+      "n_samples": 1,
+      "n_pass_det": 0,
+      "n_pass_llm": 0,
+      "pass_at_1": 0.0
+    },
+    {
+      "task_id": "software_workspace_runner_smoke",
+      "name": "Workspace runner smoke",
+      "domain": "software",
+      "category": "workspace_smoke",
+      "n_samples": 1,
+      "n_pass_det": 0,
+      "n_pass_llm": 0,
+      "pass_at_1": 0.0
+    }
+  ],
+  "disagreements": [],
+  "suite_hash": "00261c29f0a74168a0989a016dcf4aeb61c3ca044da9405bf0d1d916597d678c",
+  "run_hash": "85e95b063d4a2e41804bb71ad373b41397671581c4414bf8b129401ccfb39419",
+  "model_label": "deepseek-v4-pro",
+  "n_drift_vs_legacy": 5
+}

@@ -1,0 +1,13 @@
+Write a complete, runnable Python program using Qiskit 2.x that:
+1. Implements VQE for the 2-qubit Heisenberg Hamiltonian H = X⊗X + Y⊗Y + Z⊗Z (SparsePauliOp).
+2. Uses a 4-parameter ansatz: Ry(p0) on qubit 0, Ry(p1) on qubit 1, CNOT(0,1), Ry(p2) on qubit 0, Ry(p3) on qubit 1.
+3. Uses StatevectorEstimator to compute <H> for a given parameter vector.
+4. First does a brute-force scan over 200 random parameter sets (seed=42) to find a good starting point,
+   then refines with scipy.optimize.minimize using Nelder-Mead (xatol=1e-6, fatol=1e-6).
+5. Computes the exact ground state energy by diagonalizing H.to_matrix() with numpy.linalg.eigvalsh.
+6. In `def main()`, prints:
+     VQE energy = <value rounded to 4 decimals>
+     exact = <value rounded to 4 decimals>
+     converged: <True|False>
+   Expected: VQE energy ≈ -3.0000, exact = -3.0000, converged: True (within 0.05).
+Call main() under `if __name__ == "__main__":`.

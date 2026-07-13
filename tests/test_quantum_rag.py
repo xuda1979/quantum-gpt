@@ -21,15 +21,14 @@ from quantum_rag.corpus import (
     load_source_text,
 )
 from quantum_rag.eval import (
-    AnswerEvalResult,
     evaluate_answer,
     faithfulness_score,
     groundedness_score,
     relevance_score,
 )
 from quantum_rag.generation import (
-    ChatCompletionsClient,
     RAG_SYSTEM_PROMPT,
+    ChatCompletionsClient,
     ResponsesClient,
     build_rag_messages,
     format_retrieved_context,
@@ -41,11 +40,9 @@ from quantum_rag.retrieval import (
     _path_specificity_score,
     expand_query,
     query_aware_multiplier,
-    rerank_score,
     retrieve,
     source_priority_multiplier,
 )
-
 
 # ============================================================================
 # corpus.py — text normalisation and chunking
@@ -135,12 +132,14 @@ class TestPathPreamble:
 class TestExtractTaskMetadata:
     def test_extracts_from_task_json(self, tmp_path: Path) -> None:
         task_path = tmp_path / "task.json"
-        content = json.dumps({
-            "id": "quantum_qft_phase_pattern",
-            "name": "QFT phase pattern",
-            "domain": "quantum",
-            "category": "algorithm_reasoning",
-        })
+        content = json.dumps(
+            {
+                "id": "quantum_qft_phase_pattern",
+                "name": "QFT phase pattern",
+                "domain": "quantum",
+                "category": "algorithm_reasoning",
+            }
+        )
         task_path.write_text(content, encoding="utf-8")
         meta = _extract_task_metadata(task_path, content)
         assert "quantum_qft_phase_pattern" in meta
@@ -176,11 +175,16 @@ class TestBuildChunksForFile:
     def test_preamble_injected_into_chunks(self, tmp_path: Path) -> None:
         doc = tmp_path / "evals" / "tasks" / "quantum" / "qft_phase_pattern" / "task.json"
         doc.parent.mkdir(parents=True)
-        doc.write_text(json.dumps({
-            "id": "quantum_qft_phase_pattern",
-            "name": "QFT phase pattern",
-            "domain": "quantum",
-        }), encoding="utf-8")
+        doc.write_text(
+            json.dumps(
+                {
+                    "id": "quantum_qft_phase_pattern",
+                    "name": "QFT phase pattern",
+                    "domain": "quantum",
+                }
+            ),
+            encoding="utf-8",
+        )
         chunks = build_chunks_for_file(doc, chunk_size=600, chunk_overlap=50, min_chunk_chars=10)
         assert chunks
         assert "qft phase pattern" in chunks[0].text.lower()
@@ -191,7 +195,11 @@ class TestBuildChunksForFile:
         doc = tmp_path / "test.md"
         doc.write_text("Some content " * 30, encoding="utf-8")
         chunks = build_chunks_for_file(
-            doc, chunk_size=200, chunk_overlap=20, min_chunk_chars=10, inject_path_preamble=False,
+            doc,
+            chunk_size=200,
+            chunk_overlap=20,
+            min_chunk_chars=10,
+            inject_path_preamble=False,
         )
         assert chunks
         assert "[source:" not in chunks[0].text
@@ -207,12 +215,23 @@ class TestBuildChunksForFile:
 
     def test_ipynb_loading(self, tmp_path: Path) -> None:
         nb = tmp_path / "test.ipynb"
-        nb.write_text(json.dumps({
-            "cells": [
-                {"cell_type": "code", "source": ["import numpy as np\n", "x = np.zeros(10)\n"]},
-                {"cell_type": "markdown", "source": ["# Quantum notebook\n", "This is a test.\n"]},
-            ],
-        }), encoding="utf-8")
+        nb.write_text(
+            json.dumps(
+                {
+                    "cells": [
+                        {
+                            "cell_type": "code",
+                            "source": ["import numpy as np\n", "x = np.zeros(10)\n"],
+                        },
+                        {
+                            "cell_type": "markdown",
+                            "source": ["# Quantum notebook\n", "This is a test.\n"],
+                        },
+                    ],
+                }
+            ),
+            encoding="utf-8",
+        )
         text = load_source_text(nb)
         assert "numpy" in text
         assert "Quantum notebook" in text
@@ -224,7 +243,11 @@ class TestBuildChunksFromRoots:
             f = tmp_path / f"doc{i}.md"
             f.write_text(f"Content for document {i}. " * 30, encoding="utf-8")
         chunks = build_chunks_from_roots(
-            [tmp_path], chunk_size=200, chunk_overlap=20, min_chunk_chars=10, max_files=2,
+            [tmp_path],
+            chunk_size=200,
+            chunk_overlap=20,
+            min_chunk_chars=10,
+            max_files=2,
         )
         sources = {c.source_path for c in chunks}
         assert len(sources) <= 2
@@ -245,10 +268,18 @@ class TestBuildChunksFromRoots:
         f = tmp_path / "test.md"
         f.write_text("Test content " * 30, encoding="utf-8")
         chunks_with = build_chunks_from_roots(
-            [tmp_path], chunk_size=200, chunk_overlap=20, min_chunk_chars=10, inject_path_preamble=True,
+            [tmp_path],
+            chunk_size=200,
+            chunk_overlap=20,
+            min_chunk_chars=10,
+            inject_path_preamble=True,
         )
         chunks_without = build_chunks_from_roots(
-            [tmp_path], chunk_size=200, chunk_overlap=20, min_chunk_chars=10, inject_path_preamble=False,
+            [tmp_path],
+            chunk_size=200,
+            chunk_overlap=20,
+            min_chunk_chars=10,
+            inject_path_preamble=False,
         )
         assert any("[source:" in c.text for c in chunks_with)
         assert not any("[source:" in c.text for c in chunks_without)
@@ -275,23 +306,96 @@ class TestBuildChunksFromRoots:
 def test_qiskit_qaoa_maxcut_docs_guard_current_api() -> None:
     root = Path(__file__).resolve().parents[1]
     qaoa_doc = (root / "docs" / "quantum_libraries" / "qaoa_maxcut.md").read_text(encoding="utf-8")
-    ecosystem_doc = (root / "docs" / "quantum_libraries" / "qiskit_ecosystem_current_api.md").read_text(encoding="utf-8")
-    combined = qaoa_doc + "\n" + ecosystem_doc
+    ecosystem_doc = (
+        root / "docs" / "quantum_libraries" / "qiskit_ecosystem_current_api.md"
+    ).read_text(encoding="utf-8")
+    basics_doc = (root / "docs" / "quantum_libraries" / "qiskit_basics.md").read_text(
+        encoding="utf-8"
+    )
+    combined = qaoa_doc + "\n" + ecosystem_doc + "\n" + basics_doc
 
+    assert "## Qiskit answer template" in qaoa_doc
+    assert "### Minimal imports" in qaoa_doc
+    assert "### Canonical application pattern" in qaoa_doc
+    assert "### Generation rules" in qaoa_doc
+    assert "Task-specific templates outrank the broad reference imports below" in ecosystem_doc
+    assert "The general import surface is reference only, not an answer template" in ecosystem_doc
     assert "QAOA(sampler=sampler, optimizer=optimizer, reps=2)" in combined
     assert "result.x" in combined
     assert "result.fval" in combined
     assert "do not invent alternate solution-vector attribute names" in combined
+    assert "Keep QAOA Max-Cut imports minimal" in qaoa_doc
+    assert "keep the import block minimal and import each symbol once" in ecosystem_doc
+    assert "For the standard Max-Cut application path, do not import anything from" in combined
+    assert "already uses the default `QuadraticProgramToQubo` conversion internally" in combined
+    assert "Do not add any `qiskit_optimization.converters` import for standard Max-Cut" in combined
+    assert "including `Model2QUBO` or identity/sense-converter names" in combined
+    assert "unused direct `QuadraticProgram` imports" in combined
+    assert "duplicate `MinimumEigenOptimizer` aliases" in combined
+    assert "`CategoricalVariable` is not a root `qiskit_optimization` import" in ecosystem_doc
     assert "Ancilla-count keywords are invalid for `QAOA`" in ecosystem_doc
-    assert "result.x0" not in combined
+    assert "Qubit-count keywords are invalid for `QAOA`" in ecosystem_doc
+    assert "Instantiate `Maxcut` with graph data" in ecosystem_doc
+    assert "`Maxcut` takes one graph argument" in combined
+    assert "Do not call `Maxcut(edges, node_count)`" in combined
+    assert "There is no `Maxcut.ingraph2qubit(...)` method" in combined
+    assert "Do not read node-count attributes from the `Maxcut` application object" in combined
+    assert "There is no `MinimumD` converter" in ecosystem_doc
+    assert "There is no `MinimizationToMaximisation` converter" in ecosystem_doc
+    assert "There is no `MinimumToMaximize` converter" in ecosystem_doc
+    assert "There is no `MinimumToMaximizingConverter`" in ecosystem_doc
+    assert "There are no converters named `Model2QUBO`, `Model2QubitOperator`, or" in ecosystem_doc
+    assert "There is no `QuadraticProgramToQuadraticProgram` converter" in ecosystem_doc
+    assert "There are no converter classes named `SumOfSubproblems` or `Transformation`" in combined
+    assert "result.feval` is not valid" in combined
+    assert "`result.fvalue` is not a valid objective-value field" in combined
+    assert "Do not read `result.primal_values`; the solution-vector attribute is" in combined
+    assert "`result.fitness_value` is not a valid objective-value field" in combined
+    assert "`result.x` is an ordered array-like solution, not a dictionary" in combined
+    assert "Do not call `result.x.items()`" in combined
+    assert (
+        "Read the Max-Cut objective value directly from `result.fval`; do not negate it" in combined
+    )
+    assert (
+        "Do not negate `result.fval` for standard `Maxcut(...).to_quadratic_program()`" in combined
+    )
+    assert "Do not negate the reported objective for application-generated problems" in combined
+    assert "Maxcut(...).to_quadratic_program()` can be solved directly" in ecosystem_doc
+    assert "Prefer `result.x` plus application `interpret(result)` helpers" in ecosystem_doc
+    assert "Do not carry CUDA-Q kernel arguments such as `qubit_count` or `layer_count`" in combined
+    assert "Do not describe the solved Max-Cut assignment as a minimum cut" in combined
+    assert "If you supply two initial angles, use `reps=1`" in combined
+    assert "If `initial_point` is provided, its length must match" in combined
+    assert "For standard QAOA this is `2 * reps`" in combined
+    assert "a mismatch raises `ValueError` during solve" in combined
+    assert "not a `QuantumCircuit` constructor or CUDA-Q kernel factory" in basics_doc
+    assert "from qiskit_algorithms.utils import algorithm_globals" in combined
+    assert (
+        "Import `algorithm_globals` before assigning `algorithm_globals.random_seed`" in basics_doc
+    )
+    assert "raises `NameError` before QAOA runs" in combined
+    assert "QAOA has no post-construction qubit-replacement setter methods" in ecosystem_doc
+    assert "Do not read `result.x0`; the solution-vector attribute is `result.x`" in combined
+    assert "result.x0}" not in combined
     assert "num_ancillas=0" not in combined
+    assert "best_feasible_solution" not in combined
+    assert "maxcut.num_nodes" not in combined
+    assert "MinimumToMaximizingConverter()" not in combined
+    assert "Model2QUBO(" not in combined
+    assert "Linear2Quadratic(" not in combined
+    assert "-result.fval" not in combined
 
 
 class TestDocumentChunk:
     def test_to_dict_round_trip(self) -> None:
         chunk = DocumentChunk(
-            chunk_id="abc", source_path="/x.md", title="x.md",
-            text="Hello", char_start=0, char_end=5, metadata={"k": "v"},
+            chunk_id="abc",
+            source_path="/x.md",
+            title="x.md",
+            text="Hello",
+            char_start=0,
+            char_end=5,
+            metadata={"k": "v"},
         )
         d = chunk.to_dict()
         assert d["chunk_id"] == "abc"
@@ -450,7 +554,9 @@ class TestQueryExpansion:
         assert expand_query(original, QueryExpansionConfig(enabled=False)) == original
 
     def test_reverse_expansion(self) -> None:
-        expanded = expand_query("variational quantum eigensolver energy", QueryExpansionConfig(enabled=True))
+        expanded = expand_query(
+            "variational quantum eigensolver energy", QueryExpansionConfig(enabled=True)
+        )
         assert "vqe" in expanded.lower()
 
     def test_superdense_expansion(self) -> None:
@@ -481,32 +587,47 @@ class TestSourcePriorityMultiplier:
 
 class TestQueryAwareMultiplier:
     def test_library_queries_boost_matching_doc_source(self) -> None:
-        assert query_aware_multiplier(
-            "How do I build a Bell pair in Qiskit?",
-            "/tmp/docs/external/quantum-sdk-docs-latest/qiskit/example.md",
-        ) > 1.0
-        assert query_aware_multiplier(
-            "How do I create and measure a circuit in Cirq?",
-            "/tmp/docs/external/quantum-sdk-docs-latest/cirq/example.md",
-        ) > 1.0
+        assert (
+            query_aware_multiplier(
+                "How do I build a Bell pair in Qiskit?",
+                "/tmp/docs/external/quantum-sdk-docs-latest/qiskit/example.md",
+            )
+            > 1.0
+        )
+        assert (
+            query_aware_multiplier(
+                "How do I create and measure a circuit in Cirq?",
+                "/tmp/docs/external/quantum-sdk-docs-latest/cirq/example.md",
+            )
+            > 1.0
+        )
 
     def test_definition_query(self) -> None:
-        assert query_aware_multiplier(
-            "Where is this task defined?",
-            "/tmp/evals/tasks/quantum/qft/task.json",
-        ) > 1.0
+        assert (
+            query_aware_multiplier(
+                "Where is this task defined?",
+                "/tmp/evals/tasks/quantum/qft/task.json",
+            )
+            > 1.0
+        )
 
     def test_rag_gaps_query(self) -> None:
-        assert query_aware_multiplier(
-            "What are the support and gaps of the current low-compute rag?",
-            "/tmp/research/quantum_rag_low_compute.md",
-        ) > 1.0
+        assert (
+            query_aware_multiplier(
+                "What are the support and gaps of the current low-compute rag?",
+                "/tmp/research/quantum_rag_low_compute.md",
+            )
+            > 1.0
+        )
 
     def test_grpo_training_command_query(self) -> None:
-        assert query_aware_multiplier(
-            "What is the verified GRPO training command?",
-            "/tmp/HEARTBEAT.md",
-        ) > 1.0
+        assert (
+            query_aware_multiplier(
+                "What is the verified GRPO training command?",
+                "/tmp/HEARTBEAT.md",
+            )
+            > 1.0
+        )
 
     def test_no_match(self) -> None:
         assert query_aware_multiplier("Where is this defined?", "/tmp/random.md") == 1.0
@@ -518,13 +639,21 @@ class TestFilenameRoleScore:
     def test_reranker_prefers_task_json_for_definition(self, tmp_path: Path) -> None:
         task_doc = tmp_path / "task.json"
         tests_doc = tmp_path / "tests.py"
-        task_doc.write_text('{"id":"quantum_qft_phase_pattern","name":"QFT phase pattern"}', encoding="utf-8")
+        task_doc.write_text(
+            '{"id":"quantum_qft_phase_pattern","name":"QFT phase pattern"}', encoding="utf-8"
+        )
         tests_doc.write_text("def test_qft_phase_pattern():\n    assert True\n", encoding="utf-8")
         chunks = []
-        chunks.extend(build_chunks_for_file(task_doc, chunk_size=200, chunk_overlap=20, min_chunk_chars=10))
-        chunks.extend(build_chunks_for_file(tests_doc, chunk_size=200, chunk_overlap=20, min_chunk_chars=10))
+        chunks.extend(
+            build_chunks_for_file(task_doc, chunk_size=200, chunk_overlap=20, min_chunk_chars=10)
+        )
+        chunks.extend(
+            build_chunks_for_file(tests_doc, chunk_size=200, chunk_overlap=20, min_chunk_chars=10)
+        )
         index = QuantumRAGIndex.build(chunks, max_features=512, dense_components=4)
-        results = retrieve(index, "Where is the QFT phase pattern task defined?", top_k=2, rerank_pool_size=2)
+        results = retrieve(
+            index, "Where is the QFT phase pattern task defined?", top_k=2, rerank_pool_size=2
+        )
         assert results
         assert results[0].chunk.source_path.endswith("task.json")
 
@@ -545,10 +674,16 @@ class TestRetrieve:
             encoding="utf-8",
         )
         chunks = []
-        chunks.extend(build_chunks_for_file(qiskit_doc, chunk_size=400, chunk_overlap=80, min_chunk_chars=40))
-        chunks.extend(build_chunks_for_file(vqe_doc, chunk_size=400, chunk_overlap=80, min_chunk_chars=40))
+        chunks.extend(
+            build_chunks_for_file(qiskit_doc, chunk_size=400, chunk_overlap=80, min_chunk_chars=40)
+        )
+        chunks.extend(
+            build_chunks_for_file(vqe_doc, chunk_size=400, chunk_overlap=80, min_chunk_chars=40)
+        )
         index = QuantumRAGIndex.build(chunks, max_features=2048, dense_components=8)
-        results = retrieve(index, "How do I transpile a circuit with a coupling map in Qiskit?", top_k=2)
+        results = retrieve(
+            index, "How do I transpile a circuit with a coupling map in Qiskit?", top_k=2
+        )
         assert results
         assert results[0].chunk.source_path.endswith("qiskit_notes.md")
 
@@ -558,8 +693,12 @@ class TestRetrieve:
         doc_a.write_text(("quantum rag retrieval " * 80).strip(), encoding="utf-8")
         doc_b.write_text("quantum retrieval baseline", encoding="utf-8")
         chunks = []
-        chunks.extend(build_chunks_for_file(doc_a, chunk_size=120, chunk_overlap=20, min_chunk_chars=20))
-        chunks.extend(build_chunks_for_file(doc_b, chunk_size=120, chunk_overlap=20, min_chunk_chars=20))
+        chunks.extend(
+            build_chunks_for_file(doc_a, chunk_size=120, chunk_overlap=20, min_chunk_chars=20)
+        )
+        chunks.extend(
+            build_chunks_for_file(doc_b, chunk_size=120, chunk_overlap=20, min_chunk_chars=20)
+        )
         index = QuantumRAGIndex.build(chunks, max_features=1024, dense_components=4)
         results = retrieve(index, "quantum retrieval", top_k=2, max_chunks_per_source=1)
         assert len(results) == 2
@@ -571,11 +710,18 @@ class TestRetrieve:
         a.write_text("quantum circuit algorithms " * 20, encoding="utf-8")
         b.write_text("quantum circuit algorithms report " * 20, encoding="utf-8")
         chunks = []
-        chunks.extend(build_chunks_for_file(a, chunk_size=300, chunk_overlap=30, min_chunk_chars=20))
-        chunks.extend(build_chunks_for_file(b, chunk_size=300, chunk_overlap=30, min_chunk_chars=20))
+        chunks.extend(
+            build_chunks_for_file(a, chunk_size=300, chunk_overlap=30, min_chunk_chars=20)
+        )
+        chunks.extend(
+            build_chunks_for_file(b, chunk_size=300, chunk_overlap=30, min_chunk_chars=20)
+        )
         index = QuantumRAGIndex.build(chunks, max_features=512, dense_components=4)
         results = retrieve(
-            index, "quantum circuit", top_k=5, exclude_source_substrings=["excluded_report"],
+            index,
+            "quantum circuit",
+            top_k=5,
+            exclude_source_substrings=["excluded_report"],
         )
         assert all("excluded_report" not in r.chunk.source_path for r in results)
 
@@ -583,20 +729,34 @@ class TestRetrieve:
         """Verify that path-augmented chunks fix the QFT phase pattern miss."""
         qft_task = tmp_path / "evals" / "tasks" / "quantum" / "qft_phase_pattern" / "task.json"
         qft_task.parent.mkdir(parents=True)
-        qft_task.write_text(json.dumps({
-            "id": "quantum_qft_phase_pattern", "name": "QFT phase pattern",
-            "domain": "quantum", "category": "algorithm_reasoning",
-            "candidate_file": "candidate.py", "test_file": "tests.py",
-        }), encoding="utf-8")
-        phase_est = tmp_path / "evals" / "tasks" / "quantum" / "phase_estimation_circuit" / "candidate.py"
+        qft_task.write_text(
+            json.dumps(
+                {
+                    "id": "quantum_qft_phase_pattern",
+                    "name": "QFT phase pattern",
+                    "domain": "quantum",
+                    "category": "algorithm_reasoning",
+                    "candidate_file": "candidate.py",
+                    "test_file": "tests.py",
+                }
+            ),
+            encoding="utf-8",
+        )
+        phase_est = (
+            tmp_path / "evals" / "tasks" / "quantum" / "phase_estimation_circuit" / "candidate.py"
+        )
         phase_est.parent.mkdir(parents=True)
         phase_est.write_text(
             "def phase_estimation():\n    '''Phase estimation circuit.'''\n    pass\n" * 5,
             encoding="utf-8",
         )
         chunks = []
-        chunks.extend(build_chunks_for_file(qft_task, chunk_size=600, chunk_overlap=50, min_chunk_chars=10))
-        chunks.extend(build_chunks_for_file(phase_est, chunk_size=600, chunk_overlap=50, min_chunk_chars=10))
+        chunks.extend(
+            build_chunks_for_file(qft_task, chunk_size=600, chunk_overlap=50, min_chunk_chars=10)
+        )
+        chunks.extend(
+            build_chunks_for_file(phase_est, chunk_size=600, chunk_overlap=50, min_chunk_chars=10)
+        )
         index = QuantumRAGIndex.build(chunks, max_features=2048, dense_components=8)
         results = retrieve(index, "Where is the QFT phase pattern task defined?", top_k=2)
         assert results
@@ -614,16 +774,23 @@ class TestRetrieve:
     def test_rerank_prefers_rag_design_note(self) -> None:
         note_chunk = build_chunks_for_file(
             Path("/Users/daxu/software/quantum-gpt/research/quantum_rag_low_compute.md"),
-            chunk_size=500, chunk_overlap=50, min_chunk_chars=50,
+            chunk_size=500,
+            chunk_overlap=50,
+            min_chunk_chars=50,
         )[0]
         generic_chunk = build_chunks_for_file(
             Path("/Users/daxu/software/quantum-gpt/PROJECT.md"),
-            chunk_size=500, chunk_overlap=50, min_chunk_chars=50,
+            chunk_size=500,
+            chunk_overlap=50,
+            min_chunk_chars=50,
         )[0]
         results = retrieve(
-            QuantumRAGIndex.build([note_chunk, generic_chunk], max_features=512, dense_components=2),
+            QuantumRAGIndex.build(
+                [note_chunk, generic_chunk], max_features=512, dense_components=2
+            ),
             "What are the current low-compute rag support and gaps?",
-            top_k=2, rerank_pool_size=2,
+            top_k=2,
+            rerank_pool_size=2,
         )
         assert results[0].chunk.source_path.endswith("quantum_rag_low_compute.md")
 
@@ -639,7 +806,9 @@ class TestAnswerCache:
         cache = AnswerCache(cache_path)
         assert len(cache) == 0
 
-        entry = cache.put("What is VQE?", "abc123", "VQE is a variational method.", {"model": "test"})
+        entry = cache.put(
+            "What is VQE?", "abc123", "VQE is a variational method.", {"model": "test"}
+        )
         assert len(cache) == 1
 
         retrieved = cache.get("What is VQE?", "abc123")
@@ -780,7 +949,9 @@ class TestRelevanceScore:
         assert score == 1.0
 
     def test_partial_overlap(self) -> None:
-        score = relevance_score("quantum VQE ansatz", "The VQE uses a quantum ansatz to minimize energy.")
+        score = relevance_score(
+            "quantum VQE ansatz", "The VQE uses a quantum ansatz to minimize energy."
+        )
         assert 0.0 < score <= 1.0
 
     def test_no_overlap(self) -> None:
@@ -794,10 +965,14 @@ class TestRelevanceScore:
 class TestGroundednessScore:
     def _make_chunk(self, text: str, rank: int = 1) -> RetrievedChunk:
         chunk = DocumentChunk("test", "/test.md", "test", text, 0, len(text))
-        return RetrievedChunk(chunk=chunk, rank=rank, final_score=1.0, lexical_score=0.5, semantic_score=0.5)
+        return RetrievedChunk(
+            chunk=chunk, rank=rank, final_score=1.0, lexical_score=0.5, semantic_score=0.5
+        )
 
     def test_grounded_citation(self) -> None:
-        chunk = self._make_chunk("Variational quantum eigensolver uses an ansatz and a classical optimizer.")
+        chunk = self._make_chunk(
+            "Variational quantum eigensolver uses an ansatz and a classical optimizer."
+        )
         score = groundedness_score(
             "The VQE [C1] uses a variational quantum eigensolver with an ansatz.",
             [chunk],
@@ -816,7 +991,9 @@ class TestGroundednessScore:
 
     def test_multiple_citations(self) -> None:
         c1 = self._make_chunk("quantum entanglement bell pair EPR states superposition", rank=1)
-        c2 = self._make_chunk("classical optimization gradient descent machine learning rate", rank=2)
+        c2 = self._make_chunk(
+            "classical optimization gradient descent machine learning rate", rank=2
+        )
         # Answer must share >= 3 tokens with each cited chunk
         score = groundedness_score(
             "Entanglement [C1] uses quantum bell pair EPR, and optimization [C2] uses gradient descent machine learning.",
@@ -827,8 +1004,12 @@ class TestGroundednessScore:
 
 class TestEvaluateAnswer:
     def test_composite_score(self) -> None:
-        chunk = DocumentChunk("t", "/t.md", "t", "QFT phase pattern uses quantum Fourier transform.", 0, 50)
-        retrieved = RetrievedChunk(chunk=chunk, rank=1, final_score=1.0, lexical_score=0.5, semantic_score=0.5)
+        chunk = DocumentChunk(
+            "t", "/t.md", "t", "QFT phase pattern uses quantum Fourier transform.", 0, 50
+        )
+        retrieved = RetrievedChunk(
+            chunk=chunk, rank=1, final_score=1.0, lexical_score=0.5, semantic_score=0.5
+        )
         result = evaluate_answer(
             "What is the QFT phase pattern?",
             "The QFT phase pattern [C1] computes the quantum Fourier transform of a statevector.",
@@ -843,16 +1024,24 @@ class TestEvaluateAnswer:
 
     def test_custom_weights(self) -> None:
         chunk = DocumentChunk("t", "/t.md", "t", "text", 0, 4)
-        retrieved = RetrievedChunk(chunk=chunk, rank=1, final_score=1.0, lexical_score=0.5, semantic_score=0.5)
+        retrieved = RetrievedChunk(
+            chunk=chunk, rank=1, final_score=1.0, lexical_score=0.5, semantic_score=0.5
+        )
         result = evaluate_answer(
-            "query", "answer [C1] text", [retrieved],
-            faithfulness_weight=1.0, relevance_weight=0.0, groundedness_weight=0.0,
+            "query",
+            "answer [C1] text",
+            [retrieved],
+            faithfulness_weight=1.0,
+            relevance_weight=0.0,
+            groundedness_weight=0.0,
         )
         assert math.isclose(result.composite_score, result.faithfulness_score, abs_tol=1e-6)
 
     def test_to_dict(self) -> None:
         chunk = DocumentChunk("t", "/t.md", "t", "text here", 0, 9)
-        retrieved = RetrievedChunk(chunk=chunk, rank=1, final_score=1.0, lexical_score=0.5, semantic_score=0.5)
+        retrieved = RetrievedChunk(
+            chunk=chunk, rank=1, final_score=1.0, lexical_score=0.5, semantic_score=0.5
+        )
         result = evaluate_answer("q", "a [C1]", [retrieved])
         d = result.to_dict()
         assert "query" in d
@@ -873,7 +1062,9 @@ class TestEvaluateAnswer:
 class TestFormatRetrievedContext:
     def test_basic_format(self) -> None:
         chunk = DocumentChunk("t", "/src.md", "src.md", "Some retrieved text.", 0, 20)
-        retrieved = RetrievedChunk(chunk=chunk, rank=1, final_score=0.95, lexical_score=0.6, semantic_score=0.4)
+        retrieved = RetrievedChunk(
+            chunk=chunk, rank=1, final_score=0.95, lexical_score=0.6, semantic_score=0.4
+        )
         ctx = format_retrieved_context([retrieved])
         assert "[C1]" in ctx
         assert "source=/src.md" in ctx
@@ -883,8 +1074,12 @@ class TestFormatRetrievedContext:
     def test_multiple_chunks(self) -> None:
         c1 = DocumentChunk("a", "/a.md", "a", "First chunk.", 0, 12)
         c2 = DocumentChunk("b", "/b.md", "b", "Second chunk.", 0, 13)
-        r1 = RetrievedChunk(chunk=c1, rank=1, final_score=0.9, lexical_score=0.5, semantic_score=0.4)
-        r2 = RetrievedChunk(chunk=c2, rank=2, final_score=0.8, lexical_score=0.4, semantic_score=0.4)
+        r1 = RetrievedChunk(
+            chunk=c1, rank=1, final_score=0.9, lexical_score=0.5, semantic_score=0.4
+        )
+        r2 = RetrievedChunk(
+            chunk=c2, rank=2, final_score=0.8, lexical_score=0.4, semantic_score=0.4
+        )
         ctx = format_retrieved_context([r1, r2])
         assert "[C1]" in ctx
         assert "[C2]" in ctx
@@ -899,7 +1094,9 @@ class TestFormatRetrievedContext:
 class TestBuildRagMessages:
     def test_has_system_and_user(self) -> None:
         chunk = DocumentChunk("t", "/src.md", "src.md", "Context text.", 0, 13)
-        retrieved = RetrievedChunk(chunk=chunk, rank=1, final_score=0.9, lexical_score=0.5, semantic_score=0.4)
+        retrieved = RetrievedChunk(
+            chunk=chunk, rank=1, final_score=0.9, lexical_score=0.5, semantic_score=0.4
+        )
         messages = build_rag_messages("What is VQE?", [retrieved])
         assert len(messages) == 2
         assert messages[0]["role"] == "system"
@@ -912,7 +1109,9 @@ class TestBuildRagMessages:
 
     def test_user_prompt_includes_query_and_context(self) -> None:
         chunk = DocumentChunk("t", "/src.md", "src.md", "Some context.", 0, 13)
-        retrieved = RetrievedChunk(chunk=chunk, rank=1, final_score=0.9, lexical_score=0.5, semantic_score=0.4)
+        retrieved = RetrievedChunk(
+            chunk=chunk, rank=1, final_score=0.9, lexical_score=0.5, semantic_score=0.4
+        )
         messages = build_rag_messages("Where is VQE defined?", [retrieved])
         user_msg = messages[1]["content"]
         assert "Where is VQE defined?" in user_msg
@@ -928,6 +1127,7 @@ class TestBuildRagMessages:
 class TestPublicAPI:
     def test_all_exports_importable(self) -> None:
         import quantum_rag
+
         for name in quantum_rag.__all__:
             assert hasattr(quantum_rag, name), f"Missing export: {name}"
 
@@ -936,16 +1136,9 @@ class TestPublicAPI:
             AnswerCache,
             AnswerEvalResult,
             ChatCompletionsClient,
-            DocumentChunk,
-            QuantumRAGIndex,
-            QueryExpansionConfig,
             ResponsesClient,
-            RetrievedChunk,
-            build_chunks_from_roots,
-            evaluate_answer,
-            index_summary_hash,
-            retrieve,
         )
+
         assert AnswerCache is not None
         assert AnswerEvalResult is not None
         assert ChatCompletionsClient is not None
@@ -1040,6 +1233,7 @@ class TestEvalBenchmarkRunner:
     def test_eval_script_importable(self) -> None:
         """The eval script should be importable without side effects."""
         import importlib.util
+
         spec = importlib.util.spec_from_file_location(
             "eval_quantum_rag",
             str(Path(__file__).resolve().parents[1] / "scripts" / "eval_quantum_rag.py"),
@@ -1068,6 +1262,7 @@ class TestEvalBenchmarkRunner:
 
         # Import run_benchmark from the script
         import importlib.util
+
         spec = importlib.util.spec_from_file_location(
             "eval_quantum_rag",
             str(Path(__file__).resolve().parents[1] / "scripts" / "eval_quantum_rag.py"),

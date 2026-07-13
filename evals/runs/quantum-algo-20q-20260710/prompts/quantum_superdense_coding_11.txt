@@ -1,0 +1,9 @@
+Write a complete, runnable Python program using Qiskit that:
+1. Creates a shared Bell pair |Phi+> between Alice (q0) and Bob (q1).
+2. Alice encodes 2 bits "11" by applying Z then X to her qubit (q0).
+3. Bob receives q0, applies CX q0->q1 then H q0, then measures both qubits.
+4. In `def main()`, uses StatevectorSampler (1000 shots) and prints the most-likely 2-bit decoded message (natural order: c0 c1, so "11") and its probability.
+Output exactly:
+  Decoded bits: <2-char bitstring>
+  Probability: <value rounded to 3 decimals>
+Call main() under `if __name__ == "__main__":`.

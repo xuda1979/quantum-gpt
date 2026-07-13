@@ -1,0 +1,30 @@
+{
+  "suite_hash": "00261c29f0a74168a0989a016dcf4aeb61c3ca044da9405bf0d1d916597d678c",
+  "suite_lock_path": "/Users/daxu/software/quantum-gpt/evals/trust/runs/qwen36-27b-rag-20260709/suite.lock.json",
+  "model": {
+    "label": "qwen3.6-27b-rag",
+    "base_path": "legacy",
+    "base_hash": null,
+    "adapter_path": null,
+    "adapter_hash": null,
+    "kind": "legacy"
+  },
+  "prompt": {
+    "style": "direct",
+    "version": "v2",
+    "template_hash": "legacy"
+  },
+  "sampling": {
+    "k": 1,
+    "temperature": null,
+    "seed": 0,
+    "max_new_tokens": null
+  },
+  "environment": {
+    "python_version": "3.14.5",
+    "platform": "Darwin arm64 CPython",
+    "git_commit": "e7c5d3d142e318fd26793a08900dd5349f918657",
+    "pip_freeze_hash": null
+  },
+  "harness_version": "evals.trust.legacy"
+}

@@ -1,0 +1,333 @@
+{
+  "archive_version": "model-run-archive-v2",
+  "archived_at_utc": "2026-04-11T06:20:08.770865+00:00",
+  "label": "omnicoder9b-semantic-v4-2npu-true20",
+  "output_dir": "outputs/interface-prefix-omnicoder9b-semantic-v4-2npu-true20-20260329T2219CST",
+  "artifacts": {
+    "metrics_path": "outputs/interface-prefix-omnicoder9b-semantic-v4-2npu-true20-20260329T2219CST/metrics.json",
+    "metrics_sha256": "7a8cfb01346a8238f93a51753b46fdd1b805cd21d57ca98ab887b55cccbcdd38",
+    "run_config_path": "outputs/interface-prefix-omnicoder9b-semantic-v4-2npu-true20-20260329T2219CST/run_config.json",
+    "run_config_sha256": "fc4ad66bb97cdd3e0b7de888947cf4bfeb18b813e2aab6181d36a3b5f5a555f9",
+    "adapter_dir": "outputs/interface-prefix-omnicoder9b-semantic-v4-2npu-true20-20260329T2219CST/adapter",
+    "adapter_exists": true,
+    "adapter_model_path": "outputs/interface-prefix-omnicoder9b-semantic-v4-2npu-true20-20260329T2219CST/adapter/adapter_model.safetensors",
+    "adapter_model_exists": false,
+    "adapter_files": [
+      "README.md",
+      "adapter_config.json",
+      "chat_template.jinja",
+      "processor_config.json",
+      "tokenizer.json",
+      "tokenizer_config.json"
+    ]
+  },
+  "model": {
+    "base_model": "models/OmniCoder-9B",
+    "base_model_family": "omnicoder",
+    "training_method": "LoRA SFT",
+    "training_method_detail": {
+      "stage": "supervised_fine_tuning",
+      "adapter_strategy": "LoRA",
+      "training_method": "LoRA SFT",
+      "loss_function": {
+        "name": "causal_lm_cross_entropy",
+        "label_masking": "padding tokens masked to -100; prompt tokens also masked when train_on_completions_only=true",
+        "train_on_completions_only": false
+      },
+      "optimizer": {
+        "name": "AdamW",
+        "learning_rate": 0.0002
+      },
+      "scheduler": {
+        "name": "CosineAnnealingLR",
+        "t_max_steps": 20
+      }
+    },
+    "training_script": "training/qwen_sft_peft.py",
+    "training_command_reconstructed": "python3 training/qwen_sft_peft.py --model-name models/OmniCoder-9B --train-file data/generated/fast-mini-interface-prefix-semantic-v4/train.jsonl --eval-file data/generated/fast-mini-interface-prefix-semantic-v4/eval.jsonl --device npu --max-length 512 --per-device-batch-size 1 --gradient-accumulation-steps 2 --learning-rate 0.0002 --num-epochs 1 --max-steps 20 --eval-steps 10 --log-steps 1 --lora-rank 16 --lora-alpha 32 --lora-dropout 0.05 --target-modules q_proj k_proj v_proj o_proj gate_proj up_proj down_proj"
+  },
+  "training_signature": {
+    "model_name": "models/OmniCoder-9B",
+    "train_file": "data/generated/fast-mini-interface-prefix-semantic-v4/train.jsonl",
+    "eval_file": "data/generated/fast-mini-interface-prefix-semantic-v4/eval.jsonl",
+    "device": "npu",
+    "max_length": 512,
+    "per_device_batch_size": 1,
+    "gradient_accumulation_steps": 2,
+    "learning_rate": 0.0002,
+    "num_epochs": 1,
+    "max_steps": 20,
+    "eval_steps": 10,
+    "log_steps": 1,
+    "lora_rank": 16,
+    "lora_alpha": 32,
+    "lora_dropout": 0.05,
+    "load_in_8bit": false,
+    "train_on_completions_only": false,
+    "target_modules": [
+      "q_proj",
+      "k_proj",
+      "v_proj",
+      "o_proj",
+      "gate_proj",
+      "up_proj",
+      "down_proj"
+    ],
+    "signature_sha256": "8c63ede5aee6063df4a132bcf9fcfdfb400a777b8a8006770ee013fa93df3004"
+  },
+  "lineage": {
+    "parent_output_dir": null,
+    "adapter_init": null,
+    "paper_ids": [
+      "timeboxed_eight_npu_grpo",
+      "timeboxed_eight_npu_sft"
+    ]
+  },
+  "training_data": {
+    "train": {
+      "path": "data/generated/fast-mini-interface-prefix-semantic-v4/train.jsonl",
+      "exists": true,
+      "sha256": "76881fc97983e2d40b3bc1c2eab9c581a2021af4dfd20229f5462358a4027fd4",
+      "rows": 160,
+      "manifest_path": "data/generated/fast-mini-interface-prefix-semantic-v4/manifest.json",
+      "manifest_exists": false,
+      "manifest_valid_json": false,
+      "manifest_error": "missing",
+      "dataset_summary": {
+        "row_count": 160,
+        "unique_example_ids": 160,
+        "unique_task_ids": 23,
+        "task_ids": [
+          "quantum_bell_pair_construction",
+          "quantum_circuit_depth_optimization",
+          "quantum_circuit_phase_repair",
+          "quantum_gate_alias_normalization",
+          "quantum_measurement_bug_repair",
+          "quantum_phase_estimation_circuit",
+          "quantum_qaoa_maxcut",
+          "quantum_qft_phase_pattern",
+          "quantum_stabilizer_tableau_update_repair",
+          "quantum_superdense_coding",
+          "quantum_teleportation_corrections",
+          "quantum_vqe_energy_minimization",
+          "software_config_merge",
+          "software_docstring_contract",
+          "software_duplicate_logic_refactor",
+          "software_multifile_patch_conflict_repair",
+          "software_off_by_one_bugfix",
+          "software_parser_regression_tests",
+          "software_patch_application_conflict_resolver",
+          "software_retry_decorator",
+          "software_session_event_log",
+          "software_session_window_summary",
+          "software_tree_serialization"
+        ],
+        "formats": {
+          "chat-sft-v1": 160
+        },
+        "source_schemas": {
+          "template-v1": 160
+        },
+        "domains": {
+          "quantum": 90,
+          "software": 70
+        },
+        "categories": {
+          "algorithm_implementation": 14,
+          "algorithm_reasoning": 10,
+          "api_normalization": 10,
+          "api_quality": 9,
+          "bugfix": 5,
+          "circuit_construction": 7,
+          "circuit_optimization": 8,
+          "data_structures": 4,
+          "data_transforms": 8,
+          "debug_repair": 25,
+          "design_pattern": 9,
+          "multifile_repair": 5,
+          "protocol_logic": 8,
+          "reasoning": 8,
+          "refactor": 5,
+          "stateful_logic": 20,
+          "test_writing": 5
+        },
+        "task_types": {
+          "implementation": 160
+        },
+        "sources": {
+          "template": 160
+        },
+        "prompt_variants": {
+          "interface-prefix-semantic-v4": 160
+        }
+      }
+    },
+    "eval": {
+      "path": "data/generated/fast-mini-interface-prefix-semantic-v4/eval.jsonl",
+      "exists": true,
+      "sha256": "358657ca92ff62220ed32a365e3e533eed1dc944d986e4f44c15a9ba724d2533",
+      "rows": 32,
+      "manifest_path": "data/generated/fast-mini-interface-prefix-semantic-v4/manifest.json",
+      "manifest_exists": false,
+      "manifest_valid_json": false,
+      "manifest_error": "missing",
+      "dataset_summary": {
+        "row_count": 32,
+        "unique_example_ids": 32,
+        "unique_task_ids": 18,
+        "task_ids": [
+          "quantum_bell_pair_construction",
+          "quantum_circuit_depth_optimization",
+          "quantum_circuit_phase_repair",
+          "quantum_measurement_bug_repair",
+          "quantum_phase_estimation_circuit",
+          "quantum_stabilizer_tableau_update_repair",
+          "quantum_superdense_coding",
+          "quantum_teleportation_corrections",
+          "quantum_vqe_energy_minimization",
+          "software_config_merge",
+          "software_docstring_contract",
+          "software_duplicate_logic_refactor",
+          "software_multifile_patch_conflict_repair",
+          "software_parser_regression_tests",
+          "software_retry_decorator",
+          "software_session_event_log",
+          "software_session_window_summary",
+          "software_tree_serialization"
+        ],
+        "formats": {
+          "chat-sft-v1": 32
+        },
+        "source_schemas": {
+          "template-v1": 32
+        },
+        "domains": {
+          "quantum": 15,
+          "software": 17
+        },
+        "categories": {
+          "algorithm_implementation": 6,
+          "api_quality": 1,
+          "circuit_construction": 1,
+          "circuit_optimization": 1,
+          "data_structures": 3,
+          "data_transforms": 1,
+          "debug_repair": 3,
+          "design_pattern": 1,
+          "multifile_repair": 2,
+          "protocol_logic": 2,
+          "reasoning": 2,
+          "refactor": 2,
+          "stateful_logic": 5,
+          "test_writing": 2
+        },
+        "task_types": {
+          "implementation": 32
+        },
+        "sources": {
+          "template": 32
+        },
+        "prompt_variants": {
+          "interface-prefix-semantic-v4": 32
+        }
+      }
+    }
+  },
+  "evaluation": {
+    "quantitative": {
+      "local_eval_runner": "evals/runner/run_eval.py",
+      "datasets": [
+        {
+          "path": "evals/tasks",
+          "exists": true,
+          "kind": "executable_task_suite"
+        }
+      ],
+      "scorecard": {
+        "path": "evals/runner/scorecard.json",
+        "exists": true,
+        "sha256": "6486b5ccb6d809efbe399d18c1f01f6277d217dee89b7b136e6c30ffeda7e76a",
+        "valid_json": true,
+        "validation_error": null
+      },
+      "metrics": {
+        "device": "npu:0",
+        "world_size": 2,
+        "train_examples": 160,
+        "eval_examples": 32,
+        "optimizer_steps_per_epoch": 40,
+        "max_available_steps": 40,
+        "requested_max_steps": 20,
+        "completed_steps": 20,
+        "final_eval": {
+          "loss": 0.3727272283285856,
+          "perplexity": 1.4516883063761739
+        }
+      }
+    },
+    "qualitative": {
+      "reports": [],
+      "slices": [],
+      "eval_commands": []
+    },
+    "result_artifacts": [
+      {
+        "path": "reports/base_vs_adapter_outputs_omnicoder9b_semantic_v4_2npu_true20_20260330.json/base_vs_adapter_outputs_omnicoder9b_semantic_v4_2npu_true20_20260330.json",
+        "exists": true,
+        "sha256": "26755096ff87ac23463010123270e5e8b1f262eec713057d68d8d405bf95c271",
+        "valid_json": true,
+        "validation_error": null,
+        "summary": {
+          "kind": "base_vs_adapter_example_slice",
+          "example_count": 5,
+          "task_ids": [
+            "quantum_measurement_bug_repair",
+            "quantum_stabilizer_tableau_update_repair",
+            "software_session_event_log",
+            "software_session_window_summary"
+          ],
+          "domains": [
+            "quantum",
+            "software"
+          ]
+        }
+      }
+    ],
+    "headline_summary": {
+      "kind": "base_vs_adapter_example_slice",
+      "example_count": 5,
+      "task_ids": [
+        "quantum_measurement_bug_repair",
+        "quantum_stabilizer_tableau_update_repair",
+        "software_session_event_log",
+        "software_session_window_summary"
+      ],
+      "domains": [
+        "quantum",
+        "software"
+      ]
+    }
+  },
+  "linked_artifacts": {
+    "delivery_manifest": {
+      "path": "artifacts/deliveries/omnicoder9b_first_working_adapter_20260330.json",
+      "exists": true,
+      "sha256": "eda1f02585a6ea3c19ed29a43728de83310b739699fc6a9b4b68141eaeedd04c",
+      "valid_json": true,
+      "validation_error": null
+    },
+    "handoff_manifest": {
+      "path": "artifacts/deliveries/omnicoder9b-qual-eval-handoff_20260330T021144Z/handoff_manifest.json",
+      "exists": true,
+      "sha256": "475a0c291c489aab9c046192962c26ba5953e6b49260ecd84540e47fd740677b",
+      "valid_json": true,
+      "validation_error": null
+    }
+  },
+  "git": {
+    "head_commit": "15961aa8acf184a1d4b64122f91e18ca4781ee34",
+    "head_commit_short": "15961aa",
+    "status_porcelain": "M artifacts/model-registry/index.json\n M browser-automation/huanxin-shell-ai2.png\n M evals/runner/candidate_sanitize.py\n M evals/runs/omnicoder-quantum-generalization-holdout-base-omnicoder9b-20260410/candidate-map.json\n M evals/runs/omnicoder-quantum-generalization-holdout-base-omnicoder9b-20260410/candidates/quantum_gate_alias_normalization.py\n M evals/runs/omnicoder-quantum-generalization-holdout-base-omnicoder9b-20260410/candidates/quantum_phase_estimation_circuit.py\n M evals/runs/omnicoder-quantum-generalization-holdout-base-omnicoder9b-20260410/candidates/quantum_qaoa_maxcut.py\n M evals/runs/omnicoder-quantum-generalization-holdout-base-omnicoder9b-20260410/candidates/quantum_superdense_coding.py\n M memory/2026-04-10.md\n M reports/omnicoder9b_quantum_generalization_holdout_base_ai2_20260410_blocker.json\n M research/RESEARCH-REPORT.tex\n M research/build/RESEARCH-REPORT.aux\n M research/build/RESEARCH-REPORT.log\n M research/build/RESEARCH-REPORT.out\n M research/build/RESEARCH-REPORT.pdf\n M research/build/RESEARCH-REPORT.toc\n M scripts/ai2_start_merged_codex_server.sh\n M scripts/archive_model_run.py\n M scripts/run_ai2_omnicoder_base_prefill_eval.py\n M scripts/system_tokenizer_probe.py\n M tests/test_candidate_sanitize.py\n M tests/test_text_preprocessor_backend.py\n M training/runtime_overlay.py\n M training/text_preprocessor_backend.py\n?? .git_ssh/\n?? .huanxin_jobs/omnicoder-base-holdout-npu-20260410T114339Z.json\n?? .huanxin_jobs/omnicoder-base-npu-v2-20260410T142112Z.json\n?? .local-python/\n?? .tmp-home/\n?? .venv-gemma4-smoke-py311/\n?? .venv-gemma4-smoke/\n?? .venv-omnicoder-qwen35-py311/\n?? artifacts/delivery-registry/\n?? artifacts/model-registry/interface-prefix-omnicoder9b-semantic-v4-2npu-true20-20260329T2219CST.json\n?? artifacts/model-registry/omnicoder9b-quantum-generalization-sft-8npu-fastiter-20260409T1451CST.json\n?? artifacts/runtime-bundles/\n?? browser-automation/profile.last-known-good/\n?? data/generated/quantum-paper-router-warmup-v1/\n?? data/generated/quantum-paper-smoke-v1/\n?? evals/runner/__pycache__/\n?? evals/runs/omnicoder-quantum-generalization-holdout-base-omnicoder9b-20260410/candidates/__pycache__/\n?? evals/runs/omnicoder-quantum-generalization-holdout-base-omnicoder9b-20260410/scorecard.json\n?? evals/tasks/quantum/bell_pair_construction/__pycache__/\n?? evals/tasks/quantum/circuit_depth_optimization/__pycache__/\n?? evals/tasks/quantum/circuit_phase_repair/__pycache__/\n?? evals/tasks/quantum/error_detection_bit_flip/__pycache__/\n?? evals/tasks/quantum/gate_alias_normalization/__pycache__/\n?? evals/tasks/quantum/measurement_bug_repair/__pycache__/\n?? evals/tasks/quantum/phase_estimation_circuit/__pycache__/\n?? evals/tasks/quantum/qaoa_maxcut/__pycache__/\n?? evals/tasks/quantum/qft_phase_pattern/__pycache__/\n?? evals/tasks/quantum/stabilizer_tableau_update_repair/__pycache__/\n?? evals/tasks/quantum/superdense_coding/__pycache__/\n?? evals/tasks/quantum/teleportation_corrections/__pycache__/\n?? evals/tasks/quantum/vqe_energy_minimization/__pycache__/\n?? evals/tasks/software/config_merge/__pycache__/\n?? evals/tasks/software/docstring_contract/__pycache__/\n?? evals/tasks/software/duplicate_logic_refactor/__pycache__/\n?? evals/tasks/software/multifile_patch_conflict_repair/__pycache__/\n?? evals/tasks/software/off_by_one_bugfix/__pycache__/\n?? evals/tasks/software/parser_regression_tests/__pycache__/\n?? evals/tasks/software/patch_application_conflict_resolver/__pycache__/\n?? evals/tasks/software/retry_decorator/__pycache__/\n?? evals/tasks/software/session_event_log/__pycache__/\n?? evals/tasks/software/session_window_summary/__pycache__/\n?? evals/tasks/software/tree_serialization/__pycache__/\n?? evals/tasks/software/workspace_patch_bundle_repair/__pycache__/\n?? evals/tasks/software/workspace_runner_smoke/__pycache__/\n?? gemini.html\n?? gemini_content.txt\n?? memory/2026-04-11.md\n?? models/gemma-4-26B-A4B-it/\n?? models/gemma-4-E2B-it/\n?? outputs/omnicoder9b-quantum-generalization-sft-8npu-fastiter-20260409T1451CST/adapter/\n?? outputs/omnicoder9b-quantum-generalization-sft-8npu-fastiter-20260409T1451CST/run_config.json\n?? reports/omnicoder9b_quantum_generalization_holdout_base_ai2_20260410_override_summary.json\n?? reports/omnicoder9b_quantum_generalization_holdout_base_ai2_20260410_summary.json\n?? reports/strict_holdout_base_vs_adapter_comparison_20260410.json\n?? scripts/__pycache__/\n?? scripts/ai2_upload_small_file.py\n?? scripts/build_delivery_artifact.py\n?? scripts/build_delivery_registry.py\n?? scripts/delivery_registry.py\n?? scripts/fetch_ai2_text_via_daemon.py\n?? scripts/fix_ai2_codex_bashrc.py\n?? scripts/local_openai_response_probe.py\n?? tests/test_archive_model_run.py\n?? tests/test_build_delivery_artifact.py\n?? tests/test_delivery_registry.py\n?? training/__pycache__/"
+  },
+  "notes": ""
+}

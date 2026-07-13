@@ -1,0 +1,16 @@
+Write a complete, runnable Python program using Qiskit 2.x that:
+1. Implements Shor's order-finding algorithm for N=21, a=2.
+2. Uses n_count=8 counting qubits and n_target=5 target qubits (since 2^5=32 > 21).
+3. Builds a controlled-U^(2^k) gate for U|y> = |a^k * y mod 21> using a 32x32 permutation
+   matrix wrapped as a Unitary gate (Qiskit's Operator + circuit.unitary).
+4. Initializes the target to |1>, applies H^{⊗n_count} to counting qubits, applies the
+   controlled-U^(2^k) for k=0..7, applies the inverse QFT on the counting qubits,
+   and measures the counting register with StatevectorSampler (>= 4000 shots).
+5. Recovers the order r from the most-likely non-zero measured phase using
+   Fraction(phase).limit_denominator(N) and verifies a^r mod N == 1.
+6. Computes factors via gcd(a^(r/2) - 1, N) and gcd(a^(r/2) + 1, N) (only if r is even).
+7. In `def main()`, prints:
+     order r = <integer>
+     factors = <comma-separated integers, or 'none'>
+   Expected: order r = 6, factors = 3,7 (since 2^6 = 64 ≡ 1 mod 21, and 21 = 3*7).
+Call main() under `if __name__ == "__main__":`.

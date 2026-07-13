@@ -1,0 +1,7 @@
+{
+  "id": "quantum_vqe_h2_energy",
+  "title": "VQE on H2 (2-qubit) with 2-layer Ry ansatz + COBYLA",
+  "expected_substrings": [
+    "VQE energy = -1.85"
+  ]
+}

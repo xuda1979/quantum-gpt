@@ -1,0 +1,136 @@
+[
+  {
+    "id": "quantum_qpe_3ancilla_theta_quarter",
+    "title": "Standard 3-ancilla QPE on U = diag(1, exp(i*2*pi*0.25))",
+    "expected_substrings": [
+      "phase_bits = 010",
+      "phase_float = 0.250"
+    ]
+  },
+  {
+    "id": "quantum_random_walk_cycle4_2step",
+    "title": "Discrete-time coined quantum walk on a 4-node cycle, 2 steps from node 0",
+    "expected_substrings": [
+      "P(node=0) = ",
+      "P(node=2) = "
+    ]
+  },
+  {
+    "id": "quantum_amplitude_amplification_unknown",
+    "title": "Amplitude amplification on 4-qubit search with 3 marked solutions",
+    "expected_substrings": [
+      "Estimated solutions: 3",
+      "Found solutions:"
+    ]
+  },
+  {
+    "id": "quantum_simon_period_011",
+    "title": "Simon's algorithm for a 3-bit function with hidden period s=011",
+    "expected_substrings": [
+      "period = 011"
+    ]
+  },
+  {
+    "id": "quantum_shor_n15_a7_order",
+    "title": "Shor's algorithm: find order r of a=7 mod N=15 (r=4) and factors 3,5",
+    "expected_substrings": [
+      "order r = 4",
+      "factors = 3,5"
+    ]
+  },
+  {
+    "id": "quantum_steane_xerror_syndrome",
+    "title": "Steane [[7,1,3]] code Z-stabilizer syndrome for X error on qubit 3",
+    "expected_substrings": [
+      "syndrome = 001",
+      "error_qubit = 3"
+    ]
+  },
+  {
+    "id": "quantum_wstate_3qubit_preparation",
+    "title": "Prepare the 3-qubit W state and measure single-qubit excited probability",
+    "expected_substrings": [
+      "P(single excitation) = 0.",
+      "W-state count: 1"
+    ]
+  },
+  {
+    "id": "quantum_toffoli_decomposition_correctness",
+    "title": "Verify Toffoli decomposition into H, T, Tdg, CNOT matches a direct Toffoli",
+    "expected_substrings": [
+      "fidelity = 1.000",
+      "match: True"
+    ]
+  },
+  {
+    "id": "quantum_draper_adder_3plus2",
+    "title": "Draper QFT adder: compute 3 + 2 = 5 on 2-qubit registers",
+    "expected_substrings": [
+      "sum = 5"
+    ]
+  },
+  {
+    "id": "quantum_vqe_tfim_4qubit",
+    "title": "VQE for 4-qubit transverse-field Ising model (J=h=1, open chain)",
+    "expected_substrings": [
+      "VQE energy = ",
+      "exact = -4.759"
+    ]
+  },
+  {
+    "id": "quantum_teleportation_qubit_q2_to_q0",
+    "title": "Quantum teleportation: transmit |+> state from q2 to q0 via Bell pair",
+    "expected_substrings": [
+      "fidelity = 1.000",
+      "teleported: True"
+    ]
+  },
+  {
+    "id": "quantum_full_adder_1plus1plus0",
+    "title": "Quantum full adder: compute 1 + 1 + 0 = sum 0, carry 1",
+    "expected_substrings": [
+      "sum = 0",
+      "carry = 1"
+    ]
+  },
+  {
+    "id": "quantum_mct4_decomposition_correctness",
+    "title": "Verify 4-controlled Toffoli decomposition (no ancilla) matches direct MCT",
+    "expected_substrings": [
+      "fidelity = 1.000",
+      "match: True"
+    ]
+  },
+  {
+    "id": "quantum_chsh_violation",
+    "title": "CHSH Bell inequality: compute S > 2 with optimal measurement angles",
+    "expected_substrings": [
+      "S = ",
+      "violation: True"
+    ]
+  },
+  {
+    "id": "quantum_heavy_output_3qubit",
+    "title": "Heavy-output generation for a 3-qubit random quantum volume circuit",
+    "expected_substrings": [
+      "heavy_output_prob = ",
+      "passes: True"
+    ]
+  },
+  {
+    "id": "quantum_graph_state_5qubit_path",
+    "title": "5-qubit graph state on a path graph, measure X-stabilizer eigenvalue",
+    "expected_substrings": [
+      "stab_eigenvalue = 5",
+      "graph_state: True"
+    ]
+  },
+  {
+    "id": "quantum_qaoa_p1_maxcut_k4",
+    "title": "QAOA p=1 Max-Cut on a 4-vertex graph (triangle + pendant)",
+    "expected_substrings": [
+      "cut_value = 4",
+      "optimal: True"
+    ]
+  }
+]

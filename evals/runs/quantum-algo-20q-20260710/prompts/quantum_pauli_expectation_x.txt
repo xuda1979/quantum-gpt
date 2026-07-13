@@ -1,0 +1,7 @@
+Write a complete, runnable Python program using Qiskit that:
+1. Prepares |+> = H|0> on 1 qubit.
+2. Uses qiskit.primitives.StatevectorEstimator to compute <psi|X|psi>.
+3. In `def main()`, prints the expectation value rounded to 6 decimals.
+Output exactly:
+  <X> = <value>
+Call main() under `if __name__ == "__main__":`.

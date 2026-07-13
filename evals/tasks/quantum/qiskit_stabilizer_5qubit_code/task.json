@@ -1,0 +1,9 @@
+{
+  "id": "quantum_qiskit_stabilizer_5qubit_code",
+  "name": "Qiskit [[5,1,3]] five-qubit stabilizer code table",
+  "domain": "quantum",
+  "category": "quantum_error_correction",
+  "framework": "qiskit",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

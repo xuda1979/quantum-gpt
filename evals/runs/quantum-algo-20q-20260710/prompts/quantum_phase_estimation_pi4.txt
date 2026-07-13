@@ -1,0 +1,9 @@
+Write a complete, runnable Python program using Qiskit that:
+1. Implements Quantum Phase Estimation with 3 counting qubits to estimate the phase of the unitary U = S (phase gate, eigenvalue e^{i*pi/2}, phase = 1/4).
+2. Uses eigenstate |1> on the target qubit (qubit 3).
+3. Apply H to counting qubits 0,1,2; apply controlled-U^(2^k): cp(pi/2, q0, tgt), cp(pi, q1, tgt), (q2 needs S^4 = I, so no gate); then inverse QFT on the 3 counting qubits.
+4. In `def main()`, uses StatevectorSampler (2000 shots) and prints the most-likely 3-bit measurement (Qiskit little-endian: leftmost char is q2) and the estimated phase = int(measurement) / 2^3.
+Output exactly:
+  Measurement: <3-bit string>
+  Estimated phase: <float rounded to 4 decimals>
+Call main() under `if __name__ == "__main__":`.

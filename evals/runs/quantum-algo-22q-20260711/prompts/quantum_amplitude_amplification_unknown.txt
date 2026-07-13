@@ -1,0 +1,15 @@
+Write a complete, runnable Python program using Qiskit 2.x that:
+1. Defines a 4-qubit Grover oracle marking exactly these 3 solutions out of 16:
+   |0000>, |0101>, |1010> (bitstrings MSB=q3 to LSB=q0).
+2. Implements the Grover diffusion operator H^⊗4 (2|0><0| - I) H^⊗4 on 4 qubits
+   explicitly using X gates, a multi-controlled Z, and Hadamards (do not use
+   qiskit.circuit.library.GroverOperator).
+3. Uses k = 2 Grover iterations (optimal for M=3 out of N=16).
+4. Measures all 4 qubits with StatevectorSampler (>= 4000 shots).
+5. In `def main()`:
+   - Collects measured bitstrings with occurrence >= 5% of shots that are in
+     the good set {0000, 0101, 1010}, sorts them, and prints:
+       Found solutions: <comma-separated sorted bitstrings>
+   - Prints:
+       Estimated solutions: 3
+Call main() under `if __name__ == "__main__":`.

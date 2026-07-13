@@ -21,7 +21,9 @@ def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def run_command(command: str, env: dict[str, str], cwd: Path, timeout: int | None) -> subprocess.CompletedProcess[str]:
+def run_command(
+    command: str, env: dict[str, str], cwd: Path, timeout: int | None
+) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         command,
         shell=True,
@@ -41,7 +43,45 @@ def resolve_run_dir(run_dir: Path) -> Path:
     return resolved
 
 
-def build_env(base_env: dict[str, str], run_dir: Path, manifest: dict[str, Any], task: dict[str, Any]) -> dict[str, str]:
+HERMETIC_DIR = (ROOT / "evals" / "runner" / "_hermetic").resolve()
+
+
+def apply_hermetic_env(env: dict[str, str], seed: int, allow_network: bool) -> dict[str, str]:
+    """Make candidate code execution reproducible and (optionally) offline.
+
+    Prepends the ``_hermetic`` directory to PYTHONPATH so its ``sitecustomize``
+    module is auto-imported at interpreter startup, seeding RNGs and blocking
+    outbound network. Single-thread BLAS/OpenMP pins remove another source of
+    run-to-run nondeterminism so an S-tier "code passed" label is stable.
+    """
+    existing_pythonpath = env.get("PYTHONPATH", "")
+    env["PYTHONPATH"] = str(HERMETIC_DIR) + (
+        os.pathsep + existing_pythonpath if existing_pythonpath else ""
+    )
+    env["PYTHONHASHSEED"] = str(seed)
+    env["EVAL_SEED"] = str(seed)
+    env["EVAL_BLOCK_NETWORK"] = "0" if allow_network else "1"
+    for thread_var in (
+        "OMP_NUM_THREADS",
+        "MKL_NUM_THREADS",
+        "OPENBLAS_NUM_THREADS",
+        "NUMEXPR_NUM_THREADS",
+    ):
+        env[thread_var] = "1"
+    env["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
+    env["TOKENIZERS_PARALLELISM"] = "false"
+    return env
+
+
+def build_env(
+    base_env: dict[str, str],
+    run_dir: Path,
+    manifest: dict[str, Any],
+    task: dict[str, Any],
+    hermetic: bool = False,
+    seed: int = 0,
+    allow_network: bool = False,
+) -> dict[str, str]:
     env = dict(base_env)
     prompt_path = (run_dir / task["prompt_file"]).resolve()
     candidate_path = (run_dir / task["candidate_file"]).resolve()
@@ -61,6 +101,8 @@ def build_env(base_env: dict[str, str], run_dir: Path, manifest: dict[str, Any],
             "EVAL_PROMPT_VERSION": str(manifest.get("prompt_version", "")),
         }
     )
+    if hermetic:
+        apply_hermetic_env(env, seed=seed, allow_network=allow_network)
     return env
 
 
@@ -156,7 +198,12 @@ def write_execution_log(
 
 def score_run(run_dir: Path) -> int:
     candidate_map = run_dir / "candidate-map.json"
-    cmd = [sys.executable, str(ROOT / "evals" / "runner" / "run_eval.py"), "--candidate-map", str(candidate_map)]
+    cmd = [
+        sys.executable,
+        str(ROOT / "evals" / "runner" / "run_eval.py"),
+        "--candidate-map",
+        str(candidate_map),
+    ]
     completed = subprocess.run(cmd, cwd=str(ROOT), text=True)
     return completed.returncode
 
@@ -177,12 +224,34 @@ def parse_args() -> argparse.Namespace:
             "The command should print the candidate file contents to stdout."
         ),
     )
-    parser.add_argument("--timeout", type=int, default=None, help="Optional per-task timeout in seconds.")
-    parser.add_argument("--force", action="store_true", help="Overwrite non-empty candidate files instead of skipping them.")
-    parser.add_argument("--no-score", action="store_true", help="Execute tasks without invoking run_eval.py afterward.")
-    parser.add_argument("--backend-name", default=None, help="Optional backend/provider label recorded in logs and run manifest.")
-    parser.add_argument("--backend-model", default=None, help="Optional model identifier recorded in logs and run manifest.")
-    parser.add_argument("--backend-settings-json", default=None, help="Optional JSON object of decoding/provider settings to record in logs and run manifest.")
+    parser.add_argument(
+        "--timeout", type=int, default=None, help="Optional per-task timeout in seconds."
+    )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Overwrite non-empty candidate files instead of skipping them.",
+    )
+    parser.add_argument(
+        "--no-score",
+        action="store_true",
+        help="Execute tasks without invoking run_eval.py afterward.",
+    )
+    parser.add_argument(
+        "--backend-name",
+        default=None,
+        help="Optional backend/provider label recorded in logs and run manifest.",
+    )
+    parser.add_argument(
+        "--backend-model",
+        default=None,
+        help="Optional model identifier recorded in logs and run manifest.",
+    )
+    parser.add_argument(
+        "--backend-settings-json",
+        default=None,
+        help="Optional JSON object of decoding/provider settings to record in logs and run manifest.",
+    )
     return parser.parse_args()
 
 

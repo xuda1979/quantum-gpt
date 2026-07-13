@@ -1,0 +1,83 @@
+# ASI1 Qwen3.6-35B-A3B LoRA scientific ablation commands
+# Generated: 2026-06-12
+# Dataset split prepared at:
+#   data/generated/qwen36_quantum_finetune_10k_split_9500_500_v1/
+# Note: source file currently has 10,500 rows, so split is 10,000 train / 500 test.
+# Run each command from repo root: /Users/daxu/software/quantum-gpt
+
+# Shared knobs
+export ASI1_ISQ_SFT_MODEL_NAME=/root/work/filestorage/Qwen3.6-35B-A3B
+export ASI1_ISQ_SFT_SPLIT_DIR=data/generated/qwen36_quantum_finetune_10k_split_9500_500_v1
+export ASI1_ISQ_SFT_TRAIN_FILE=data/generated/qwen36_quantum_finetune_10k_split_9500_500_v1/train_chatml.jsonl
+export ASI1_ISQ_SFT_EVAL_FILE=data/generated/qwen36_quantum_finetune_10k_split_9500_500_v1/test_chatml.jsonl
+export ASI1_ISQ_SFT_MAX_LENGTH=1024
+export ASI1_ISQ_SFT_MAX_STEPS=240
+export ASI1_ISQ_SFT_NUM_EPOCHS=1
+export ASI1_ISQ_SFT_PER_DEVICE_BATCH_SIZE=1
+export ASI1_ISQ_SFT_GRAD_ACCUM=8
+export ASI1_ISQ_SFT_LEARNING_RATE=1e-5
+export ASI1_ISQ_SFT_EVAL_STEPS=20
+export ASI1_ISQ_SFT_LOG_STEPS=5
+export ASI1_ISQ_SFT_LORA_ALPHA=64
+export ASI1_ISQ_SFT_LORA_DROPOUT=0.05
+export ASI1_ISQ_SFT_TRAIN_LAYERNORM=1
+export ASI1_ISQ_SFT_MIN_TRAINABLE_PARAMETERS=80000000
+export ASI1_ISQ_SFT_MAX_TRAINABLE_PARAMETERS=700000000
+
+# Upper-layer focus regex: layers 19..47 (for 48-layer stack)
+# Includes both model.layers.* and model.language_model.layers.* naming styles.
+export UPPER_LAYER_LORA_REGEX='(?:model(?:\\.language_model)?\\.layers\\.(?:1[9]|[2-3][0-9]|4[0-7])\\..*lora_)'
+
+################################################################################
+# A) Recommended baseline: no-K, Q/V/O + FFN, upper layers only
+################################################################################
+export ASI1_ISQ_SFT_TASK_NAME=asi1-q36-35b-loraA-qvoffn-upper-noK
+export ASI1_ISQ_SFT_OUTPUT_DIR=outputs/qwen36-35b-a3b-loraA-qvoffn-upper-noK-20260612
+export ASI1_ISQ_SFT_LOG_PATH=logs/asi1_q36_35b_loraA_qvoffn_upper_noK_20260612.log
+export ASI1_ISQ_SFT_LORA_RANK=32
+export ASI1_ISQ_SFT_TARGET_MODULES='q_proj v_proj o_proj gate_proj up_proj down_proj'
+export ASI1_ISQ_SFT_TARGET_MODULE_REGEX=''
+export ASI1_ISQ_SFT_TRAINABLE_PARAM_REGEX="$UPPER_LAYER_LORA_REGEX"
+export ASI1_ISQ_SFT_FREEZE_PARAM_REGEX=''
+bash scripts/submit_asi1_isq_sft_task.sh --submit
+
+################################################################################
+# B) Full-depth comparison: no-K, Q/V/O + FFN, all layers
+################################################################################
+export ASI1_ISQ_SFT_TASK_NAME=asi1-q36-35b-loraB-qvoffn-alllayers-noK
+export ASI1_ISQ_SFT_OUTPUT_DIR=outputs/qwen36-35b-a3b-loraB-qvoffn-alllayers-noK-20260612
+export ASI1_ISQ_SFT_LOG_PATH=logs/asi1_q36_35b_loraB_qvoffn_alllayers_noK_20260612.log
+export ASI1_ISQ_SFT_LORA_RANK=32
+export ASI1_ISQ_SFT_TARGET_MODULES='q_proj v_proj o_proj gate_proj up_proj down_proj'
+export ASI1_ISQ_SFT_TARGET_MODULE_REGEX=''
+export ASI1_ISQ_SFT_TRAINABLE_PARAM_REGEX='lora_'
+export ASI1_ISQ_SFT_FREEZE_PARAM_REGEX=''
+bash scripts/submit_asi1_isq_sft_task.sh --submit
+
+################################################################################
+# C) MoE-safe gating sensitivity probe (NOT full router+expert tuning)
+#    Rationale: qwen3_5_moe router uses raw parameter tensors (not standard Linear),
+#    so generic LoRA cannot safely tune full router/expert weights without custom method.
+#    This run adds shared_expert_gate + FFN/QVO upper layers as a conservative proxy.
+################################################################################
+export ASI1_ISQ_SFT_TASK_NAME=asi1-q36-35b-loraC-gating-proxy-upper-noK
+export ASI1_ISQ_SFT_OUTPUT_DIR=outputs/qwen36-35b-a3b-loraC-gating-proxy-upper-noK-20260612
+export ASI1_ISQ_SFT_LOG_PATH=logs/asi1_q36_35b_loraC_gating_proxy_upper_noK_20260612.log
+export ASI1_ISQ_SFT_LORA_RANK=32
+export ASI1_ISQ_SFT_TARGET_MODULES='q_proj v_proj o_proj gate_proj up_proj down_proj shared_expert_gate'
+export ASI1_ISQ_SFT_TARGET_MODULE_REGEX=''
+export ASI1_ISQ_SFT_TRAINABLE_PARAM_REGEX="$UPPER_LAYER_LORA_REGEX|shared_expert_gate.*lora_"
+export ASI1_ISQ_SFT_FREEZE_PARAM_REGEX=''
+bash scripts/submit_asi1_isq_sft_task.sh --submit
+
+################################################################################
+# After each run finishes: comprehensive base-vs-adapter evaluation
+################################################################################
+# Example for run A:
+# HUANXIN_USE_DAEMON=0 HUANXIN_ALLOW_STANDALONE_FALLBACK=1 HUANXIN_ALLOW_SAFARI_SSO_BRIDGE=1 \
+# bash scripts/huanxin_env_shell.sh --env ASI1 "cd /root/software/quantum-gpt && \
+# python3 scripts/run_asi2_base_adapter_rubric_eval.py \
+#   --base-model /root/work/filestorage/Qwen3.6-35B-A3B \
+#   --adapter /root/software/quantum-gpt/outputs/qwen36-35b-a3b-loraA-qvoffn-upper-noK-20260612/adapter \
+#   --output /root/software/quantum-gpt/reports/qwen36_35b_loraA_rubric_eval_20260612.json \
+#   --device npu --max-new-tokens 768"

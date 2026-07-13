@@ -1,0 +1,20 @@
+Write a complete, runnable Python program using Qiskit 2.x that:
+1. Uses 7 data qubits (q0..q6) initialized in |0> and 3 ancilla qubits
+   (q7, q8, q9) initialized in |0>. (|0>^7 is a +1 eigenstate of all
+   Z-type stabilizers of the Steane [[7,1,3]] code.)
+2. Injects a single-qubit X error on data qubit 3 (qc.x(3)).
+3. Measures the 3 Z-type stabilizer generators of the Steane code:
+     g1 = Z0 Z2 Z4 Z6
+     g2 = Z1 Z2 Z5 Z6
+     g3 = Z3 Z4 Z5 Z6
+   For each generator, measure the Z-parity by introducing an ancilla in |0>,
+   applying CNOT(data_qubit, ancilla) for each data qubit in the generator,
+   then measuring the ancilla in the Z basis.
+4. Use StatevectorSampler (>= 2000 shots) and report the 3-bit syndrome
+   (g1 g2 g3, MSB=g1) and the decoded error qubit (the qubit q in 0..6
+   whose syndrome bits (1 if q in g_i else 0) match the measured syndrome).
+5. In `def main()`, prints:
+     syndrome = <3-bit string>
+     error_qubit = <integer>
+   For an X error on qubit 3, expected: syndrome = 001 and error_qubit = 3.
+Call main() under `if __name__ == "__main__":`.

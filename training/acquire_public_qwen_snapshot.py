@@ -27,6 +27,17 @@ DEFAULT_HF_ENDPOINT = "https://huggingface.co"
 HF_MIRROR_ENDPOINT = "https://hf-mirror.com"
 
 PUBLIC_MODELS = {
+    "qwen36-27b": {
+        "model_id": "Qwen/Qwen3.6-27B",
+        "expected_substring": "Qwen3.6-27B",
+        "expected_family_substring": "qwen",
+        "supports_generic_remote_commands": True,
+        "audit_out": "artifacts/model-source-audit-qwen36-27b.json",
+        "handoff_note": "research/qwen36-27b-handoff.md",
+        "remote_model_dir": "/root/software/quantum-gpt/models/Qwen3.6-27B",
+        "handoff_manifest": "artifacts/qwen36-27b-local-snapshot-handoff.json",
+        "preflight_manifest": "artifacts/qwen36-27b-local-snapshot-preflight.json",
+    },
     "qwen25": {
         "model_id": "Qwen/Qwen2.5-1.5B-Instruct",
         "expected_substring": "Qwen2.5-1.5B-Instruct",
@@ -34,7 +45,7 @@ PUBLIC_MODELS = {
         "supports_generic_remote_commands": True,
         "audit_out": "artifacts/model-source-audit-qwen25.json",
         "handoff_note": "research/qwen25-public-fallback-handoff.md",
-        "remote_model_dir": "/root/root/work/quantum-gpt/models/Qwen2.5-1.5B-Instruct",
+        "remote_model_dir": "/root/work/quantum-gpt/models/Qwen2.5-1.5B-Instruct",
         "handoff_manifest": "artifacts/qwen25-local-snapshot-handoff.json",
         "preflight_manifest": "artifacts/qwen25-local-snapshot-preflight.json",
     },
@@ -45,7 +56,7 @@ PUBLIC_MODELS = {
         "supports_generic_remote_commands": True,
         "audit_out": "artifacts/model-source-audit-qwen3-1p7b.json",
         "handoff_note": "research/qwen3-public-alternative-handoff.md",
-        "remote_model_dir": "/root/root/work/quantum-gpt/models/Qwen3-1.7B",
+        "remote_model_dir": "/root/work/quantum-gpt/models/Qwen3-1.7B",
         "handoff_manifest": "artifacts/qwen3-1p7b-local-snapshot-handoff.json",
         "preflight_manifest": "artifacts/qwen3-1p7b-local-snapshot-preflight.json",
     },
@@ -56,7 +67,7 @@ PUBLIC_MODELS = {
         "supports_generic_remote_commands": False,
         "audit_out": "artifacts/model-source-audit-omnicoder9b.json",
         "handoff_note": "research/omnicoder9b-public-handoff.md",
-        "remote_model_dir": "/root/root/work/quantum-gpt/models/OmniCoder-9B",
+        "remote_model_dir": "/root/work/quantum-gpt/models/OmniCoder-9B",
         "handoff_manifest": "artifacts/omnicoder9b-local-snapshot-handoff.json",
         "preflight_manifest": "artifacts/omnicoder9b-local-snapshot-preflight.json",
     },
@@ -67,7 +78,7 @@ PUBLIC_MODELS = {
         "supports_generic_remote_commands": False,
         "audit_out": "artifacts/model-source-audit-gemma4-e2b-it.json",
         "handoff_note": "research/papers/gemma4_text_path_enablement/paper.md",
-        "remote_model_dir": "/root/root/work/quantum-gpt/models/gemma-4-E2B-it",
+        "remote_model_dir": "/root/work/quantum-gpt/models/gemma-4-E2B-it",
         "handoff_manifest": "artifacts/gemma4-e2b-it-local-snapshot-handoff.json",
         "preflight_manifest": "artifacts/gemma4-e2b-it-local-snapshot-preflight.json",
     },
@@ -78,7 +89,7 @@ PUBLIC_MODELS = {
         "supports_generic_remote_commands": False,
         "audit_out": "artifacts/model-source-audit-gemma4-e4b-it.json",
         "handoff_note": "research/papers/gemma4_text_path_enablement/paper.md",
-        "remote_model_dir": "/root/root/work/quantum-gpt/models/gemma-4-E4B-it",
+        "remote_model_dir": "/root/work/quantum-gpt/models/gemma-4-E4B-it",
         "handoff_manifest": "artifacts/gemma4-e4b-it-local-snapshot-handoff.json",
         "preflight_manifest": "artifacts/gemma4-e4b-it-local-snapshot-preflight.json",
     },
@@ -89,7 +100,7 @@ PUBLIC_MODELS = {
         "supports_generic_remote_commands": False,
         "audit_out": "artifacts/model-source-audit-gemma4-26b-a4b-it.json",
         "handoff_note": "research/papers/gemma4_text_path_enablement/paper.md",
-        "remote_model_dir": "/root/root/work/quantum-gpt/models/gemma-4-26B-A4B-it",
+        "remote_model_dir": "/root/work/quantum-gpt/models/gemma-4-26B-A4B-it",
         "handoff_manifest": "artifacts/gemma4-26b-a4b-it-local-snapshot-handoff.json",
         "preflight_manifest": "artifacts/gemma4-26b-a4b-it-local-snapshot-preflight.json",
     },
@@ -100,7 +111,7 @@ PUBLIC_MODELS = {
         "supports_generic_remote_commands": False,
         "audit_out": "artifacts/model-source-audit-gemma4-31b-it.json",
         "handoff_note": "research/papers/gemma4_text_path_enablement/paper.md",
-        "remote_model_dir": "/root/root/work/quantum-gpt/models/gemma-4-31B-it",
+        "remote_model_dir": "/root/work/quantum-gpt/models/gemma-4-31B-it",
         "handoff_manifest": "artifacts/gemma4-31b-it-local-snapshot-handoff.json",
         "preflight_manifest": "artifacts/gemma4-31b-it-local-snapshot-preflight.json",
     },
@@ -287,7 +298,9 @@ def main() -> int:
         }
         if args.render_remote_commands and supports_generic_remote_commands:
             try:
-                remote_commands_path, render_payload = render_remote_commands(args.bootstrap_bundle, remote_model_dir)
+                remote_commands_path, render_payload = render_remote_commands(
+                    args.bootstrap_bundle, remote_model_dir
+                )
             except subprocess.CalledProcessError as exc:
                 sys.stderr.write(exc.stdout)
                 sys.stderr.write(exc.stderr)
@@ -301,7 +314,9 @@ def main() -> int:
                 "bootstrap path assumes a text-only AutoTokenizer + AutoModelForCausalLM stack. "
                 "This target requires a newer runtime and/or a processor-aware conditional-generation path first."
             )
-        preflight_manifest.write_text(json.dumps(result, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        preflight_manifest.write_text(
+            json.dumps(result, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+        )
         print(json.dumps(result, indent=2, ensure_ascii=False))
         return 0
 
@@ -368,7 +383,9 @@ def main() -> int:
     }
     if args.render_remote_commands and supports_generic_remote_commands:
         try:
-            remote_commands_path, render_payload = render_remote_commands(args.bootstrap_bundle, remote_model_dir)
+            remote_commands_path, render_payload = render_remote_commands(
+                args.bootstrap_bundle, remote_model_dir
+            )
         except subprocess.CalledProcessError as exc:
             sys.stderr.write(exc.stdout)
             sys.stderr.write(exc.stderr)
@@ -382,7 +399,9 @@ def main() -> int:
             "bootstrap path assumes a text-only AutoTokenizer + AutoModelForCausalLM stack. "
             f"{Path(remote_model_dir).name} requires a newer Transformers runtime and a processor-aware path first."
         )
-    handoff_manifest.write_text(json.dumps(result, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    handoff_manifest.write_text(
+        json.dumps(result, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+    )
     print(json.dumps(result, indent=2, ensure_ascii=False))
     return 0
 

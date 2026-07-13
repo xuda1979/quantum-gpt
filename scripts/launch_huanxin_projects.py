@@ -8,7 +8,6 @@ import json
 import os
 import shutil
 import subprocess
-import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -34,7 +33,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--huanxin-headless", default=os.environ.get("HUANXIN_HEADLESS", "1"))
     parser.add_argument(
         "--quantum-model-name",
-        default=os.environ.get("QWEN_BASE_MODEL", "Qwen/Qwen3.5-1.5B-Instruct"),
+        default=os.environ.get("QWEN_BASE_MODEL", "Qwen/Qwen3.6-27B"),
     )
     parser.add_argument(
         "--out",
@@ -102,7 +101,9 @@ def ensure_alphaqubit_python(python_path: str) -> tuple[str, list[dict]]:
         return str(interpreter), bootstrap_results
 
     bootstrap_results.append(
-        run_local_command([str(interpreter), "-m", "pip", "install", "--upgrade", "pip"], ALPHAQUBIT_ROOT)
+        run_local_command(
+            [str(interpreter), "-m", "pip", "install", "--upgrade", "pip"], ALPHAQUBIT_ROOT
+        )
     )
     if not bootstrap_results[-1]["ok"]:
         return str(interpreter), bootstrap_results
@@ -116,7 +117,9 @@ def ensure_alphaqubit_python(python_path: str) -> tuple[str, list[dict]]:
     return str(interpreter), bootstrap_results
 
 
-def run_node_script(script_name: str, script_args: list[str], cwd: Path, profile_copy_name: str, headless: str) -> dict:
+def run_node_script(
+    script_name: str, script_args: list[str], cwd: Path, profile_copy_name: str, headless: str
+) -> dict:
     env = {
         **os.environ,
         "HUANXIN_PROFILE_COPY_NAME": profile_copy_name,
@@ -137,7 +140,7 @@ def run_node_script(script_name: str, script_args: list[str], cwd: Path, profile
 def project_configs(args: argparse.Namespace) -> dict[str, dict]:
     alpha_python = args.alphaqubit_python
     quantum_command = (
-        "cd /root/root/work/quantum-gpt && "
+        "cd /root/work/quantum-gpt && "
         "python3 evals/runner/run_eval.py && "
         "python3 data/seed/build_seed_dataset.py && "
         "python3 data/seed/convert_to_chat.py && "
@@ -157,7 +160,7 @@ def project_configs(args: argparse.Namespace) -> dict[str, dict]:
         "quantum": {
             "env": "ai2",
             "local_root": WORKSPACE_ROOT,
-            "remote_dir": "/root/root/work/quantum-gpt",
+            "remote_dir": "/root/work/quantum-gpt",
             "sources": [
                 "AGENTS.md",
                 "PROJECT.md",
@@ -175,7 +178,13 @@ def project_configs(args: argparse.Namespace) -> dict[str, dict]:
                 ["python3", "data/seed/build_seed_dataset.py"],
                 ["python3", "data/seed/convert_to_chat.py"],
                 ["python3", "data/seed/create_splits.py", "--auto-policy"],
-                ["python3", "-m", "py_compile", "training/qwen_sft_peft.py", "scripts/launch_huanxin_projects.py"],
+                [
+                    "python3",
+                    "-m",
+                    "py_compile",
+                    "training/qwen_sft_peft.py",
+                    "scripts/launch_huanxin_projects.py",
+                ],
             ],
             "remote_command": quantum_command,
         },
@@ -249,7 +258,9 @@ def launch_project(name: str, config: dict, headless: str) -> dict:
     sync_args = [config["env"], "--remote-dir", config["remote_dir"]]
     for source in config["sources"]:
         sync_args.extend(["--source", source])
-    result["sync"] = run_node_script("huanxin_shell_sync.js", sync_args, config["local_root"], profile_copy_name, headless)
+    result["sync"] = run_node_script(
+        "huanxin_shell_sync.js", sync_args, config["local_root"], profile_copy_name, headless
+    )
     if not result["sync"]["ok"]:
         result["ok"] = False
         result["blocked_at"] = "sync"

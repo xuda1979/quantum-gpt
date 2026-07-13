@@ -1,46 +1,68 @@
 {
   "ok": true,
   "title": "焕新社区",
-  "url": "https://aihuanxin.cn/auth/realms/TechnicalMiddlePlatform/protocol/openid-connect/auth?client_id=kunlun-front&redirect_uri=https%3A%2F%2Faihuanxin.cn%2Fkunlun%2Fkl-web%3FpoolId%3D1%26projectId%3D3ed7854b946a47b1a49ad754baa76cd3%23%2Ftrain-dev&state=becf4c14-b574-45eb-bf8f-3bed12758ae2&response_mode=fragment&response_type=code&scope=openid&nonce=8dda9737-9eab-4be6-8c91-0ab7f55c51d5",
-  "state": "login_required",
-  "bodyPreview": "焕新社区 短信登录 密码登录 获取验证码 下次自动登录 我已阅读并同意焕新社区 《服务协议及隐私政策》 登录 取消登录 没有账号？ 立即注册 ©2025 焕新社区 版权所有京ICP备05002571号-27",
+  "url": "https://aihuanxin.cn/kunlun/kl-web?poolId=6&projectId=21b4208dde424e96b159362ef49c9c96#/train-dev/environment/dl-9a5a098accce31c28cf4c6ca23391341?name=AI&state=0b2cbd55-cb1e-41d0-885e-1a473261e0cb&session_state=ab6f697b-a4ba-47f4-83fb-460b6504a81c&code=10900e70-1ebe-4363-a396-d0e92ee7fe27.ab6f697b-a4ba-47f4-83fb-460b6504a81c.55d54dd3-6a72-4b47-b302-151bd26477bc",
+  "state": "authenticated_surface_ready",
+  "bodyPreview": "哈尔滨-1 帮助中心 消息中心 xuda2025 我的项目 移动研究院未来院 项目空间详情 模型广场 模型训练 开发环境 训练任务 模型调优 有监督微调 模型推理 推理服务 应用接入 调用统计 资产管理 模型管理 镜像管理 文件管理 数据集管理 运营运维 用量管理 告警管理 操作日志 项目空间管理/ 模型训练/ 开发环境/ 开发环境详情/ 打开环境 AI 所有开发环境合计可最多占用128卡，超出将无法启动，请提交训练任务；开发环境使用完毕后请及时手动停止，如长时间闲置，将被自动回收，状态更新为已锁定；在运行镜像中安装软件及依赖后，请务必及时进行“保存镜像”操作，以实现镜像持久化保存，否则，当开发环境被停止或锁定后，相关安装文件将丢失无法找回 Jupyter VSCode Shell终端 可视化 保存镜像 任务列表 提交任务",
   "attemptTrace": [
     {
       "attempt": 1,
       "title": "焕新社区",
-      "url": "https://aihuanxin.cn/auth/realms/TechnicalMiddlePlatform/protocol/openid-connect/auth?client_id=kunlun-front&redirect_uri=https%3A%2F%2Faihuanxin.cn%2Fkunlun%2Fkl-web%3FpoolId%3D1%26projectId%3D3ed7854b946a47b1a49ad754baa76cd3%23%2Ftrain-dev&state=becf4c14-b574-45eb-bf8f-3bed12758ae2&response_mode=fragment&response_type=code&scope=openid&nonce=8dda9737-9eab-4be6-8c91-0ab7f55c51d5",
-      "state": "login_required",
-      "bodyPreview": "焕新社区 短信登录 密码登录 获取验证码 下次自动登录 我已阅读并同意焕新社区 《服务协议及隐私政策》 登录 取消登录 没有账号？ 立即注册 ©2025 焕新社区 版权所有京ICP备05002571号-27",
+      "url": "https://aihuanxin.cn/kunlun/kl-web?poolId=6&projectId=21b4208dde424e96b159362ef49c9c96#/train-dev/environment/dl-9a5a098accce31c28cf4c6ca23391341?name=AI&state=0b2cbd55-cb1e-41d0-885e-1a473261e0cb&session_state=ab6f697b-a4ba-47f4-83fb-460b6504a81c&code=10900e70-1ebe-4363-a396-d0e92ee7fe27.ab6f697b-a4ba-47f4-83fb-460b6504a81c.55d54dd3-6a72-4b47-b302-151bd26477bc",
+      "state": "authenticated_surface_ready",
+      "bodyPreview": "哈尔滨-1 帮助中心 消息中心 xuda2025 我的项目 移动研究院未来院 项目空间详情 模型广场 模型训练 开发环境 训练任务 模型调优 有监督微调 模型推理 推理服务 应用接入 调用统计 资产管理 模型管理 镜像管理 文件管理 数据集管理 运营运维 用量管理 告警管理 操作日志 项目空间管理/ 模型训练/ 开发环境/ 开发环境详情/ 打开环境 AI 所有开发环境合计可最多占用128卡，超出将无法启动，请提交训练任务；开发环境使用完毕后请及时手动停止，如长时间闲置，将被自动回收，状态更新为已锁定；在运行镜像中安装软件及依赖后，请务必及时进行“保存镜像”操作，以实现镜像持久化保存，否则，当开发环境被停止或锁定后，相关安装文件将丢失无法找回 Jupyter VSCode Shell终端 可视化 保存镜像 任务列表 提交任务",
       "hasLikelyRemoteSurface": true
     }
   ],
   "links": [
     {
-      "text": "短信登录",
-      "href": "#"
+      "text": "项目空间管理",
+      "href": "#/project-space"
     },
     {
-      "text": "密码登录",
-      "href": "#"
+      "text": "开发环境",
+      "href": "#/train-dev"
     },
     {
-      "text": "《服务协议及隐私政策》",
-      "href": "https://aihuanxin.cn/portal/common-helpcenter#/document/40?unread-message=%2Fportal%2Fcommon-components%23%2F&platformCode=JTRGZNPTFWXY&error=login_required&state=b2457970-ab75-412b-8596-95caa4011dfc"
-    },
-    {
-      "text": "取消登录",
-      "href": ""
-    },
-    {
-      "text": "立即注册",
-      "href": "/auth/realms/TechnicalMiddlePlatform/login-actions/registration?client_id=kunlun-front&tab_id=hg0eO9LD79Y&redirect_uri=https%3A%2F%2Faihuanxin.cn%2Fkunlun%2Fkl-web%3FpoolId%3D1%26projectId%3D3ed7854b946a47b1a49ad754baa76cd3%23%2Ftrain-dev"
+      "text": "开发环境详情",
+      "href": "#/train-dev/detail/dl-9a5a098accce31c28cf4c6ca23391341"
     }
   ],
   "surfaceSummary": {
     "interesting": [
       {
+        "tag": "INPUT",
+        "text": "",
+        "placeholder": "",
+        "role": "combobox",
+        "className": "ant-select-selection-search-input",
+        "id": "rc_select_0",
+        "editable": "",
+        "testId": ""
+      },
+      {
+        "tag": "INPUT",
+        "text": "",
+        "placeholder": "",
+        "role": "combobox",
+        "className": "ant-select-selection-search-input",
+        "id": "rc_select_1",
+        "editable": "",
+        "testId": ""
+      },
+      {
+        "tag": "DIV",
+        "text": "项目空间管理/ 模型训练/ 开发环境/ 开发环境详情/ 打开环境 AI 所有开发环境合计可最多占用128卡，超出将无法启动，请提交训练任务；开发环境使用完毕后请及时手动停止，如长时间闲置，将被自动回收，状态更新为已锁定；在运行镜像中安装软件及依赖后，请务必及时进行“保存镜像”操作，以实现镜像持久化保存，否则，当开发环境被停止或锁定后，相关安装文件将丢失无法找回 Jupyter VSCode She",
+        "placeholder": "",
+        "role": "",
+        "className": "dev-terminal-tabs",
+        "id": "",
+        "editable": "",
+        "testId": ""
+      },
+      {
         "tag": "A",
-        "text": "短信登录",
+        "text": "项目空间管理",
         "placeholder": "",
         "role": "",
         "className": "",
@@ -50,7 +72,7 @@
       },
       {
         "tag": "A",
-        "text": "密码登录",
+        "text": "开发环境",
         "placeholder": "",
         "role": "",
         "className": "",
@@ -59,38 +81,138 @@
         "testId": ""
       },
       {
-        "tag": "INPUT",
-        "text": "",
-        "placeholder": "手机号",
+        "tag": "A",
+        "text": "开发环境详情",
+        "placeholder": "",
         "role": "",
-        "className": "input",
-        "id": "phoneNumber",
-        "editable": "",
-        "testId": ""
-      },
-      {
-        "tag": "INPUT",
-        "text": "",
-        "placeholder": "图形验证码",
-        "role": "",
-        "className": "input ",
-        "id": "captchaCode",
-        "editable": "",
-        "testId": ""
-      },
-      {
-        "tag": "INPUT",
-        "text": "",
-        "placeholder": "短信验证码",
-        "role": "",
-        "className": "input",
-        "id": "code",
+        "className": "",
+        "id": "",
         "editable": "",
         "testId": ""
       },
       {
         "tag": "BUTTON",
-        "text": "获取验证码",
+        "text": "",
+        "placeholder": "",
+        "role": "",
+        "className": "ant-alert-close-icon",
+        "id": "",
+        "editable": "",
+        "testId": ""
+      },
+      {
+        "tag": "DIV",
+        "text": "",
+        "placeholder": "",
+        "role": "",
+        "className": "jupyter-terminal-container",
+        "id": "",
+        "editable": "",
+        "testId": ""
+      },
+      {
+        "tag": "IFRAME",
+        "text": "",
+        "placeholder": "",
+        "role": "",
+        "className": "jupyter-terminal",
+        "id": "",
+        "editable": "",
+        "testId": ""
+      },
+      {
+        "tag": "BUTTON",
+        "text": "可视化",
+        "placeholder": "",
+        "role": "",
+        "className": "css-3nz3m5 ant-btn ant-btn-default",
+        "id": "",
+        "editable": "",
+        "testId": ""
+      },
+      {
+        "tag": "BUTTON",
+        "text": "保存镜像",
+        "placeholder": "",
+        "role": "",
+        "className": "css-3nz3m5 ant-btn ant-btn-default",
+        "id": "",
+        "editable": "",
+        "testId": ""
+      },
+      {
+        "tag": "BUTTON",
+        "text": "任务列表",
+        "placeholder": "",
+        "role": "",
+        "className": "css-3nz3m5 ant-btn ant-btn-default",
+        "id": "",
+        "editable": "",
+        "testId": ""
+      },
+      {
+        "tag": "BUTTON",
+        "text": "提交任务",
+        "placeholder": "",
+        "role": "",
+        "className": "css-3nz3m5 ant-btn ant-btn-primary ant-btn-background-ghost",
+        "id": "",
+        "editable": "",
+        "testId": ""
+      },
+      {
+        "tag": "BUTTON",
+        "text": "",
+        "placeholder": "",
+        "role": "",
+        "className": "ant-modal-close",
+        "id": "",
+        "editable": "",
+        "testId": ""
+      },
+      {
+        "tag": "INPUT",
+        "text": "",
+        "placeholder": "",
+        "role": "combobox",
+        "className": "ant-select-selection-search-input",
+        "id": "form_item_category",
+        "editable": "",
+        "testId": ""
+      },
+      {
+        "tag": "TEXTAREA",
+        "text": "",
+        "placeholder": "请详细描述您的问题，并提供您的手机号、用户名、问题页面网址等相关信息，以便我们定位和排查",
+        "role": "",
+        "className": "ant-input",
+        "id": "form_item_description",
+        "editable": "",
+        "testId": ""
+      },
+      {
+        "tag": "SPAN",
+        "text": "上传附件支持png、jpg、jpeg、PNG、JPG、JPEG格式，最多上传5个文件，每个文件大小不超过10 MB",
+        "placeholder": "",
+        "role": "button",
+        "className": "ant-upload",
+        "id": "",
+        "editable": "",
+        "testId": ""
+      },
+      {
+        "tag": "BUTTON",
+        "text": "上传附件",
+        "placeholder": "",
+        "role": "",
+        "className": "ant-btn upload-btn",
+        "id": "",
+        "editable": "",
+        "testId": ""
+      },
+      {
+        "tag": "BUTTON",
+        "text": "取消",
         "placeholder": "",
         "role": "",
         "className": "ant-btn",
@@ -99,31 +221,21 @@
         "testId": ""
       },
       {
-        "tag": "INPUT",
-        "text": "",
+        "tag": "BUTTON",
+        "text": "确定",
         "placeholder": "",
         "role": "",
-        "className": "ant-checkbox-input",
-        "id": "rememberMe",
-        "editable": "",
-        "testId": ""
-      },
-      {
-        "tag": "INPUT",
-        "text": "",
-        "placeholder": "",
-        "role": "",
-        "className": "ant-checkbox-input",
+        "className": "ant-btn ant-btn-primary",
         "id": "",
         "editable": "",
         "testId": ""
       },
       {
-        "tag": "A",
-        "text": "《服务协议及隐私政策》",
+        "tag": "BUTTON",
+        "text": "",
         "placeholder": "",
         "role": "",
-        "className": "",
+        "className": "ant-modal-close",
         "id": "",
         "editable": "",
         "testId": ""
@@ -131,10 +243,30 @@
       {
         "tag": "INPUT",
         "text": "",
-        "placeholder": "",
+        "placeholder": "请输入",
         "role": "",
-        "className": "",
-        "id": "id-hidden-input",
+        "className": "ant-input",
+        "id": "form_item_companyName",
+        "editable": "",
+        "testId": ""
+      },
+      {
+        "tag": "INPUT",
+        "text": "",
+        "placeholder": "请输入11位手机号",
+        "role": "",
+        "className": "ant-input",
+        "id": "form_item_phoneNum",
+        "editable": "",
+        "testId": ""
+      },
+      {
+        "tag": "INPUT",
+        "text": "",
+        "placeholder": "请输入",
+        "role": "",
+        "className": "ant-input",
+        "id": "form_item_email",
         "editable": "",
         "testId": ""
       },
@@ -142,59 +274,130 @@
         "tag": "INPUT",
         "text": "",
         "placeholder": "",
-        "role": "",
-        "className": "",
-        "id": "loginType",
+        "role": "combobox",
+        "className": "ant-select-selection-search-input",
+        "id": "form_item_collaborationScope",
         "editable": "",
         "testId": ""
       },
       {
-        "tag": "A",
-        "text": "取消登录",
-        "placeholder": "",
+        "tag": "TEXTAREA",
+        "text": "",
+        "placeholder": "请输入",
         "role": "",
-        "className": "",
+        "className": "ant-input",
+        "id": "form_item_description",
+        "editable": "",
+        "testId": ""
+      },
+      {
+        "tag": "SPAN",
+        "text": "上传附件支持pdf、doc、docx格式，最多上传5个文件，每个文件大小不超过10 MB",
+        "placeholder": "",
+        "role": "button",
+        "className": "ant-upload",
         "id": "",
         "editable": "",
         "testId": ""
       },
       {
-        "tag": "A",
-        "text": "立即注册",
+        "tag": "BUTTON",
+        "text": "上传附件",
         "placeholder": "",
         "role": "",
-        "className": "link-button",
+        "className": "ant-btn upload-btn",
+        "id": "",
+        "editable": "",
+        "testId": ""
+      },
+      {
+        "tag": "BUTTON",
+        "text": "取消",
+        "placeholder": "",
+        "role": "",
+        "className": "ant-btn",
+        "id": "",
+        "editable": "",
+        "testId": ""
+      },
+      {
+        "tag": "BUTTON",
+        "text": "确定",
+        "placeholder": "",
+        "role": "",
+        "className": "ant-btn ant-btn-primary",
         "id": "",
         "editable": "",
         "testId": ""
       }
     ],
-    "likelyTerminalTargets": [],
-    "likelyEditorTargets": [
+    "likelyTerminalTargets": [
       {
-        "tag": "INPUT",
-        "text": "",
-        "placeholder": "图形验证码",
+        "tag": "DIV",
+        "text": "项目空间管理/ 模型训练/ 开发环境/ 开发环境详情/ 打开环境 AI 所有开发环境合计可最多占用128卡，超出将无法启动，请提交训练任务；开发环境使用完毕后请及时手动停止，如长时间闲置，将被自动回收，状态更新为已锁定；在运行镜像中安装软件及依赖后，请务必及时进行“保存镜像”操作，以实现镜像持久化保存，否则，当开发环境被停止或锁定后，相关安装文件将丢失无法找回 Jupyter VSCode She",
+        "placeholder": "",
         "role": "",
-        "className": "input ",
-        "id": "captchaCode",
+        "className": "dev-terminal-tabs",
+        "id": "",
         "editable": "",
         "testId": ""
       },
       {
-        "tag": "INPUT",
+        "tag": "DIV",
         "text": "",
-        "placeholder": "短信验证码",
+        "placeholder": "",
         "role": "",
-        "className": "input",
-        "id": "code",
+        "className": "jupyter-terminal-container",
+        "id": "",
+        "editable": "",
+        "testId": ""
+      },
+      {
+        "tag": "IFRAME",
+        "text": "",
+        "placeholder": "",
+        "role": "",
+        "className": "jupyter-terminal",
+        "id": "",
+        "editable": "",
+        "testId": ""
+      }
+    ],
+    "likelyEditorTargets": [
+      {
+        "tag": "DIV",
+        "text": "项目空间管理/ 模型训练/ 开发环境/ 开发环境详情/ 打开环境 AI 所有开发环境合计可最多占用128卡，超出将无法启动，请提交训练任务；开发环境使用完毕后请及时手动停止，如长时间闲置，将被自动回收，状态更新为已锁定；在运行镜像中安装软件及依赖后，请务必及时进行“保存镜像”操作，以实现镜像持久化保存，否则，当开发环境被停止或锁定后，相关安装文件将丢失无法找回 Jupyter VSCode She",
+        "placeholder": "",
+        "role": "",
+        "className": "dev-terminal-tabs",
+        "id": "",
+        "editable": "",
+        "testId": ""
+      },
+      {
+        "tag": "SPAN",
+        "text": "上传附件支持png、jpg、jpeg、PNG、JPG、JPEG格式，最多上传5个文件，每个文件大小不超过10 MB",
+        "placeholder": "",
+        "role": "button",
+        "className": "ant-upload",
+        "id": "",
+        "editable": "",
+        "testId": ""
+      },
+      {
+        "tag": "SPAN",
+        "text": "上传附件支持pdf、doc、docx格式，最多上传5个文件，每个文件大小不超过10 MB",
+        "placeholder": "",
+        "role": "button",
+        "className": "ant-upload",
+        "id": "",
         "editable": "",
         "testId": ""
       }
     ],
     "hasLikelyRemoteSurface": true
   },
-  "timestamp": "2026-04-10T03:13:05.592Z",
+  "timestamp": "2026-07-10T07:25:23.529Z",
   "usedPersistentProfile": true,
   "profileInfo": {
     "profileDir": "/Users/daxu/software/quantum-gpt/browser-automation/profile",

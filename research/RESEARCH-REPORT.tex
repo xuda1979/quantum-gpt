@@ -82,9 +82,19 @@
 
 \section{引言}
 
-\subsection{研究目标}
+\noindent\fbox{\parbox{0.96\textwidth}{%
+\textbf{本章关键结论：}本项目围绕量子算法与软件工程双域任务，已构建起\textbf{可验证、可迭代、可远端扩展}的量子编码大模型研发闭环。严格量子 holdout 上首次出现真实 benchmark 收益（override 0/4 → 2/4）。}}
 
-本项目的核心目标是：围绕量子算法与软件工程双域任务，构建一个\textbf{可验证、可迭代、可远端扩展}的量子编码大模型研发闭环。
+\subsection{项目目标}
+
+用一句话概括：\textbf{让大语言模型真正学会写量子代码，并用严格、不可作弊的测试来证明它确实学会了。}
+
+具体而言，本项目要做到三件事：
+\begin{enumerate}
+  \item \textbf{可验证}——评测数据与训练数据在 task、prompt family、example 三层严格隔离，任何"提升"都必须经过零污染 holdout 验证；
+  \item \textbf{可迭代}——SFT 与 GRPO 两条训练主线均已工程化，新方法以插件形式接入，不破坏主干稳定性；
+  \item \textbf{可远端扩展}——本地验证通过后，代码经 S3 relay 同步到远端 8-NPU 集群执行，全程留痕。
+\end{enumerate}
 
 \begin{figure}[htbp]
 \centering
@@ -103,77 +113,34 @@
   \draw[->, thick] (research.south) -- (report.north);
   \draw[->, thick, dashed, gray] (report.west) -- ++(-1.2,0) |- (data.west) node[pos=0.5, left, font=\scriptsize, gray] {迭代反馈};
 \end{tikzpicture}
-\caption{量子编码大模型研发闭环的六层结构。每一层的输出是下一层的输入，报告层的结论反馈指导下一轮数据与训练决策。}
+\caption{量子编码大模型研发闭环的六层结构。}
 \label{fig:rd-six-layers}
 \end{figure}
 
-本报告重点介绍系统的工程化实现细节、模型泛化能力的边界评估与训练策略的演进，为量子领域的大语言模型研发提供参考。
-
-
-
-
-
-\subsection{重点架构与执行概览}
-本报告面向核心研发团队与技术委员会，围绕以下五个方面对工程体系进行全面梳理：
+\subsection{报告结构导览}
 
 \begin{table}[htbp]
 \centering
-\small
-\begin{tabularx}{\textwidth}{p{2.5cm} Y}
+\scriptsize
+\begin{tabularx}{\textwidth}{p{2.2cm} Y}
 \toprule
-章节主题 & 主要内容 \\
+章节 & 一句话说明 \\
 \midrule
-1. \textbf{核心研发指标} & 展示最新训练适配器的系统评测进度与核心迭代里程碑。 \\
-2. \textbf{评测基准与数据隔离} & 说明数据边界规范，界定监督集与多级泛化测试集的零重叠准则。 \\
-3. \textbf{后训练算法体系} & 阐述驱动本轮进展的 SFT 微调流程与 GRPO 强化学习机制。 \\
-4. \textbf{分布式训练环境} & 介绍本地-远端 8-NPU 训练的同步链路与稳定性保障。 \\
-5. \textbf{研发基础设施} & 记录 S3 数据同步机制、自治研发循环与闭环自动化流程。 \\
+§2 数据 & 数据集规模、角色划分与三层零重叠隔离规则 \\
+§3 算法 & SFT 微调 + GRPO 强化学习 + 6 个研究插件的完整算法栈 \\
+§4 算力 & 四组已归档训练工件、双线并行策略（OmniCoder 快线 + Gemma 主线） \\
+§5 研发架构 & S3 relay 控制面、ai2 远端资产、自治研发循环 \\
+§6 测试结果 & 参考解 26/26 → 严格 override 0/4 → 2/4，逐题对比与分类原则 \\
+§7 总结 & 进展汇总、下一步工作排序、前沿技术对标 \\
 \bottomrule
 \end{tabularx}
-\caption{报告结构导览 (Report Structure)}
+\caption{报告结构导览。}
 \label{tab:reading-guide}
 \end{table}
 
-为确保评测结论的可信度，所有性能指标均经过严格的数据污染检查（Decontamination Check）。
+\noindent\textbf{阅读约定：}每个正文章节以\textbf{关键结论}框开头、以\textbf{小结}收尾，便于快速扫读。所有可引用数字附有证据编号（如 V1、M4、B2），对应附录 C 工件索引。
 
-
-\noindent 每个正文章节均以\textbf{关键结论}开头、以\textbf{小结}收尾，便于快速扫读。所有可引用数字都附有证据编号（如 V1、M4、B2 等），对应附录 C 中的工件索引。
-
-\medskip
-\noindent\textbf{术语速查}
-
-\medskip
-\noindent 下表列出本报告中频繁出现的专业术语及其简要解释，便于非专业读者快速理解。
-
-\begin{table}[htbp]
-\centering
-\small
-\begin{tabularx}{\textwidth}{p{3.0cm} Y}
-\toprule
-术语 & 解释 \\
-\midrule
-LoRA（低秩适配） & Low-Rank Adaptation，一种高效微调技术。不修改模型全部参数，而是在关键层注入少量可训练参数，大幅降低训练成本。 \\
-SFT（监督微调） & Supervised Fine-Tuning，使用标注好的问答对直接训练模型，让模型学会特定任务的输入输出模式。 \\
-GRPO（组相对策略优化） & Group Relative Policy Optimization，一种强化学习方法。对同一问题生成多个候选答案，运行测试器评分，再根据组内相对优劣更新模型策略。 \\
-Holdout（严格保留集） & 专门为评估模型泛化能力而保留、训练过程中完全未见的数据集。本项目要求 example、task、prompt family 三层零重叠。 \\
-Adapter（适配器） & LoRA 训练产生的少量额外参数文件，可以叠加在基础模型之上改变其行为，而不需要修改原始模型权重。 \\
-NPU（神经处理单元） & Neural Processing Unit，用于加速深度学习计算的专用硬件。本项目使用远端 8-NPU 集群进行分布式训练。 \\
-MoE（混合专家） & Mixture of Experts，一种模型架构。模型包含多个"专家"子网络，通过路由器（router）决定每个输入激活哪些专家，兼顾模型容量与推理效率。 \\
-ESFT（专家特定微调） & Expert-Specific Fine-Tuning，只微调 MoE 模型中被选中的少数专家，其余专家冻结，减少参数更新量。 \\
-Continuation training & 从已有 adapter 继续训练，而不是每次从零开始，相当于"接力式"迭代改进。 \\
-Override（任务级通过判定） & 针对严格 holdout 中每个任务的最终通过/未通过判定，是本项目的核心 benchmark 指标。 \\
-Scorecard & 一份 JSON 格式的评测记录，记录模型在每个任务上的通过状态、错误类型与详细分析。 \\
-KV Cache & 推理时模型缓存的键值对（Key-Value），用于加速自回归生成。TurboQuant 通过压缩 KV cache 降低长文本推理的内存开销。 \\
-\bottomrule
-\end{tabularx}
-\caption{本报告核心术语速查表。}
-\label{tab:glossary}
-\end{table}
-
-
-\subsection{模型训练与进展概览}
-
-
+\subsection{核心数字一览}
 
 \begin{table}[htbp]
 \centering
@@ -193,7 +160,36 @@ Gemma & 正在推进 runtime 适配与 backend 对接 & R1, G1, G2 \\
 \label{tab:executive-summary}
 \end{table}
 
+\subsection{术语速查}
 
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabularx}{\textwidth}{p{3.0cm} Y}
+\toprule
+术语 & 解释 \\
+\midrule
+LoRA（低秩适配） & 不修改全部参数，而是在关键层注入少量可训练参数的高效微调技术。 \\
+SFT（监督微调） & 使用标注好的问答对直接训练模型，让模型学会特定任务的输入输出模式。 \\
+GRPO（组相对策略优化） & 对同一问题生成多个候选答案，运行测试器评分，再根据组内相对优劣更新模型策略。 \\
+Holdout（严格保留集） & 训练过程中完全未见的数据集。本项目要求 example、task、prompt family 三层零重叠。 \\
+Adapter（适配器） & LoRA 训练产生的少量额外参数文件，可叠加在基础模型之上改变其行为。 \\
+NPU（神经处理单元） & 加速深度学习计算的专用硬件。本项目使用远端 8-NPU 集群进行分布式训练。 \\
+MoE（混合专家） & 模型包含多个"专家"子网络，路由器决定每个输入激活哪些专家。 \\
+ESFT（专家特定微调） & 只微调 MoE 中被选中的少数专家，其余冻结。 \\
+Continuation training & 从已有 adapter 继续训练，"接力式"迭代改进。 \\
+Override（任务级通过） & 严格 holdout 中每个任务的最终通过/未通过判定，本项目核心 benchmark 指标。 \\
+Scorecard & JSON 格式的评测记录，记录每个任务的通过状态与错误分析。 \\
+KV Cache & 推理时缓存的键值对，TurboQuant 通过压缩 KV cache 降低长文本推理内存开销。 \\
+\bottomrule
+\end{tabularx}
+\caption{本报告核心术语速查表。}
+\label{tab:glossary}
+\end{table}
+
+\subsection{小结}
+
+本报告的定位是\textbf{研发手册}：记录已做到什么、如何做到、证据在哪里、下一步做什么。所有结论均可通过附录 C 中的工件路径追溯到源文件。
 
 \clearpage
 
@@ -201,55 +197,56 @@ Gemma & 正在推进 runtime 适配与 backend 对接 & R1, G1, G2 \\
 
 \section{数据}
 
-\subsection{数据设计原则}
+\noindent\fbox{\parbox{0.96\textwidth}{%
+\textbf{本章关键结论：}当前数据层已经能稳定支撑研发主线：\textbf{宽口径监督集负责把模型训起来，严格 holdout 负责诚实检验，专题子集负责快迭代。}最关键的纪律不是“样本多”，而是 \textbf{example、task、prompt family 三层零重叠}。}}
 
-数据按三种角色组织（图 \ref{fig:data-roles}），核心原则是：\textbf{评测数据不仅要与训练数据 example 不同，还必须在 task 与 prompt family 上严格隔离。}
+\subsection{先看结论：数据怎么分工}
+
+本项目的数据不是混在一起用，而是明确分成三类：
+\begin{itemize}
+  \item \textbf{基础监督集}：给 SFT 提供宽口径训练样本，负责把模型训到“会写量子代码，也不会完全丢掉软件能力”；
+  \item \textbf{严格 holdout}：训练时完全不碰，只在评测时使用，负责回答“模型是不是真的学会了迁移”；
+  \item \textbf{专题子集}：样本少、反馈快，负责短周期试验、难例攻坚和 Gemma 路由 warmup。
+\end{itemize}
 
 \begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[node distance=0.3cm]
   \tikzstyle{role}=[draw, rounded corners, minimum width=4.2cm, minimum height=0.75cm, align=center, font=\small]
-  \node[role, fill=blue!10] (sup) {广义监督数据\\建立跨域基本行为};
-  \node[role, fill=orange!10, right=0.8cm of sup] (hold) {严格未见 holdout\\检验跨任务泛化};
-  \node[role, fill=green!10, right=0.8cm of hold] (spec) {专题子集\\快迭代 / 难例 / warmup};
+  \node[role, fill=blue!10] (sup) {基础监督数据\\把模型训起来};
+  \node[role, fill=orange!10, right=0.8cm of sup] (hold) {严格 holdout\\负责诚实评测};
+  \node[role, fill=green!10, right=0.8cm of hold] (spec) {专题子集\\负责快试验与定向优化};
   \draw[->, thick] (sup) -- (hold) node[midway, above, font=\scriptsize] {训练→评测};
-  \draw[->, thick] (hold) -- (spec) node[midway, above, font=\scriptsize] {定向优化};
+  \draw[->, thick] (hold) -- (spec) node[midway, above, font=\scriptsize] {问题定位→专项修复};
 \end{tikzpicture}
-\caption{数据的三种角色及其流转关系。}
+\caption{数据的三种角色。}
 \label{fig:data-roles}
 \end{figure}
 
-\subsection{主要数据集概览}
+\subsection{数据清单总表}
 
 \begin{table}[htbp]
 \centering
 \small
 \begin{tabularx}{\textwidth}{p{2.8cm} r r p{1.8cm} p{2.1cm} Y}
 \toprule
-数据集 & 训练样本 & 验证样本 & 领域 & 划分策略 & 当前用途 \\
+数据集 & 训练样本 & 验证样本 & 领域 & 划分策略 & 当前角色 \\
 \midrule
-\code{template-large-v1} & 2208 & 552 & 量子+软件 & family disjoint & 最大的宽口径 SFT 基础集 \\
-\code{mixed-holdout-v1} & 1440 & 504 & 量子+软件 & task disjoint & 混合域严格未见 holdout \\
-\code{quantum-large-v1} & 1536 & 504 & 量子 & family disjoint & 宽口径量子 SFT 基础集 \\
-\code{quantum-holdout-v1} & 1024 & 504 & 量子 & task disjoint & 严格量子未见 holdout \\
+\code{template-large-v1} & 2208 & 552 & 量子+软件 & family disjoint & 最大的宽口径 SFT 底座 \\
+\code{mixed-holdout-v1} & 1440 & 504 & 量子+软件 & task disjoint & 混合域严格未见评测 \\
+\code{quantum-large-v1} & 1536 & 504 & 量子 & family disjoint & 量子专项 SFT 底座 \\
+\code{quantum-holdout-v1} & 1024 & 504 & 量子 & task disjoint & 严格量子未见评测 \\
 \code{quantum-focus-v1} & 252 & 48 & 量子偏置混合 & 随机拆分 & 快速小样本量子迭代 \\
-\code{quantum-hard-v1} & 121 & 19 & 量子 & task subset split & 难例聚焦与压力测试 \\
-\code{paper-router/messages} & 42 & 5 & 论文路由消息 & 消息拆分 & Gemma 路由 warmup 前置数据 \\
+\code{quantum-hard-v1} & 121 & 19 & 量子 & task subset split & 难例压力测试 \\
+\code{paper-router/messages} & 42 & 5 & 论文路由消息 & 消息拆分 & Gemma 路由 warmup \\
 \bottomrule
 \end{tabularx}
-\caption{当前主要数据集的规模与角色。}
+\caption{当前主要数据集总表。}
 \label{tab:dataset-inventory}
 \end{table}
 
-\vspace{1.5em}
-\noindent \textbf{核心数据集的详细定位与构成：}
-\begin{itemize}
-    \item \textbf{\code{template-large-v1}}：宽口径监督微调（SFT）基础数据集，总计包含超过 2000 条高质量记录。结合了量子计算逻辑与经典软件工程代码片段，旨在让模型兼具两者的基础编程能力，而不偏废。
-    \item \textbf{\code{mixed-holdout-v1}}：包含 1440 条量子代码和经典软件代码的混合评测集。采用严格的 \code{task disjoint}（任务隔离）策略构造，确保训练与测试在任务层级完全正交，用作核心泛化能力验证的基准指标（Benchmark）。
-    \item \textbf{\code{quantum-large-v1}} 与 \textbf{\code{quantum-holdout-v1}}：针对量子域打造的专属训练和纯量子严格未见测试集。前者使模型快速从普遍软件领域适配到深度的量子逻辑体系，后者严卡数据污染确保零重合，用来检验面对陌生量子协议时的真实推理水准。
-    \item \textbf{\code{quantum-focus-v1}} 与 \textbf{\code{quantum-hard-v1}}：均是小规模专门子集。前者主要跑通快速验证回路（针对学习率、Batch Size 的小周期试验），后者汇总了在历次评测中暴露的极端困难样例，服务于后期的专项突破和高难度动作强化。
-    \item \textbf{\code{paper-router/messages}}：专供 Gemma 这类基于混合专家（MoE）结构模型的路由层进行“微热身”（Warmup）的前置型轻量数据，防患路由塌缩和单极化分布。
-\end{itemize}
+\noindent\textbf{怎么读这张表：} \code{template-large-v1} 与 \code{quantum-large-v1} 是训练底座；\code{mixed-holdout-v1} 与 \code{quantum-holdout-v1} 是 headline benchmark；\code{focus/hard/router} 三类数据只服务专项任务，不能替代主评估。
+
 
 
 
@@ -312,9 +309,17 @@ Gemma & 正在推进 runtime 适配与 backend 对接 & R1, G1, G2 \\
 \end{itemize}
 
 
-\subsection{混合域严格 holdout}
+\subsection{两类 headline benchmark}
 
-\code{omnicoder-generalization-holdout-v1} 的核心性质见表 \ref{tab:mixed-holdout}，三层零重叠保证了评测的严格性。
+真正决定报告可信度的，不是训练集有多大，而是评测集够不够干净。当前主评测只有两条线：
+\begin{itemize}
+  \item \textbf{混合域严格 holdout}：同时看量子和软件，回答“量子增强会不会伤到软件能力”；
+  \item \textbf{量子严格 holdout}：只看未见量子任务，回答“模型是否真的开始学会量子迁移”。
+\end{itemize}
+
+\subsubsection{混合域严格 holdout}
+
+\code{omnicoder-generalization-holdout-v1} 的核心性质见表 \ref{tab:mixed-holdout}。它的价值不在于“样本接近 2000 条”，而在于训练和验证在 \code{example\_id}、\code{task\_id}、\code{prompt\_family} 三层都做了零重叠控制。
 
 \begin{table}[htbp]
 \centering
@@ -358,11 +363,11 @@ prompt family & 6 & 4 & 训练/验证提示风格也分离 \\
 \label{fig:mixed-domain-balance}
 \end{figure}
 
-混合域 holdout 的验证集在量子/软件上严格平衡（图 \ref{fig:mixed-domain-balance}），使得”量子提升是否伤害软件”可直接追踪。
+图 \ref{fig:mixed-domain-balance} 说明这条 benchmark 不是“顺手留一点验证集”，而是专门做成了量子/软件各半。这样一来，量子能力有没有提升、软件能力有没有被带偏，都能直接观察。
 
-\subsection{量子严格 holdout}
+\subsubsection{量子严格 holdout}
 
-\code{omnicoder-quantum-generalization-holdout-v1} 比混合 holdout 更激进：训练仅 8 个量子 task，验证仅 4 个量子 task，且该部分验证任务集中考察当前模型的薄弱环节（表 \ref{tab:quantum-holdout}）。
+\code{omnicoder-quantum-generalization-holdout-v1} 更像项目的最终闸门。它只保留 4 个未见量子任务做验证，而且这 4 个任务刚好覆盖当前最容易失分的几类能力：API 正规化、经典-量子算法实现、协议推理。
 
 \begin{table}[htbp]
 \centering
@@ -382,15 +387,13 @@ prompt family & 6 & 4 & prompt family 也完全不重叠 \\
 \label{tab:quantum-holdout}
 \end{table}
 
-上述 4 项验证任务覆盖了四类关键能力：API 正规化、经典-量子算法实现（2 个）、协议型推理。当 Qwen 在此 benchmark 上 0/4 时，可合理解读为”严格未见量子任务仍明显困难”。
+因此，Qwen 在这条 benchmark 上的 0/4 不是偶然波动，而是一个很直接的信号：模型在严格未见量子任务上还不稳定。后续 2/4、3/4 的改善，才有资格被当成 headline 结果写进测试章节。
 
-\subsection{prompt family 划分}
+\subsection{为什么还要看 prompt family 和样本配额}
 
-两个 holdout 不仅 task disjoint，prompt family（提示风格族）也完全分离。训练侧使用 6 种风格（如 \code{behavior\_first}、\code{implementation\_ticket}），验证侧使用 4 种不同风格（如 \code{acceptance\_gate}、\code{spec\_translation}）。这表明模型必须在新任务背景\textbf{和}新说话方式下完成迁移。
+只做到 task disjoint 还不够。当前数据继续把训练和验证的 prompt family 分开，是为了避免模型只学会适应某一种说话方式。换句话说，验证集不仅换了题，也换了提问方法。
 
-\subsection{样本配额}
-
-两个严格 holdout 在 task 粒度上接近等额配给（表 \ref{tab:task-quota}），避免单个大类任务的超大配额掩盖其他任务的表现起伏。
+两个严格 holdout 在 task 粒度上也尽量等额配给（表 \ref{tab:task-quota}），这样每个任务在最终分数里权重接近一致，不会被单个大类样本“刷高平均值”。
 
 \begin{table}[htbp]
 \centering
@@ -425,7 +428,7 @@ family 数量 & 6 / 4 & 6 / 4 & 两个严格数据集都坚持 train/test 风格
 \label{tab:family-quota}
 \end{table}
 
-需要强调的是，当前 holdout 不只是”量子/软件各占一半”或”样本总数够多”，而是在任务类别上有意覆盖了不同难度信号。以混合 holdout 为例，训练侧包含 \code{algorithm\_implementation}、\code{debug\_repair}、\code{protocol\_logic}、\code{test\_writing}、\code{stateful\_logic} 等不同类型；验证侧则刻意换成 \code{circuit\_construction}、\code{api\_normalization}、\code{multifile\_repair}、\code{design\_pattern} 等另一批类型。也就是说，当前验证并不是在熟悉类型内换个题面，而是有意识地让模型面对“任务类型 + 话语风格 + 具体实现目标”三重迁移。
+同样重要的是，验证集并不是在熟悉题型里换个题面。以混合 holdout 为例，训练侧偏向 \code{algorithm\_implementation}、\code{debug\_repair}、\code{protocol\_logic} 等类型；验证侧则刻意换成 \code{circuit\_construction}、\code{api\_normalization}、\code{multifile\_repair}、\code{design\_pattern}。这意味着当前 benchmark 施加的是“任务类型 + 说话风格 + 具体实现目标”三重迁移压力。
 
 \begin{table}[htbp]
 \centering
@@ -444,11 +447,13 @@ API / interface 类 & 96 & 63 & 验证侧单列 API 正规化，利于直接观�
 \label{tab:mixed-category-shift}
 \end{table}
 
-这一点决定了当前 benchmark 的\textbf{解释边界}。它可以支持“模型在严格未见 task 上是否开始具备迁移能力”的讨论，但不能支持“模型已经在开放世界量子编程中普遍泛化”的夸张表述。换言之，当前数据纪律足够强，可以支撑研究结论；但数据规模仍然是封闭任务集上的强纪律，而不是开放宇宙中的大规模公开 benchmark。
+所以，这套数据可以支持“模型是否开始具备严格未见任务迁移能力”的判断，但不能被夸大成“已经实现开放世界量子编程泛化”。报告里把这个边界说清楚，比把数字写得更大更重要。
 
-\subsection{Category 与 Prompt Family 细分}
+\subsection{四个核心数据集的细分结构}
 
-如果只报告训练/验证总样本数，仍然无法判断数据是否过度集中在少数任务形态上。当前最值得在正式报告中展开的，是四个核心数据集的 category 与 prompt family 细分：\code{omnicoder-template-large-v1}、\code{omnicoder-quantum-large-v1}、\code{omnicoder-generalization-holdout-v1}、\code{omnicoder-quantum-generalization-holdout-v1}。它们共同描述了仓库在“宽口径监督”与“严格未见验证”之间的分工。
+前面的总表解决的是“有哪些数据集”。这一节解决的是“这些数据集内部到底偏什么能力”。如果不看 category 和 prompt family 细分，就很容易把几个规模相近、但用途完全不同的数据集误当成一回事。
+
+先看 domain 分布，表 \ref{tab:core-dataset-domains} 给出四个核心数据集的最基本分工：两个是训练底座，两个是最终 benchmark。
 
 \begin{table}[htbp]
 \centering
@@ -467,6 +472,8 @@ API / interface 类 & 96 & 63 & 验证侧单列 API 正规化，利于直接观�
 \label{tab:core-dataset-domains}
 \end{table}
 
+更细一点看，category 分布直接告诉我们：训练底座主要在教模型什么，holdout 又故意把压力放在哪些能力上。
+
 \begin{table}[htbp]
 \centering
 \small
@@ -483,6 +490,10 @@ API / interface 类 & 96 & 63 & 验证侧单列 API 正规化，利于直接观�
 \caption{四个核心监督数据集的 category 结构摘要。}
 \label{tab:core-dataset-categories}
 \end{table}
+
+这张表最值得读出的信息有两点。第一，\code{template-large-v1} 和 \code{quantum-large-v1} 都不是“平均撒样本”，而是明显把更多配额压在修复和算法实现上，因为这两类正是当前训练最有价值的主能力。第二，两个 holdout 的验证侧并没有照搬训练侧重心，而是故意把压力改到接口、推理、多文件一致性这类更容易暴露真问题的地方。
+
+最后看 prompt family。它回答的是：这些数据是不是只在一种说话方式里成立。
 
 \begin{table}[htbp]
 \centering
@@ -501,7 +512,7 @@ API / interface 类 & 96 & 63 & 验证侧单列 API 正规化，利于直接观�
 \label{tab:core-dataset-prompts}
 \end{table}
 
-总的来看，宽口径数据的主峰恰好对应项目最需要的能力类别；holdout 验证集在 category、prompt family、task 三个层面同时制造迁移压力。
+把 domain、category、prompt family 三张表合起来看，当前数据层的结构已经很清楚：训练集负责把主要能力训起来，holdout 负责把“真的会不会迁移”这件事测干净，而不是只做一轮好看的平均分。
 
 \subsection{快迭代子集与难例子集}
 
@@ -593,9 +604,18 @@ source & train 条数 & valid 条数 & 说明 \\
 
 \section{算法}
 
-\subsection{算法栈总览}
+\noindent\fbox{\parbox{0.96\textwidth}{%
+\textbf{本章关键结论：}当前算法栈已经形成清晰分工：\textbf{SFT 负责把基础能力训起来，GRPO 负责把“差一点通过”的候选继续往通过推，plugin 负责插入研究方法，TurboQuant 负责推理侧效率实验。}主线已经可用，但 Gemma 的 MoE 路线仍处于“先做 router/gate warmup，再谈 expert 微调”的阶段。}}
 
-当前算法栈如图 \ref{fig:algo-stack} 所示，可用”主干稳定、方法可插拔”概括。
+\subsection{先看结论：算法栈怎么分层}
+
+当前算法部分最好按四层来理解，而不是按脚本文件零散阅读：
+\begin{itemize}
+  \item \textbf{SFT 主干}：用监督数据把模型训到“基本会做题”；
+  \item \textbf{GRPO 主干}：把测试器反馈变成强化学习信号，继续逼近通过；
+  \item \textbf{研究插件层}：在不改坏主干的前提下插入方法研究；
+  \item \textbf{推理优化层}：不改变训练结果本身，主要研究长上下文推理成本。
+\end{itemize}
 
 \begin{figure}[htbp]
 \centering
@@ -630,39 +650,45 @@ source & train 条数 & valid 条数 & 说明 \\
 \label{tab:algo-stack}
 \end{table}
 
-\subsection{SFT 主干}
+从研发角度看，这个分层很重要，因为它直接回答了三个最常见的问题：模型为什么能先跑起来，为什么还能继续提分，以及新方法该插在哪里。把这三件事混成一个“大训练脚本”，后面就很难解释实验结果。
 
-\code{training/qwen_sft_peft.py} 的功能远不止“读 JSONL 然后训 LoRA”。现有实现至少包含七类能力：
+\subsection{SFT 主干：先把基础能力训起来}
+
+\code{training/qwen_sft_peft.py} 是当前最稳定的训练入口。它不只是“读取 JSONL 然后做 LoRA”，而是已经具备一整套可控训练能力：
 
   \par 聊天式消息数据读取与文本预处理；
-  \par \code{train\_on\_completions\_only} 的 completion-only mask；
+  \par completion-only mask；
   \par \code{adapter-init} continuation training；
   \par LoRA 目标模块自动发现与手动覆盖；
-  \par 基于正则表达式的选择性参数训练与冻结；
+  \par 基于正则的选择性参数训练与冻结；
   \par research method 对 SFT record 的增广；
   \par runtime 与 backend preflight。
 
+换句话说，SFT 主干当前承担的是“把模型训到具备可用起点”的角色。它既能支持标准 Qwen/OmniCoder 文本路径微调，也能支持从已有 adapter 接着训，还能支持更小范围的 Gemma router/gate warmup 试验。
 
-这表明当前 SFT 主线已经可以同时服务三类看似差异很大的实验：
+其中最关键的工程能力是 continuation training。\code{--adapter-init} 让每一轮快迭代都可以从当前最好的 adapter 继续出发，而不是反复从弱底座重跑。对远端 8-NPU 这种成本较高的环境，这一点不是小优化，而是研发效率能否成立的前提。
 
-  \par 标准 Qwen/OmniCoder 文本路径 LoRA 微调；
-  \par 继续训练已有 adapter，而不是每轮从头开始；
-  \par 针对 Gemma 路由器或 gate 的局部参数 warmup。
+\subsection{选择性训练：为什么它对 Gemma 特别重要}
 
+当前 SFT 脚本里，最容易被忽视、但研究价值很高的能力是 \code{--target-module-regex} 与 \code{--trainable-param-regex}/\code{--freeze-param-regex}。它们的意义很简单：不是所有实验都该“一口气训练整套 attention/MLP 模块”，有时只该训练很小一部分模块。
 
-以 continuation training 为例，\code{--adapter-init} 使得快迭代不必从较弱底座重复起步，而是可以从已验证过的 adapter 继续向前推进。对于算力昂贵的远端环境，这一点至关重要：它把”每轮从零热身”的低效做法替换成”以当前最好已知权重为起点”的研究迭代方式。
+对普通 dense 模型，这种能力主要提高实验可控性；对 Gemma 4 26B-A4B 这样的 MoE 目标，它几乎是必要条件。因为当前更现实的路线不是直接宣称“已经能完整微调 Gemma”，而是先做 router/gate 这种范围更小、解释更清楚、成本也更低的 warmup。
 
-\subsection{选择性训练控制}
+\subsection{Gemma 的边界：现在能写什么，不能写什么}
 
-当前 SFT 脚本提供了两组至关重要、且容易被忽略的能力：\code{--target-module-regex} 与 \code{--trainable-param-regex}/\code{--freeze-param-regex}。这两类控制的意义在于，它们让模型微调从“整个 attention/MLP 层一刀切插 LoRA”扩展为“精确选择某类模块或参数”。
+这里需要把边界说清楚。\textbf{在当前仓库已验证的 runtime/backend 条件下，Gemma 4 26B-A4B 还不应被写成“已经具备普通 dense causal LM 那样的稳定 LoRA 微调主线”。} 更准确的表述是：仓库已经具备 MoE-aware 的准备能力，但完整主线还没闭环。
 
-对于 Gemma 4 26B-A4B 这样的条件生成/MoE 目标，这种能力尤其重要。因为当前最现实的周末 demo 主线，并不是宣称“已经能完整训好 Gemma”，而是先做更小范围、更容易解释、更便宜的 router/gate warmup。对应的策略不是暴力改整个模型，而是通过正则限制只让指定模块变为可训练。
+已经具备的部分包括：
 
-\subsection{Gemma MoE 微调策略}
+  \par MoE 模块发现与扫描脚本；
+  \par regex 级 selective training 控制；
+  \par router/gate warmup 命令模板与规划。
 
-这里必须明确一点：\textbf{在当前仓库已验证的 runtime/backend 条件下，不应把 Gemma 4 26B-A4B 按普通 dense causal LM 的默认 LoRA 路径直接作为可执行主线。} 从本地快照与控制面代码看，该目标已按 MoE/专家调优思路被规划；当前仓库中的 \code{training/inspect\_moe\_target\_modules.py} 也把推荐策略预设为 \code{router\_warmup\_then\_frequency\_guided\_esft}。因此，后续对 Gemma 的正式微调，更稳妥的做法是”先 router/gate，后 expert；先拿 routing 证据，再谈 expert 选择”。
+还没有完成的部分包括：
 
-但这仍然是\textbf{计划中的方法}，不是当前已经完成的结果。当前仓库已经具备的是：MoE 模块发现、regex 级 selective training 控制、router warmup 命令生成；当前还\textbf{没有}完成的是：Gemma 4 conditional-generation backend、packed expert tensor 的真 expert-slice 训练、以及两阶段 adapter 的无缝衔接。
+  \par Gemma 4 conditional-generation backend；
+  \par packed expert tensor 的真 expert-slice 训练；
+  \par router warmup 到 expert 微调的两阶段无缝衔接。
 
 \begin{table}[htbp]
 \centering
@@ -682,9 +708,11 @@ Gemma conditional-generation SFT backend & 未完成 & runtime 适配完成后�
 \label{tab:gemma-moe-boundary}
 \end{table}
 
-\subsection{SFT 默认参数}
+这一节的意义不是给 Gemma 降级，而是防止报告把准备状态误写成完成状态。当前最稳妥的写法应该是：Gemma 路线已经有明确技术方向，但现在仍处于 runtime 适配和 router/gate 预热阶段。
 
-为了让训练器的配置透明可审，本节把当前 \code{training/qwen_sft_peft.py} 中几个最关键的默认参数列明。当前默认配置为：
+\subsection{SFT 默认参数：当前训练器更像快迭代平台}
+
+为了让训练器的默认行为可审计，本节把最关键参数单独列出。根据当前源码，默认配置包括：
 
   \par \code{max\_length=2048}；
   \par \code{per\_device\_batch\_size=1}；
@@ -695,8 +723,7 @@ Gemma conditional-generation SFT backend & 未完成 & runtime 适配完成后�
   \par \code{eval\_steps=5}；
   \par \code{log\_steps=1}；
   \par \code{lora\_rank=16}，\code{lora\_alpha=32}，\code{lora\_dropout=0.05}；
-  \par completion-only 训练默认关闭，需要显式传入 \code{--train-on-completions-only}。
-
+  \par completion-only 默认关闭，需要显式传入 \code{--train-on-completions-only}。
 
 \begin{table}[htbp]
 \centering
@@ -716,66 +743,55 @@ Gemma conditional-generation SFT backend & 未完成 & runtime 适配完成后�
 \label{tab:sft-defaults}
 \end{table}
 
-从研究角度看，这套默认值清楚地表明了当前训练器的定位：它首先是一个\textbf{高可控、适合做有限范围实验的工程平台}，而非追求长程极限训练的脚本。也正因如此，当前很多可信结论来自”20 step 真实工件”而非”上百 step 长训推测”。
+这些默认值共同说明了一件事：当前训练器首先是一个\textbf{高可控、适合快迭代和方法试验的工程平台}，而不是为超长程大预算训练定制的单一脚本。因此，报告中引用这些 run 时，最准确的说法往往是“短程稳定性验证”“快迭代 continuation 结果”，而不是“最终极限训练结论”。
 
-\subsection{GRPO 主干}
+\subsection{GRPO 主干：把 near-miss 继续往通过推}
 
-\code{training/grpo_trainer.py} 的引入意味着算法栈已经越过了“只能做 SFT”的阶段。当前 GRPO 训练器具备以下核心机制：
+\code{training/grpo_trainer.py} 的价值，在于它让训练不再停留在“模仿已有答案”，而是开始直接使用测试结果来优化候选代码。当前主干包含五个关键动作：
 
-  \par 对每个任务 prompt 一次采样多个候选；
-  \par 将候选代码交给 task harness 执行，而不是只看语言模型分数；
-  \par 将 pass/fail 进一步分解为多路 reward；
-  \par 用组内相对优势而不是绝对 reward 直接更新策略；
-  \par 用 curriculum 与 adaptive temperature 避免低信号无效更新。
+  \par 对同一任务一次采样多个候选；
+  \par 把候选交给 task harness 执行，而不是只看语言模型分数；
+  \par 将通过/未通过拆成多路 reward；
+  \par 用组内相对优势更新，而不是只看绝对 reward；
+  \par 用 curriculum 和自适应温度避免低质量更新。
 
+这套设计特别适合当前量子代码任务，因为很多失败其实不是“完全不会”，而是只差一个函数名、一个接口形状、一个边界条件，或者协议闭环少一步。SFT 很难稳定吃到这类细小差别，但 GRPO 可以。
 
-在数学上，现有实现最重要的两个对象是总 reward 与相对优势。总 reward 的默认组合为
+在数学上，当前默认总 reward 为
 \[
 r = 0.6\,r_{\mathrm{pass}} + 0.1\,r_{\mathrm{syntax}} + 0.15\,r_{\mathrm{interface}} + 0.15\,r_{\mathrm{verifier}} + \lambda_{\mathrm{brevity}}\,r_{\mathrm{brevity}}.
 \]
 
-其中 brevity reward 默认权重为 0，但机制本身已经存在，用于某些“所有候选都同样错误但长短差异显著”的边角情形。
+其中 pass 仍然是主信号，但 syntax、interface、verifier 已经被正式纳入训练。也就是说，系统承认“差一点通过”的候选不该和“完全不可用”的候选拿到同样信号。
 
-相对优势的基本思想则可以表述为
+组内相对优势的基本形式为
 \[
 A_i = \frac{r_i - \bar{r}}{\max(\sigma_r,\epsilon)},
 \]
-其中同一组候选的平均 reward $\bar{r}$ 与标准差 $\sigma_r$ 决定了这个 candidate 相对组内其他 candidate 的优势。这样做的直观意义是：即使一整组候选都没有完全通过，只要其中某个候选“更接近正确”，模型仍能从这个相对差异中得到学习信号。
+它表达的直觉很简单：即使同一组里没有任何候选完全通过，只要其中某个候选更接近正确，它仍然能给模型提供有效学习信号。
 
-\subsection{多路 reward 分解}
+\subsection{为什么要拆四路 reward}
 
-代码生成任务，尤其是量子编码任务，常出现”接口存在细微偏差、逻辑存在细微偏差、只差一个边界条件”的近似通过（near-miss）状态。如果 reward 只有 pass/fail，训练信号就会极度稀疏。当前 GRPO 训练器因此明确拆分出四路默认 reward：
+如果 reward 只有 pass/fail，当前很多量子任务几乎会陷入“全错即零分”的稀疏状态。现在拆成四路以后，训练器可以分别看到：
 
-  \par \textbf{pass reward}：最终测试是否通过；
-  \par \textbf{syntax reward}：代码是否至少满足基本可解析性；
-  \par \textbf{interface reward}：导出函数名、签名、接口形状是否对齐；
-  \par \textbf{verifier reward}：来自验证器或测试器细粒度反馈的部分信用。
+  \par \textbf{pass reward}：最终有没有通过；
+  \par \textbf{syntax reward}：代码至少是不是可解析；
+  \par \textbf{interface reward}：函数名、签名、导出结构是否对齐；
+  \par \textbf{verifier reward}：测试器是否给出了细粒度部分信用。
 
+这不是把评分系统故意搞复杂，而是因为真实错误本来就分层。比如一个候选可能算法思路对了，但函数名错；或者 API 名字对了，但返回值格式错；又或者门序列大致正确，只是规范化处理没收好。把这些差别压成一个 0，会丢掉最有价值的学习信号。
 
-这种设计背后的考量并不是”把分数凑复杂”，而是正视真实错误的分布。对于量子编码任务，很多未通过不是”完全不会”，而是：
+\subsection{Curriculum 与自适应温度：先提高信号质量，再谈步数}
 
-  \par 大方向对，但函数名错；
-  \par 量子态或门序列结构对，但符号大小写错；
-  \par 主要推理路径对，但边界 case 或返回值格式错。
+当前 GRPO 不是静态均匀采样。\code{TaskCurriculum} 和 \code{AdaptiveTemperatureState} 一起负责决定：哪些任务更值得采，什么时候应该跳步，什么时候该提高采样温度。
 
+具体来说，它会结合历史 EMA reward、出现次数、任务难度和不确定性动态调权；可以对量子任务施加额外优先级；当某一步 reward 方差太低时直接跳过，避免做无效更新；连续跳过时再提高温度，增加候选多样性。
 
-若无法将这类”差一点就通过”（near-miss）的样本转化为可学习的强化信号，RL 就很容易停留在”全错即零分”的低效状态。
+这套机制背后的逻辑很工程化：当前远端训练预算贵、任务集也不大，所以最重要的不是“机械地多跑几步”，而是尽量保证每一步真的有信息量。
 
-\subsection{Curriculum 与自适应温度}
+\subsection{GRPO 默认参数：当前 RL 在探索什么 regime}
 
-当前 GRPO 训练器不是在静态均匀采样任务。其策略由 \code{TaskCurriculum} 与 \code{AdaptiveTemperatureState} 共同调节：
-
-  \par task curriculum 依据每个任务的历史 EMA reward、出现次数、难度与不确定性动态调权；
-  \par quantum priority 可以对量子任务施加更高采样权重；
-  \par 当某一步 reward 方差过低，训练器会选择跳过本步更新，而不是硬做无效梯度；
-  \par 连续跳过会触发采样温度上调，以增大候选多样性。
-
-
-这套机制的意义在于，当前方案将”训练信号的质量”视为核心，而非机械地追求迭代轮次。对于这样一个小任务集、高成本远端环境的场景，这一点直接决定了 RL 是否值得跑。
-
-\subsection{GRPO 默认参数}
-
-当前 \code{training/grpo_trainer.py} 的默认参数也值得在正式报告中单列，因为它们直接决定了“当前 RL 主线是在探索什么样的训练 regime”。根据本地源码，当前默认值包括：
+根据当前源码，GRPO 默认值包括：
 
   \par \code{group\_size=8}；
   \par \code{grpo\_steps=100}；
@@ -787,7 +803,6 @@ A_i = \frac{r_i - \bar{r}}{\max(\sigma_r,\epsilon)},
   \par \code{reward\_pass\_weight=0.6}，\code{reward\_syntax\_weight=0.1}，\code{reward\_interface\_weight=0.15}，\code{reward\_verifier\_weight=0.15}；
   \par \code{reward\_brevity\_weight=0.0}；
   \par \code{min\_reward\_std=0.05}，\code{curriculum\_ema\_decay=0.9}，\code{curriculum\_min\_weight=0.05}，\code{curriculum\_uncertainty\_bonus=0.35}，\code{quantum\_priority=1.5}。
-
 
 \begin{table}[htbp]
 \centering
@@ -807,33 +822,24 @@ curriculum & \code{ema=0.9}，\code{min\_weight=0.05}，\newline \code{uncertain
 \label{tab:grpo-defaults}
 \end{table}
 
-该表将强化学习的配置参数化、事实化，便于在研发层面对诸如调整 group size、verifier 权重或 skip 阈值等具体策略进行精准评估与消融分析。
+把这些参数写进报告，不是为了堆细节，而是为了把“当前 RL 到底在优化什么”说清楚。现在的设定明显不是大规模暴力搜索，而是围绕 near-miss、任务难度和量子优先级做精细控制。
 
 \subsection{GRPO 一句话概括}
 
-本项目当前强化学习主线的核心机制为：\textbf{目前采用 GRPO，它不是对单个答案做 0/1 打分，而是对同一个任务一次采样 8 个候选，把候选交给测试 harness 执行，再用 pass、syntax、interface、verifier 四路 reward 的加权结果做组内相对优势更新。}
+本项目当前强化学习主线可以浓缩成一句话：\textbf{对同一个任务一次采样 8 个候选，把候选交给测试 harness 执行，再用 pass、syntax、interface、verifier 四路 reward 的加权结果做组内相对优势更新。}
 
-这句话里每个部分都对应一个明确实现事实：
-“GRPO”对应 \code{training/grpo\_trainer.py} 的组相对策略更新主干；“一次采样 8 个候选”对应默认 \code{group\_size=8}；“交给测试 harness 执行”意味着 reward 来源不是语言模型自打分，而是任务级测试反馈；“四路 reward”对应当前默认的 \code{0.6/0.1/0.15/0.15}；“组内相对优势更新”意味着训练信号来自同组候选之间的相对好坏，而不是某个固定阈值以上才有梯度。
+这句话之所以值得单列，是因为它已经足够解释当前 RL 为什么适合这个项目：它不依赖单次 lucky sample，也不把所有失败都当成一样的失败。
 
-从研究解释上看，这种设计专门服务于当前量子编码任务的错误分布：大量失败并不是”完全不会”，而是接口缺一项、命名稍有出入、协议差一步、边界情形缺一个重要分支。因此，当前 RL 不是在追求一个抽象的”更高奖励”，而是把这些 near-miss 变成可学习的细粒度信号。对本项目而言，\textbf{reward 设计本身就是方法设计的一部分}，而不是训练器之外的附属超参数。
+\subsection{研究插件机制：让方法研究不破坏主干}
 
-\subsection{研究方法插件机制}
+\code{training/research_plugins.py} 定义了一套很克制但很好用的接口。每个研究方法可以在四个位置挂载：
 
-\code{training/research_plugins.py} 定义了一套相当克制、但非常实用的插件接口。每个研究方法可以在以下四个关键点注入：
-
-  \par \code{augment_sft_record}：在 SFT 阶段修改样本；
-  \par \code{augment_grpo_prompt}：在 GRPO 阶段修改 prompt；
-  \par \code{adjust_task_weight}：在 curriculum 层调整任务采样权重；
+  \par \code{augment_sft_record}：在 SFT 阶段改写样本；
+  \par \code{augment_grpo_prompt}：在 GRPO 阶段改写 prompt；
+  \par \code{adjust_task_weight}：在 curriculum 层调整任务采样；
   \par \code{adjust_reward_breakdown}：在 reward 层调整分解结果。
 
-
-这样的接口设计有三个优势：
-
-  \par 新方法可以独立存在于 \code{research/papers/<method>/code/plugin.py}，不会污染主训练器；
-  \par SFT 与 GRPO 共用同一方法注册方式，便于做消融；
-  \par 报告中可以明确区分“主干能力”和“研究插件能力”，避免把所有改动混成一个黑盒。
-
+这个设计最重要的好处是，方法研究不会逼着你去 fork 主训练器。新方法可以独立放在 \code{research/papers/<method>/code/plugin.py}，主干继续保持稳定，SFT 和 GRPO 也能复用同一套注册方式。
 
 \begin{figure}[htbp]
 \centering
@@ -854,9 +860,9 @@ curriculum & \code{ema=0.9}，\code{min\_weight=0.05}，\newline \code{uncertain
 \label{fig:plugin-hooks}
 \end{figure}
 
-\subsection{已实现的六个插件}
+\subsection{六个已实现插件：每个都对应一种可解释提升方向}
 
-当前已有 6 个真正以插件代码形态存在的方法，它们都位于 \code{research/papers/*/code/plugin.py}：
+当前已有 6 个真正代码化的方法插件，它们都位于 \code{research/papers/*/code/plugin.py}：
 
 \begin{table}[htbp]
 \centering
@@ -877,39 +883,35 @@ curriculum & \code{ema=0.9}，\code{min\_weight=0.05}，\newline \code{uncertain
 \label{tab:plugin-catalog}
 \end{table}
 
+如果用一句更直接的话来概括，这 6 个插件其实都在做同一件事：把“已经快对了但还没过线”的候选，尽量变成训练能利用的信号，只是切入点不同。有的改 prompt，有的改 reward，有的改采样权重。
+
 \subsection{插件 1：Verifier-Guided Repair Curriculum}
 
-这个方法的核心不是”让模型自由发挥”，而是把问题先转化为”最小必要修复”。对很多代码任务尤其是修复类任务而言，最危险的行为不是改错，而是模型在修正一个局部问题时顺手重写了整个实现，导致接口或边界行为一起漂移。
-
-因此，这个插件在 SFT 侧会强调 repair-first 的系统提示，在 GRPO 侧则会把 prompt 重写为”保持接口、优先补齐待提升点、避免额外改动”的风格。对于当前量子任务集，这个方向尤其合理，因为很多任务本质上就是“修正已有门序列、测量映射或返回结构”。
+这个方法的核心不是让模型自由发挥，而是先把问题改写成“最小必要修复”。对修复类任务来说，最危险的往往不是没改对，而是模型顺手把原来可用的接口和结构一起重写坏了。因此，这个插件强调保持接口、优先补齐缺口、避免无关改动。它最适合那些已经离通过不远、但总在局部细节上掉分的任务。
 
 \subsection{插件 2：Clause-Aware Verifier Reward}
 
-该方法承认一个事实：测试器返回的信息不应只被压缩成 0/1。很多未通过的错误细节本身就包含条款级的监督信息，如”大小写不正确””缺少某个函数””某个消息映射错误”等。将此类反馈转化为奖励系统中的局部信用，可以为强化学习提供更密集的优化信号。
-
-在现有实现里，这种思路被编码为 verifier reward 的保守增益，而不是取代原始 pass reward。这样做可以防止模型专门去优化“看起来像对”的局部结构，却忽视了最终通过率。
+这个方法承认一个事实：测试器返回的信息不该被全部压成 0/1。很多失败其实已经暴露出明确条款，比如大小写不正确、缺少函数、映射关系错误。把这些条款变成部分信用，能显著提高 RL 的可学性，同时又不至于取代最终 pass reward。
 
 \subsection{插件 3：AST Anchor Interface Grounding}
 
-量子编码任务和软件工程任务有一个共性：接口形状错了，后续行为往往再好也无法通过。当前插件通过候选代码的导出符号、函数签名与接口线索，将“先把 API 说对”作为一等目标。对严格 holdout 中的 \code{phase\_estimation\_circuit} 与 \code{qaoa\_maxcut} 这类任务而言，这尤其关键，因为当前 Qwen 基线的表现恰恰是函数缺失或函数名不匹配。
+量子任务和软件任务有一个共同点：接口错了，后面基本都白做。这个插件的作用就是把导出函数名、签名和接口形状优先固定下来。对严格 holdout 中那些“核心函数缺失”或“函数名不匹配”的任务，它是最直接的方法入口。
 
 \subsection{插件 4：Behavior Anchor Coverage Reward}
 
-这是当前方法层中最“轻量”也最容易被快速放弃的一个方向。本方法从测试用例或行为指令中主动提取核心锚点 token，如关键函数名、关键术语、关键动作，再用它们是否被候选代码覆盖来生成廉价 reward。它的价值不在于单独决定好坏，而在于为“所有候选都没有真正通过”的情况下提供一点结构化差异。
-
-这类方法之所以值得保留，是因为它几乎不增加远端训练成本；之所以必须注明”偏探索”，是因为一旦它不能显著提高信号方差，就应当被及时停用。
+这是最轻量的探索方向。它从测试要求里抽取关键行为锚点，用这些锚点是否被候选覆盖来给低成本 reward。它本身不适合当主信号，但在“所有候选都没完全通过”的阶段，可以帮系统区分谁更接近正确。
 
 \subsection{插件 5：Self-Consistency Verifier Routing}
 
-这一方向并不追求让模型输出多份答案，而是把“更像 verifier 期望的思路”作为路由偏好写回训练过程。对编程类任务而言，代码最终是否能被测试器接受，比“解释得是否漂亮”更重要；该插件因此强调候选间的一致性、接口正确性与 verifier 对齐。
+这个方向更关心“哪种思路更像 verifier 会接受的答案”，而不只是多生成几份文本。对编程任务来说，这很实用，因为代码最终是要过测试的，不是要写得像解释题。它偏向让模型在候选内部路由到更一致、更可通过的解法。
 
 \subsection{插件 6：Uncertainty-Triggered Repair Replay}
 
-当前量子任务集规模仍然有限，因此每个难任务都很宝贵。该插件试图用 difficulty、category、prompt family、behavior hints、接口复杂度等信号估计任务 hardness，并在模型表现不稳定时进行更有针对性的 replay。与简单的”按未通过次数重采样”相比，这种做法更接近研究意义上的不确定性驱动训练。
+当前量子任务集不大，所以每个难任务都很值钱。这个插件会利用 difficulty、category、prompt family、接口复杂度等信息估计哪些样本最不稳定，再对这些样本做更有针对性的 replay。比起简单按失败次数重采样，它更接近真正的不确定性驱动训练。
 
 \subsection{插件与 benchmark 的对应关系}
 
-下表基于严格量子 holdout 的评测结果与现有 plugin 机制，推导出\textbf{下一步方法优先级矩阵}，说明各研究插件与具体提升方向的对应关系。
+下表把严格量子 holdout 中的关键失分点，直接映射到最可能有用的方法方向。这样写的好处是，方法研究不再是“想一个新点子”，而是明确围绕当前 benchmark 暴露出来的问题推进。
 
 \begin{table}[htbp]
 \centering
@@ -928,25 +930,17 @@ curriculum & \code{ema=0.9}，\code{min\_weight=0.05}，\newline \code{uncertain
 \label{tab:failure-to-method}
 \end{table}
 
-这张表展示了各研究插件的具体应用方向：当前需要提升的四个任务中，两个涉及函数接口补全，一个涉及 API 规范化，一个涉及协议逻辑闭环，它们分别对应接口锚定、最小修复、条款级 reward 与不确定性 replay 这几类方法。方法栈的设计直接围绕具体提升方向展开。
+这张表的意义在于把“方法”和“失分模式”绑在一起。两个任务明显是接口补全问题，一个是 API 规范化问题，一个是协议闭环问题，所以方法优先级也应该围绕这些点排，而不是平均下注。
 
 \subsection{TurboQuant 推理优化}
 
-\code{research/papers/turboquant/paper.md} 与 \code{training/turboquant.py} 指向的是一条\textbf{推理时 KV cache 压缩}的研究方向，而不是训练算法。现有实现已经有完整的配置对象与量化/反量化路径，目标是降低长上下文推理时的显存或 NPU 内存压力。它适合接入 \code{scripts/serve_openai_chat_adapter.py} 或 \code{scripts/run_hf_pass1_eval.py} 这样的推理路径。
+\code{research/papers/turboquant/paper.md} 与 \code{training/turboquant.py} 指向的是一条推理时 KV cache 压缩路线，而不是训练算法。它的目标是降低长上下文推理的显存或 NPU 内存压力，更适合接入服务和评测路径，而不是和 SFT、GRPO 混写成同一条训练主线。
 
-把 TurboQuant 写进本报告是因为它是方法栈的重要组成部分。需要说明的是：\textbf{TurboQuant 属于推理优化方向的实验性实现，服务于长上下文推理效率，与训练主线分开叙述。}
+所以在报告里，TurboQuant 最准确的定位应该是：\textbf{推理优化方向的实验性实现，服务长上下文效率，不直接改变训练结论。}
 
 \subsection{小结}
 
-当前算法层已经具备以下研究价值：
-
-  \par SFT 主线足够稳定，能够支撑持续数据迭代；
-  \par GRPO 主线已经成型，不再受限于“只能模仿训练集”；
-  \par 方法研究已经被工程化为插件，而不是一次性分支；
-  \par TurboQuant 提供了算力效率方向，为后续长上下文推理实验预留了入口。
-
-
-因此，算法层当前真正稀缺的不是”再想一个新方向”，而是把已有主干和插件在严格 holdout 上持续做出可信实验。
+当前算法层已经有了比较完整的研发结构：SFT 主线稳定，GRPO 主线能把 near-miss 转成学习信号，plugin 机制让方法研究能持续插拔，TurboQuant 为后续推理效率实验预留了入口。下一步真正稀缺的不是再想一个全新方向，而是把现有主干和插件持续压到严格 holdout 上，做出更稳的提升。
 
 \clearpage
 
@@ -1117,168 +1111,14 @@ completed steps & 12 & 完整执行到设定上限 \\
 
 \clearpage
 
-\section{研发架构（软件架构）}
+\section{研发架构}
 
 \noindent\fbox{\parbox{0.96\textwidth}{%
-\textbf{本章关键结论：}研发架构的核心原则是“分层、留痕、可恢复”。先在本地验证，再通过 S3 relay 送到远端；trainer 与 plugin 分离；所有实验状态都沉淀为工件。即使会话中断，研发主线也能从 state 文件恢复。}}
+\textbf{本章关键结论：}研发架构遵循三个原则——\textbf{分层}（trainer 与 plugin 分离）、\textbf{留痕}（所有实验沉淀为工件）、\textbf{可恢复}（会话中断后可从 state 文件接续）。整体采用 local-first 控制面，代码通过 S3 relay 同步到远端，不依赖浏览器上传。}}
 
-\subsection{local-first 控制面}
+\subsection{架构总览}
 
-当前研发架构的一个核心原则是：\textbf{先在本地验证，再通过 S3 relay 与 Huanxin shell 把已验证代码送到 ai2。} 这比“直接在浏览器里不断手改远端文件”更慢一些，但它换来了非常重要的可复用性与可追溯性。
-
-这一控制面可以概括为如下五层：
-\begin{itemize}
-  \item 本地代码与测试层：\code{training/}、\code{evals/}、\code{tests/}；
-  \item 数据与工件层：\code{data/generated/}、\code{outputs/}、\code{reports/}、\code{artifacts/}；
-  \item 远端同步层：\code{scripts/push_to_s3.sh}、\code{scripts/ai2_sync_from_s3.sh}；
-  \item 远端运行层：\code{scripts/ai2_shell.sh}、\code{scripts/ai2_job.sh}、\code{scripts/queue_ai2_timeboxed_pipeline.sh}；
-  \item 研究与汇报层：\code{research/papers/} 与 \code{research/RESEARCH-REPORT.tex}。
-\end{itemize}
-
-
-\subsection{ai2 远端工作目录与资产分布}
-
-\noindent\fbox{\parbox{0.96\textwidth}{%
-\textbf{ai2 唯一工作目录：}\code{/root/root/work/quantum-gpt}。本项目在 ai2 上的所有训练、评测、同步、数据与模型操作，均以此目录为根目录执行。下文所有相对路径，均相对于此目录。}}
-
-\medskip
-为确保研发资产的可追溯性与项目交接规范，本节将远端节点上的资产分布按\textbf{基座模型、数据集、微调产物、代码入口}四类列清。
-
-\subsubsection{基座模型}
-
-\begin{table}[htbp]
-\centering
-\small
-\begin{tabularx}{\textwidth}{p{3.8cm} p{2.0cm} Y}
-\toprule
-路径（相对于项目根目录） & 模型主线 & 说明 \\
-\midrule
-\code{models/Qwen2.5-1.5B-Instruct} & 稳定基线 & 最小可运行的 Qwen 模型，用于基线测试与 preflight 校验 \\
-\code{models/OmniCoder-9B} & 快迭代主线 & OmniCoder 9B continuation 的底座，当前快线所有 adapter 都基于此 \\
-\code{models/gemma-4-26B-A4B-it} & MoE 研究主线 & Gemma 4 26B-A4B MoE 模型，用于 router warmup 与 ESFT 实验（runtime 适配中） \\
-\bottomrule
-\end{tabularx}
-\caption{ai2 上的基座模型。绝对路径为 \code{/root/root/work/quantum-gpt/models/<model-name>}。}
-\label{tab:ai2-base-models}
-\end{table}
-
-\subsubsection{数据集}
-
-\begin{table}[htbp]
-\centering
-\scriptsize
-\begin{tabularx}{\textwidth}{p{1.4cm} p{5.8cm} p{1.1cm} Y}
-\toprule
-数据集类别 & 路径（相对于 \code{data/generated/}） & 规模 & 说明 \\
-\midrule
-严格量子 holdout & \code{omnicoder-quantum-generalization-holdout-v1/} (\code{train.jsonl}, \code{eval.jsonl}, \code{manifest.json}) & 1024/504 & 当前 OmniCoder 8-NPU fastiter 的主训练/评测集 \\
-混合域 holdout & \code{omnicoder-generalization-holdout-v1/} (\code{train.jsonl}, \code{eval.jsonl}, \code{manifest.json}) & 1440/504 & 量子+软件双域泛化评测 \\
-混合宽口径 SFT & \code{omnicoder-template-large-v1/*} & 2208/552 & SFT 主干训练数据池 \\
-量子宽口径 SFT & \code{omnicoder-quantum-large-v1/*} & 1536/504 & SFT 量子专项数据池 \\
-Gemma 路由 warmup & \code{quantum-paper-router-warmup-v1/messages/} (\code{..\_train.jsonl}, \code{..\_valid.jsonl}) & 42/5 & 论文级路由预热数据 \\
-\bottomrule
-\end{tabularx}
-\caption{ai2 上的数据集。绝对路径前缀为 \code{/root/root/work/quantum-gpt/data/generated/}。}
-\label{tab:ai2-datasets}
-\end{table}
-
-\subsubsection{微调产物（adapter）}
-
-\begin{table}[htbp]
-\centering
-\small
-\begin{tabularx}{\textwidth}{p{2.0cm} p{4.5cm} p{1.5cm} Y}
-\toprule
-产物类别 & 路径（相对于 \code{outputs/}） & 当前状态 & 说明 \\
-\midrule
-Qwen 8-NPU interface-prefix & \code{interface-prefix-semantic-v4-8npu-true20-e2-20260326T1627CST/} & 已归档 & Qwen 基线 8-NPU 训练产物 \\
-Qwen 8-NPU codefirst & \code{codefirst-semantic-mix75-8npu-true20-e2-20260326T2118CST/} & 已归档 & Qwen prompt 变体对比实验 \\
-OmniCoder 2-NPU continuation & \code{interface-prefix-omnicoder9b-semantic-v4-2npu-true20-20260329T2219CST/} & 已归档 & 当前快线 continuation 的起点 adapter（\code{adapter/} 子目录） \\
-OmniCoder 8-NPU strict quantum & \code{omnicoder9b-quantum-generalization-sft-8npu-fastiter-20260409T1451CST/} & 已归档 & \textbf{当前最佳 adapter}，strict quantum override 2/4（\code{adapter/} 子目录） \\
-\bottomrule
-\end{tabularx}
-\caption{ai2 上的微调产物。绝对路径前缀为 \code{/root/root/work/quantum-gpt/outputs/}。每个目录下的 \code{adapter/} 子目录包含 LoRA 权重，\code{metrics.json} 包含训练指标。}
-\label{tab:ai2-adapters}
-\end{table}
-
-\subsubsection{代码入口与控制面脚本}
-
-\scriptsize
-\begin{longtable}{p{2.1cm} T{5.0cm} p{2.2cm} p{3.8cm}}
-\toprule
-类别 & 关键相对路径 & 当前作用 & 说明 \\
-\midrule
-\endfirsthead
-\toprule
-类别 & 关键相对路径 & 当前作用 & 说明 \\
-\midrule
-\endhead
-训练代码入口 & \parbox[t]{\linewidth}{\code{training/qwen\_sft\_peft.py}\\ \code{training/grpo\_trainer.py}\\ \code{training/research\_plugins.py}\\ \code{training/inspect\_moe\_target\_modules.py}} & SFT / RL / plugin / MoE 方法入口 & 核心算法实现的参考基准入口 \\
-评测代码入口 & \parbox[t]{\linewidth}{\code{scripts/run\_hf\_pass1\_eval.py}\\ \code{scripts/summarize\_override\_scorecard.py}\\ \code{evals/runner/run\_eval.py}} & 生成 scorecard 与 override summary & 所有 headline 级 benchmark 数字都应能追溯到这里生成的工件 \\
-远端控制面入口 & \parbox[t]{\linewidth}{\code{scripts/ai2\_job.sh}\\ \code{scripts/queue\_ai2\_timeboxed\_pipeline.sh}\\ \code{scripts/ai2\_sync\_from\_s3.sh}\\ \code{scripts/ai2\_push\_results\_to\_s3.sh}} & ai2 作业启动、同步与结果回收 & 控制集群节点执行任务的标准部署工具 \\
-\bottomrule
-\end{longtable}
-\normalsize
-
-\noindent 图 \ref{fig:ai2-directory-tree} 以目录树形式汇总上述四类资产在 ai2 上的位置关系。
-
-\begin{figure}[htbp]
-\centering
-\begin{minipage}{0.92\textwidth}
-\ttfamily\small
-\begin{tabbing}
-\hspace{0.5cm}\=\hspace{0.5cm}\=\hspace{0.5cm}\=\kill
-\textbf{/root/root/work/quantum-gpt/} \normalfont\scriptsize （ai2 唯一工作目录）\\
-\>models/ \normalfont\scriptsize ← 基座模型\\
-\>\>\ttfamily Qwen2.5-1.5B-Instruct/ \normalfont\scriptsize ← 稳定基线\\
-\>\>\ttfamily OmniCoder-9B/ \normalfont\scriptsize ← 快迭代底座\\
-\>\>\ttfamily gemma-4-26B-A4B-it/ \normalfont\scriptsize ← MoE 研究主线\\[2pt]
-\>data/generated/ \normalfont\scriptsize ← 数据集\\
-\>\>\ttfamily omnicoder-quantum-generalization-holdout-v1/ \normalfont\scriptsize ← 严格量子\\
-\>\>\ttfamily omnicoder-generalization-holdout-v1/ \normalfont\scriptsize ← 混合域\\
-\>\>\ttfamily omnicoder-template-large-v1/ \normalfont\scriptsize ← 宽口径 SFT\\
-\>\>\ttfamily quantum-paper-router-warmup-v1/ \normalfont\scriptsize ← Gemma 路由\\[2pt]
-\>outputs/ \normalfont\scriptsize ← 微调产物（每个子目录含 adapter/ 与 metrics.json）\\
-\>\>\ttfamily ...omnicoder9b-...-2npu-.../adapter/ \normalfont\scriptsize ← continuation 起点\\
-\>\>\ttfamily ...omnicoder9b-...-8npu-fastiter-.../adapter/ \normalfont\scriptsize ← \textbf{最佳 (2/4)}\\[2pt]
-\>training/ \normalfont\scriptsize ← SFT / GRPO / plugin 训练入口\\
-\>scripts/ \normalfont\scriptsize ← ai2 作业启动、S3 同步、评测\\
-\>evals/ \normalfont\scriptsize ← 评测 runner 与 benchmark 定义
-\end{tabbing}
-\end{minipage}
-\caption{ai2 远端工作目录树。所有操作从此根目录执行。}
-\label{fig:ai2-directory-tree}
-\end{figure}
-
-\subsection{控制面组件与职责边界}
-
-对于实际研发而言，当前控制面已经能够把问题精确定位到具体组件。表 \ref{tab:control-plane-components} 给出当前主要组件及其职责边界。
-
-\begin{table}[htbp]
-\centering
-\small
-\begin{tabularx}{\textwidth}{p{2.2cm} p{3.0cm} p{2.0cm} Y}
-\toprule
-组件层 & 代表脚本或工件 & 正常产物 & 定位作用 \\
-\midrule
-Safari keepalive & \code{scripts/huanxin\_safari\_keepalive.sh} & 周期性 train-dev 保活日志 & 确认 Safari 会话保持活跃 \\
-浏览器 daemon & \code{browser-automation/huanxin\_browser\_daemon.js} & 本地健康端口 + shell 通道 & 确认本机 Playwright 通道就绪 \\
-远端 durable job & \code{scripts/ai2\_job.sh} + \code{.huanxin\_jobs/*.json} & job id、PID、日志路径 & 确认作业已真实发起并可追踪 \\
-时间盒 pipeline & \code{scripts/queue\_ai2\_timeboxed\_pipeline.sh} & 统一 profile 与命令生成 & 统一配置管理，每次运行可追溯到具体参数 \\
-S3 relay & \code{scripts/push\_to\_s3.sh}、\code{scripts/ai2\_sync\_from\_s3.sh} & 关键训练脚本对齐 & 确保远端运行的脚本版本与本地一致 \\
-报告与证据索引 & \code{research/RESEARCH-REPORT.tex}、E1 & 单一汇报口径 & 保证项目汇报的一致性与可追溯性 \\
-\bottomrule
-\end{tabularx}
-\caption{当前研发控制面的主要组件与故障定位边界。}
-\label{tab:control-plane-components}
-\end{table}
-
-这个分层的直接收益是问题定位更加精确。例如，本轮 ai2 状态可以明确区分：Safari keepalive 正常工作、8-NPU fast SFT 的 durable job 元数据已存在、本机浏览器 daemon 需要重启。这种精确的分层使得运维效率大幅提升。
-
-\subsection{自治研发循环脚本}
-
-\code{scripts/run_autonomous_rd_cycle.py} 代表的是控制面的“叙事层”。它将一个研发循环明确拆成多个 stage，例如本地评测 gate、holdout integrity、模型来源审计、快照校验、paper router warmup、remote launcher gate 等，并把状态输出成 \code{reports/autonomous_rd_cycle_*.json} 与命令单工件。
-这类脚本的价值在于，它把”接下来该做什么”也变成了工件的一部分。即使团队交接或上下文切换，当前主线仍然可以从 state 文件中恢复。
+图 \ref{fig:rd-loop} 展示了研发闭环的整体结构：本地验证 → S3 同步 → 远端训练 → 结果回收 → 报告归档。
 
 \begin{figure}[htbp]
 \centering
@@ -1296,60 +1136,269 @@ S3 relay & \code{scripts/push\_to\_s3.sh}、\code{scripts/ai2\_sync\_from\_s3.sh
   \draw[->] (gate) -- (report);
   \draw[->] (remote.east) -- ++(0.8,0) |- (report.south);
 \end{tikzpicture}
-\caption{当前 local-first 研发闭环的控制面结构。}
+\caption{local-first 研发闭环结构：本地验证 → S3 同步 → 远端执行 → 工件归档。}
 \label{fig:rd-loop}
 \end{figure}
 
-\subsection{训练器与研究方法为什么要分层}
+\noindent 控制面分为五层，每一层职责清晰：
 
-如果把每个研究想法都直接写进 \code{qwen_sft_peft.py} 或 \code{grpo_trainer.py}，训练器会很快变得难以维护。当前仓库通过 \code{training/research_plugins.py} 维持分层，原因有三：
-\begin{itemize}
-  \item 主干 trainer 应该稳定，方法实验应该可插拔；
-  \item 报告中必须能说清“哪些是已稳定主线，哪些只是研究插件”；
-  \item 远端快迭代时，最常同步的只是几个关键训练文件与 plugin，不必整仓库胡乱覆盖。
-\end{itemize}
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabularx}{\textwidth}{p{2.2cm} T{4.6cm} Y}
+\toprule
+层次 & 关键路径 & 职责 \\
+\midrule
+本地代码与测试 & \code{training/}、\code{evals/}、\code{tests/} & 编写与验证算法、评测逻辑 \\
+数据与工件 & \code{data/generated/}、\code{outputs/} 等 & 存储数据集、训练产物、评测报告 \\
+远端同步 & \code{push\_to\_s3.sh} + \code{ai2\_sync\_from\_s3.sh} & 通过 S3 中继，保证远端代码与本地一致 \\
+远端运行 & \code{ai2\_job.sh} + \code{queue\_ai2\_timeboxed\_pipeline.sh} & 在 ai2 上发起训练/评测作业 \\
+研究与汇报 & \code{RESEARCH-REPORT.tex}、\code{research/papers/} & 唯一正式报告与研究论文 \\
+\bottomrule
+\end{tabularx}
+\caption{控制面五层结构。}
+\label{tab:control-plane-layers}
+\end{table}
 
+\subsection{实验环境：ai2 远端资产分布}
 
-\subsection{Huanxin 控制面为什么不能依赖浏览器上传代码}
+\noindent\fbox{\parbox{0.96\textwidth}{%
+\textbf{ai2 当前 live 工作目录：}\code{/root/work/david/software/quantum-gpt}。本节的训练、评测、同步与 Codex 相关核验均以此为根目录。}}
 
-远端连接与操作的架构原则是：\textbf{浏览器只负责进入环境与 shell 终端；代码传输与文件更新统一走 S3 relay。}
+\medskip
+远端资产按\textbf{基座模型、数据集、微调产物、代码入口}四类组织，图 \ref{fig:ai2-directory-tree} 给出目录树总览。
 
-这个设计避免了两个典型问题：
-\begin{itemize}
-  \item 浏览器页面状态波动时，代码同步也跟着不稳定；
-  \item 远端脚本版本容易和本地脱节，导致“本地修好了，远端还是旧 trainer”。
-\end{itemize}
+\begin{figure}[htbp]
+\centering
+\begin{minipage}{0.92\textwidth}
+\ttfamily\small
+\begin{tabbing}
+\hspace{0.5cm}\=\hspace{0.5cm}\=\hspace{0.5cm}\=\kill
+\textbf{/root/work/david/software/quantum-gpt/} \normalfont\scriptsize （当前 live 工作目录）\\
+\>models/ \normalfont\scriptsize ← 基座模型\\
+\>\>\ttfamily Qwen2.5-1.5B-Instruct/ \normalfont\scriptsize ← 稳定基线\\
+\>\>\ttfamily OmniCoder-9B/ \normalfont\scriptsize ← 快迭代底座\\
+\>\>\ttfamily gemma-4-26B-A4B-it/ \normalfont\scriptsize ← MoE 研究主线\\[2pt]
+\>data/generated/ \normalfont\scriptsize ← 数据集\\
+\>\>\ttfamily omnicoder-quantum-generalization-holdout-v1/ \normalfont\scriptsize ← 严格量子\\
+\>\>\ttfamily omnicoder-generalization-holdout-v1/ \normalfont\scriptsize ← 混合域\\
+\>\>\ttfamily omnicoder-template-large-v1/ \normalfont\scriptsize ← 宽口径 SFT\\
+\>\>\ttfamily quantum-paper-router-warmup-v1/ \normalfont\scriptsize ← Gemma 路由\\[2pt]
+\>outputs/ \normalfont\scriptsize ← 微调产物（每个子目录含 adapter/ 与 metrics.json）\\
+\>\>\ttfamily ...omnicoder9b-...-2npu-.../adapter/ \normalfont\scriptsize ← continuation 起点\\
+\>\>\ttfamily ...omnicoder9b-...-8npu-fastiter-.../adapter/ \normalfont\scriptsize ← 已归档 adapter（strict 2/4，低于 base 3/4）\\[2pt]
+\>training/ \normalfont\scriptsize ← SFT / GRPO / plugin 训练入口\\
+\>scripts/ \normalfont\scriptsize ← ai2 作业启动、S3 同步、评测\\
+\>evals/ \normalfont\scriptsize ← 评测 runner 与 benchmark 定义
+\end{tabbing}
+\end{minipage}
+\caption{ai2 远端工作目录树。}
+\label{fig:ai2-directory-tree}
+\end{figure}
 
+\subsubsection{基座模型}
 
-当前 8-NPU 快迭代作业元数据恰好证明了这一点：其命令开头先执行 \code{rclone copy} 从 S3 覆盖同步若干关键训练脚本，然后才进入 \code{torchrun}。这正是“控制面把同步与训练显式串起来”的体现。
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabularx}{\textwidth}{p{3.8cm} p{2.0cm} Y}
+\toprule
+路径 & 主线 & 说明 \\
+\midrule
+\code{models/Qwen2.5-1.5B-Instruct} & 稳定基线 & 最小可运行 Qwen 模型，用于基线测试与 preflight 校验 \\
+\code{models/OmniCoder-9B} & 快迭代主线 & 当前快线所有 adapter 的底座 \\
+\code{models/gemma-4-26B-A4B-it} & MoE 研究主线 & 用于 router warmup 与 ESFT 实验（runtime 适配中） \\
+\bottomrule
+\end{tabularx}
+\caption{ai2 上的基座模型。}
+\label{tab:ai2-base-models}
+\end{table}
 
-\subsection{唯一正式报告为什么是架构的一部分}
+\subsubsection{微调产物}
 
-研究报告不是最终才补写的文档，而是研发架构的一部分。原因很简单：
-\begin{itemize}
-  \item 如果没有唯一正式报告，汇报口径就会漂移；
-  \item 如果没有单一 PDF 产物，警告清理、版式统一、证据索引都无从谈起；
-  \item 如果没有“唯一报告 + 唯一证据索引”，下一轮迭代很容易再次出现造口径、混口径、漏工件的问题。
-\end{itemize}
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabularx}{\textwidth}{p{2.0cm} p{4.5cm} p{1.5cm} Y}
+\toprule
+产物 & 路径（相对于 \code{outputs/}） & 状态 & 说明 \\
+\midrule
+Qwen 8-NPU & \code{interface-prefix-semantic-v4-8npu-true20-e2-20260326T1627CST/} & 已归档 & Qwen 基线训练产物 \\
+OmniCoder 2-NPU & \code{interface-prefix-omnicoder9b-semantic-v4-2npu-true20-20260329T2219CST/} & 已归档 & 快线 continuation 起点 \\
+OmniCoder 8-NPU & \code{omnicoder9b-quantum-generalization-sft-8npu-fastiter-20260409T1451CST/} & 已归档 & 当前最佳 adapter 工件，但 same-model strict holdout 结果仍低于 base（2/4 vs 3/4） \\
+\bottomrule
+\end{tabularx}
+\caption{ai2 上的微调产物。每个目录下 \code{adapter/} 含 LoRA 权重，\code{metrics.json} 含训练指标。}
+\label{tab:ai2-adapters}
+\end{table}
 
+\subsubsection{代码入口}
 
-因此，\code{research/RESEARCH-REPORT.tex} 的地位不低于 \code{training/grpo_trainer.py} 或 \code{scripts/queue_ai2_timeboxed_pipeline.sh}。它并不是项目的附庸，而是项目能否进行高质量汇报与决策的必要基础设施。
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabularx}{\textwidth}{p{2.0cm} p{5.5cm} Y}
+\toprule
+类别 & 关键脚本 & 职责 \\
+\midrule
+训练 & \code{training/qwen\_sft\_peft.py}、\code{training/grpo\_trainer.py}、\code{training/research\_plugins.py} & SFT / RL / 插件 \\
+评测 & \code{scripts/run\_hf\_pass1\_eval.py}、\code{evals/runner/run\_eval.py} & 生成 scorecard \\
+远端控制 & \code{scripts/ai2\_job.sh}、\code{scripts/queue\_ai2\_timeboxed\_pipeline.sh} & 作业启动与同步 \\
+\bottomrule
+\end{tabularx}
+\caption{核心代码入口。}
+\label{tab:code-entries}
+\end{table}
 
-\subsection{软件架构章节小结}
+\subsubsection{Codex 本地推理入口}
 
-当前软件架构的成熟点不在于“花哨”，而在于三个词：\textbf{分层、留痕、可恢复。} 分层体现在 trainer 与 plugin 分离；留痕体现在 outputs、reports、artifacts、job meta 齐全；可恢复体现在 autonomous cycle state 与唯一正式报告并存。
+截至 2026-04-12，ai2 不仅能承载训练与评测，也已经能直接把 Codex CLI 指向\textbf{finetuned OmniCoder} 做本地 provider 推理。当前可直接使用的模型 alias 为 \code{omnicoder9b-quantum-generalization-sft-8npu-fastiter-20260409T1451CST}，provider id 为 \code{quantum\_local}，当前 live 工作目录为 \code{/root/work/david/software/quantum-gpt}。证据见 C1。
+
+\begin{quote}
+\code{printf '' | codex exec --skip-git-repo-check --color never -C /root/work/david/software/quantum-gpt -p local -m omnicoder9b-quantum-generalization-sft-8npu-fastiter-20260409T1451CST -o /tmp/codex_last.txt 'Reply with exactly OK and nothing else.'}
+\end{quote}
+
+该 smoke test 在 ai2 NPU 上通过本地 \code{/v1/responses} provider 返回 \code{OK}，并把 \code{OK} 落盘到 \code{/tmp/codex\_last.txt}。这意味着后续在 ai2 上执行 \code{codex -p local -m omnicoder9b-quantum-generalization-sft-8npu-fastiter-20260409T1451CST} 时，命中的已经是当前 finetuned model，而不是 base model 或未配置的默认 provider。
+
+\subsection{控制面组件与故障定位}
+
+表 \ref{tab:control-plane-components} 列出各控制面组件。分层设计使得问题定位精确——可以区分”浏览器会话断了”还是”S3 同步失败”还是”训练脚本出错”。
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabularx}{\textwidth}{p{2.2cm} p{3.5cm} Y}
+\toprule
+组件 & 代表脚本 & 职责 \\
+\midrule
+Safari keepalive & \code{scripts/huanxin\_safari\_keepalive.sh} & 保持远端 web 会话活跃 \\
+浏览器 daemon & \code{browser-automation/huanxin\_browser\_daemon.js} & 本地 Playwright shell 通道 \\
+Durable job & \code{scripts/ai2\_job.sh} + \code{.huanxin\_jobs/*.json} & 作业发起、追踪与元数据记录 \\
+Timeboxed pipeline & \code{scripts/queue\_ai2\_timeboxed\_pipeline.sh} & 统一 profile/target 配置管理 \\
+S3 relay & \code{scripts/push\_to\_s3.sh}、\code{ai2\_sync\_from\_s3.sh} & 代码同步，保证远端版本一致 \\
+\bottomrule
+\end{tabularx}
+\caption{控制面组件与职责。}
+\label{tab:control-plane-components}
+\end{table}
+
+\subsection{Gemma 主线环境适配进展}
+
+Gemma 4 26B-A4B 的 runtime 适配是当前主线的关键环境问题。表 \ref{tab:gemma-progress} 列出各环节状态。
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabularx}{\textwidth}{p{3.0cm} p{1.8cm} Y}
+\toprule
+检查点 & 状态 & 说明 \\
+\midrule
+模型来源审计 & 通过 & \code{google/gemma-4-26B-A4B-it}，架构 \code{gemma4} \\
+本地快照校验 & 通过 & 权重分片、processor、chat template 齐全 \\
+本地解释器 gate & 通过 & Python 3.11.15 已就位 \\
+runtime bootstrap & 进行中 & 需要 Gemma 4-capable Transformers（稳定版 4.57.1 尚不支持） \\
+conditional-generation backend & 待完成 & runtime 解决后的下一步 \\
+\bottomrule
+\end{tabularx}
+\caption{Gemma 4 主线环境适配进展。}
+\label{tab:gemma-progress}
+\end{table}
+
+\subsection{关键架构决策}
+
+\paragraph{为什么代码传输走 S3 而不走浏览器？} 浏览器只负责进入环境与 shell 终端；代码传输统一走 S3 relay。这样避免浏览器页面波动导致同步不稳定，也避免远端脚本版本与本地脱节。
+
+\paragraph{为什么 trainer 与 plugin 要分离？} 主干 trainer 需要稳定，研究方法需要可插拔。分层后，报告能说清”哪些是稳定主线，哪些是实验性插件”；远端快迭代只需同步关键文件，不必整仓库覆盖。
+
+\paragraph{为什么报告是架构的一部分？} 唯一正式报告保证汇报口径不漂移。\code{research/RESEARCH-REPORT.tex} 的地位等同于核心训练脚本——它是高质量汇报与决策的必要基础设施。
+
+\subsection{自治研发循环}
+
+\code{scripts/run_autonomous_rd_cycle.py} 将研发循环拆成明确的 stage（本地评测 gate → holdout integrity → 模型审计 → 远端启动），并把状态输出为 \code{reports/autonomous_rd_cycle_*.json}。其价值在于：即使会话中断或团队交接，当前主线仍可从 state 文件恢复。
+
+\subsection{小结}
+
+研发架构的成熟度体现在三个词：\textbf{分层}（trainer 与 plugin 分离）、\textbf{留痕}（outputs、reports、artifacts、job meta 齐全）、\textbf{可恢复}（autonomous cycle state 与唯一正式报告并存）。
 
 \clearpage
 
 \section{测试结果}
 
 \noindent\fbox{\parbox{0.96\textwidth}{%
-\textbf{本章关键结论：}参考解基准 26/26 全部通过；在协议一致的 strict quantum holdout 上，Qwen clean baseline 为 0/4、OmniCoder 8-NPU adapter 为 2/4；OmniCoder 9B base 同协议回评当前仍被 ai2 模型快照恢复阻塞，因此本章 headline 明确只基于已完成的 protocol-matched run。训练主干稳定，Gemma 主线当前停在 \code{gemma\_runtime\_bootstrap}。测试结果区分三类：参考解健康度、严格未见任务表现、训练过程指标。}}
+\textbf{本章关键结论：}参考解 26/26 全部通过（评测器健康）；严格量子 holdout 上，Qwen baseline 0/4、OmniCoder 9B base 3/4、OmniCoder 8-NPU adapter 2/4。也就是说，当前 8-NPU SFT 相比 Qwen 有收益，但相比同模型 base 仍低 1 个任务（75\% $\rightarrow$ 50\%）。另外，2026-04-12 新补齐并继续到 ai1 结构化 enriched continuation 的 Qwen2.5 same-model 对比也给出了明确答案：可恢复的 \code{fast-lora-qwen25-1p5b-small}、ai1 新 8-NPU SFT、ai1 二阶段 continuation、ai1 三阶段 continuation、以及 ai1 enriched continuation 在同协议 strict holdout 上都仍是 0/4，与 base 持平，没有带来 headline 提升。测试结果分三类：参考解健康度、严格未见任务表现、训练过程指标，不可混用。}}
+
+\subsection{核心结果一览}
+
+\textbf{先看 leadership 直接答案。}
+如果只问“微调后相对同模型 base 提高了多少”，当前两条已经真实测到的 strict holdout same-model 结论都不是正提升：
+\code{Qwen2.5-1.5B} 最新已测支线是 \textbf{0/4 $\rightarrow$ 0/4}（提升 \textbf{0 个任务 / 0pp}）；
+\code{OmniCoder 9B} 当前主线是 \textbf{3/4 $\rightarrow$ 2/4}（回退 \textbf{1 个任务 / 25pp}）。
+表 \ref{tab:strict-task-by-task} 给出逐题结果，表 \ref{tab:strict-override-compare} 把 same-model before/after 摘成领导视角。
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabularx}{\textwidth}{p{3.2cm} c c c Y}
+\toprule
+任务 & Qwen baseline & OmniCoder base & OmniCoder adapter & 变化说明 \\
+\midrule
+\code{quantum\_gate\_alias\_normalization} & 未通过 & 未通过 & 未通过 & 三者都卡在 API 规范化 \\
+\code{quantum\_phase\_estimation\_circuit} & 未通过 & \textcolor{green!50!black}{\textbf{通过}} & \textcolor{green!50!black}{\textbf{通过}} & base 与 adapter 均明显优于 Qwen \\
+\code{quantum\_qaoa\_maxcut} & 未通过 & \textcolor{green!50!black}{\textbf{通过}} & 未通过 & adapter 相比 base 出现回退 \\
+\code{quantum\_superdense\_coding} & 未通过 & \textcolor{green!50!black}{\textbf{通过}} & \textcolor{green!50!black}{\textbf{通过}} & 协议 round-trip 在 OmniCoder 上已闭环 \\
+\midrule
+\textbf{合计} & \textbf{0/4} & \textbf{3/4} & \textbf{2/4} & \textbf{adapter vs base = -1 个任务} \\
+\bottomrule
+\end{tabularx}
+\caption{严格量子 holdout 逐题对比（override-only，协议一致）。}
+\label{tab:strict-task-by-task}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabularx}{\textwidth}{p{4.2cm} c c c Y}
+\toprule
+same-model 对比 & base strict & finetuned strict & strict 差值 & 说明 \\
+\midrule
+Qwen2.5-1.5B latest measured（base 2026-04-12 vs ai1 GRPO hard-only r2 2026-04-13） & 0/4 & 0/4 & 0 / 0pp & full 仅 +3/26（22/26 $\rightarrow$ 25/26），strict 仍无提升 \\
+OmniCoder 9B mainline（base 2026-04-10 vs 8-NPU adapter 2026-04-09） & 3/4 & 2/4 & -1 / -25pp & full 也从 25/26 回落到 24/26；base 实测 artifact 已存在 \\
+\bottomrule
+\end{tabularx}
+\caption{严格量子 holdout 的 same-model before/after 领导视角汇总。当前已测到的两条主线都没有出现“strict holdout 提升”：Qwen latest measured 仍为 0/4 $\rightarrow$ 0/4，OmniCoder 9B 则是 3/4 $\rightarrow$ 2/4。}
+\label{tab:strict-override-compare}
+\end{table}
+
+\noindent\textbf{领导若只问 Qwen same-model 的提升幅度，当前真实答案是：0 个任务 / 0 个百分点。}
+截至 2026-04-13，base、可恢复 LoRA、ai1 新 SFT、二阶段 recovery、三阶段 continuation、enriched continuation、以及 ai1 GRPO hard-only r2 七条线的 strict override 全部都是 0/4，且失败 override task id 完全一致，没有任何一题从失败翻到通过。
+
+\begin{table}[htbp]
+\centering
+\footnotesize
+\begin{tabularx}{\textwidth}{p{3.2cm} c c c c Y}
+\toprule
+Qwen2.5 same-model 对比 & strict override & strict 相对 base & full scorecard & full 相对 base & 说明 \\
+\midrule
+Qwen2.5-1.5B base（2026-04-12 同日重跑） & 0/4 & --- & 22/26 & --- & local same-protocol rerun \\
+Qwen2.5-1.5B \code{fast-lora-qwen25-1p5b-small} & 0/4 & 0 / 0pp & 22/26 & 0 / 0pp & restored LoRA artifact \\
+Qwen2.5-1.5B ai1 新 SFT（2026-04-12） & 0/4 & 0 / 0pp & 22/26 & 0 / 0pp & fresh ai1 8-NPU SFT \\
+Qwen2.5-1.5B ai1 二阶段 recovery curriculum（2026-04-12） & 0/4 & 0 / 0pp & 22/26 & 0 / 0pp & curriculum continuation \\
+Qwen2.5-1.5B ai1 三阶段 continuation（2026-04-12） & 0/4 & 0 / 0pp & 22/26 & 0 / 0pp & safe continuation \\
+Qwen2.5-1.5B ai1 enriched continuation（2026-04-12） & 0/4 & 0 / 0pp & 22/26 & 0 / 0pp & structured-hint continuation \\
+Qwen2.5-1.5B ai1 GRPO hard-only r2（2026-04-13） & 0/4 & 0 / 0pp & 25/26 & +3 / +11.5pp & latest measured RL branch \\
+\midrule
+\textbf{领导单问答案（latest measured same-model）} & \textbf{0/4 $\rightarrow$ 0/4} & \textbf{0 / 0pp} & \textbf{22/26 $\rightarrow$ 25/26} & \textbf{+3 / +11.5pp} & \textbf{no strict task flipped from fail to pass} \\
+\bottomrule
+\end{tabularx}
+\caption{Qwen2.5 严格量子 holdout 的 same-model before/after。\
+截至 2026-04-13，base、可恢复 LoRA、ai1 新 SFT、ai1 二阶段、ai1 三阶段、ai1 enriched、ai1 GRPO hard-only r2 七条线里，strict override 依然全部是 0/4；最新 GRPO r2 虽把 full scorecard 提到 25/26，但四个严格 override task 仍然全部失败。}
+\label{tab:qwen-same-model-compare}
+\end{table}
 
 \begin{figure}[htbp]
 \centering
-\begin{tikzpicture}[x=2.1cm, y=1.5cm]
-  \draw[->] (-0.3, 0) -- (3.5, 0) node[right, font=\small] {模型};
+\begin{tikzpicture}[x=1.8cm, y=1.5cm]
+  \draw[->] (-0.3, 0) -- (4.7, 0) node[right, font=\small] {模型};
   \draw[->] (0, -0.3) -- (0, 2.6) node[above, font=\small] {严格量子 override 通过数};
   \foreach \y in {0,1,2,3,4}
     \draw (-0.05,\y*0.55) -- (0.05,\y*0.55) node[left, font=\scriptsize] {\y};
@@ -1359,363 +1408,147 @@ S3 relay & \code{scripts/push\_to\_s3.sh}、\code{scripts/ai2\_sync\_from\_s3.sh
   \node[font=\scriptsize, anchor=south] at (0.80, 0.05) {0/4};
   \node[font=\small, anchor=north, align=center] at (0.80, -0.1) {Qwen2.5-1.5B\\baseline};
 
-  \fill[orange!70] (1.55, 0) rectangle (2.05, 1.10);
-  \node[font=\scriptsize, anchor=south] at (1.80, 1.12) {2/4};
-  \node[font=\small, anchor=north, align=center] at (1.80, -0.1) {OmniCoder 9B\\8-NPU adapter};
+  \fill[blue!45] (1.75, 0) rectangle (2.25, 1.65);
+  \node[font=\scriptsize, anchor=south] at (2.00, 1.67) {3/4};
+  \node[font=\small, anchor=north, align=center] at (2.00, -0.1) {OmniCoder 9B\\base};
 
-  \draw[dashed, gray] (0, 2.2) -- (2.4, 2.2);
-  \node[font=\scriptsize, gray, anchor=west] at (2.45, 2.2) {目标 4/4};
-  \draw[->, thick, green!50!black] (1.05, 0.3) -- (1.50, 1.00);
-  \node[font=\scriptsize, green!50!black, anchor=south] at (1.28, 0.65) {+2};
+  \fill[orange!70] (2.95, 0) rectangle (3.45, 1.10);
+  \node[font=\scriptsize, anchor=south] at (3.20, 1.12) {2/4};
+  \node[font=\small, anchor=north, align=center] at (3.20, -0.1) {OmniCoder 9B\\8-NPU adapter};
+
+  \draw[dashed, gray] (0, 2.2) -- (3.7, 2.2);
+  \node[font=\scriptsize, gray, anchor=west] at (3.75, 2.2) {目标 4/4};
+  \draw[->, thick, green!50!black] (1.05, 0.3) -- (1.70, 1.45);
+  \node[font=\scriptsize, green!50!black, anchor=south] at (1.38, 0.95) {+3 vs Qwen};
+  \draw[->, thick, red!60!black] (2.25, 1.45) -- (2.92, 1.00);
+  \node[font=\scriptsize, red!60!black, anchor=south] at (2.58, 1.33) {-1 vs base};
 \end{tikzpicture}
-\caption{严格量子 holdout 上的 override-only 成绩对比。两根柱子对应的 run 共享相同的 4 个 task、\code{prompt\_version=v2}、\code{prompt\_style=repair\_focused}、\code{include\_reference\_candidate=false} 与 \code{token\_budget\_preset=quantum\_heavy}；OmniCoder base 9B 的第三根柱子当前仍缺失，因为 2026-04-10 fresh ai2 回评先卡在模型快照恢复。}
+\caption{严格量子 holdout override 成绩对比。三组 run 共享相同评测协议。}
 \label{fig:strict-override-progress}
 \end{figure}
 
-\subsection{测试结果的口径原则}
+\noindent\textbf{公平性说明：}三组 run 共享完全相同的 4 个 task、\code{prompt\_version=v2}、\code{prompt\_style=repair\_focused}、\code{include\_reference\_candidate=false}。OmniCoder 9B base 的 3/4 分数来自“本地 tokenizer 预填充 + ai2 NPU 生成 + 本地 decode/score”的同协议回评，因此可以直接与 Qwen 0/4 和 adapter 2/4 对照。当前最重要的 leadership-facing 结论不是“有没有收益”，而是\textbf{当前 8-NPU SFT 在严格 holdout 上尚未超过 OmniCoder 9B base}。
 
-本报告中的“测试结果”必须分成三类看：
-\begin{itemize}
-  \item \textbf{参考解健康度}：验证评测器本身没有坏；
-  \item \textbf{严格未见任务表现}：验证模型是否真的泛化；
-  \item \textbf{训练过程指标}：验证训练堆栈是否稳定、方向是否合理。
-\end{itemize}
+\noindent\textbf{Qwen same-model 补充说明：}表 \ref{tab:qwen-same-model-compare} 的作用只有一个: 正面回答“Qwen 微调后比没微调前提高了多少”。当前本地已落地的 measured evidence 是七条 same-model 支线：base、可恢复 \code{fast-lora-qwen25-1p5b-small}、ai1 新 SFT、ai1 二阶段 recovery curriculum、ai1 三阶段 continuation、ai1 enriched continuation、以及 ai1 GRPO hard-only r2。它们的 strict override 全部仍是 \textbf{0/4}；最新 GRPO r2 只是把 full scorecard 从 \textbf{22/26} 拉到 \textbf{25/26}，并没有把任何一个严格 override task 从失败翻到通过。换句话说，\textbf{Qwen latest measured same-model strict 提升仍然是 0 个任务 / 0 个百分点}。这说明问题不在于“旧工件偶然失效”，而是当前这条 Qwen 训练线即使继续迭代，也还没有在严格未见量子任务上带来 headline 泛化提升。
 
-不能把这三类结果混在一起做 headline。例如，参考解 26/26 并不意味着模型已经达到 26/26；而某个训练 loss 下降，也不意味着严格 holdout 已经通过。
+\subsection{测试结果的分类原则}
 
-\subsection{测试结果到底是怎么测出来的}
+本报告将测试结果分为三类，\textbf{不可混用}：
 
-当前 headline 级测试结果不是“看 loss 曲线”得出的，而是按一条固定评测流水线生成的。最简化地说，这条流水线分四步：
-第一步，用 \code{evals/runner/prepare\_prompts.py} 为每个 task 生成 run directory，写出 \code{manifest.json}、\code{candidate-map.json}、system prompt 与逐题 prompt。第二步，用 \code{scripts/run\_hf\_pass1\_eval.py} 让 base model 或 adapter 对每个 task 各生成 1 个 candidate，因此 headline 指标本质上是 pass@1。第三步，用 \code{evals/runner/run\_eval.py} 逐题加载测试模块，把 candidate 文件放进单文件或临时 workspace 环境里执行真实 tests。第四步，用 \code{scripts/summarize\_override\_scorecard.py} 从整份 \code{scorecard.json} 中只抽取 \code{source=override} 的条目，得到 strict unseen benchmark 的 override-only headline。
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabularx}{\textwidth}{p{2.5cm} p{2.5cm} Y}
+\toprule
+类别 & 代表指标 & 说明 \\
+\midrule
+参考解健康度 & 26/26 & 证明评测器没有坏，不代表模型能力 \\
+严格未见任务 & Qwen 0/4；base 3/4；adapter 2/4 & 唯一可做 headline 的模型泛化指标 \\
+训练过程指标 & eval loss / ppl & 证明训练路径稳定，不等同于泛化结论 \\
+\bottomrule
+\end{tabularx}
+\caption{三类测试结果的用途边界。}
+\label{tab:test-categories}
+\end{table}
 
-这条流水线的关键点有两个。第一，评测器不是只比较字符串，也不是只做人工主观判断，而是直接运行任务附带的 tests，因此结果本质上是“候选代码是否通过 task harness”。第二，整份 \code{scorecard.json} 往往同时包含 \code{reference} 与 \code{override} 两类条目：前者用于确认评测链路健康，后者才代表模型在严格未见任务上的真实求解表现。因此，像“24/26”这样的整表数字只能作为调试辅助；真正能进入 headline 的，是 override 子集的 “0/4” 或 “2/4”。
+\subsection{评测流水线说明}
 
-换言之，本报告中的 strict quantum benchmark 可以被准确复述为：\textbf{在固定 run protocol 下，模型对 4 个严格未见量子 override task 各生成 1 个候选，统一交给本地 task tests 执行，最终按 override 子集的通过数汇总成 0/4 或 2/4。} 这个定义把“到底测了什么”与“哪些数字能做 headline”都说清楚了。
+评测流水线分四步，结果本质上是 pass@1（每个任务生成 1 个候选，交给真实 tests 执行）：
 
-\subsection{参考解健康度：26/26 通过}
+\begin{enumerate}
+  \item \code{evals/runner/prepare\_prompts.py} 生成 run directory、manifest、prompt；
+  \item \code{scripts/run\_hf\_pass1\_eval.py} 让模型对每个 task 生成 1 个候选；
+  \item \code{evals/runner/run\_eval.py} 逐题运行真实 tests（不是字符串比较）；
+  \item \code{scripts/summarize\_override\_scorecard.py} 从 scorecard 中只取 \code{source=override} 条目。
+\end{enumerate}
 
-本轮重新执行 \code{python3 evals/runner/run_eval.py}，并将完整输出固化为 \code{artifacts/reference_eval_2026-04-09.txt}。结果是：
-\begin{itemize}
-  \item 总计 26/26 通过；
-  \item 量子任务 13/13 通过；
-  \item 软件任务 13/13 通过。
-\end{itemize}
+\noindent 整份 scorecard 同时包含 \code{reference}（确认链路健康）与 \code{override}（模型真实求解）两类条目。像 24/26 这样的全表数字只能做调试辅助，\textbf{只有 override 子集可做 headline}。
+
+\subsection{参考解健康度：26/26}
 
 \begin{table}[htbp]
 \centering
 \small
 \begin{tabularx}{\textwidth}{p{2.5cm} c c Y}
 \toprule
-分组 & 通过数 & 总数 & 说明 \\
+分组 & 通过 & 总数 & 说明 \\
 \midrule
-总计 & 26 & 26 & 当前评测器、参考解与任务目录整体健康 \\
-量子任务 & 13 & 13 & 包括 gate alias、QPE、QAOA、superdense coding 等关键任务 \\
-软件任务 & 13 & 13 & 包括 workspace repair / smoke 两个 workspace 任务 \\
+总计 & 26 & 26 & 评测器、参考解与任务目录整体健康 \\
+量子任务 & 13 & 13 & 包括 gate alias、QPE、QAOA、superdense coding \\
+软件任务 & 13 & 13 & 包括 workspace repair / smoke \\
 \bottomrule
 \end{tabularx}
-\caption{参考解健康度结果。}
+\caption{参考解健康度。后续模型未通过的任务可归因为模型能力，而非评测器缺陷。}
 \label{tab:reference-eval}
 \end{table}
 
-这个结果非常重要，因为它意味着后续任何模型未通过的任务都可以归因为模型能力问题，而不是评测器本身存在缺陷。
+\subsection{Qwen same-model 详细分析}
 
-\subsection{Qwen 严格量子 holdout 基线}
-
-Qwen2.5-1.5B 在严格量子未见任务上的基线表现显示，四个验证任务均未通过 override，这为后续改进提供了明确的对比起点与优化方向。
+Qwen2.5-1.5B 在 2026-04-12 到 2026-04-13 的同协议 same-model 测试里，base、可恢复的 \code{fast-lora-qwen25-1p5b-small}、ai1 新 SFT、ai1 二阶段 recovery curriculum continuation、ai1 三阶段 no-leak continuation + research methods、ai1 enriched continuation、以及 ai1 GRPO hard-only r2 仍然卡在完全相同的 4 个严格量子验证任务上：
 
 \begin{table}[htbp]
 \centering
 \footnotesize
-\begin{tabularx}{\textwidth}{p{4.2cm} p{1.9cm} Y}
+\begin{tabularx}{\textwidth}{p{3.5cm} p{1.8cm} Y}
 \toprule
-待提升任务 & 待提升方面 & 说明 \\
+任务 & 差距类型 & 具体表现 \\
 \midrule
-\code{quantum\_gate\_alias\_}\newline \code{normalization} & 大小写规范 & 已能识别映射方向，需进一步完善 canonical casing \\
-\code{quantum\_phase\_estimation\_}\newline \code{circuit} & 接口补全 & 需补全 \code{phase\_estimation} 函数接口 \\
-\code{quantum\_qaoa\_maxcut} & 接口补全 & 需补全 \code{maxcut\_cost} 函数接口 \\
-\code{quantum\_superdense\_}\newline \code{coding} & 协议闭环 & 编解码映射的 round-trip 一致性待完善 \\
+\code{gate\_alias\_normalization} & API 规范化 / 空白清洗 & alias 方向有学习，但 canonical casing 与 strip 仍不稳定；enriched continuation 仍会把 \code{' hadamard '} 判成 unsupported \\
+\code{phase\_estimation\_circuit} & 数值接口 / 类型 & 已从“函数缺失”推进到“函数存在但实现不对”；最新 enriched continuation 误用 \code{complex.modulus} \\
+\code{qaoa\_maxcut} & 外部依赖幻觉 & 仍会凭空依赖 \code{qaoa} 模块或错误 helper，而不是在单文件内自洽实现 \\
+\code{superdense\_coding} & 协议语义 & 编码映射 round-trip 不一致 \\
 \bottomrule
 \end{tabularx}
-\caption{Qwen 基线在严格量子 holdout 上的逐任务分析。}
+\caption{Qwen2.5 各条 same-model 支线共同暴露出的逐任务差距。}
 \label{tab:qwen-failures}
 \end{table}
 
-\begin{table}[htbp]
-\centering
-\small
-\begin{tabularx}{\textwidth}{p{2.6cm} c Y}
-\toprule
-待提升 category & 数量 & 对方法设计的直接含义 \\
-\midrule
-\code{algorithm\_implementation} & 2 & 两个核心量子算法任务直接缺失 required function，说明当前首要提升方向是”把算法落成可调用接口” \\
-\code{api\_normalization} & 1 & gate alias 大小写正规化未通过，说明接口锚定和 canonical formatting 仍需显式训练 \\
-\code{reasoning} & 1 & superdense coding round-trip 未闭合，说明协议级语义闭环需要进一步训练 \\
-\bottomrule
-\end{tabularx}
-\caption{Qwen 严格量子 holdout override 的 category 级待提升分布。}
-\label{tab:qwen-failure-categories}
-\end{table}
+结论：Qwen 这条可恢复的微调支线目前并没有改变 headline 失败结构。主要瓶颈不是“trainer-time eval loss 还不够低”，而是\textbf{接口命中与结构性对齐}。三阶段与 enriched continuation 的结果更说明这一点：部分任务已经从“函数缺失”推进到“函数存在但行为、类型或依赖假设不对”，比如 \code{phase\_estimation\_circuit} 已不再缺导出函数，而是出现错误的数值接口调用；但 strict headline 仍然是 0/4。这直接支持 AST anchor、repair curriculum、verifier-guided repair、以及更显式的接口约束数据增广的优先级，也说明仅靠现有 Qwen SFT recipe 继续训练，仍不足以支撑严格 holdout 提升结论。
 
-这四个待提升任务非常有代表性。它们揭示了当前基础模型的三类具体提升方向：
+\subsection{OmniCoder base 与 8-NPU adapter 详细分析}
+
+相比 Qwen 基线，OmniCoder 系列表现已经显著更强；但同模型 base 与 adapter 的差异也已经清晰：
 \begin{itemize}
-  \item API 形状与命名不稳；
-  \item 算法实现函数缺失；
-  \item 协议型逻辑未能闭环。
+  \item \textbf{OmniCoder 9B base} 已通过 \code{phase\_estimation\_circuit}、\code{qaoa\_maxcut}、\code{superdense\_coding}，只剩 \code{gate\_alias\_normalization} 未过，strict override = 3/4；
+  \item \textbf{OmniCoder 8-NPU adapter} 保住了 \code{phase\_estimation\_circuit} 与 \code{superdense\_coding} 两项，但 \code{qaoa\_maxcut} 相比 base 出现回退，strict override = 2/4；
+  \item \textbf{结论}：当前这轮 SFT 对严格未见量子任务的 same-model headline 指标不是提升，而是回退；它对 Qwen 有收益，但对 OmniCoder base 还没有收益。
 \end{itemize}
-
-因此，后续算法工作中强调 AST-anchor、repair curriculum、clause-aware reward 并不是形式主义，而是直接对应这些具体提升方向。
-
-\subsection{OmniCoder 8-NPU strict quantum benchmark：override 2/4}
-
-这轮最重要的新变化是：最新的 8-NPU OmniCoder adapter 不再只有训练级 \code{metrics.json}，还补上了独立 benchmark scorecard。对应工件是
-\code{evals/runs/omnicoder-quantum-generalization-holdout-8npu-fastiter-eval-20260409T122347Z/scorecard.json}
-以及
-\code{reports/omnicoder9b_quantum_generalization_holdout_8npu_fastiter_eval_20260409_override_summary.json}。
-按 override-only 口径统计，结果为：
-\begin{itemize}
-  \item override 总数 4；
-  \item override 通过 2；
-  \item override 未通过 2；
-  \item override pass rate = 50\%。
-\end{itemize}
-
-这里有一个需要明确写出来的公平性点：当前正文使用的 Qwen clean baseline 与 OmniCoder 8-NPU adapter run 在协议上是对齐的。两者共享完全相同的 4 个 override task（\code{quantum\_gate\_alias\_normalization}、\code{quantum\_phase\_estimation\_circuit}、\code{quantum\_qaoa\_maxcut}、\code{quantum\_superdense\_coding}），都使用 \code{prompt\_version=v2}、\code{prompt\_style=repair\_focused}、\code{include\_reference\_candidate=false} 与 manifest 驱动的 \code{token\_budget\_preset=quantum\_heavy}。因此，\textbf{0/4 $\rightarrow$ 2/4} 不是协议漂移带来的表面变化，而是在同一 strict holdout 设定下出现的真实收益。
-
-与此同时，这个对比仍然不是完整的 OmniCoder base-vs-adapter 分解。2026-04-10 的 fresh ai2 base OmniCoder 回评已经正式启动，但在进入生成前退出：远端 \code{models/OmniCoder-9B} 被判定为不完整 snapshot；本地同名目录当前只有 20{,}074{,}654 bytes，缺少任何权重文件；\code{bash scripts/model\_snapshot\_s3\_ready.sh OmniCoder-9B} 则确认完整 snapshot 仍在 S3。因此，当前最准确的表述应是：\textbf{strict quantum headline 已经有 protocol-matched 的小模型 baseline 与 adapter 结果，但 OmniCoder base 9B 的同协议公平比较仍被模型恢复与 Huanxin transport 阻塞。}
-
-这意味着当前最诚实的结论已经从“只有训练 loss，没有独立 benchmark”推进到“训练工件与 benchmark scorecard 成对存在，并且与 clean baseline 形成 protocol-matched 对照”。它仍然不是全通过，但相对于 Qwen 基线 0/4，已经出现了可归档的真实提升。
 
 \begin{table}[htbp]
 \centering
 \small
 \begin{tabularx}{\textwidth}{p{2.8cm} c c c Y}
 \toprule
-模型 / 口径 & override 通过 & override 总数 & 通过率 & 说明 \\
+统计口径 & Qwen & OmniCoder base & OmniCoder adapter & 用途 \\
 \midrule
-Qwen2.5-1.5B baseline & 0 & 4 & 0\% & 当前最诚实的严格量子未见任务基础地板 \\
-OmniCoder 9B base & -- & -- & -- & 2026-04-10 fresh ai2 回评已发起，但先被不完整模型快照阻塞；当前缺失的是模型恢复，不是 benchmark 协议 \\
-OmniCoder 9B 8-NPU fastiter adapter & 2 & 4 & 50\% & 已有独立 scorecard；证明 8-NPU 快线不只是在训练 loss 上好看 \\
+整份 scorecard & 22/26（2026-04-12 重跑） & 25/26 & 24/26 & 仅做调试辅助（含 reference） \\
+reference 子集 & 22/22（2026-04-12 重跑） & 22/22 & 22/22 & 确认评测链路健康 \\
+override 子集 & 0/4 & 3/4 & 2/4 & \textbf{唯一 headline 指标} \\
 \bottomrule
 \end{tabularx}
-\caption{严格量子 holdout 上的 override-only 对比。}
-\label{tab:strict-override-compare}
-\end{table}
-
-\begin{table}[htbp]
-\centering
-\small
-\begin{tabularx}{\textwidth}{p{3.6cm} c c Y}
-\toprule
-任务 & Qwen baseline & OmniCoder 8-NPU adapter & 说明 \\
-\midrule
-\code{quantum\_gate\_alias\_normalization} & 未通过 & 未通过 & API 正规化与非法输入约束待完善，\code{ValueError} 断言未通过 \\
-\code{quantum\_phase\_estimation\_circuit} & 未通过 & \textcolor{green!50!black}{\textbf{通过}} & 从”缺失 \code{phase\_estimation}”推进到完整通过，接口命中已明显改善 \\
-\code{quantum\_qaoa\_maxcut} & 未通过 & 未通过 & 从缺失 \code{maxcut\_cost} 推进到运行期 \code{ValueError}，已从”缺接口”推进到”局部逻辑待修正” \\
-\code{quantum\_superdense\_coding} & 未通过 & \textcolor{green!50!black}{\textbf{通过}} & 协议 round-trip 已闭环，reasoning / protocol 方向出现真实收益 \\
-\bottomrule
-\end{tabularx}
-\caption{四个严格量子 override 任务的逐题对比。}
-\label{tab:strict-task-by-task}
-\end{table}
-
-如果看整份 \code{scorecard.json}，当前 run 还会给出 \code{24/26} 的全量数字，其中 \code{reference=22/22}、\code{override=2/4}。这组数字只能作为“整份 scorecard 没坏、参考任务仍健康”的辅证，不能替代 override-only headline。因为那 22 个 reference 任务不是这次 adapter 真实求解出来的严格未见任务。
-
-\begin{table}[htbp]
-\centering
-\small
-\begin{tabularx}{\textwidth}{p{2.8cm} c c Y}
-\toprule
-统计口径 & 通过数 & 总数 & 解释 \\
-\midrule
-整份 scorecard & 24 & 26 & 其中包含 22 个 reference 条目，只适合做调试记录与整体验证 \\
-reference 子集 & 22 & 22 & 说明 run dir 与评测器链路正常，没有把参考任务跑坏 \\
-override 子集 & 2 & 4 & 这是唯一可直接代表 strict unseen benchmark 改善的 headline \\
-\bottomrule
-\end{tabularx}
-\caption{同一份 strict benchmark scorecard 的三种统计口径。}
+\caption{同协议 scorecard 的三种统计口径，避免把 full scorecard 与 override headline 混用。}
 \label{tab:strict-scorecard-views}
 \end{table}
 
-\subsection{Qwen baseline strict holdout 的接口层与测试层细分}
+\subsection{训练过程指标}
 
-为了更精确地理解各任务的提升方向，Qwen baseline 在 strict holdout 上的 4 个待通过案例可以进一步拆成”要求的接口是什么”和”当前具体差距在哪一层”。这四个任务的 prompt 与 tests 都是本地可读工件，因此可以安全写入报告。
+训练指标不能直接等同于泛化结论，但可用于判断训练主干是否稳定、哪条路径效率更高。详见算力章节表 \ref{tab:stable-train-metrics} 和表 \ref{tab:curve-checkpoints}。
 
-\scriptsize
-\begin{longtable}{p{2.9cm} p{4.0cm} p{1.8cm} p{4.4cm}}
-\toprule
-任务 & 必需接口 / 关键语义 & 差距类型 & 当前最有信息量的分析细节 \\
-\midrule
-\endfirsthead
-\toprule
-任务 & 必需接口 / 关键语义 & 差距类型 & 当前最有信息量的分析细节 \\
-\midrule
-\endhead
-\code{quantum\_gate\_alias\_normalization} & 需要实现 \code{normalize\_gate\_sequence(gates)}；要把 \code{h/hadamard/cx/CNOT/Pauli\_X} 等别名正规化到 \code{H/CX/X}，并对非法输入抛出 \code{ValueError} & 断言未通过 & 期望 \code{['H','CX','X']}，实际得到 \code{['H','cx','x']}，说明模型理解了映射方向，但未完成 canonical casing \\
-\code{quantum\_phase\_estimation\_circuit} & 需要实现两个核心函数：\code{phase\_estimation} 与 \code{phase\_from\_measurement}。\newline 测试覆盖 round-trip、边界 phase，以及相位离散化取整规则 & 接口缺失 & 直接缺失 \code{phase\_estimation}，差距在接口存在性层面，而不是数值精度 \\
-\code{quantum\_qaoa\_maxcut} & 需要实现 \code{maxcut\_cost}、\code{brute\_force\_maxcut}、\code{qaoa\_cost\_landscape}；\newline 测试覆盖 triangle graph、line graph、排序规则与单边图 & 接口缺失 & 直接缺失 \code{maxcut\_cost}，说明模型尚未命中最基础的 required interface \\
-\code{quantum\_superdense\_coding} & 需要实现 \code{encode\_message(bits)} 与 \code{decode\_message(operation)}；四个映射必须 round-trip：\code{00->I}、\code{01->X}、\code{10->Z}、\code{11->XZ} & 语义映射偏差 & \code{encode\_message failed for 00}，说明它不是缺接口，而是协议语义映射需要进一步对齐 \\
-\bottomrule
-\end{longtable}
-\normalsize
-
-这张表对后续方法选择有直接意义。Qwen baseline 的 4 个待通过任务中，至少 2 个是接口缺失型，1 个是 API 正规化型，1 个是协议语义型。也就是说，baseline 阶段 strict holdout 的主要提升方向还不是”更长推理链条”，而是\textbf{接口命中与结构性对齐}。这恰好支持了 AST anchor、repair curriculum 和 interface reward 这几类方法在当前阶段的优先级。
-
-\subsection{从评测分析回推测试设计价值}
-
-严格量子 holdout 当前只有 4 个 override task，但这 4 个 task 的信息密度其实很高。更重要的是，它们并不是随手抽出来的 4 个例子，而是整个 eval split 的 4 个 task：每个 task 对应 126 条 eval 样本，eval prompt family 共有 4 个且与训练侧完全不重叠，category 分布则是 2 个 \code{algorithm\_implementation}、1 个 \code{api\_normalization}、1 个 \code{reasoning}。因此，这里确实存在 small-\(N\) headline 的限制，但并不存在“只挑了 4 个偶然样本”的问题。
-
-以 Qwen baseline 的评测结果为起点，它们分别揭示了四种彼此不同、且都非常关键的能力维度：
-\begin{itemize}
-  \item API 规范待提升：模型可能知道目标大概是什么，但没有学会仓库要求的接口词法；
-  \item 函数缺失：模型没有把算法实现真正落到可调用函数；
-  \item 算法逻辑残缺：即便生成了部分代码，也没有构成可执行算法；
-  \item 协议闭环待完善：编码和解码两侧需要形成一致 round-trip。
-\end{itemize}
-
-\begin{table}[htbp]
-\centering
-\footnotesize
-\begin{tabularx}{\textwidth}{p{2.6cm} p{2.5cm} p{2.8cm} Y}
-\toprule
-测试信号 & 当前证据 & 对应的研发价值 & 后续最该观察的指标 \\
-\midrule
-API 规范性 & gate alias 大小写待提升 & 检验接口锚定类方法是否真的能减少格式级偏差 & API 正规化任务是否由全部未通过变为可部分通过 \\
-函数存在性 & 两个算法任务都缺失关键函数 & 检验 trainer 是否能先把函数壳与接口学出来 & “缺失函数”是否推进到”局部逻辑待修正” \\
-协议闭环性 & superdense coding round-trip 待完善 & 区分表面会写量子门与真正理解协议逻辑 & encode/decode 是否同时被 verifier 接受 \\
-参考地板健康度 & 26/26 参考解通过 & 证明测试器没有坏 & 后续任何模型回退都可直接归因到模型或数据，而非 benchmark 崩坏 \\
-\bottomrule
-\end{tabularx}
-\caption{当前测试结果所暴露出的研发价值。}
-\label{tab:test-value}
-\end{table}
-
-这也是为什么”即便 Qwen baseline 只有 0/4”也不意味着 benchmark 没价值。恰恰相反，一个能把能力结构分得足够细的 benchmark，往往比一个模糊的高分 benchmark 更能推动方法研究。
-
-\subsection{训练指标结果：四组稳定工件的含义}
-
-虽然当前还没有把“严格量子 holdout 上的最终提升”稳定固化为一组漂亮 headline，但已有四组训练指标足以支撑训练主干的可靠性判断：
-\begin{itemize}
-  \item Qwen 在 8 NPU、20 step、160/32 小样本条件下能稳定跑完并得到 0.6986 loss；
-  \item 改成 code-first mixed prompt 后，loss 变为 0.7353，说明 prompt 与数据组织方式确实会改变训练效果；
-  \item OmniCoder 9B 在 2 NPU continuation 路径下同样 20 step，却把 final eval loss 降到了 0.3727；
-  \item OmniCoder 9B 在 8 NPU strict-quantum timeboxed run 中已经能稳定完成 12 step，并把 final eval loss 归档到 0.3863。
-\end{itemize}
-
-这些结果本身并不能直接等价为“泛化更强”，但它们至少说明：\textbf{OmniCoder continuation 是当前更有效率、也更值得继续押注的快迭代底座。}
-
-\subsection{为什么不把 24/26 直接写成主结论}
-
-当前仓库里已经有最新的 \code{24/26} scorecard，但它同样混合了参考解候选与模型候选，因此仍不应直接拿来充当 headline。为了避免在组会上造成歧义，本报告故意不把这类综合分数作为 headline，而是优先使用：
-\begin{itemize}
-  \item 参考解健康度 26/26；
-  \item Qwen 严格量子 holdout override 0/4；
-  \item OmniCoder 8-NPU strict quantum adapter override 2/4；
-  \item 稳定训练工件中的 loss / perplexity。
-\end{itemize}
-
-这种取舍会让 headline 更“难看”，但也更诚实。对研究项目而言，诚实比好看更重要。
-
-\subsection{delivery gate 的 manifest 口径与 scorecard 口径必须分开}
-
-当前仓库里一个最容易被误用的工件，是 \code{evals/runs/omnicoder-delivery-pass1-v1/scorecard.json}。如果直接看整个 \code{results} 数组，会得到 25 个条目、15 个通过、10 个未通过；但这\textbf{不是}该 delivery gate 想表达的真实 gate 成绩。原因在于：\code{scorecard.json} 混入了大量 \code{source=reference} 的非 gate 任务，而真正的 gate 任务清单写在 \code{evals/runs/omnicoder-delivery-pass1-v1/manifest.json}。
-
-\begin{table}[htbp]
-\centering
-\small
-\begin{tabularx}{\textwidth}{p{3.4cm} p{2.0cm} p{2.3cm} Y}
-\toprule
-统计口径 & 条目数 & 可否直接做 headline & 解释 \\
-\midrule
-整份 \code{scorecard.json} & 25 & 否 & 混合了 reference 任务与 manifest gate 任务，只适合做全量调试记录 \\
-\code{manifest.json} 定义的 gate 任务 & 10 & 是 & 这 10 个任务才是 delivery gate 的真正目标任务集合 \\
-按 manifest 过滤后的 scorecard 结果 & 0/10 & 是 & 当前这个具体 run 在 10 个 gate 任务上均未通过，不能被 15/25 的混合分数掩盖 \\
-\bottomrule
-\end{tabularx}
-\caption{delivery gate 中 manifest 与 scorecard 两种统计口径的区别。}
-\label{tab:delivery-filtering}
-\end{table}
-
-\begin{table}[htbp]
-\centering
-\small
-\begin{tabularx}{\textwidth}{p{2.8cm} p{2.2cm} p{2.0cm} Y}
-\toprule
-维度 & manifest 中的真实 gate 分布 & 按 manifest 过滤后的结果 & 说明 \\
-\midrule
-任务总数 & 10 & 10 & 由 \code{manifest.json} 明确定义 \\
-domain 分布 & 量子 5，软件 5 & 量子 0/5 通过，软件 0/5 通过 & 该 run 在两个 domain 上都未通过 gate \\
-category 分布 & 10 个 category 各 1 个 & 未通过覆盖全部 10 个 gate 任务 & 适合作为”基础底座能力起点”的基准记录，后续迭代以此为参照 \\
-\bottomrule
-\end{tabularx}
-\caption{delivery gate 的真实任务分布与过滤后结果。}
-\label{tab:delivery-gate-breakdown}
-\end{table}
-
-把这一点写进正式报告，有两个价值。第一，它能防止组会现场误把 \code{15/25} 当成模型已经交付过半。第二，它也提醒后续所有 headline 都必须绑定 manifest，而不是绑定某个看起来更好看的混合 scorecard。
-
-\subsection{训练结果不仅是终点分数，也包括 step-wise 轨迹}
-
-当前仓库里最值得正式汇报的 step-wise 轨迹，已经不只来自 \code{outputs/interface-prefix-omnicoder9b-semantic-v4-2npu-true20-20260329T2219CST/metrics.json}，也包括最新的 \code{outputs/omnicoder9b-quantum-generalization-sft-8npu-fastiter-20260409T1451CST/metrics.json}。前者证明 continuation lane 长程稳定，后者证明严格量子 holdout 上的 8 NPU timeboxed 训练已经可归档。
-
-\begin{table}[htbp]
-\centering
-\small
-\begin{tabularx}{\textwidth}{p{2.0cm} p{2.0cm} p{2.5cm} p{2.5cm} Y}
-\toprule
-运行 & step 1 train loss & 中间 eval 点 & 最终 eval 点 & 可直接支持的报告结论 \\
-\midrule
-Qwen 8 NPU true20-e2 & 3.2799 & step 10: \code{eval\_loss=0.8348}，\code{ppl=2.3044} & step 20: \code{eval\_loss=0.6986}，\code{ppl=2.0110} & 说明 8 NPU 文本 SFT 主干在 20 step 内是稳定下降的，而不是偶然单点幸运 \\
-Qwen 8 NPU codefirst-semantic mix75 & 3.2799 & step 10: \code{eval\_loss=0.8642}，\code{ppl=2.3731} & step 20: \code{eval\_loss=0.7353}，\code{ppl=2.0862} & 说明 prompt/data 变体可形成稳定工件，但当前仍弱于 interface-prefix 方案 \\
-OmniCoder 9B 2 NPU true20 & 1.0787 & step 10: \code{eval\_loss=0.4477}，\code{ppl=1.5647} & step 20: \code{eval\_loss=0.3727}，\code{ppl=1.4517} & 说明 continuation 路线不只是“能跑”，而是在 20 step 内持续优于现有 Qwen 参考工件 \\
-OmniCoder 9B 8 NPU strict-quantum fastiter & 0.3238 & step 6: \code{eval\_loss=0.3272}，\code{ppl=1.3870} & step 12: \code{eval\_loss=0.3863}，\code{ppl=1.4715} & 说明严格量子 holdout 已经进入真实 8 NPU 训练闭环，但当前 12-step 配方更像 timeboxed 快试验而不是最终最优配方 \\
-\bottomrule
-\end{tabularx}
-\caption{四组稳定训练工件的 step-wise 摘要。}
-\label{tab:stepwise-train-summary}
-\end{table}
-
-这一类表的价值在于，它把“实验方向是否稳定”从主观判断变成了序列事实。特别是 OmniCoder 2 NPU run，其训练初值已经远低于 Qwen 参考 run，而 step 10 与 step 20 的 eval 点也持续改善，因此完全可以作为当前 continuation 快线的 strongest verified lane。
-
-同时也要诚实承认：最新 8-NPU strict-quantum fastiter 曲线并不是单调改善的。当前最佳 eval 点出现在 step 6（\code{eval\_loss=0.3272}，\code{ppl=1.3870}），最终 step 12 回落到 \code{eval\_loss=0.3863}、\code{ppl=1.4715}。这说明 M4 已经足够证明“真实 8 NPU 训练闭环可运行、并能产出 strict benchmark 收益”，但还不足以证明“当前 12-step 配方已经是稳定最优点”。
-
-\subsection{当前 8-NPU 快迭代该如何表述}
-
-当前 8-NPU 快迭代现在不只有作业元数据，也已经有回收到本地的训练工件与配套 benchmark scorecard，因此可以明确说：
-\begin{itemize}
-  \item 真实 8-NPU 启动已经发生并完成 12 step；
-  \item 运行命令明确指向严格量子 holdout 数据与既有 OmniCoder adapter；
-  \item 同步远端 trainer 的控制面步骤也已纳入作业命令；
-  \item 已有独立稳定的最终 \code{metrics.json}，因此可以写训练级最终 loss/ppl；
-  \item 已有与该 adapter 配套的独立 scorecard，因此可以写 strict override 2/4；
-  \item 但不能把这 2/4 夸大为“严格 benchmark 已解决”或“全局最优 run 已确定”。
-\end{itemize}
-
-这种表达方式对组会很关键。它既证明快迭代路线不是假设，也避免把“已有 2/4 提升”误夸大成“严格 benchmark 已大规模通过”。
+核心判断：OmniCoder 9B continuation 在相似或更短预算下进入低 loss 区间，是当前最高效的快迭代底座。
 
 \subsection{Gemma 测试状态}
 
-Gemma 4 26B-A4B 的测试状态目前可以精确表述为：
+Gemma 4 主线当前停在 \code{gemma\_runtime\_bootstrap}。已通过：模型来源审计、本地快照校验、Python 3.11 gate、消息级 warmup 数据。待完成：Gemma 4-capable Transformers runtime → conditional-generation backend。详见研发架构章节表 \ref{tab:gemma-progress}。
+
+\subsection{小结}
+
 \begin{itemize}
-  \item 模型来源审计通过；
-  \item 本地快照校验通过；
-  \item 消息级 router warmup 数据存在；
-  \item workspace-local Python 3.11 gate 已通过；
-  \item 控制面当前 stage 已明确推进到 \code{gemma\_runtime\_bootstrap}，而不是笼统的“Python 版本不够”；
-  \item 即使在 Python 3.11.15 + \code{transformers==4.57.1} 的稳定 wheel 栈上，Gemma smoke 仍停在 \code{runtime\_compat}，因为当前 runtime 仍不能识别 \code{gemma4} 架构；
-  \item 只有拿到更高版本的 Gemma 4-capable Transformers runtime 后，下一步才是 conditional-generation backend 对接。
-\end{itemize}
-
-Gemma 主线数据、快照、控制面已经准备就绪，当前工作重点已收敛到 runtime bootstrap 这一具体的软件工程环节，下一步方向非常明确。
-
-\subsection{测试结果章节小结}
-
-测试结果给出的是一个有扎实研究价值的阶段性故事：
-\begin{itemize}
-  \item 参考解基准健康，说明评测地板可靠；
-  \item 严格量子未见任务仍具挑战性，但最新 8-NPU OmniCoder adapter 已在 protocol-matched 设定下把 override 从 0/4 推进到 2/4，项目已出现首个经过严格验证的 benchmark 收益；
-  \item OmniCoder base 9B 的同协议回评已尝试补齐，但当前缺失点已经被精确定位为 ai2 模型快照恢复与 transport 稳定性，而不是 benchmark 设计本身；
-  \item 训练主干和快迭代路径已经能产生稳定工件，项目的基础设施层已经成熟；
-  \item Gemma 主线的 runtime 适配方向清晰，下一步工作目标明确。
+  \item 参考解 26/26，评测地板可靠；
+  \item 严格量子 override 目前的真实对比是：Qwen 0/4，OmniCoder base 3/4，8-NPU adapter 2/4；
+  \item 2026-04-12 新补齐并继续到 enriched continuation 的 Qwen same-model 对比显示：\code{fast-lora-qwen25-1p5b-small}、ai1 新 SFT、ai1 二阶段、ai1 三阶段、以及 ai1 enriched continuation 相比 Qwen base 都仍是 0/4 $\rightarrow$ 0/4，没有 headline 提升；
+  \item 当前 8-NPU SFT 相比 base 不是提升，而是 -1 个任务 / -25pp 的回退；
+  \item 训练主干和快迭代路径已能产生稳定工件；
+  \item Gemma runtime 适配方向清晰。
 \end{itemize}
 
 \clearpage
@@ -1723,7 +1556,7 @@ Gemma 主线数据、快照、控制面已经准备就绪，当前工作重点�
 \section{总结与下一步}
 
 \noindent\fbox{\parbox{0.96\textwidth}{%
-\textbf{本章关键结论：}研发闭环已成型，严格量子 benchmark 出现首个真实提升（protocol-matched override 0/4 $\rightarrow$ 2/4）。下一步重点：先补齐 OmniCoder base 9B 的公平基线、继续推进 OmniCoder 快线的严格 holdout 提升、完成 Gemma runtime 适配、针对剩余 2 个待通过任务做 targeted 优化。}}
+\textbf{本章关键结论：}研发闭环已成型，严格量子 benchmark 的 same-protocol 结果已经补齐：Qwen base 0/4，Qwen fast-lora small 0/4，Qwen ai1 fresh SFT 0/4，Qwen ai1 stage2 0/4，Qwen ai1 stage3 0/4，Qwen ai1 enriched continuation 0/4，OmniCoder base 3/4，8-NPU adapter 2/4。也就是说，Qwen 这条线无论是历史可恢复工件还是 2026-04-12 在 ai1 上继续推进到 structured-hint enriched continuation 的真实 SFT，都还没有把 strict holdout 从 0/4 往上推，而 OmniCoder 当前主线虽然显著强于 Qwen，但 8-NPU adapter 依旧没有超过同模型 base。下一步重点不再是“补 base 分数”，而是解释并修复 current SFT 相比 base 的回退、继续推进 OmniCoder 快线的严格 holdout 提升、完成 Gemma runtime 适配、针对剩余 1 个 base 未过任务和 2 个 adapter 未过任务做 targeted 优化。}}
 
 \subsection{当前进展总览}
 
@@ -1740,7 +1573,7 @@ Gemma 主线数据、快照、控制面已经准备就绪，当前工作重点�
   \node[anchor=west, font=\small\bfseries] at (0.2, 0.6) {规划中};
   \node[anchor=west, font=\small] at (2.0, 3.3) {数据纪律体系、严格 holdout 校验、参考解 26/26};
   \node[anchor=west, font=\small] at (2.0, 2.8) {SFT/GRPO/plugin 算法栈、四组训练工件归档};
-  \node[anchor=west, font=\small] at (2.0, 2.1) {OmniCoder strict override 2/4，正在向 4/4 推进};
+  \node[anchor=west, font=\small] at (2.0, 2.1) {OmniCoder strict override：base 3/4，adapter 2/4，需解释回退};
   \node[anchor=west, font=\small] at (2.0, 1.6) {Gemma 4 runtime 适配（Python 3.11 已就位）};
   \node[anchor=west, font=\small] at (2.0, 0.8) {Gemma MoE router warmup → ESFT → 正式 demo};
   \node[anchor=west, font=\small] at (2.0, 0.3) {PDF 级路由数据补齐、GRPO 8-NPU 正式 run};
@@ -1755,9 +1588,10 @@ Gemma 主线数据、快照、控制面已经准备就绪，当前工作重点�
 
   \par 量子编码大模型研发闭环已经成型——数据、训练、评测、远端控制面、研究插件和报告工件形成完整链路；
   \par 严格 holdout 数据体系已足够干净，后续任何提升都更有可能是真实能力提升，而不是评测泄漏；
-  \par 最新 OmniCoder 8-NPU adapter 已完成独立回评，并在与 Qwen clean baseline 协议一致的 strict quantum holdout 上把 override 从 0/4 推进到 2/4——这是项目首个经过严格验证的 benchmark 收益；
+  \par 最新 strict quantum 同协议结果已经补齐：Qwen clean baseline 为 0/4，OmniCoder 9B base 为 3/4，OmniCoder 8-NPU adapter 为 2/4；也就是说当前 SFT 相比 Qwen 有收益，但相比同模型 base 仍回退 1 个任务；
   \par OmniCoder continuation 是当前快迭代的高效底座，Gemma 4 是更具研究价值的 MoE 主线目标，两条线互为补充；
-  \par OmniCoder base 9B 的 strict quantum 公平基线当前仍未补齐，但问题已进一步收敛到 ai2 runtime bundle 的内部兼容，而非实验协议不一致：远端现已能看到 repo-local qwen3\_5 bundle，本地也已验证 \code{Qwen3\_5Config} 与 \code{TokenizersBackend}；当前真正阻塞 base scorecard 的是 \code{huggingface\_hub.dataclasses}、\code{HybridCache} 与 \code{tokenizer.json} 解析之间的版本错配；
+  \par OmniCoder base 9B 的 strict quantum 公平基线现已补齐，并通过“本地 tokenizer 预填充 + ai2 NPU 生成 + 本地 decode”的方式拿到真实 scorecard；这也证明当前阻塞点已经不在 base 评测本身，而在如何让后续 SFT 结果超过 base；
+  \par ai2 上的 Codex 本地 provider 也已打通：\code{codex -p local -m omnicoder9b-quantum-generalization-sft-8npu-fastiter-20260409T1451CST} 已在 finetuned merged model 上返回 \code{OK}，说明远端交互式编码入口已经可用；
   \par Gemma 主线的 runtime 适配问题已收窄到具体的软件依赖（需要 Gemma 4-capable Transformers 版本），下一步工作方向清晰。
 
 
@@ -1765,10 +1599,10 @@ Gemma 主线数据、快照、控制面已经准备就绪，当前工作重点�
 
 以”最快提升真实研究产出”为标准，下一步工作排序如下：
 
-  \par 先把 ai2 的 OmniCoder runtime 升级到 Qwen3.5-capable Transformers 栈，并补齐缺失的 strict quantum base benchmark，避免后续所有 adapter 对比继续缺少同模型公平地板；
+  \par 先围绕 \code{quantum\_qaoa\_maxcut} 做 targeted continuation / curriculum / plugin 消融，解释为什么 current 8-NPU SFT 相比 base 从 3/4 回退到 2/4；
   \par 在已就位的本地 Python 3.11 环境上完成 Gemma runtime 适配，获得可识别 \code{gemma4} 架构的 Transformers 版本，打通 Gemma smoke test；
-  \par 保持 OmniCoder 快线持续迭代严格量子 holdout，推动 override 从 2/4 向 4/4 推进；
-  \par 围绕 \code{quantum\_gate\_alias\_normalization} 与 \code{quantum\_qaoa\_maxcut} 两个待通过任务做 targeted continuation 与 plugin 消融实验；
+  \par 保持 OmniCoder 快线持续迭代严格量子 holdout，目标是先恢复到不低于 base 的 3/4，再向 4/4 推进；
+  \par 围绕 \code{quantum\_gate\_alias\_normalization} 与 \code{quantum\_qaoa\_maxcut} 两个 adapter 未通过任务做 targeted continuation 与 plugin 消融实验；
   \par 补齐 paper router 的 PDF 级工件，使 Gemma 路由 warmup 从消息级预热升级为完整论文级数据；
   \par 持续固化 Huanxin 保活、状态探测与远端 job 管理脚本，提升远端运维自动化水平。
 
@@ -2233,17 +2067,37 @@ V1 & \code{reports/omnicoder_generalization_holdout_v1_integrity.json} & A & 诚
 V2 & \code{reports/omnicoder_quantum_generalization_holdout_v1_integrity.json} & A & 诚信校验 & 量子 holdout 的零重叠证明 \\
 B0 & \code{evals/runs/qwen25-quantum-generalization-holdout-clean-local/manifest.json} & A & strict baseline 协议 & Qwen clean baseline 的 4 task、prompt 与 token budget 定义 \\
 B1 & \code{reports/qwen25_quantum_generalization_holdout_clean_local_override_summary.json} & A & 基线效果 & 严格量子 holdout override 0/4 与详细分析 \\
-B2 & \code{reports/omnicoder9b_quantum_generalization_holdout_8npu_fastiter_eval_20260409_override_summary.json} & A & 最新严格量子回评 & strict quantum holdout override 2/4 与详细分析 \\
+B1a & \code{evals/runs/qwen25-quantum-generalization-holdout-clean-local/scorecard.json} & A & baseline 全量回评 & Qwen clean baseline 的 21/25、reference 21/21、override 0/4 \\
+B1b & \code{reports/qwen25_quantum_generalization_holdout_base_rerun_20260412_override_summary.json} & A & Qwen 同日基线重跑 & 2026-04-12 同口径 strict rerun：override 0/4，full 22/26 \\
+B1c & \code{reports/qwen25_quantum_generalization_holdout_fastlora_small_20260412_override_summary.json} & A & Qwen 微调工件重评 & 可恢复 Qwen fast-lora small 在 strict holdout 上仍为 override 0/4，full 22/26 \\
+B1d & \code{reports/qwen25_strict_holdout_base_vs_fastlora_small_20260412.json} & A & Qwen same-model 严格对比 & 微调前后差值为 0 task / 0pp；领导单问时可直接引用 \\
+B1e & \code{reports/qwen25_quantum_generalization_holdout_ai1_ft_rerun_20260412_override_summary.json} & A & Qwen ai1 新训练回评 & ai1 新 8-NPU strict-holdout SFT 完成后，override 仍为 0/4，full 22/26 \\
+B1f & \code{reports/qwen25_strict_holdout_base_vs_ai1_finetuned_rerun_20260412.json} & A & Qwen ai1 same-model 严格对比 & 新 ai1 微调前后差值仍为 0 task / 0pp，直接回答 leadership 提升问题 \\
+B1g & \code{reports/qwen25_quantum_generalization_holdout_ai1_stage2_rerun_20260412_override_summary.json} & A & Qwen ai1 二阶段回评 & ai1 二阶段 recovery curriculum continuation 完成后，override 仍为 0/4，full 22/26 \\
+B1h & \code{reports/qwen25_strict_holdout_base_vs_ai1_stage2_rerun_20260412.json} & A & Qwen ai1 二阶段严格对比 & 二阶段 continuation 相比 Qwen base 仍为 0 task / 0pp，继续训练尚未带来 headline 提升 \\
+B1i & \code{reports/qwen25_quantum_generalization_holdout_ai1_continue_safe_v2_rerun_20260412_override_summary.json} & A & Qwen ai1 三阶段回评 & ai1 三阶段 no-leak continuation + research methods 完成后，override 仍为 0/4，full 22/26 \\
+B1j & \code{reports/qwen25_strict_holdout_base_vs_ai1_continue_safe_v2_rerun_20260412.json} & A & Qwen ai1 三阶段严格对比 & 三阶段 continuation 相比 Qwen base 仍为 0 task / 0pp，继续训练三轮后 headline 仍未提升 \\
+B1k & \code{reports/qwen25_quantum_generalization_holdout_ai1_enriched_v1_rerun_20260412_override_summary.json} & A & Qwen ai1 enriched 回评 & ai1 enriched structured-hint continuation 完成后，override 仍为 0/4，full 22/26 \\
+B1l & \code{reports/qwen25_strict_holdout_base_vs_ai1_enriched_v1_rerun_20260412.json} & A & Qwen ai1 enriched 严格对比 & enriched continuation 相比 Qwen base 仍为 0 task / 0pp，继续训练到第六条 same-model 线后 headline 仍未提升 \\
+B1m & \code{reports/qwen25_strict_holdout_comparison_table.json} & A & Qwen same-model 聚合表 & 自动聚合截至 2026-04-12 的 5 份 same-model base-vs-finetune 对比 JSON，便于报告维护与 leadership 快速查看 \\
+B1n & \code{reports/qwen25_grpo_v3_hard_r2_eval_20260413_override_summary.json} & A & Qwen ai1 GRPO r2 回评 & 2026-04-13 最新 measured same-model 支线：full 25/26、override 仍为 0/4 \\
+B1o & \code{reports/qwen25_strict_holdout_base_vs_ai1_grpo_v3_hard_r2_20260413.json} & A & Qwen ai1 GRPO r2 严格对比 & latest measured Qwen same-model strict 提升仍为 0 task / 0pp；仅 full scorecard +3/26 \\
+B2 & \code{reports/omnicoder9b_quantum_generalization_holdout_8npu_fastiter_eval_20260409_override_summary.json} & A & adapter 严格量子回评 & strict quantum holdout override 2/4 与详细分析 \\
 B2a & \code{evals/runs/omnicoder-quantum-generalization-holdout-8npu-fastiter-eval-20260409T122347Z/manifest.json} & A & strict adapter 协议 & OmniCoder adapter 回评所用的同协议 manifest \\
-B3 & \code{evals/runs/omnicoder-quantum-generalization-holdout-8npu-fastiter-eval-20260409T122347Z/scorecard.json} & A & 最新全量回评 & 最新 8-NPU adapter 的 24/26、reference 22/22、override 2/4 \\
-B4 & \code{reports/omnicoder9b_quantum_generalization_holdout_base_ai2_20260410_blocker.json} & A & base 回评进展 & 2026-04-10 在 ai2 上确认 18G snapshot 与 repo-local qwen3\_5 bundle 均存在，但 base eval 继续卡在 runtime bundle 内部兼容（\code{huggingface\_hub.dataclasses} / \code{HybridCache} / \code{tokenizer.json} 解析） \\
-B4a & \code{reports/omnicoder9b_qwen35_runtime_overlay_local_probe_20260410.json} & A & 本地 runtime overlay probe & repo-local source overlay 已能解析 \code{Qwen3\_5Config} 并恢复 \code{TokenizersBackend}，说明 runtime 资产已局部具备 \\
-B4b & \code{reports/omnicoder9b_qwen35_runtime_overlay_local_smoke_20260410.json} & A & 本地 runtime overlay smoke & Python 3.11 下的本地 smoke 已通过 import stack、qwen3\_5 config 与 text-batch preflight，说明远端剩余问题集中在 ai2 依赖版本错配 \\
+B3 & \code{evals/runs/omnicoder-quantum-generalization-holdout-8npu-fastiter-eval-20260409T122347Z/scorecard.json} & A & adapter 全量回评 & 最新 8-NPU adapter 的 24/26、reference 22/22、override 2/4 \\
+B4 & \code{reports/omnicoder9b_quantum_generalization_holdout_base_ai2_20260410_override_summary.json} & A & base 严格量子回评 & strict quantum holdout override 3/4，唯一未过任务为 gate alias normalization \\
+B4a & \code{reports/omnicoder9b_quantum_generalization_holdout_base_ai2_20260410_summary.json} & A & base 全量回评 & OmniCoder 9B base 的 25/26、reference 22/22、override 3/4 \\
+B4b & \code{reports/strict_holdout_base_vs_adapter_comparison_20260410.json} & A & strict 对比汇总 & current adapter 相比 base 为 -1 task / -25pp，相比 Qwen 仍为 +2 task / +50pp \\
+B4c & \code{evals/runs/omnicoder-quantum-generalization-holdout-base-omnicoder9b-20260410/manifest.json} & A & strict base 协议 & OmniCoder 9B base 同协议 manifest（4 task、prompt 与 token budget） \\
 M1 & \code{outputs/interface-prefix-semantic-v4-8npu-true20-e2-20260326T1627CST/metrics.json} & A & 训练主干健康度 & Qwen 8 NPU interface-prefix 结果 \\
 M2 & \code{outputs/codefirst-semantic-mix75-8npu-true20-e2-20260326T2118CST/metrics.json} & A & prompt 变体对比 & Qwen 8 NPU codefirst 结果 \\
+M2b & \code{outputs/qwen25-strict-recovery-curriculum-v1-continue-ai1-8npu-20260412T1805CST/metrics.json} & A & Qwen 二阶段 continuation & ai1 二阶段 continuation：24 step，final eval loss 0.1386，perplexity 1.1487 \\
+M2c & \code{outputs/qwen25-quantum-generalization-holdout-ai1-continue-safe-v2-20260412T182538CST/metrics.json} & A & Qwen 三阶段 continuation & ai1 三阶段 continuation：32 step，final eval loss 0.1807，perplexity 1.1981 \\
+M2d & \code{outputs/qwen25-quantum-generalization-holdout-ai1-enriched-v1-20260412T224255CST/metrics.json} & A & Qwen enriched continuation & ai1 enriched continuation：24 step，final eval loss 0.1509，perplexity 1.1629 \\
 M3 & \raggedright{\scriptsize\ttfamily outputs/...omnicoder9b-2npu-true20-.../metrics.json} & A & Omni 快线 & OmniCoder 2 NPU continuation 结果 \\
 M4 & \raggedright{\scriptsize\ttfamily outputs/...omnicoder9b-8npu-fastiter-.../metrics.json} & A & Omni 严格量子快线 & OmniCoder 8 NPU strict-holdout 结果 \\
 H1 & \code{.huanxin_jobs/omnicoder-8npu-fast-sft-20260409T065250Z.json} & A & 远端快迭代作业元数据 & 8 NPU 启动命令、PID、日志路径、插件列表 \\
+C1 & \code{reports/ai2_codex_finetuned_model_smoke_20260412.json} & A & ai2 Codex smoke & live ai2 workspace、\code{codex-cli 0.120.0}、provider=\code{quantum\_local}、fresh login-shell proof、\code{/tmp/codex\_last.txt=OK} \\
 G1 & \code{artifacts/model-source-audit-gemma4-26b-a4b-it.json} & A- & Gemma 来源审计 & model id、架构、pipeline tag、下载信息 \\
 G2 & \code{artifacts/gemma4-26b-a4b-it-local-snapshot-handoff.json} & A- & Gemma 快照完整性 & 权重分片、processor、chat template 齐全 \\
 G3 & \code{reports/autonomous_rd_cycle_gemma4-26b-a4b-it_2026-04-09.json} & A- & Gemma 当前阶段摘要 & stage、进展状态、下一步命令与 warmup 计划 \\
@@ -2284,14 +2138,28 @@ strict quantum 对比协议一致 & 是 & 是 & B0, B2a \\
 参考解健康度 & 26/26 & 是 & E2 \\
 参考解量子/软件分布 & 13/13, 13/13 & 是 & E2 \\
 Qwen 严格量子 holdout override 通过率 & 0/4 & 是 & B1 \\
+Qwen fast-lora small strict quantum override 通过率 & 0/4 & 是 & B1c, B1d \\
+Qwen fast-lora small 相比 Qwen base 的 strict quantum 变化 & 0 任务 / 0pp & 是 & B1d \\
+Qwen ai1 fresh SFT strict quantum override 通过率 & 0/4 & 是 & B1e, B1f \\
+Qwen ai1 fresh SFT 相比 Qwen base 的 strict quantum 变化 & 0 任务 / 0pp & 是 & B1f \\
+Qwen ai1 二阶段 continuation strict quantum override 通过率 & 0/4 & 是 & B1g, B1h \\
+Qwen ai1 二阶段 continuation 相比 Qwen base 的 strict quantum 变化 & 0 任务 / 0pp & 是 & B1h \\
+Qwen ai1 三阶段 continuation strict quantum override 通过率 & 0/4 & 是 & B1i, B1j \\
+Qwen ai1 三阶段 continuation 相比 Qwen base 的 strict quantum 变化 & 0 任务 / 0pp & 是 & B1j \\
+Qwen ai1 enriched continuation strict quantum override 通过率 & 0/4 & 是 & B1k, B1l \\
+Qwen ai1 enriched continuation 相比 Qwen base 的 strict quantum 变化 & 0 任务 / 0pp & 是 & B1l \\
+OmniCoder base 9B strict quantum override 通过率 & 3/4 & 是 & B4 \\
 OmniCoder 8-NPU strict quantum override 通过率 & 2/4 & 是 & B2 \\
-OmniCoder base 9B strict quantum 同协议结果 & 暂缺，runtime 升级中 & 是，需注明缺失原因 & B4 \\
+OmniCoder 8-NPU 相比 base 的 strict quantum 变化 & -1 任务 / -25pp & 是 & B4b \\
+Qwen 2026-04-12 同口径 full scorecard & 22/26（reference 22/22 + override 0/4） & 否，需注明口径 & B1b, B1c, B1d, B1e, B1f, B1g, B1h, B1i, B1j, B1k, B1l \\
+Qwen ai1 二阶段 continuation final eval loss / perplexity & 0.1386 / 1.1487 & 否，训练指标不可替代 strict 分数 & M2b \\
+Qwen ai1 三阶段 continuation final eval loss / perplexity & 0.1807 / 1.1981 & 否，训练指标不可替代 strict 分数 & M2c \\
+Qwen ai1 enriched continuation final eval loss / perplexity & 0.1509 / 1.1629 & 否，训练指标不可替代 strict 分数 & M2d \\
+OmniCoder base 9B strict quantum full scorecard & 25/26（reference 22/22 + override 3/4） & 否，需注明口径 & B4a \\
 OmniCoder 8-NPU strict quantum full scorecard & 24/26（reference 22/22 + override 2/4） & 否，需注明口径 & B3 \\
 Qwen 未通过任务类别 & 2 算法实现 + 1 API + 1 reasoning & 是 & B1 \\
 OmniCoder 8-NPU strict quantum 未通过任务 & gate alias + qaoa 两项未通过 & 是 & B2, B3 \\
-ai2 OmniCoder snapshot 状态 & 18G 且 \code{model.safetensors} 已存在 & 是，限进展说明 & B4 \\
-ai2 OmniCoder base eval runtime & \code{/usr/bin/python3 + transformers==4.44.0} & 是，限 blocker 说明 & B4 \\
-repo-local qwen3\_5 overlay probe & \code{Qwen3\_5Config + TokenizersBackend} & 是，限恢复路径说明 & B4a \\
+OmniCoder base 未通过任务 & gate alias normalization 一项 & 是 & B4 \\
 Qwen 8-NPU interface-prefix 最终 loss & 0.6986 & 是 & M1 \\
 Qwen 8-NPU codefirst 最终 loss & 0.7353 & 是 & M2 \\
 OmniCoder 2-NPU continuation 最终 loss & 0.3727 & 是 & M3 \\
@@ -2301,6 +2169,7 @@ OmniCoder 2-NPU continuation 最终 perplexity & 1.4517 & 是 & M3 \\
 当前 8-NPU 快迭代最终 perplexity & 1.4715 & 是 & M4 \\
 当前 8-NPU 快迭代 completed steps & 12 & 是 & M4 \\
 当前 8-NPU 快迭代最佳 eval 点 & step 6: 0.3272 / 1.3870 & 是 & M4 \\
+ai2 上 Codex 可直接命中 finetuned model & 是（返回 OK） & 是 & C1 \\
 Gemma 来源审计通过 & 是 & 是 & G1 \\
 Gemma 本地快照校验通过 & 是 & 是 & G2 \\
 Gemma 本地 Python gate 已通过 & 是 & 是 & G5, R2 \\

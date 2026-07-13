@@ -1,0 +1,36 @@
+{
+  "manifest_version": "quantum-llm-plan-seed-v1",
+  "format": "chat-sft-v1",
+  "output": "/Users/daxu/software/quantum-gpt/data/seed/quantum_llm_plan_seed.jsonl",
+  "summary": {
+    "count": 8,
+    "output_type": {
+      "code": 4,
+      "formula": 1,
+      "refusal": 2,
+      "structured_text": 1
+    },
+    "target_framework": {
+      "None": 1,
+      "cirq": 1,
+      "pennylane": 2,
+      "qiskit": 4
+    },
+    "workflow": {
+      "circuit_to_code": 1,
+      "error_repair": 1,
+      "formula_to_code_skeleton": 2,
+      "problem_to_circuit": 1,
+      "refusal_numeric_boundary": 2,
+      "research_workflow_decomposition": 1
+    },
+    "numeric_boundary": {
+      "no_direct_measurement_results": 3,
+      "procedure_without_direct_numeric_claims": 1,
+      "refuse_direct_numeric_energy": 1,
+      "refuse_direct_optimal_parameters": 1,
+      "symbolic_only": 1,
+      "symbolic_or_algorithmic_only": 1
+    }
+  }
+}

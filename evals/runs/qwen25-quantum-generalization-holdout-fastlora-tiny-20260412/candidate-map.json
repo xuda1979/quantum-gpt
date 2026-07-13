@@ -1,0 +1,6 @@
+{
+  "quantum_gate_alias_normalization": "candidates/quantum_gate_alias_normalization.py",
+  "quantum_phase_estimation_circuit": "candidates/quantum_phase_estimation_circuit.py",
+  "quantum_qaoa_maxcut": "candidates/quantum_qaoa_maxcut.py",
+  "quantum_superdense_coding": "candidates/quantum_superdense_coding.py"
+}

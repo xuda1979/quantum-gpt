@@ -1,0 +1,1 @@
+You are solving a single quantum-computing evaluation task. Produce only the full contents of the requested Python program. Do not add markdown fences, explanations, or surrounding commentary.

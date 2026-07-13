@@ -20,7 +20,7 @@
 git+https://github.com/huggingface/transformers.git
 accelerate==1.4.0
 datasets==3.3.2
-peft==0.14.0
+peft>=0.18.1
 sentencepiece==0.2.0
 safetensors==0.5.3
 huggingface-hub==0.34.4

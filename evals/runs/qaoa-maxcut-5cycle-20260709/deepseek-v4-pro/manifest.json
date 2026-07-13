@@ -1,0 +1,23 @@
+{
+  "prompt_version": "v2",
+  "prompt_style": "direct",
+  "created_at_utc": "2026-07-09T00:00:00+00:00",
+  "system_prompt": "You are solving a single quantum-computing evaluation task. Produce only the full contents of the requested Python program. Do not add markdown fences, explanations, or surrounding commentary.",
+  "tasks": [
+    {
+      "id": "quantum_qaoa_maxcut_5cycle",
+      "name": "QAOA Max-Cut on a 5-vertex undirected cycle graph",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "prompt_file": "prompts/quantum_qaoa_maxcut_5cycle.txt",
+      "candidate_file": "candidates/quantum_qaoa_maxcut_5cycle.py"
+    }
+  ],
+  "backend": {
+    "name": "huanxin",
+    "model": "deepseek-v4-pro",
+    "settings": {
+      "max_output_tokens": 4096
+    }
+  }
+}

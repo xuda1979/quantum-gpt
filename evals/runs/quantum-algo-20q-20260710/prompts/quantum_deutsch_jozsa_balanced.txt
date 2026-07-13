@@ -1,0 +1,8 @@
+Write a complete, runnable Python program using Qiskit that:
+1. Implements the Deutsch-Jozsa algorithm for a 2-input-bit balanced function f(x0, x1) = x0 (i.e. f is 0 when x0=0, 1 when x0=1).
+2. Uses 2 query qubits + 1 ancilla, applies H to all, oracle (CX from q0 to ancilla), H on query qubits, measures.
+3. In `def main()`, uses StatevectorSampler (1000 shots) and prints the measured query-bitstring and the classification ("constant" if 00, "balanced" otherwise).
+Output exactly:
+  Measurement: <2-char bitstring>
+  Function is: <constant|balanced>
+Call main() under `if __name__ == "__main__":`.

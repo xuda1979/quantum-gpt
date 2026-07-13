@@ -1,0 +1,9 @@
+{
+  "id": "quantum_qaoa_maxcut_5cycle",
+  "name": "QAOA Max-Cut on a 5-vertex undirected cycle graph",
+  "domain": "quantum",
+  "category": "algorithm_implementation",
+  "framework": "qiskit",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Quantum Eval Verifier"
+  short_description: "Execute, score, and gate quantum-coding model output"
+  default_prompt: "Run the eval harness on the held-out benchmark with identical conditions, score the artifacts, compare against the baseline, and return a gate decision (continue / pause-rerun / hard-stop) with the numeric threshold."

@@ -222,6 +222,45 @@ Nice-to-have validation later:
 - approximate token/character length checks
 - split leakage checks between train/val/test
 
+## Manifest convention for generated splits
+
+For generated train/eval datasets, keep a sibling `manifest.json` with a
+machine-checkable `dataset_contract` block.
+
+Recommended fields:
+
+```json
+{
+  "dataset_contract": {
+    "generation_script": "scripts/build_large_template_dataset.py",
+    "source_task_ids": ["quantum_bell_pair_construction"],
+    "train_task_ids": ["quantum_bell_pair_construction"],
+    "eval_task_ids": ["quantum_phase_estimation_circuit"],
+    "prompt_families": {
+      "train": ["implementation_ticket"],
+      "eval": ["acceptance_gate"]
+    }
+  }
+}
+```
+
+This keeps the workflow contract explicit:
+
+- where the split came from
+- which task ids fed train vs eval
+- which prompt families belong to each side
+- whether benchmark files can be checked automatically against the split
+
+The local checker for benchmark/task/dataset consistency is:
+
+```bash
+python3 scripts/check_benchmark_dataset_consistency.py \
+  --benchmark-file evals/benchmarks/quantum_generalization_holdout_v1.txt \
+  --manifest data/generated/omnicoder-quantum-generalization-holdout-v1/manifest.json \
+  --require-all-benchmark-tasks-in-manifest-eval \
+  --require-benchmark-tasks-absent-from-manifest-train
+```
+
 ## Why this schema is enough for now
 
 It supports the immediate next layer of work without dragging in premature complexity:

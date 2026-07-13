@@ -1,0 +1,18 @@
+Write a complete, runnable Python program using Qiskit 2.x that:
+1. Encodes the logical |1> state of the Steane [[7,1,3]] code.
+2. Builds the encoding circuit as follows:
+   - Apply H to qubits 6, 5, 3 (the "control" qubits in |+>).
+   - Apply CNOT(6,4), CNOT(5,4) so q4 = q6 XOR q5.
+   - Apply CNOT(6,2), CNOT(3,2) so q2 = q6 XOR q3.
+   - Apply CNOT(5,1), CNOT(3,1) so q1 = q5 XOR q3.
+   - Apply CNOT(6,0), CNOT(5,0), CNOT(3,0) so q0 = q6 XOR q5 XOR q3.
+   - Apply X^{⊗7} to flip logical |0> to logical |1>.
+3. Computes the statevector and checks:
+   - The 3 X-stabilizers X0X2X4X6, X1X2X5X6, X3X4X5X6 each have eigenvalue +1.
+   - The logical Z operator Z^{⊗7} has eigenvalue -1 (since |1_L> is the -1 eigenstate of Z_L).
+4. In `def main()`, prints:
+     X-stabilizer eigenvalues: [<3 floats>]
+     Z_L eigenvalue: <float>
+     encoded: <True|False>
+   Expected: all 3 X-stabilizer eigenvalues = 1.000, Z_L eigenvalue = -1.000, encoded: True.
+Call main() under `if __name__ == "__main__":`.

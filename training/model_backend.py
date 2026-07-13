@@ -5,13 +5,18 @@ import re
 from pathlib import Path
 from typing import Any
 
-from training.model_family_preflight import inference_backend_preflight_block, trainer_backend_preflight_block
+from training.model_family_preflight import (
+    inference_backend_preflight_block,
+    trainer_backend_preflight_block,
+)
 
 
 def load_model_config_metadata(model_name: str) -> dict[str, Any]:
     from transformers import PretrainedConfig
 
-    config_dict, _unused_kwargs = PretrainedConfig.get_config_dict(model_name, trust_remote_code=True)
+    config_dict, _unused_kwargs = PretrainedConfig.get_config_dict(
+        model_name, trust_remote_code=True
+    )
     return config_dict
 
 
@@ -134,6 +139,44 @@ def load_causal_lm_with_text_backend_preflight(
         backend_blocker_fn=inference_backend_preflight_block,
     )
     return auto_model_for_causal_lm_cls.from_pretrained(model_name, **(model_kwargs or {}))
+
+
+def select_transformers_model_loader(
+    model_name: str,
+    *,
+    auto_config_cls: Any,
+    auto_model_for_causal_lm_cls: Any,
+    transformers_module: Any,
+) -> tuple[Any, dict[str, Any] | None, dict[str, Any]]:
+    """Choose the HF auto-loader that matches the checkpoint architecture.
+
+    Qwen3.6 27B advertises an image-text conditional-generation architecture
+    even for text-only training. Newer Transformers exposes this via
+    AutoModelForImageTextToText; falling back to AutoModelForCausalLM makes the
+    remote task exit before metrics on some stacks.
+    """
+
+    runtime_compat = ensure_text_backend_preflight(
+        model_name,
+        auto_config_cls,
+        backend_blocker_fn=trainer_backend_preflight_block,
+    )
+    architectures = [str(item) for item in (runtime_compat or {}).get("config_architectures", [])]
+    loader = auto_model_for_causal_lm_cls
+    loader_reason = "causal_lm_default"
+    if any("ConditionalGeneration" in architecture for architecture in architectures):
+        image_text_loader = getattr(transformers_module, "AutoModelForImageTextToText", None)
+        if image_text_loader is not None:
+            loader = image_text_loader
+            loader_reason = "conditional_generation_image_text"
+    metadata = {
+        "model_loader_class": getattr(loader, "__name__", loader.__class__.__name__),
+        "model_loader_reason": loader_reason,
+        "config_architectures": architectures,
+    }
+    if runtime_compat is not None:
+        metadata["config_model_type"] = runtime_compat.get("config_model_type")
+    return loader, runtime_compat, metadata
 
 
 def _extract_forward_loss(outputs: Any) -> Any:

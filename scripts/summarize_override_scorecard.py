@@ -17,7 +17,9 @@ from typing import Any
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--scorecard", type=Path, required=True)
-    parser.add_argument("--output", type=Path, default=None, help="Optional path to write the JSON summary.")
+    parser.add_argument(
+        "--output", type=Path, default=None, help="Optional path to write the JSON summary."
+    )
     return parser.parse_args()
 
 
@@ -33,13 +35,25 @@ def main() -> int:
     if not overrides:
         raise SystemExit(f"No override results found in {args.scorecard}")
 
+    references = [result for result in results if result.get("source") == "reference"]
     passed = sum(1 for result in overrides if result.get("passed"))
+    full_passes = sum(1 for result in results if result.get("passed"))
+    reference_passes = sum(1 for result in references if result.get("passed"))
     failed = [result for result in overrides if not result.get("passed")]
     by_domain = Counter(str(result.get("domain", "unknown")) for result in overrides)
     by_category = Counter(str(result.get("category", "unknown")) for result in overrides)
 
     summary = {
+        "kind": "override_summary",
         "scorecard": str(args.scorecard.resolve()),
+        "full_total": len(results),
+        "full_passes": full_passes,
+        "full_failures": len(results) - full_passes,
+        "full_pass_rate": full_passes / len(results),
+        "reference_total": len(references),
+        "reference_passes": reference_passes,
+        "reference_failures": len(references) - reference_passes,
+        "reference_pass_rate": reference_passes / len(references) if references else None,
         "override_total": len(overrides),
         "override_passes": passed,
         "override_failures": len(overrides) - passed,

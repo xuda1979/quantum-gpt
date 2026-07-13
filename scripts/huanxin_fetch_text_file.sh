@@ -71,7 +71,7 @@ run_shell_json() {
 
 read_meta() {
   local json_out
-  json_out="$(run_shell_json "cd /root/root/work/quantum-gpt && if [ -f \"$REMOTE_PATH\" ]; then echo __HX_TEXT_EXISTS__ && wc -l \"$REMOTE_PATH\"; else echo __HX_TEXT_MISSING__; fi")"
+  json_out="$(run_shell_json "cd /root/work/quantum-gpt && if [ -f \"$REMOTE_PATH\" ]; then echo __HX_TEXT_EXISTS__ && wc -l \"$REMOTE_PATH\"; else echo __HX_TEXT_MISSING__; fi")"
 
   python3 - <<'PY' "$json_out"
 import json
@@ -116,7 +116,7 @@ else
     marker_begin="__HX_TEXT_BEGIN_${start}_${end}__"
     marker_end="__HX_TEXT_END_${start}_${end}__"
 
-    json_out="$(run_shell_json "cd /root/root/work/quantum-gpt && echo $marker_begin && sed -n '${start},${end}p' \"$REMOTE_PATH\" && echo $marker_end")"
+    json_out="$(run_shell_json "cd /root/work/quantum-gpt && echo $marker_begin && sed -n '${start},${end}p' \"$REMOTE_PATH\" && echo $marker_end")"
 
     python3 - <<'PY' "$json_out" "$marker_begin" "$marker_end" "$LOCAL_TMP"
 import json

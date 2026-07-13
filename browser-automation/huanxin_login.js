@@ -11,13 +11,14 @@
  *   node huanxin_login.js --timeout 300  # Wait up to 300s for login (default: 600s)
  */
 
-const { chromium } = require('playwright');
 const path = require('path');
 const fs = require('fs');
-const { getBaseProfileDir } = require('./huanxin_profile');
+const { getRequestedProfileDir } = require('./huanxin_profile');
+const { launchPersistentContext } = require('./huanxin_browser_launch');
 
 const DEFAULT_HUANXIN_URL =
-  'https://aihuanxin.cn/kunlun/kl-web?poolId=1&projectId=3ed7854b946a47b1a49ad754baa76cd3#/train-dev';
+  process.env.HUANXIN_TRAIN_DEV_URL ||
+  'https://aihuanxin.cn/kunlun/kl-web?poolId=6&projectId=21b4208dde424e96b159362ef49c9c96#/train-dev/environment/dl-9a5a098accce31c28cf4c6ca23391341?name=AI';
 
 function parseArgs(argv) {
   const args = { timeout: 600, url: DEFAULT_HUANXIN_URL, holdOpen: false };
@@ -53,7 +54,7 @@ function isLoggedIn(url, title, bodyText) {
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
-  const profileDir = getBaseProfileDir();
+  const profileDir = getRequestedProfileDir();
   fs.mkdirSync(profileDir, { recursive: true });
 
   console.log(`[login] Opening headed browser with base profile: ${profileDir}`);
@@ -62,11 +63,9 @@ async function main() {
   console.log(`[login] Will auto-detect login success or timeout after ${args.timeout}s.`);
   console.log(`[login] Press Ctrl+C at any time to save & exit.\n`);
 
-  const context = await chromium.launchPersistentContext(profileDir, {
-    headless: false,
-    slowMo: 50,
-    viewport: { width: 1440, height: 900 },
-  });
+  process.env.HUANXIN_HEADLESS = '0';
+  const launch = await launchPersistentContext(profileDir);
+  const context = launch.context;
   _context = context;
 
   const page = context.pages()[0] || await context.newPage();

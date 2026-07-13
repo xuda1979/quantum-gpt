@@ -1,0 +1,11 @@
+{
+  "id": "quantum_science_quantum_comm_bb84_security_sketch",
+  "name": "Step through the BB84 quantum key distribution protocol. Exp...",
+  "domain": "quantum_science",
+  "category": "walkthrough",
+  "level": "L3",
+  "field": "quantum_comm",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py",
+  "question": "Step through the BB84 quantum key distribution protocol. Explain the role of the two bases, the sifting step, and how the no-cloning theorem underpins the security against eavesdropping. Why does a simple intercept-resend attack introduce a detectable error rate?"
+}

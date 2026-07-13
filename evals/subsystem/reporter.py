@@ -47,7 +47,14 @@ def _is_v2(data: dict[str, Any]) -> bool:
 def get_records(data: dict[str, Any], model_key: str) -> list[dict[str, Any]]:
     if _is_v2(data):
         return data.get("results", {}).get(model_key, {}).get("records", [])
-    return [r for r in data.get("records", []) if r.get("model") == model_key]
+    recs = data.get("records")
+    if isinstance(recs, list):
+        return [r for r in recs if r.get("model") == model_key]
+    # v1 scorecard shape: `results` is a list of records keyed by `id`.
+    res = data.get("results")
+    if isinstance(res, list):
+        return list(res)
+    return []
 
 
 def task_passed(rec: dict[str, Any]) -> bool:
@@ -58,10 +65,16 @@ def task_passed(rec: dict[str, Any]) -> bool:
     return bool(rec.get("passed", False))
 
 
+def _task_id(rec: dict[str, Any]) -> str:
+    """Return the task identifier from a record, supporting both
+    schema_version=2 (`task_id`) and the v1 scorecard (`id`) fields."""
+    return rec.get("task_id") or rec.get("id") or rec.get("name") or ""
+
+
 def get_summary(data: dict[str, Any], model_key: str) -> dict[str, Any]:
     if _is_v2(data):
         return data.get("results", {}).get(model_key, {}).get("summary", {})
-    recs = [r for r in data.get("records", []) if r.get("model") == model_key]
+    recs = get_records(data, model_key)
     n = len(recs)
     n_pass = sum(1 for r in recs if task_passed(r))
     return {"pass_at_1": round(n_pass / n, 4) if n else 0.0, "n_tasks": n, "n_pass": n_pass}
@@ -80,13 +93,14 @@ def _pass_str(n_pass: int, n_total: int) -> str:
 # Single-run Markdown report
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def render_single_report(data: dict[str, Any], label: str | None = None) -> str:
     lines: list[str] = []
     created_at = data.get("created_at_utc", "?")
     base_model = Path(data.get("base_model", "?")).name
-    adapter    = data.get("adapter") or "None"
+    adapter = data.get("adapter") or "None"
     adapter_name = Path(adapter).parent.name if adapter and adapter != "None" else "None"
-    k          = data.get("k", 1)
+    k = data.get("k", 1)
 
     run_label = label or f"{base_model} / {adapter_name}"
     lines.append(f"# Eval Report: {run_label}")
@@ -101,7 +115,7 @@ def render_single_report(data: dict[str, Any], label: str | None = None) -> str:
     lines.append("| Model | Pass@1 | Rate |")
     lines.append("|:------|:-------|:-----|")
 
-    base_sum    = get_summary(data, "base")
+    base_sum = get_summary(data, "base")
     adapter_sum = get_summary(data, "adapter")
 
     if base_sum.get("n_tasks"):
@@ -116,25 +130,27 @@ def render_single_report(data: dict[str, Any], label: str | None = None) -> str:
         )
     if base_sum.get("n_tasks") and adapter_sum.get("n_tasks"):
         delta = adapter_sum["pass_at_1"] - base_sum["pass_at_1"]
-        lines.append(
-            f"| **Delta** | — | **{delta:+.1%}** |"
-        )
+        lines.append(f"| **Delta** | — | **{delta:+.1%}** |")
 
     # Delta breakdown
     delta = data.get("delta")
     if delta:
         if delta.get("fixed_tasks"):
-            lines.append(f"\n**Fixed by adapter:** {', '.join(f'`{t}`' for t in delta['fixed_tasks'])}")
+            lines.append(
+                f"\n**Fixed by adapter:** {', '.join(f'`{t}`' for t in delta['fixed_tasks'])}"
+            )
         if delta.get("broken_tasks"):
-            lines.append(f"\n**⚠️ Broken by adapter:** {', '.join(f'`{t}`' for t in delta['broken_tasks'])}")
+            lines.append(
+                f"\n**⚠️ Broken by adapter:** {', '.join(f'`{t}`' for t in delta['broken_tasks'])}"
+            )
 
     # Per-task table
     lines.append("\n## Per-task Results\n")
     lines.append("| Task | Domain | Category | Base | Adapter | Change |")
     lines.append("|:-----|:-------|:---------|:-----|:--------|:-------|")
 
-    base_recs = {r["task_id"]: r for r in get_records(data, "base")}
-    adp_recs  = {r["task_id"]: r for r in get_records(data, "adapter")}
+    base_recs = {_task_id(r): r for r in get_records(data, "base")}
+    adp_recs = {_task_id(r): r for r in get_records(data, "adapter")}
     all_tasks = sorted(set(base_recs) | set(adp_recs))
 
     for tid in all_tasks:
@@ -143,8 +159,8 @@ def render_single_report(data: dict[str, Any], label: str | None = None) -> str:
         bp = task_passed(br) if br else None
         ap = task_passed(ar) if ar else None
         rec = br or ar or {}
-        dom  = rec.get("domain", "?")[:12]
-        cat  = rec.get("category", "?")[:20]
+        dom = rec.get("domain", "?")[:12]
+        cat = rec.get("category", "?")[:20]
         bsym = ("✅" if bp else "❌") if bp is not None else "—"
         asym = ("✅" if ap else "❌") if ap is not None else "—"
         if bp is None or ap is None:
@@ -158,15 +174,12 @@ def render_single_report(data: dict[str, Any], label: str | None = None) -> str:
         lines.append(f"| `{tid}` | {dom} | {cat} | {bsym} | {asym} | {chg} |")
 
     # Failure analysis
-    failing_adapter = [
-        r for r in get_records(data, "adapter")
-        if not task_passed(r)
-    ]
+    failing_adapter = [r for r in get_records(data, "adapter") if not task_passed(r)]
     if failing_adapter:
         lines.append("\n## Failure Analysis (Adapter)\n")
         for rec in failing_adapter:
-            tid = rec["task_id"]
-            fc  = rec.get("failure_category") or (
+            tid = _task_id(rec)
+            fc = rec.get("failure_category") or (
                 rec.get("samples", [{}])[0].get("failure_category") if rec.get("samples") else None
             )
             details = rec.get("details", []) or (
@@ -185,8 +198,7 @@ def render_single_report(data: dict[str, Any], label: str | None = None) -> str:
     # CE-loss if available
     for model_key in ("base", "adapter"):
         heldout = (
-            data.get("results", {}).get(model_key, {}).get("heldout_loss")
-            if _is_v2(data) else None
+            data.get("results", {}).get(model_key, {}).get("heldout_loss") if _is_v2(data) else None
         )
         if heldout and heldout.get("loss") is not None:
             lines.append(f"\n## Held-out CE Loss ({model_key})\n")
@@ -195,13 +207,16 @@ def render_single_report(data: dict[str, Any], label: str | None = None) -> str:
             lines.append(f"- **n_examples:** {heldout['n_examples']}")
             lines.append(f"- **n_tokens:** {heldout['n_tokens']}")
 
-    lines.append(f"\n---\n*Generated by `evals/subsystem/reporter.py` at {time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())}*")
+    lines.append(
+        f"\n---\n*Generated by `evals/subsystem/reporter.py` at {time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())}*"
+    )
     return "\n".join(lines) + "\n"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Multi-run Markdown trend table
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def render_multi_report(runs: list[tuple[str, dict[str, Any]]], model_key: str = "adapter") -> str:
     lines: list[str] = []
@@ -227,7 +242,9 @@ def render_multi_report(runs: list[tuple[str, dict[str, Any]]], model_key: str =
     lines.append("|:----|:-------|:-----|")
     for label, data in runs:
         s = get_summary(data, model_key)
-        lines.append(f"| {label} | {s.get('n_pass', '?')}/{s.get('n_tasks', '?')} | {_pct(s.get('pass_at_1', 0))} |")
+        lines.append(
+            f"| {label} | {s.get('n_pass', '?')}/{s.get('n_tasks', '?')} | {_pct(s.get('pass_at_1', 0))} |"
+        )
 
     # Per-task grid
     lines.append("\n## Per-task Grid\n")
@@ -250,7 +267,7 @@ def render_multi_report(runs: list[tuple[str, dict[str, Any]]], model_key: str =
             row.append(f" {sym} |")
         lines.append("".join(row))
 
-    lines.append(f"\n---\n*Generated by `evals/subsystem/reporter.py`*")
+    lines.append("\n---\n*Generated by `evals/subsystem/reporter.py`*")
     return "\n".join(lines) + "\n"
 
 
@@ -258,8 +275,9 @@ def render_multi_report(runs: list[tuple[str, dict[str, Any]]], model_key: str =
 # update-summary: append a new section to the canonical summary file
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def cmd_update_summary(args: argparse.Namespace) -> None:
-    data      = _load(args.eval)
+    data = _load(args.eval)
     new_block = render_single_report(data, label=args.run_label)
     summary_path = Path(args.summary_file)
 
@@ -283,14 +301,17 @@ def cmd_update_summary(args: argparse.Namespace) -> None:
 # CLI wiring
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def build_parser() -> argparse.ArgumentParser:
     root = argparse.ArgumentParser(description="Generate Markdown reports from eval JSON outputs")
-    sub  = root.add_subparsers(dest="cmd", required=True)
+    sub = root.add_subparsers(dest="cmd", required=True)
 
     p_single = sub.add_parser("single", help="Single-run Markdown report")
-    p_single.add_argument("--eval",  type=Path, required=True)
+    p_single.add_argument("--eval", type=Path, required=True)
     p_single.add_argument("--label", type=str, default=None, help="Human label for this run")
-    p_single.add_argument("--out",   type=Path, default=None, help="Output .md file (default: stdout)")
+    p_single.add_argument(
+        "--out", type=Path, default=None, help="Output .md file (default: stdout)"
+    )
 
     p_multi = sub.add_parser("multi", help="Multi-run trend table")
     p_multi.add_argument("--evals", nargs="+", type=Path, required=True)
@@ -299,8 +320,8 @@ def build_parser() -> argparse.ArgumentParser:
     p_multi.add_argument("--out", type=Path, default=None)
 
     p_upd = sub.add_parser("update-summary", help="Append a section to the canonical summary file")
-    p_upd.add_argument("--eval",         type=Path, required=True)
-    p_upd.add_argument("--run-label",    type=str, default=None)
+    p_upd.add_argument("--eval", type=Path, required=True)
+    p_upd.add_argument("--run-label", type=str, default=None)
     p_upd.add_argument("--summary-file", type=str, required=True)
 
     return root
@@ -312,7 +333,7 @@ def main() -> int:
 
     if args.cmd == "single":
         data = _load(args.eval)
-        md   = render_single_report(data, label=args.label)
+        md = render_single_report(data, label=args.label)
         if args.out:
             args.out.parent.mkdir(parents=True, exist_ok=True)
             args.out.write_text(md, encoding="utf-8")
@@ -323,9 +344,9 @@ def main() -> int:
     elif args.cmd == "multi":
         labels = args.labels or [p.stem for p in args.evals]
         if len(labels) < len(args.evals):
-            labels += [p.stem for p in args.evals[len(labels):]]
+            labels += [p.stem for p in args.evals[len(labels) :]]
         runs = [(labels[i], _load(p)) for i, p in enumerate(args.evals)]
-        md   = render_multi_report(runs, model_key=args.model)
+        md = render_multi_report(runs, model_key=args.model)
         if args.out:
             args.out.parent.mkdir(parents=True, exist_ok=True)
             args.out.write_text(md, encoding="utf-8")

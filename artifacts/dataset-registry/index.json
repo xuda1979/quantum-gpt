@@ -1,0 +1,35 @@
+{
+  "archive_version": "dataset-registry-v1",
+  "datasets": {
+    "glm52_soft_distill_sft_iter2": [
+      {
+        "dataset": "glm52_soft_distill_sft_iter2",
+        "content_hash": "3270c77e4588b8836c6f3e85e701ab764d7ecb15c76b9df742fb65d0c2069431",
+        "snapshot_at_utc": "2026-07-08T07:01:43.240293+00:00",
+        "snapshot_file": "glm52_soft_distill_sft_iter2@20260708T070143-3270c77e4588.json",
+        "git_sha_at_snapshot": "f496258bb3f983f8038eafede4f7fa0d943c8b53",
+        "file_count": 3,
+        "total_bytes": 1114528,
+        "row_count_total": 155,
+        "train_rows": 142,
+        "eval_rows": 13,
+        "note": "iter-2 distill SFT dataset (142 train + 13 eval)"
+      }
+    ],
+    "glm52_soft_distill_sft_100": [
+      {
+        "dataset": "glm52_soft_distill_sft_100",
+        "content_hash": "7b5765d8372b98b0b9d38b9f3bc2f5314163f0ec3a85f70c0d70ca5d50a83d1a",
+        "snapshot_at_utc": "2026-07-08T07:02:06.243436+00:00",
+        "snapshot_file": "glm52_soft_distill_sft_100@20260708T070206-7b5765d8372b.json",
+        "git_sha_at_snapshot": "f496258bb3f983f8038eafede4f7fa0d943c8b53",
+        "file_count": 3,
+        "total_bytes": 848506,
+        "row_count_total": 100,
+        "train_rows": 90,
+        "eval_rows": 10,
+        "note": "iter-1 base distill SFT dataset (90 train + 10 eval)"
+      }
+    ]
+  }
+}

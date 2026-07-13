@@ -13,6 +13,7 @@ Usage:
         --group-size 8 \
         --grpo-steps 100
 """
+
 from __future__ import annotations
 
 import argparse
@@ -32,17 +33,6 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from training.qwen_sft_peft import (  # noqa: E402
-    TextPreprocessorBackend,
-    apply_selective_training_controls,
-    collect_trainable_parameters,
-    load_text_preprocessor_backend,
-    probe_model_runtime_compat,
-    resolve_lora_target_modules,
-)
-from training.model_backend import run_text_forward_preflight  # noqa: E402
-from training.model_family_preflight import trainer_backend_preflight_block  # noqa: E402
-from training.text_preprocessor_backend import build_supervised_text_example, pad_supervised_text_batch  # noqa: E402
 from training.grpo_utils import (  # noqa: E402
     AdaptiveTemperatureState,
     TaskCurriculum,
@@ -59,7 +49,21 @@ from training.grpo_utils import (  # noqa: E402
     stable_token_log_probs,
     summarize_python_interface,
 )
+from training.model_backend import run_text_forward_preflight  # noqa: E402
+from training.model_family_preflight import trainer_backend_preflight_block  # noqa: E402
+from training.qwen_sft_peft import (  # noqa: E402
+    TextPreprocessorBackend,
+    apply_selective_training_controls,
+    collect_trainable_parameters,
+    load_text_preprocessor_backend,
+    probe_model_runtime_compat,
+    resolve_lora_target_modules,
+)
 from training.research_plugins import load_research_methods, summarize_methods  # noqa: E402
+from training.text_preprocessor_backend import (  # noqa: E402
+    build_supervised_text_example,
+    pad_supervised_text_batch,
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -139,10 +143,24 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--reward-syntax-weight", type=float, default=0.1)
     p.add_argument("--reward-interface-weight", type=float, default=0.15)
     p.add_argument("--reward-verifier-weight", type=float, default=0.15)
-    p.add_argument("--reward-brevity-weight", type=float, default=0.0,
-                   help="Weight for brevity reward; set >0 to break flat-reward deadlocks.")
-    p.add_argument("--brevity-target-lines", type=int, default=40,
-                   help="Target line count for full brevity reward.")
+    p.add_argument(
+        "--reward-brevity-weight",
+        type=float,
+        default=0.0,
+        help="Weight for brevity reward; set >0 to break flat-reward deadlocks.",
+    )
+    p.add_argument(
+        "--reward-import-hygiene-weight",
+        type=float,
+        default=0.05,
+        help="Penalty weight for invented non-stdlib imports on single-file tasks.",
+    )
+    p.add_argument(
+        "--brevity-target-lines",
+        type=int,
+        default=40,
+        help="Target line count for full brevity reward.",
+    )
     p.add_argument("--reward-detail-budget-cap", type=int, default=8)
     p.add_argument("--advantage-clip", type=float, default=2.5)
     p.add_argument("--ratio-clip-log-delta", type=float, default=8.0)
@@ -180,7 +198,11 @@ def load_requested_task_ids(path: str | None) -> set[str] | None:
     return task_ids
 
 
-def discover_tasks(tasks_dir: Path, requested_task_ids: set[str] | None = None, allowed_domains: set[str] | None = None) -> list[dict]:
+def discover_tasks(
+    tasks_dir: Path,
+    requested_task_ids: set[str] | None = None,
+    allowed_domains: set[str] | None = None,
+) -> list[dict]:
     tasks = []
     for domain_dir in sorted(tasks_dir.iterdir()):
         if not domain_dir.is_dir():
@@ -222,6 +244,37 @@ def summarize_candidate_interface(candidate_path: Path) -> list[str]:
     return summarize_python_interface(candidate_path.read_text(encoding="utf-8"))
 
 
+def build_task_runtime_context(task: dict, *, detail_budget_cap: int) -> dict[str, Any]:
+    """Derive runtime-only task fields once so reward and prompt code share the same view."""
+    meta = task["meta"]
+    task_id = meta.get("id", task["task_dir"].name)
+    candidate_file = meta.get("candidate_file")
+    required_interface = (
+        summarize_candidate_interface(task["task_dir"] / candidate_file) if candidate_file else []
+    )
+    behavior_hints = extract_behavior_hints(task["tests_py"])
+    test_source = task["tests_py"].read_text(encoding="utf-8")
+    detail_budget = max(
+        estimate_detail_budget(test_source, cap=detail_budget_cap),
+        min(detail_budget_cap, max(1, len(behavior_hints))) if behavior_hints else 1,
+    )
+    raw_allowed_import_roots = meta.get("allowed_import_roots", [])
+    allowed_import_roots = [
+        root.strip() for root in raw_allowed_import_roots if isinstance(root, str) and root.strip()
+    ]
+    candidate_files = meta.get("candidate_files")
+    if candidate_files is None and candidate_file:
+        candidate_files = [candidate_file]
+    return {
+        "task_id": task_id,
+        "required_interface": required_interface,
+        "behavior_hints": behavior_hints,
+        "detail_budget": detail_budget,
+        "single_file_expected": len(candidate_files or []) <= 1,
+        "allowed_import_roots": allowed_import_roots,
+    }
+
+
 def build_prompt(task: dict, research_methods: list[Any] | None = None) -> str:
     meta = task["meta"]
     parts: list[str] = []
@@ -233,17 +286,32 @@ def build_prompt(task: dict, research_methods: list[Any] | None = None) -> str:
         parts.append(f"Task: {meta.get('name', task['task_dir'].name)}")
 
     parts.append(f"Task id: {meta.get('id', task['task_dir'].name)}")
-    parts.append(f"Domain: {meta.get('domain', 'unknown')}\nCategory: {meta.get('category', 'unknown')}")
+    parts.append(
+        f"Domain: {meta.get('domain', 'unknown')}\nCategory: {meta.get('category', 'unknown')}"
+    )
 
     candidate_file = meta.get("candidate_file")
     if candidate_file:
-        interface_lines = task.get("required_interface") or summarize_candidate_interface(task["task_dir"] / candidate_file)
+        interface_lines = task.get("required_interface") or summarize_candidate_interface(
+            task["task_dir"] / candidate_file
+        )
         if interface_lines:
-            parts.append("Required interface:\n" + "\n".join(f"- {line}" for line in interface_lines))
+            parts.append(
+                "Required interface:\n" + "\n".join(f"- {line}" for line in interface_lines)
+            )
 
     behavior_hints = task.get("behavior_hints") or extract_behavior_hints(task["tests_py"])
     if behavior_hints:
-        parts.append("Behavioral requirements:\n" + "\n".join(f"- {line}" for line in behavior_hints))
+        parts.append(
+            "Behavioral requirements:\n" + "\n".join(f"- {line}" for line in behavior_hints)
+        )
+
+    if task.get("single_file_expected", False):
+        parts.append(
+            "Implementation constraints:\n"
+            "- Keep the answer self-contained in one Python file.\n"
+            "- Do not depend on repository-local helpers or invent non-standard modules."
+        )
 
     parts.append("Return only the final Python code.")
     prompt = "\n\n".join(parts)
@@ -270,9 +338,13 @@ def extract_code(response: str) -> str:
     return response.strip()
 
 
-def evaluate_candidate(code: str, test_harness, task: dict, args, research_methods: list[Any] | None = None) -> dict[str, Any]:
+def evaluate_candidate(
+    code: str, test_harness, task: dict, args, research_methods: list[Any] | None = None
+) -> dict[str, Any]:
     """Run tests and return a shaped reward breakdown."""
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False, dir=str(task["task_dir"])) as f:
+    with tempfile.NamedTemporaryFile(
+        mode="w", suffix=".py", delete=False, dir=str(task["task_dir"])
+    ) as f:
         f.write(code)
         f.flush()
         path = f.name
@@ -302,6 +374,9 @@ def evaluate_candidate(code: str, test_harness, task: dict, args, research_metho
         verifier_weight=args.reward_verifier_weight,
         brevity_weight=args.reward_brevity_weight,
         brevity_target_lines=args.brevity_target_lines,
+        import_hygiene_weight=args.reward_import_hygiene_weight,
+        single_file_expected=bool(task.get("single_file_expected", False)),
+        allowed_import_roots=task.get("allowed_import_roots", []),
     )
     reward["details"] = result.get("details", []) if isinstance(result, dict) else []
     for method in research_methods or []:
@@ -329,7 +404,9 @@ def render_generation_prompt(render_backend: Any, prompt: str) -> str:
                 enable_thinking=False,
             )
         except TypeError:
-            return render_backend.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+            return render_backend.apply_chat_template(
+                messages, tokenize=False, add_generation_prompt=True
+            )
     return "\n\n".join(f"{message['role'].upper()}: {message['content']}" for message in messages)
 
 
@@ -337,7 +414,9 @@ def move_batch_to_device(batch: dict[str, torch.Tensor], device: Any) -> dict[st
     return {name: tensor.to(device) for name, tensor in batch.items()}
 
 
-def generate_group(model, backend: TextPreprocessorBackend, prompt: str, args, *, temperature: float | None = None) -> tuple[list[str], str]:
+def generate_group(
+    model, backend: TextPreprocessorBackend, prompt: str, args, *, temperature: float | None = None
+) -> tuple[list[str], str]:
     """Generate a group of solutions and return (codes, prompt_text).
 
     Args:
@@ -362,7 +441,7 @@ def generate_group(model, backend: TextPreprocessorBackend, prompt: str, args, *
                 output_scores=True,
             )
 
-        gen_ids = outputs.sequences[0, inputs["input_ids"].shape[1]:]
+        gen_ids = outputs.sequences[0, inputs["input_ids"].shape[1] :]
         response = backend.text_backend.decode(gen_ids, skip_special_tokens=True)
         codes.append(extract_code(response))
 
@@ -377,9 +456,20 @@ def compute_completion_log_prob(
     device: Any,
     max_seq_length: int,
     logit_clip: float,
+    *,
+    add_mm_token_type_ids: bool = False,
 ) -> tuple[torch.Tensor, torch.Tensor]:
-    prompt_inputs = tokenizer(prompt_text, return_tensors="pt", truncation=True, max_length=max_seq_length)
-    full_inputs = tokenizer(prompt_text + completion_text, return_tensors="pt", truncation=True, max_length=max_seq_length)
+    prompt_inputs = tokenizer(
+        prompt_text, return_tensors="pt", truncation=True, max_length=max_seq_length
+    )
+    full_inputs = tokenizer(
+        prompt_text + completion_text,
+        return_tensors="pt",
+        truncation=True,
+        max_length=max_seq_length,
+    )
+    if add_mm_token_type_ids:
+        full_inputs["mm_token_type_ids"] = torch.zeros_like(full_inputs["input_ids"])
     full_inputs = move_batch_to_device(full_inputs, device)
     prompt_len = min(prompt_inputs["input_ids"].shape[1], full_inputs["input_ids"].shape[1])
 
@@ -401,9 +491,13 @@ def compute_completion_log_prob(
     return seq_log_prob, token_count
 
 
-def grpo_loss(log_probs: torch.Tensor, old_log_probs: torch.Tensor,
-              advantages: torch.Tensor, kl_coeff: float,
-              ratio_clip_log_delta: float) -> torch.Tensor:
+def grpo_loss(
+    log_probs: torch.Tensor,
+    old_log_probs: torch.Tensor,
+    advantages: torch.Tensor,
+    kl_coeff: float,
+    ratio_clip_log_delta: float,
+) -> torch.Tensor:
     """GRPO loss: policy gradient with group-relative advantages + KL penalty."""
     return stable_grpo_loss(
         log_probs=log_probs,
@@ -412,6 +506,243 @@ def grpo_loss(log_probs: torch.Tensor, old_log_probs: torch.Tensor,
         kl_coeff=kl_coeff,
         ratio_clip_log_delta=ratio_clip_log_delta,
     )
+
+
+def compute_dr_pair_loss(
+    *,
+    research_methods: list[Any],
+    rewards: torch.Tensor,
+    codes: list[str],
+    current_log_probs: list[torch.Tensor],
+    old_log_probs: list[torch.Tensor],
+) -> tuple[torch.Tensor, dict[str, Any]]:
+    """Compute the doubly-robust DPO pair loss when the plugin is enabled.
+
+    Returns (loss, info) where `loss` is a scalar tensor (zero if the
+    plugin is disabled or no pair was mined) and `info` is a dict with
+    debugging fields (`dr_pair_mined`, `dr_pair_reward_gap`,
+    `dr_pair_loss_value`).
+
+    This is a no-op when no research method matches
+    `doubly_robust_quantum_grpo`. The pair loss is weighted by
+    `dr_pair_loss_weight` (default 0.3) read from the plugin's
+    `extra_run_config()`.
+    """
+    info: dict[str, Any] = {
+        "dr_pair_mined": False,
+        "dr_pair_reward_gap": 0.0,
+        "dr_pair_loss_value": 0.0,
+        "dr_pair_loss_weight": 0.0,
+    }
+    if not research_methods:
+        zero = rewards.new_tensor(0.0) if rewards is not None else None
+        if zero is None:
+            import torch as _torch
+
+            zero = _torch.zeros((), dtype=_torch.float32)
+        return zero, info
+
+    method = next(
+        (m for m in research_methods if m.method_id == "doubly_robust_quantum_grpo"),
+        None,
+    )
+    if method is None:
+        zero = rewards.new_tensor(0.0) if rewards is not None else None
+        if zero is None:
+            import torch as _torch
+
+            zero = _torch.zeros((), dtype=_torch.float32)
+        return zero, info
+
+    cfg = method.extra_run_config().get("doubly_robust_quantum_grpo", {})
+    beta = float(cfg.get("dr_dpo_beta", 0.07))
+    min_gap = float(cfg.get("dr_pair_min_reward_gap", 0.4))
+    max_pairs = int(cfg.get("dr_pair_max_per_step", 1))
+    weight = float(cfg.get("dr_pair_loss_weight", 0.3))
+    info["dr_pair_loss_weight"] = weight
+    if weight <= 0.0 or max_pairs <= 0:
+        zero = rewards.new_tensor(0.0)
+        return zero, info
+
+    # Lazy import so the trainer does not hard-depend on the plugin module.
+    try:
+        import importlib.util
+        import sys as _sys
+
+        plugin_root = (
+            Path(__file__).resolve().parents[1]
+            / "research"
+            / "papers"
+            / "doubly_robust_quantum_grpo"
+            / "code"
+        )
+        spec = importlib.util.spec_from_file_location(
+            "dr_pair_loss_mod", plugin_root / "dr_pair_loss.py"
+        )
+        if spec is None or spec.loader is None:
+            zero = rewards.new_tensor(0.0)
+            return zero, info
+        mod = importlib.util.module_from_spec(spec)
+        # Register the module in sys.modules before exec so that
+        # @dataclass(frozen=True) inside the plugin can resolve the
+        # module namespace.
+        _sys.modules["dr_pair_loss_mod"] = mod
+        try:
+            spec.loader.exec_module(mod)
+        except Exception:
+            _sys.modules.pop("dr_pair_loss_mod", None)
+            raise
+    except Exception:
+        zero = rewards.new_tensor(0.0)
+        return zero, info
+
+    pairs = mod.build_dr_pairs(
+        rewards=rewards,
+        codes=codes,
+        min_reward_gap=min_gap,
+        max_pairs=max_pairs,
+    )
+    if not pairs:
+        zero = rewards.new_tensor(0.0)
+        return zero, info
+
+    info["dr_pair_mined"] = True
+    info["dr_pair_reward_gap"] = float(pairs[0].reward_gap)
+
+    log_probs_tensor = torch.stack(current_log_probs)
+    ref_log_probs_tensor = torch.stack(old_log_probs).detach()
+    pair_loss = mod.dr_pair_loss(
+        log_probs=log_probs_tensor,
+        ref_log_probs=ref_log_probs_tensor,
+        pairs=pairs,
+        beta=beta,
+        device=log_probs_tensor.device,
+    )
+    if not torch.isfinite(pair_loss):
+        zero = rewards.new_tensor(0.0)
+        return zero, info
+
+    weighted = weight * pair_loss
+    info["dr_pair_loss_value"] = float(pair_loss.item())
+    return weighted, info
+
+
+def compute_dr_variance_correction(
+    *,
+    research_methods: list[Any],
+    log_probs: torch.Tensor,
+    old_log_probs: torch.Tensor,
+    advantages: torch.Tensor,
+    ratio_clip_log_delta: float,
+    current_step: int | None = None,
+) -> tuple[torch.Tensor, dict[str, Any]]:
+    """Compute the doubly-robust PPO-side variance correction.
+
+    The DR estimator is
+
+        L_DR = L_PPO + psi * E[ (r - 1) * A ]
+
+    where `r = exp(log_probs - old_log_probs)` is the PPO importance
+    ratio and `A` is the (detached) group-relative advantage. The
+    correction has zero mean under the behavior policy but reduces
+    variance when the behavior policy is close to the target, which is
+    the "doubly robust" guarantee (see paper.md §2 and
+    arXiv:2506.01183).
+
+    Returns (correction_term, info). The correction term is added to
+    `total_loss` by the caller. When the `doubly_robust_quantum_grpo`
+    plugin is absent or `dr_psi_init == 0`, returns a zero tensor so
+    this is safe for base GRPO.
+    """
+    info: dict[str, Any] = {
+        "dr_variance_correction_value": 0.0,
+        "dr_psi": 0.0,
+    }
+    if not research_methods:
+        zero = log_probs.new_tensor(0.0) if log_probs is not None else None
+        if zero is None:
+            import torch as _torch
+
+            zero = _torch.zeros((), dtype=_torch.float32)
+        return zero, info
+
+    method = None
+    for m in research_methods:
+        if getattr(m, "method_id", "") == "doubly_robust_quantum_grpo":
+            method = m
+            break
+    if method is None:
+        zero = log_probs.new_tensor(0.0)
+        return zero, info
+
+    cfg = method.extra_run_config().get("doubly_robust_quantum_grpo", {})
+    psi_init = float(cfg.get("dr_psi_init", 0.0))
+    warmup_steps = int(float(cfg.get("dr_psi_warmup_steps", 0)))
+    # Linear psi warmup: psi ramps 0 -> psi_init over the first
+    # `dr_psi_warmup_steps` training steps, then holds at psi_init.
+    # Matches the paper's "tune psi after warmup" guidance and reduces
+    # early-step variance. When warmup_steps == 0 (default), psi is
+    # constant — preserves the pre-warmup behavior.
+    if warmup_steps > 0 and current_step is not None and current_step < warmup_steps:
+        psi = psi_init * (float(current_step) / float(warmup_steps))
+    else:
+        psi = psi_init
+    info["dr_psi"] = psi
+    info["dr_psi_init"] = psi_init
+    info["dr_psi_warmup_steps"] = warmup_steps
+    info["dr_psi_current_step"] = int(current_step) if current_step is not None else None
+    if psi == 0.0:
+        zero = log_probs.new_tensor(0.0)
+        return zero, info
+
+    # Reuse the plugin helper if importable; fall back to inline math.
+    try:
+        plugin_root = Path(__file__).resolve().parent.parent / (
+            "research/papers/doubly_robust_quantum_grpo/code"
+        )
+        spec = importlib.util.spec_from_file_location(
+            "dr_pair_loss_mod_v2", plugin_root / "dr_pair_loss.py"
+        )
+        if spec is not None and spec.loader is not None:
+            mod = importlib.util.module_from_spec(spec)
+            _sys.modules["dr_pair_loss_mod_v2"] = mod
+            try:
+                spec.loader.exec_module(mod)
+            except Exception:
+                _sys.modules.pop("dr_pair_loss_mod_v2", None)
+                raise
+            log_ratio = (log_probs - old_log_probs.detach()).clamp(
+                -ratio_clip_log_delta, ratio_clip_log_delta
+            )
+            ppo_ratio = torch.exp(log_ratio)
+            correction = mod.dr_variance_correction(
+                ppo_loss=log_probs.new_tensor(0.0),  # unused; helper adds to ppo_loss
+                ppo_ratio=ppo_ratio,
+                advantages=advantages.detach(),
+                psi=psi,
+            )
+            # dr_variance_correction returns ppo_loss + psi*((r-1)*A).mean();
+            # subtract the unused ppo_loss (0.0) so we isolate the correction.
+            correction = correction - 0.0
+            if not torch.isfinite(correction):
+                zero = log_probs.new_tensor(0.0)
+                return zero, info
+            info["dr_variance_correction_value"] = float(correction.item())
+            return correction, info
+    except Exception:
+        pass
+
+    # Inline fallback (matches dr_variance_correction math).
+    log_ratio = (log_probs - old_log_probs.detach()).clamp(
+        -ratio_clip_log_delta, ratio_clip_log_delta
+    )
+    ppo_ratio = torch.exp(log_ratio)
+    correction = psi * ((ppo_ratio - 1.0) * advantages.detach()).mean()
+    if not torch.isfinite(correction):
+        zero = log_probs.new_tensor(0.0)
+        return zero, info
+    info["dr_variance_correction_value"] = float(correction.item())
+    return correction, info
 
 
 def main() -> int:
@@ -433,7 +764,6 @@ def main() -> int:
 
     if distributed:
         if args.device == "npu":
-            import torch_npu
             torch.npu.set_device(local_rank)
             device = torch.device(f"npu:{local_rank}")
             torch.distributed.init_process_group(backend="hccl")
@@ -444,7 +774,6 @@ def main() -> int:
     else:
         device = torch.device(args.device)
         if args.device == "npu":
-            import torch_npu
             torch.npu.set_device(0)
 
     args.device = device
@@ -457,7 +786,16 @@ def main() -> int:
         resume_metrics = load_grpo_step_metrics_jsonl(resume_path)
         if resume_metrics:
             resume_step = max(int(r.get("step", 0)) for r in resume_metrics)
-            print(json.dumps({"stage": "warm_restart", "resume_from": str(resume_path), "resume_step": resume_step, "prior_records": len(resume_metrics)}))
+            print(
+                json.dumps(
+                    {
+                        "stage": "warm_restart",
+                        "resume_from": str(resume_path),
+                        "resume_step": resume_step,
+                        "prior_records": len(resume_metrics),
+                    }
+                )
+            )
 
     if rank == 0:
         if not args.resume_from:
@@ -469,7 +807,9 @@ def main() -> int:
             for prior_record in resume_metrics:
                 append_grpo_metric_jsonl(step_metrics_path, prior_record)
 
-    tasks = discover_tasks(Path(args.tasks_dir), requested_task_ids=requested_task_ids, allowed_domains=allowed_domains)
+    tasks = discover_tasks(
+        Path(args.tasks_dir), requested_task_ids=requested_task_ids, allowed_domains=allowed_domains
+    )
     if not tasks:
         raise ValueError("No GRPO tasks matched the requested filters")
     if rank == 0:
@@ -488,8 +828,14 @@ def main() -> int:
         )
 
     # Load model with LoRA
-    from transformers import AutoConfig, AutoModelForCausalLM, AutoProcessor, AutoTokenizer, PreTrainedTokenizerFast
     from peft import LoraConfig, PeftModel, TaskType, get_peft_model
+    from transformers import (
+        AutoConfig,
+        AutoModelForCausalLM,
+        AutoProcessor,
+        AutoTokenizer,
+        PreTrainedTokenizerFast,
+    )
 
     runtime_compat = probe_model_runtime_compat(args.model_name, AutoConfig)
     if runtime_compat is not None:
@@ -513,7 +859,9 @@ def main() -> int:
             )
             raise SystemExit(backend_blocker)
 
-    text_preprocessor = load_text_preprocessor_backend(args.model_name, AutoTokenizer, AutoProcessor, PreTrainedTokenizerFast)
+    text_preprocessor = load_text_preprocessor_backend(
+        args.model_name, AutoTokenizer, AutoProcessor, PreTrainedTokenizerFast
+    )
     tokenizer = text_preprocessor.text_backend
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
@@ -538,7 +886,10 @@ def main() -> int:
         "example_id": f"grpo-preflight-{preflight_task_id}",
         "messages": [
             {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": build_prompt(preflight_task, research_methods=research_methods)},
+            {
+                "role": "user",
+                "content": build_prompt(preflight_task, research_methods=research_methods),
+            },
             {"role": "assistant", "content": "pass"},
         ],
     }
@@ -548,7 +899,15 @@ def main() -> int:
         args.max_seq_length,
         train_on_completions_only=True,
     )
-    preflight_batch = pad_supervised_text_batch([preflight_example], text_preprocessor.text_backend, torch)
+    _needs_mm_token_type_ids = str(
+        runtime_compat.get("config_model_type") if runtime_compat is not None else ""
+    ).startswith("gemma4")
+    preflight_batch = pad_supervised_text_batch(
+        [preflight_example],
+        text_preprocessor.text_backend,
+        torch,
+        add_mm_token_type_ids=_needs_mm_token_type_ids,
+    )
 
     model = AutoModelForCausalLM.from_pretrained(
         args.model_name,
@@ -557,7 +916,12 @@ def main() -> int:
         torch_dtype="auto",
     )
     if rank == 0:
-        print(json.dumps({"stage": "model_loaded", "model_class": model.__class__.__name__}, ensure_ascii=False))
+        print(
+            json.dumps(
+                {"stage": "model_loaded", "model_class": model.__class__.__name__},
+                ensure_ascii=False,
+            )
+        )
     if args.adapter_init:
         model = PeftModel.from_pretrained(model, str(args.adapter_init), is_trainable=True)
         resolved_target_modules = None
@@ -581,7 +945,9 @@ def main() -> int:
         trainable_param_regex=getattr(args, "trainable_param_regex", None),
         freeze_param_regex=getattr(args, "freeze_param_regex", None),
     )
-    trainable_param_tensors, trainable_param_names, trainable_param_count = collect_trainable_parameters(model)
+    trainable_param_tensors, trainable_param_names, trainable_param_count = (
+        collect_trainable_parameters(model)
+    )
     if rank == 0:
         print(
             json.dumps(
@@ -604,7 +970,11 @@ def main() -> int:
         device=device,
     )
     if rank == 0:
-        print(json.dumps({"stage": "text_forward_preflight", **text_forward_preflight}, ensure_ascii=False))
+        print(
+            json.dumps(
+                {"stage": "text_forward_preflight", **text_forward_preflight}, ensure_ascii=False
+            )
+        )
 
     if distributed:
         model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[local_rank])
@@ -636,19 +1006,9 @@ def main() -> int:
             adaptive_temp.record_update()
 
     for task in tasks:
-        task_id = task["meta"].get("id", task["task_dir"].name)
-        candidate_file = task["meta"].get("candidate_file")
-        required_interface = summarize_candidate_interface(task["task_dir"] / candidate_file) if candidate_file else []
-        behavior_hints = extract_behavior_hints(task["tests_py"])
-        test_source = task["tests_py"].read_text(encoding="utf-8")
-        detail_budget = max(
-            estimate_detail_budget(test_source, cap=args.reward_detail_budget_cap),
-            min(args.reward_detail_budget_cap, max(1, len(behavior_hints))) if behavior_hints else 1,
+        task.update(
+            build_task_runtime_context(task, detail_budget_cap=args.reward_detail_budget_cap)
         )
-        task["task_id"] = task_id
-        task["required_interface"] = required_interface
-        task["behavior_hints"] = behavior_hints
-        task["detail_budget"] = detail_budget
 
     random.seed(42 + rank)
 
@@ -673,7 +1033,9 @@ def main() -> int:
         active_model = model.module if distributed else model
         active_model.eval()
         effective_temperature = adaptive_temp.current_temp()
-        codes, prompt_text = generate_group(active_model, text_preprocessor, prompt, args, temperature=effective_temperature)
+        codes, prompt_text = generate_group(
+            active_model, text_preprocessor, prompt, args, temperature=effective_temperature
+        )
 
         consistent_old_log_probs = []
         consistent_old_token_counts = []
@@ -687,6 +1049,7 @@ def main() -> int:
                     device,
                     args.max_seq_length,
                     args.logit_clip,
+                    add_mm_token_type_ids=_needs_mm_token_type_ids,
                 )
                 consistent_old_log_probs.append(old_log_prob.detach())
                 consistent_old_token_counts.append(old_token_count.detach())
@@ -694,13 +1057,28 @@ def main() -> int:
         old_token_counts = torch.stack(consistent_old_token_counts)
 
         # Score each solution with verifier-aware shaped rewards.
-        evaluations = [evaluate_candidate(c, test_harness, task, args, research_methods=research_methods) for c in codes]
-        rewards = torch.tensor([float(entry["total_reward"]) for entry in evaluations], device=device)
-        pass_rewards = torch.tensor([float(entry["pass_reward"]) for entry in evaluations], device=device)
-        syntax_rewards = torch.tensor([float(entry["syntax_reward"]) for entry in evaluations], device=device)
-        interface_rewards = torch.tensor([float(entry["interface_reward"]) for entry in evaluations], device=device)
-        verifier_rewards = torch.tensor([float(entry["verifier_reward"]) for entry in evaluations], device=device)
-        brevity_rewards = torch.tensor([float(entry.get("brevity_reward", 0.0)) for entry in evaluations], device=device)
+        evaluations = [
+            evaluate_candidate(c, test_harness, task, args, research_methods=research_methods)
+            for c in codes
+        ]
+        rewards = torch.tensor(
+            [float(entry["total_reward"]) for entry in evaluations], device=device
+        )
+        pass_rewards = torch.tensor(
+            [float(entry["pass_reward"]) for entry in evaluations], device=device
+        )
+        syntax_rewards = torch.tensor(
+            [float(entry["syntax_reward"]) for entry in evaluations], device=device
+        )
+        interface_rewards = torch.tensor(
+            [float(entry["interface_reward"]) for entry in evaluations], device=device
+        )
+        verifier_rewards = torch.tensor(
+            [float(entry["verifier_reward"]) for entry in evaluations], device=device
+        )
+        brevity_rewards = torch.tensor(
+            [float(entry.get("brevity_reward", 0.0)) for entry in evaluations], device=device
+        )
 
         # Compute group-relative advantages (GRPO core idea)
         mean_reward = rewards.mean()
@@ -759,6 +1137,7 @@ def main() -> int:
                 device,
                 args.max_seq_length,
                 args.logit_clip,
+                add_mm_token_type_ids=_needs_mm_token_type_ids,
             )
             if token_count.item() == 0:
                 continue
@@ -798,6 +1177,32 @@ def main() -> int:
             args.kl_coeff,
             args.ratio_clip_log_delta,
         )
+        # Doubly-Robust DPO pair loss (only active when the
+        # doubly_robust_quantum_grpo research method is enabled).
+        # The helper is a no-op (returns zero) when the plugin is
+        # absent or no pair is mined, so this is safe for base GRPO.
+        dr_pair_loss_term, dr_pair_info = compute_dr_pair_loss(
+            research_methods=research_methods,
+            rewards=rewards,
+            codes=codes,
+            current_log_probs=current_log_probs,
+            old_log_probs=normalized_old_log_probs,
+        )
+        if torch.isfinite(dr_pair_loss_term) and float(dr_pair_loss_term.item()) != 0.0:
+            total_loss = total_loss + dr_pair_loss_term
+        # Doubly-Robust PPO-side variance correction (psi * E[(r-1)*A]).
+        # Only active when the doubly_robust_quantum_grpo plugin is
+        # enabled and dr_psi_init > 0. Safe no-op for base GRPO.
+        dr_variance_term, dr_variance_info = compute_dr_variance_correction(
+            research_methods=research_methods,
+            log_probs=torch.stack(current_log_probs),
+            old_log_probs=torch.stack(normalized_old_log_probs),
+            advantages=torch.stack(filtered_advantages),
+            ratio_clip_log_delta=args.ratio_clip_log_delta,
+            current_step=step,
+        )
+        if torch.isfinite(dr_variance_term) and float(dr_variance_term.item()) != 0.0:
+            total_loss = total_loss + dr_variance_term
         if not torch.isfinite(total_loss):
             adaptive_temp.record_skip("non_finite_loss")
             if rank == 0:
@@ -845,6 +1250,19 @@ def main() -> int:
                 loss=float(total_loss.item()),
                 adapter_init=args.adapter_init,
             )
+            if dr_pair_info:
+                record["dr_pair_mined"] = bool(dr_pair_info.get("dr_pair_mined"))
+                record["dr_pair_reward_gap"] = float(dr_pair_info.get("dr_pair_reward_gap", 0.0))
+                record["dr_pair_loss_value"] = float(dr_pair_info.get("dr_pair_loss_value", 0.0))
+                record["dr_pair_loss_weight"] = float(dr_pair_info.get("dr_pair_loss_weight", 0.0))
+            if dr_variance_info:
+                record["dr_variance_correction_value"] = float(
+                    dr_variance_info.get("dr_variance_correction_value", 0.0)
+                )
+                record["dr_psi"] = float(dr_variance_info.get("dr_psi", 0.0))
+                record["dr_psi_init"] = float(dr_variance_info.get("dr_psi_init", 0.0))
+                record["dr_psi_warmup_steps"] = int(dr_variance_info.get("dr_psi_warmup_steps", 0))
+                record["dr_psi_current_step"] = dr_variance_info.get("dr_psi_current_step")
             append_grpo_metric(metrics, record=record)
             append_grpo_metric_jsonl(step_metrics_path, record)
             if step % args.log_steps == 0:
@@ -857,7 +1275,8 @@ def main() -> int:
         save_model.save_pretrained(adapter_dir)
         text_preprocessor.save_backend.save_pretrained(adapter_dir)
         (output_dir / "grpo_metrics.json").write_text(
-            json.dumps(build_grpo_metrics_payload(metrics, planned_steps=args.grpo_steps), indent=2) + "\n"
+            json.dumps(build_grpo_metrics_payload(metrics, planned_steps=args.grpo_steps), indent=2)
+            + "\n"
         )
         (output_dir / "run_config.json").write_text(
             json.dumps(
@@ -898,10 +1317,14 @@ def main() -> int:
                     "research_methods": summarize_methods(research_methods),
                     "curriculum_state": curriculum.state,
                     "target_modules": list(args.target_modules) if args.target_modules else None,
-                    "target_module_regex": list(args.target_module_regex) if args.target_module_regex else None,
+                    "target_module_regex": list(args.target_module_regex)
+                    if args.target_module_regex
+                    else None,
                     "resolved_target_modules": resolved_target_modules,
-                    "trainable_param_regex": list(getattr(args, "trainable_param_regex", []) or []) or None,
-                    "freeze_param_regex": list(getattr(args, "freeze_param_regex", []) or []) or None,
+                    "trainable_param_regex": list(getattr(args, "trainable_param_regex", []) or [])
+                    or None,
+                    "freeze_param_regex": list(getattr(args, "freeze_param_regex", []) or [])
+                    or None,
                     "selective_training": selective_training,
                     "trainable_parameter_count": trainable_param_count,
                     "trainable_parameter_sample": trainable_param_names[:12],

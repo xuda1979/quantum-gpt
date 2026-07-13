@@ -16,26 +16,56 @@ from pathlib import Path
 
 import torch
 from peft import PeftModel
-from transformers import AutoConfig, AutoModelForCausalLM, AutoProcessor, AutoTokenizer, PreTrainedTokenizerFast
+from transformers import (
+    AutoConfig,
+    AutoModelForCausalLM,
+    AutoProcessor,
+    AutoTokenizer,
+    PreTrainedTokenizerFast,
+)
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
-from training.model_backend import ensure_text_backend_preflight, load_causal_lm_with_text_backend_preflight
-from training.text_preprocessor_backend import TextPreprocessorBackend, load_text_preprocessor_backend
+from training.model_backend import (
+    ensure_text_backend_preflight,
+    load_causal_lm_with_text_backend_preflight,
+)
+from training.text_preprocessor_backend import (
+    TextPreprocessorBackend,
+    load_text_preprocessor_backend,
+)
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--slice-json", type=Path, default=Path("reports/base_vs_adapter_eval_slice.json"))
-    parser.add_argument("--base-model", type=Path, default=Path("models/Qwen2.5-1.5B-Instruct"))
-    parser.add_argument("--adapter", type=Path, default=Path("outputs/fast-lora-qwen25-1p5b-mini/adapter"))
+    parser.add_argument(
+        "--slice-json", type=Path, default=Path("reports/base_vs_adapter_eval_slice.json")
+    )
+    parser.add_argument("--base-model", type=Path, default=Path("models/Qwen3.6-27B"))
+    parser.add_argument(
+        "--adapter", type=Path, default=Path("outputs/fast-lora-qwen25-1p5b-mini/adapter")
+    )
     parser.add_argument("--output", type=Path, default=Path("reports/base_vs_adapter_outputs.json"))
     parser.add_argument("--max-new-tokens", type=int, default=192)
     parser.add_argument("--temperature", type=float, default=0.0)
-    parser.add_argument("--limit", type=int, default=0, help="Optional max number of examples to run (0 = all)")
+    parser.add_argument(
+        "--limit", type=int, default=0, help="Optional max number of examples to run (0 = all)"
+    )
     parser.add_argument("--device", default="cpu")
+    parser.add_argument(
+        "--npu-device-map",
+        choices=["auto", "balanced-layers"],
+        default="auto",
+        help="For --device npu, shard language-model layers across visible NPUs instead of loading on one card.",
+    )
+    parser.add_argument(
+        "--npu-max-memory-gib",
+        type=int,
+        default=56,
+        help="Per-NPU max_memory GiB used with --device npu --npu-device-map balanced-layers.",
+    )
     parser.add_argument(
         "--offload-dir",
         type=Path,
@@ -49,13 +79,82 @@ def load_slice(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def load_causal_lm(model_path: Path, device: str, offload_dir: Path):
+def _visible_npu_indices() -> list[int]:
+    raw = os.environ.get("ASCEND_RT_VISIBLE_DEVICES") or os.environ.get("ASCEND_VISIBLE_DEVICES")
+    if not raw:
+        return [0]
+    indices: list[int] = []
+    for item in raw.split(","):
+        item = item.strip()
+        if not item:
+            continue
+        try:
+            indices.append(int(item))
+        except ValueError:
+            indices.append(len(indices))
+    return indices or [0]
+
+
+def _config_get(config, key: str):
+    if hasattr(config, key):
+        return getattr(config, key)
+    if isinstance(config, dict):
+        return config.get(key)
+    return None
+
+
+def build_balanced_npu_layer_device_map(config, visible_npus: list[int]) -> dict[str, int]:
+    text_config = _config_get(config, "text_config") or _config_get(config, "llm_config") or config
+    num_layers = _config_get(text_config, "num_hidden_layers") or _config_get(
+        text_config, "num_layers"
+    )
+    if not num_layers:
+        raise SystemExit(
+            "Cannot build balanced NPU device map: config does not expose num_hidden_layers."
+        )
+    devices = list(range(len(visible_npus)))
+    last_device = devices[-1]
+    device_map: dict[str, int] = {
+        "model.embed_tokens": devices[0],
+        "model.norm": last_device,
+        "model.rotary_emb": devices[0],
+        "model.language_model.embed_tokens": devices[0],
+        "model.language_model.norm": last_device,
+        "model.language_model.rotary_emb": devices[0],
+        "lm_head": last_device,
+    }
+    for layer_idx in range(int(num_layers)):
+        device_map[f"model.layers.{layer_idx}"] = devices[
+            layer_idx * len(devices) // int(num_layers)
+        ]
+        device_map[f"model.language_model.layers.{layer_idx}"] = devices[
+            layer_idx * len(devices) // int(num_layers)
+        ]
+    return device_map
+
+
+def load_causal_lm(
+    model_path: Path, device: str, offload_dir: Path, npu_device_map: str, npu_max_memory_gib: int
+):
     model_kwargs = {
         "trust_remote_code": True,
         "low_cpu_mem_usage": True,
         "torch_dtype": "auto",
     }
-    if device == "auto":
+    if device == "npu" and npu_device_map == "balanced-layers":
+        model_config = AutoConfig.from_pretrained(str(model_path), trust_remote_code=True)
+        visible_npus = _visible_npu_indices()
+        model_kwargs["device_map"] = build_balanced_npu_layer_device_map(model_config, visible_npus)
+        model_kwargs["max_memory"] = {
+            device_idx: f"{npu_max_memory_gib}GiB" for device_idx in range(len(visible_npus))
+        }
+        model = load_causal_lm_with_text_backend_preflight(
+            str(model_path),
+            auto_config_cls=AutoConfig,
+            auto_model_for_causal_lm_cls=AutoModelForCausalLM,
+            model_kwargs=model_kwargs,
+        )
+    elif device == "auto":
         offload_dir.mkdir(parents=True, exist_ok=True)
         model_kwargs["device_map"] = "auto"
         model_kwargs["offload_folder"] = str(offload_dir)
@@ -85,11 +184,13 @@ def load_causal_lm(model_path: Path, device: str, offload_dir: Path):
 
 def load_text_backend(model_path: Path) -> TextPreprocessorBackend:
     ensure_text_backend_preflight(str(model_path), AutoConfig)
-    return load_text_preprocessor_backend(str(model_path), AutoTokenizer, AutoProcessor, PreTrainedTokenizerFast)
+    return load_text_preprocessor_backend(
+        str(model_path), AutoTokenizer, AutoProcessor, PreTrainedTokenizerFast
+    )
 
 
 def resolve_input_device(model, device: str) -> torch.device:
-    if device != "auto":
+    if device not in {"auto", "npu"}:
         return torch.device(device)
     try:
         return next(model.parameters()).device
@@ -110,14 +211,23 @@ def build_inputs(backend: TextPreprocessorBackend, prompt: str, device: torch.de
                 enable_thinking=False,
             )
         except TypeError:
-            text = render_backend.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+            text = render_backend.apply_chat_template(
+                messages, tokenize=False, add_generation_prompt=True
+            )
     else:
         text = "USER: " + prompt
     tokens = text_backend(text, return_tensors="pt")
     return {k: v.to(device) for k, v in tokens.items()}, text
 
 
-def generate_text(model, backend: TextPreprocessorBackend, prompt: str, max_new_tokens: int, temperature: float, device: str) -> str:
+def generate_text(
+    model,
+    backend: TextPreprocessorBackend,
+    prompt: str,
+    max_new_tokens: int,
+    temperature: float,
+    device: str,
+) -> str:
     input_device = resolve_input_device(model, device)
     inputs, _ = build_inputs(backend, prompt, input_device)
     prompt_len = inputs["input_ids"].shape[1]
@@ -152,8 +262,14 @@ def write_json_atomically(path: Path, payload: dict) -> None:
 
 def main() -> int:
     args = parse_args()
+    if not args.base_model.exists():
+        raise SystemExit(f"Base model path does not exist: {args.base_model}")
+    if not args.adapter.exists():
+        raise SystemExit(f"Adapter path does not exist: {args.adapter}")
     payload = load_slice(args.slice_json)
-    examples = payload["examples"][: args.limit] if args.limit and args.limit > 0 else payload["examples"]
+    examples = (
+        payload["examples"][: args.limit] if args.limit and args.limit > 0 else payload["examples"]
+    )
 
     backend = load_text_backend(args.base_model)
     tokenizer = backend.text_backend
@@ -187,7 +303,13 @@ def main() -> int:
         f"loading base model from {args.base_model} for {total_examples} examples on {args.device}",
         flush=True,
     )
-    base_model = load_causal_lm(args.base_model, args.device, args.offload_dir / "base")
+    base_model = load_causal_lm(
+        args.base_model,
+        args.device,
+        args.offload_dir / "base",
+        args.npu_device_map,
+        args.npu_max_memory_gib,
+    )
     for index, example in enumerate(examples):
         print_progress("base", index + 1, total_examples, example["example_id"])
         results["examples"][index]["base_output"] = generate_text(
@@ -205,7 +327,13 @@ def main() -> int:
         gc.collect()
 
     print(f"loading adapter from {args.adapter}", flush=True)
-    adapter_base = load_causal_lm(args.base_model, args.device, args.offload_dir / "adapter_base")
+    adapter_base = load_causal_lm(
+        args.base_model,
+        args.device,
+        args.offload_dir / "adapter_base",
+        args.npu_device_map,
+        args.npu_max_memory_gib,
+    )
     adapter_model = PeftModel.from_pretrained(adapter_base, str(args.adapter))
     adapter_model.eval()
     for index, example in enumerate(examples):

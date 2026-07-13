@@ -1,0 +1,22 @@
+{
+  "task": "as1-isq-fs4rb-135312",
+  "task_id": "dt-ebb08ab145864876955d22f614cfed85",
+  "status": "running_model_load",
+  "notify": false,
+  "reason": "still loading model; no user action needed",
+  "updated_at": "2026-06-11T14:06:57+0800",
+  "markers": {
+    "__ASI1_ISQ_FS_SYNC_DONE__": true,
+    "__ASI1_ISQ_FS4_RETRY_BEFORE_TRAIN__": true,
+    "model_loader_selected": true,
+    "text_preprocessor_loaded": true,
+    "device_resolved": true,
+    "model_loaded": false,
+    "forward_preflight": false,
+    "eval_loss": false,
+    "Traceback": false,
+    "RuntimeError": false,
+    "OutOfMemory": false
+  },
+  "tail": "哈尔滨-1\n帮助中心\n消息中心\n\nxuda2025\n\n我的项目\n\n移动研究院未来院\n项目空间详情\n模型广场\n模型训练\n开发环境\n训练任务\n模型调优\n有监督微调\n模型推理\n推理服务\n应用接入\n调用统计\n资产管理\n模型管理\n镜像管理\n文件管理\n数据集管理\n运营运维\n用量管理\n告警管理\n操作日志\n项目空间管理/\n模型训练/\n训练任务/\n训练任务详情/\n实例日志\n实例日志_dt-ebb08ab145864876955d22f614cfed85-master-9649c150ec72-0\ndt-ebb08ab14586...ec72-0\n导 出\n/bin/bash: line 1: /usr/sbin/sshd: No such file or directory\n__ASI1_ISQ_FS_BOOT__\n/vllm-workspace\nroot\nPython 3.11.14\n/root/work/filestorage/qg-transfer/isq/code_payload.tar.gz 4696439fbdf0882803e3ee15140f03389fd79fd76740b8a00d0b5b3a9aab3710\n/root/work/filestorage/qg-transfer/isq/train.jsonl.gz d5c808f8df64468d27b24cf4663759807ad449b28412c02cd39a8d509816a25a\n/root/work/filestorage/qg-transfer/isq/eval.jsonl.gz 43b12374388facb617adba858b5ad2a7289190f1aad9f4d81624dec9da3e7110\ntrain_rows 4488\neval_rows 1123\n__ASI1_ISQ_FS_SYNC_DONE__\n__ASI1_ISQ_FS4_RETRY_BEFORE_TRAIN__\n{\"stage\": \"args_parsed\", \"output_dir\": \"outputs/qwen36-35b-w8a8-isq-cot-sft-asi1-fs4-20260611T055500Z\", \"train_file\": \"data/generated/isq-cot-sft-80-20-v1/train_chatml.jsonl\", \"eval_file\": \"data/generated/isq-cot-sft-80-20-v1/eval_chatml.jsonl\"}\n{\"stage\": \"research_methods_loaded\", \"methods\": []}\n[INFO] Monkey-patching transformers.modeling_utils.caching_allocator_warmup to be a no-op\n{\"stage\": \"deps_loaded\"}\n{\"stage\": \"qwen35_moe_runtime_registration\", \"error_type\": \"ValueError\", \"error\": \"The model class you are passing has a `config_class` attribute that is not consistent with the config class you passed (model has <class 'transformers.models.qwen3_5_moe.configuration_qwen3_5_moe.Qwen3_5MoeTextConfig'> and you passed <class 'transformers.models.qwen3_5_moe.configuration_qwen3_5_moe.Qwen3_5MoeConfig'>. Fix one of those so they match!\"}\nThe argument `trust_remote_code` is to be used with Auto classes. It has no effect here and is ignored.\n{\"stage\": \"model_runtime_compat_checked\", \"config_model_type\": \"qwen3_5_moe\", \"config_architectures\": [\"Qwen3_5MoeForConditionalGeneration\"], \"runtime_autoconfig_ok\": true, \"checkpoint_transformers_version\": \"4.57.1\", \"runtime_config_class\": \"Qwen3_5MoeConfig\"}\n{\"stage\": \"model_loader_selected\", \"model_loader_class\": \"AutoModelForCausalLM\", \"model_loader_reason\": \"balanced_npu_text_only_causal_lm\", \"config_architectures\": [\"Qwen3_5MoeForConditionalGeneration\"], \"config_model_type\": \"qwen3_5_moe\"}\n{\"stage\": \"text_preprocessor_loaded\", \"backend_kind\": \"processor.tokenizer\", \"render_backend_class\": \"Qwen3VLProcessor\", \"text_backend_class\": \"TokenizersBackend\", \"save_backend_class\": \"Qwen3VLProcessor\"}\n{\"stage\": \"device_resolved\", \"device\": \"npu\", \"requested\": \"npu\"}\n"
+}

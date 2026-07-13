@@ -4,12 +4,18 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-TRAIN_DEV_URL="https://aihuanxin.cn/kunlun/kl-web?poolId=1&projectId=3ed7854b946a47b1a49ad754baa76cd3#/train-dev"
+ENV_NAME="${1:-${HUANXIN_ENV_NAME:-AI}}"
+ENV_CONFIG="$("$ROOT_DIR/.venv/bin/python" scripts/huanxin_env_config.py --env "$ENV_NAME" --format shell 2>/dev/null || /usr/bin/python3 scripts/huanxin_env_config.py --env "$ENV_NAME" --format shell)"
+eval "$ENV_CONFIG"
+DEFAULT_DAEMON_PORT="$HUANXIN_ENV_DAEMON_PORT"
+TRAIN_DEV_URL="${HUANXIN_TRAIN_DEV_URL:-$HUANXIN_ENV_TRAIN_DEV_URL}"
+MANUAL_MODE_LOCK="$ROOT_DIR/.huanxin_manual_mode"
+AUTOMATION_ENABLE_FILE="$ROOT_DIR/.huanxin_automation_enabled"
 KEEPALIVE_LABEL="com.quantumgpt.huanxin-safari-keepalive"
 KEEPALIVE_LOG="/tmp/huanxin-safari-keepalive.launchd.log"
 DAEMON_AGENT_LABEL="com.quantumgpt.huanxin-ai2-daemon"
-DAEMON_HEALTH_URL="http://127.0.0.1:19002/health"
-DAEMON_LOG="/tmp/huanxin-daemon-ai2.log"
+DAEMON_HEALTH_URL="${HUANXIN_DAEMON_HEALTH_URL:-http://127.0.0.1:${DEFAULT_DAEMON_PORT}/health}"
+DAEMON_LOG="${HUANXIN_DAEMON_LOG:-/tmp/huanxin-daemon-${ENV_NAME}.log}"
 REPAIR_LOG="/tmp/huanxin-browser-profile-repair.log"
 REPAIR_RESULT_PATH="${HUANXIN_PROFILE_REPAIR_RESULT_PATH:-/tmp/huanxin-browser-profile-repair.json}"
 REPAIR_STATE_PATH="${HUANXIN_PROFILE_REPAIR_STATE_PATH:-/tmp/huanxin-browser-profile-repair-state.json}"
@@ -24,8 +30,31 @@ DAEMON_AGENT_STATUS="$(bash scripts/install_huanxin_ai2_daemon_agent.sh --status
 DAEMON_AGENT_STATUS_CODE=$?
 DAEMON_HEALTH="$(curl -sS --max-time 3 "$DAEMON_HEALTH_URL" 2>/dev/null)"
 DAEMON_HEALTH_CODE=$?
-PROBE_JSON="$(
-/usr/bin/python3 - "$ROOT_DIR" "$PROBE_TIMEOUT_SEC" <<'PY'
+if [[ ! -f "$AUTOMATION_ENABLE_FILE" || -f "$MANUAL_MODE_LOCK" ]]; then
+  PROBE_JSON="$(
+    /usr/bin/python3 - "$MANUAL_MODE_LOCK" "$AUTOMATION_ENABLE_FILE" <<'PY'
+import json
+import sys
+
+print(
+    json.dumps(
+        {
+            "state": "automation_disabled",
+            "error": "huanxin_probe_skipped",
+            "manual_lock_present": __import__("pathlib").Path(sys.argv[1]).exists(),
+            "automation_enable_present": __import__("pathlib").Path(sys.argv[2]).exists(),
+            "lock_path": sys.argv[1],
+            "enable_path": sys.argv[2],
+        },
+        ensure_ascii=False,
+    )
+)
+PY
+  )"
+  PROBE_STATUS_CODE=125
+else
+  PROBE_JSON="$(
+  /usr/bin/python3 - "$ROOT_DIR" "$PROBE_TIMEOUT_SEC" <<'PY'
 import json
 import subprocess
 import sys
@@ -59,8 +88,9 @@ if payload:
     print(payload)
 raise SystemExit(completed.returncode)
 PY
-)"
-PROBE_STATUS_CODE=$?
+  )"
+  PROBE_STATUS_CODE=$?
+fi
 set -e
 
 if [[ -f "$KEEPALIVE_LOG" ]]; then
@@ -138,13 +168,21 @@ print(json.dumps(summary, ensure_ascii=False))
 PY
 )"
 
-/usr/bin/python3 - "$TRAIN_DEV_URL" "$KEEPALIVE_LABEL" "$KEEPALIVE_STATUS_CODE" "$KEEPALIVE_STATUS" "$KEEPALIVE_LOG" "$KEEPALIVE_LOG_TAIL" "$DAEMON_AGENT_LABEL" "$DAEMON_AGENT_STATUS_CODE" "$DAEMON_AGENT_STATUS" "$DAEMON_HEALTH_CODE" "$DAEMON_HEALTH" "$PROBE_STATUS_CODE" "$PROBE_JSON" "$DAEMON_LOG" "$DAEMON_LOG_TAIL" "$REPAIR_LOG" "$REPAIR_LOG_TAIL" "$REPAIR_STATE_PATH" "$REPAIR_STATE_JSON" "$REPAIR_STATE_MTIME" "$REPAIR_RESULT_PATH" "$REPAIR_RESULT_JSON" "$REPAIR_RESULT_MTIME" "$CALLBACK_FILE" "$CALLBACK_JSON" "$JOB_SUMMARY_JSON" <<'PY'
+COMMAND_CONNECTION_PATH="$ROOT_DIR/.huanxin_shell_connections/${ENV_NAME}.json"
+if [[ -f "$COMMAND_CONNECTION_PATH" ]]; then
+  COMMAND_CONNECTION_JSON="$(cat "$COMMAND_CONNECTION_PATH")"
+else
+  COMMAND_CONNECTION_JSON=""
+fi
+
+/usr/bin/python3 - "$ENV_NAME" "$TRAIN_DEV_URL" "$KEEPALIVE_LABEL" "$KEEPALIVE_STATUS_CODE" "$KEEPALIVE_STATUS" "$KEEPALIVE_LOG" "$KEEPALIVE_LOG_TAIL" "$DAEMON_AGENT_LABEL" "$DAEMON_AGENT_STATUS_CODE" "$DAEMON_AGENT_STATUS" "$DAEMON_HEALTH_URL" "$DAEMON_HEALTH_CODE" "$DAEMON_HEALTH" "$PROBE_STATUS_CODE" "$PROBE_JSON" "$DAEMON_LOG" "$DAEMON_LOG_TAIL" "$REPAIR_LOG" "$REPAIR_LOG_TAIL" "$REPAIR_STATE_PATH" "$REPAIR_STATE_JSON" "$REPAIR_STATE_MTIME" "$REPAIR_RESULT_PATH" "$REPAIR_RESULT_JSON" "$REPAIR_RESULT_MTIME" "$CALLBACK_FILE" "$CALLBACK_JSON" "$JOB_SUMMARY_JSON" "$COMMAND_CONNECTION_PATH" "$COMMAND_CONNECTION_JSON" <<'PY'
 import json
 import re
 import sys
 from datetime import datetime, timezone
 
 (
+    env_name,
     train_dev_url,
     keepalive_label,
     keepalive_status_code,
@@ -154,6 +192,7 @@ from datetime import datetime, timezone
     daemon_agent_label,
     daemon_agent_status_code,
     daemon_agent_status,
+    daemon_health_url,
     daemon_health_code,
     daemon_health,
     probe_status_code,
@@ -171,6 +210,8 @@ from datetime import datetime, timezone
     callback_file,
     callback_json,
     job_summary_json,
+    command_connection_path,
+    command_connection_json,
 ) = sys.argv[1:]
 
 def parse_json_maybe(text):
@@ -276,10 +317,18 @@ elif daemon_health.strip():
 daemon_startup_state = "unknown"
 daemon_ready = False
 daemon_current_url = ""
+daemon_startup_failure = {}
+daemon_startup_failure_kind = None
+daemon_shell_endpoint_failure = False
+daemon_health_summary = ""
 if isinstance(daemon_payload, dict):
     daemon_startup_state = str(daemon_payload.get("startupState") or "unknown")
     daemon_ready = bool(daemon_payload.get("ready"))
     daemon_current_url = str(daemon_payload.get("currentUrl") or "")
+    daemon_startup_failure = daemon_payload.get("startupFailure") or {}
+    daemon_startup_failure_kind = daemon_payload.get("startupFailureKind")
+    daemon_shell_endpoint_failure = bool(daemon_payload.get("shellEndpointFailure"))
+    daemon_health_summary = str(daemon_payload.get("healthSummary") or "")
 
 daemon_on_train_surface = "/train-dev" in daemon_current_url
 daemon_on_env_surface = "/train-dev/environment/" in daemon_current_url
@@ -299,6 +348,16 @@ elif "login_required" in daemon_log_tail or "短信登录" in daemon_log_tail or
     daemon_auth_state = "login_required"
 elif daemon_state == "healthy":
     daemon_auth_state = "authenticated"
+
+shell_endpoint_summary = ""
+shell_endpoint_request = None
+shell_endpoint_response = None
+if isinstance(daemon_startup_failure, dict):
+    shell_endpoint_summary = str(daemon_startup_failure.get("summary") or "")
+    shell_endpoint_request = daemon_startup_failure.get("request")
+    shell_endpoint_response = daemon_startup_failure.get("response")
+if not shell_endpoint_summary and daemon_shell_endpoint_failure:
+    shell_endpoint_summary = daemon_health_summary or str((daemon_payload or {}).get("startupError") or "")
 
 cold_probe_login_required = probe_state == "login_required" and daemon_operational
 repair_state_payload = parse_json_maybe(repair_state_json) or {}
@@ -369,6 +428,13 @@ if repair_state_source == "result_supersedes_state":
 repair_updated_age_sec = age_seconds_from_epoch(repair_effective_updated_epoch)
 repair_result_age_sec = age_seconds_from_epoch(repair_result_updated_epoch)
 callback_age_sec = age_seconds(callback_payload.get("timestamp_utc"))
+command_connection_payload = parse_json_maybe(command_connection_json) or {}
+command_connection_age_sec = age_seconds(command_connection_payload.get("recorded_at_utc"))
+command_channel_recent_success = (
+    bool(command_connection_payload.get("ok"))
+    and bool(command_connection_payload.get("command_ok"))
+    and (command_connection_age_sec is None or command_connection_age_sec <= 1800)
+)
 repair_recent_failure = repair_status == "failed" and (repair_updated_age_sec is None or repair_updated_age_sec <= 900)
 repair_in_progress = repair_status == "running" and (repair_updated_age_sec is None or repair_updated_age_sec <= 600)
 repair_recent_success = (
@@ -382,7 +448,11 @@ keepalive_transient_repair_noise = (
     or "Terminated" in keepalive_log_tail
 )
 
-if keepalive_operational and daemon_state == "healthy" and daemon_auth_state == "authenticated" and daemon_agent_loaded:
+if (daemon_shell_endpoint_failure or daemon_startup_failure_kind == "shell_endpoint_unavailable") and command_channel_recent_success:
+    summary = "command_channel_connected_daemon_shell_endpoint_failed"
+elif daemon_shell_endpoint_failure or daemon_startup_failure_kind == "shell_endpoint_unavailable":
+    summary = "browser_daemon_shell_endpoint_failed"
+elif keepalive_operational and daemon_state == "healthy" and daemon_auth_state == "authenticated" and daemon_agent_loaded:
     summary = "safari_keepalive_and_supervised_browser_daemon_healthy"
 elif keepalive_operational and daemon_state == "healthy" and daemon_auth_state == "authenticated":
     summary = "safari_keepalive_and_browser_daemon_healthy"
@@ -404,6 +474,7 @@ else:
 job_summary = parse_json_maybe(job_summary_json) or {}
 
 payload = {
+    "env_name": env_name,
     "train_dev_url": train_dev_url,
     "summary": summary,
     "keepalive": {
@@ -418,8 +489,35 @@ payload = {
         "recent_log_tail": keepalive_log_tail,
         "transient_repair_noise": keepalive_transient_repair_noise,
     },
+    "browser_daemon": {
+        "env_name": env_name,
+        "health_url": daemon_health_url,
+        "health_ok": daemon_health_code == "0",
+        "state": daemon_state,
+        "payload": daemon_payload,
+        "auth_state": daemon_auth_state,
+        "operational": daemon_operational,
+        "startup_state": daemon_startup_state,
+        "startup_failure": daemon_startup_failure,
+        "startup_failure_kind": daemon_startup_failure_kind,
+        "shell_endpoint_failure": daemon_shell_endpoint_failure,
+        "health_summary": daemon_health_summary,
+        "current_url": daemon_current_url,
+        "log_path": daemon_log,
+        "recent_log_tail": daemon_log_tail,
+    },
+    "command_channel": {
+        "status_path": command_connection_path,
+        "recent_success": command_channel_recent_success,
+        "age_seconds": command_connection_age_sec,
+        "payload": command_connection_payload,
+        "transport": command_connection_payload.get("transport"),
+        "browser_mode": command_connection_payload.get("browser_mode"),
+        "url": command_connection_payload.get("url"),
+        "duration_ms": command_connection_payload.get("duration_ms"),
+    },
     "browser_daemon_ai2": {
-        "health_url": "http://127.0.0.1:19002/health",
+        "health_url": daemon_health_url,
         "health_ok": daemon_health_code == "0",
         "state": daemon_state,
         "payload": daemon_payload,
@@ -472,11 +570,17 @@ payload = {
     },
     "local_ai2_jobs": job_summary,
     "diagnostics": {
+        "env_name": env_name,
         "canonical_train_dev_url": train_dev_url,
         "cold_probe_login_required": cold_probe_login_required,
         "probe_should_block_shell_ops": not daemon_operational and probe_state == "login_required" and not repair_in_progress,
         "effective_shell_authority": "daemon" if daemon_operational else "probe_or_repair",
         "daemon_agent_health_mismatch": daemon_agent_loaded and daemon_health_code != "0",
+        "shell_endpoint_summary": shell_endpoint_summary,
+        "shell_endpoint_request": shell_endpoint_request,
+        "shell_endpoint_response": shell_endpoint_response,
+        "command_channel_recent_success": command_channel_recent_success,
+        "command_channel_age_seconds": command_connection_age_sec,
         "repair_state_age_seconds": repair_updated_age_sec,
         "repair_result_age_seconds": repair_result_age_sec,
         "repair_result_stale_vs_state": repair_result_stale_vs_state,
@@ -484,7 +588,7 @@ payload = {
     },
     "guidance": {
         "normal_path": "Keep the Safari keepalive LaunchAgent installed, use on-demand daemon-backed shell wrappers by default, and only opt into the ai2 daemon LaunchAgent with HUANXIN_USE_DAEMON_AGENT=1 after explicit validation.",
-        "diagnosis_rule": "If the live ai2 daemon is healthy and operational (startupState=ready on a /train-dev surface), treat Huanxin shell access as operational even if a cold standalone probe lands on login_required. Only treat probe login as blocking when daemon_operational=false. Treat repair_in_progress as transient recovery, not a hard blocker by itself.",
+        "diagnosis_rule": "Distinguish three states: train-dev opened/authenticated, daemon terminal endpoint ready, and command channel verified. If the daemon terminal endpoint fails with getShellVisitUrl but a wrapper records a recent command_channel success, report the daemon endpoint failure as a degraded control-plane condition rather than claiming Codex cannot connect.",
     },
 }
 print(json.dumps(payload, indent=2, ensure_ascii=False))

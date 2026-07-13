@@ -1,0 +1,7 @@
+Write a complete, runnable Python program (no Qiskit needed) that:
+1. Defines a 4-vertex undirected graph with edges: (0,1), (1,2), (2,3), (3,0), (0,2).
+2. In `def main()`, brute-forces all 2^4 = 16 bitstring assignments, computes the MaxCut value for each, and prints the maximum cut value and one optimal bitstring.
+Output exactly:
+  Max cut value: <int>
+  Optimal bitstring: <4-char 0/1 string>
+Call main() under `if __name__ == "__main__":`.

@@ -1,0 +1,11 @@
+Write a complete, runnable Python program using Qiskit that:
+1. Simulates the 2-qubit XXZ Heisenberg Hamiltonian H = X (x) X + Y (x) Y + 0.5 * Z (x) Z using a 4-step Trotter decomposition for total time t=1.0 (each step e^{-i dt H}, dt=0.25).
+   Per-step gates (for each Trotter step):
+     - e^{-i dt XX}: H on both qubits, CX q0->q1, RZ(2*dt) on q1, CX q0->q1, H on both qubits.
+     - e^{-i dt YY}: RX(pi/2) on both, CX q0->q1, RZ(2*dt) on q1, CX q0->q1, RX(-pi/2) on both.
+     - e^{-i dt * 0.5 ZZ}: CX q0->q1, RZ(2*0.5*dt) on q1, CX q0->q1.
+2. Evolves the initial state |01> (apply X on q1).
+3. In `def main()`, uses qiskit.primitives.StatevectorEstimator to compute <Z (x) I> (i.e. "ZI" Pauli string) and prints the value rounded to 4 decimals.
+Output exactly:
+  <Z on q0> = <value>
+Call main() under `if __name__ == "__main__":`.

@@ -8,14 +8,23 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from transformers import AutoTokenizer
+from transformers import AutoProcessor, AutoTokenizer, PreTrainedTokenizerFast
+
+from training.text_preprocessor_backend import load_text_preprocessor_backend
 
 
 def main() -> int:
     model_path = sys.argv[1]
-    tokenizer = AutoTokenizer.from_pretrained(model_path)
+    backend = load_text_preprocessor_backend(
+        model_path,
+        AutoTokenizer,
+        AutoProcessor,
+        PreTrainedTokenizerFast,
+    )
+    tokenizer = backend.text_backend
+    print(f"backend_kind={backend.backend_kind}")
     print(f"tokenizer_class={tokenizer.__class__.__name__}")
-    rendered = tokenizer.apply_chat_template(
+    rendered = backend.render_backend.apply_chat_template(
         [{"role": "user", "content": "hi"}],
         tokenize=False,
         add_generation_prompt=True,

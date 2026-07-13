@@ -6,16 +6,17 @@ import torch
 
 from training.grpo_utils import (
     AdaptiveTemperatureState,
+    TaskCurriculum,
     append_grpo_metric_jsonl,
     brevity_reward,
-    load_grpo_step_metrics_jsonl,
-    build_grpo_metrics_payload_from_jsonl,
     build_grpo_metrics_payload,
-    TaskCurriculum,
+    build_grpo_metrics_payload_from_jsonl,
     build_grpo_step_record,
     build_reward_breakdown,
     estimate_detail_budget,
+    import_hygiene_score,
     interface_match_score,
+    load_grpo_step_metrics_jsonl,
     reward_signal_stats,
     summarize_python_interface,
 )
@@ -59,6 +60,47 @@ def test_build_reward_breakdown_adds_partial_verifier_credit() -> None:
     assert reward["interface_reward"] == 1.0
     assert reward["verifier_reward"] == 0.75
     assert 0.0 < float(reward["total_reward"]) < 1.0
+
+
+def test_import_hygiene_score_penalizes_invented_helper_imports() -> None:
+    score = import_hygiene_score(
+        "from qaoa import solve\nimport itertools\n",
+        single_file_expected=True,
+    )
+    assert score == 0.5
+
+
+def test_build_reward_breakdown_includes_import_hygiene_signal() -> None:
+    reward = build_reward_breakdown(
+        code="from qaoa import helper\n\ndef solve(x: int) -> int:\n    return x\n",
+        result={"passed": False, "details": ["case a failed"]},
+        required_interface=["solve(x: int) -> int"],
+        detail_budget=4,
+        pass_weight=0.6,
+        syntax_weight=0.1,
+        interface_weight=0.15,
+        verifier_weight=0.1,
+        import_hygiene_weight=0.05,
+        single_file_expected=True,
+    )
+    assert reward["import_hygiene_reward"] == 0.0
+    assert 0.0 <= float(reward["total_reward"]) < 1.0
+
+
+def test_build_reward_breakdown_zeros_verifier_credit_for_runtime_failures() -> None:
+    reward = build_reward_breakdown(
+        code="def solve(x: int) -> int:\n    return missing_name + x\n",
+        result={"passed": False, "details": ["NameError: name 'missing_name' is not defined"]},
+        required_interface=["solve(x: int) -> int"],
+        detail_budget=4,
+        pass_weight=0.6,
+        syntax_weight=0.1,
+        interface_weight=0.15,
+        verifier_weight=0.15,
+    )
+    assert reward["syntax_reward"] == 1.0
+    assert reward["interface_reward"] == 1.0
+    assert reward["verifier_reward"] == 0.0
 
 
 def test_estimate_detail_budget_counts_test_markers() -> None:

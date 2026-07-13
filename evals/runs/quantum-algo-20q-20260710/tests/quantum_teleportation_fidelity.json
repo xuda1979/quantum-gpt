@@ -1,0 +1,7 @@
+{
+  "id": "quantum_teleportation_fidelity",
+  "title": "Quantum teleportation of |+> state (coherent)",
+  "expected_substrings": [
+    "<X> on Bob = 1.000000"
+  ]
+}

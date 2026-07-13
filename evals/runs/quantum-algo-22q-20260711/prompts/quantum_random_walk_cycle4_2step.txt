@@ -1,0 +1,15 @@
+Write a complete, runnable Python program using Qiskit 2.x that:
+1. Implements a discrete-time coined quantum walk on a 4-node cycle (nodes
+   0,1,2,3 with edges i <-> (i+1 mod 4)). Use 2 qubits for the node register
+   (q0 = LSB, q1 = MSB, integer value = 2*q1 + q0) and 1 qubit for the coin
+   (q2). Use a Hadamard coin H on q2 at each step. The shift S: if coin=0
+   move -1 mod 4; if coin=1 move +1 mod 4. S|c,node> = |1-c, (node + (1 if c==1 else -1)) mod 4>.
+2. Starts at node 0 with coin in |0>.
+3. Applies exactly 2 walk steps (H on coin, then S).
+4. Measures the node register (q0, q1) with StatevectorSampler (>= 4000 shots).
+5. In `def main()`, prints the probability of being at node 0 and at node 2,
+   each rounded to 3 decimals:
+     P(node=0) = <value>
+     P(node=2) = <value>
+   (After 2 steps the theoretical distribution is P(0)=0.5, P(2)=0.5.)
+Call main() under `if __name__ == "__main__":`.

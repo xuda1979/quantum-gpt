@@ -1,0 +1,7 @@
+{
+  "id": "quantum_bernstein_vazirani_hidden",
+  "title": "Bernstein-Vazirani hidden string s=101",
+  "expected_substrings": [
+    "Hidden string: 101"
+  ]
+}

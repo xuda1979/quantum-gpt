@@ -5,15 +5,14 @@ from __future__ import annotations
 
 import argparse
 import copy
-import datetime
 import hashlib
 import json
 import math
 import os
 import re
+import sys
 import time
 from pathlib import Path
-import sys
 from typing import TYPE_CHECKING, Any
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -29,21 +28,22 @@ from training.runtime_overlay import (
 configure_runtime_overlay_from_env()
 
 if TYPE_CHECKING:
-    from transformers import AutoProcessor, AutoTokenizer
-    import torch
+    pass
 
 try:
     from torch.distributed.elastic.multiprocessing.errors import record as elastic_record
 except Exception:  # noqa: BLE001
+
     def elastic_record(function: Any) -> Any:
         return function
 
-from training.research_plugins import load_research_methods, summarize_methods
+
 from training.model_backend import (
     probe_model_runtime_compat,
     run_text_forward_preflight,
     select_transformers_model_loader,
 )
+from training.research_plugins import load_research_methods, summarize_methods
 from training.text_preprocessor_backend import (
     TextPreprocessorBackend,
     build_supervised_text_example,
@@ -51,7 +51,15 @@ from training.text_preprocessor_backend import (
     pad_supervised_text_batch,
 )
 
-DEFAULT_LORA_TARGET_MODULES = ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]
+DEFAULT_LORA_TARGET_MODULES = [
+    "q_proj",
+    "k_proj",
+    "v_proj",
+    "o_proj",
+    "gate_proj",
+    "up_proj",
+    "down_proj",
+]
 COMMON_LORA_TARGET_MODULE_GROUPS = [
     DEFAULT_LORA_TARGET_MODULES,
     ["query_proj", "key_proj", "value_proj", "o_proj", "gate_proj", "up_proj", "down_proj"],
@@ -59,11 +67,24 @@ COMMON_LORA_TARGET_MODULE_GROUPS = [
 ]
 # Standard projection suffix set used for full-path Gemma 4 / MoE-family discovery.
 _PROJECTION_SUFFIXES = frozenset(
-    ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj",
-     "query_proj", "key_proj", "value_proj"]
+    [
+        "q_proj",
+        "k_proj",
+        "v_proj",
+        "o_proj",
+        "gate_proj",
+        "up_proj",
+        "down_proj",
+        "query_proj",
+        "key_proj",
+        "value_proj",
+    ]
 )
 
-def build_native_lora_linear(torch_module: Any, base_layer: Any, rank: int, alpha: int, dropout: float) -> Any:
+
+def build_native_lora_linear(
+    torch_module: Any, base_layer: Any, rank: int, alpha: int, dropout: float
+) -> Any:
     class _NativeLoraLinear(torch_module.nn.Module):
         def __init__(self, wrapped: Any) -> None:
             super().__init__()
@@ -75,13 +96,21 @@ def build_native_lora_linear(torch_module: Any, base_layer: Any, rank: int, alph
             self.rank = int(rank)
             self.lora_alpha = int(alpha)
             self.scaling = float(alpha) / float(rank)
-            self.lora_dropout = torch_module.nn.Dropout(float(dropout)) if dropout > 0 else torch_module.nn.Identity()
+            self.lora_dropout = (
+                torch_module.nn.Dropout(float(dropout))
+                if dropout > 0
+                else torch_module.nn.Identity()
+            )
             self.lora_A = torch_module.nn.Linear(in_features, rank, bias=False)
             self.lora_B = torch_module.nn.Linear(rank, out_features, bias=False)
             torch_module.nn.init.kaiming_uniform_(self.lora_A.weight, a=math.sqrt(5))
             torch_module.nn.init.zeros_(self.lora_B.weight)
             device = wrapped.weight.device
-            dtype = wrapped.weight.dtype if getattr(wrapped.weight, "is_floating_point", lambda: False)() else torch_module.float32
+            dtype = (
+                wrapped.weight.dtype
+                if getattr(wrapped.weight, "is_floating_point", lambda: False)()
+                else torch_module.float32
+            )
             self.lora_A.to(device=device, dtype=dtype)
             self.lora_B.to(device=device, dtype=dtype)
 
@@ -113,12 +142,16 @@ def apply_native_lora(
     suffixes = tuple(target_modules)
     wrapped_names: list[str] = []
     for name, module in list(model.named_modules()):
-        if not name or not any(name == suffix or name.endswith("." + suffix) for suffix in suffixes):
+        if not name or not any(
+            name == suffix or name.endswith("." + suffix) for suffix in suffixes
+        ):
             continue
         if not all(hasattr(module, attr) for attr in ("in_features", "out_features", "weight")):
             continue
         parent, child_name = _get_parent_module(model, name)
-        setattr(parent, child_name, build_native_lora_linear(torch_module, module, rank, alpha, dropout))
+        setattr(
+            parent, child_name, build_native_lora_linear(torch_module, module, rank, alpha, dropout)
+        )
         wrapped_names.append(name)
     if not wrapped_names:
         raise SystemExit(
@@ -134,7 +167,9 @@ def apply_native_lora(
     }
 
 
-def save_native_lora_adapter(model: Any, adapter_dir: Path, torch_module: Any, config: dict[str, Any]) -> None:
+def save_native_lora_adapter(
+    model: Any, adapter_dir: Path, torch_module: Any, config: dict[str, Any]
+) -> None:
     adapter_dir.mkdir(parents=True, exist_ok=True)
     state = {
         name: parameter.detach().cpu()
@@ -142,7 +177,9 @@ def save_native_lora_adapter(model: Any, adapter_dir: Path, torch_module: Any, c
         if ".lora_A." in name or ".lora_B." in name
     }
     torch_module.save(state, adapter_dir / "adapter_model.bin")
-    (adapter_dir / "adapter_config.json").write_text(json.dumps(config, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    (adapter_dir / "adapter_config.json").write_text(
+        json.dumps(config, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
 
 
 def persist_adapter(
@@ -275,7 +312,9 @@ def apply_selective_training_controls(
     trainable_param_regex: list[str] | None = None,
     freeze_param_regex: list[str] | None = None,
 ) -> dict[str, Any]:
-    trainable_patterns = _compile_name_patterns(trainable_param_regex, flag_name="--trainable-param-regex")
+    trainable_patterns = _compile_name_patterns(
+        trainable_param_regex, flag_name="--trainable-param-regex"
+    )
     freeze_patterns = _compile_name_patterns(freeze_param_regex, flag_name="--freeze-param-regex")
 
     params = list(model.named_parameters())
@@ -320,7 +359,9 @@ def apply_selective_training_controls(
 
 
 def collect_trainable_parameters(model: Any) -> tuple[list[Any], list[str], int]:
-    named_trainable = [(name, parameter) for name, parameter in model.named_parameters() if parameter.requires_grad]
+    named_trainable = [
+        (name, parameter) for name, parameter in model.named_parameters() if parameter.requires_grad
+    ]
     if not named_trainable:
         raise SystemExit("No trainable parameters found after selective training controls.")
     trainable_tensors = [parameter for _name, parameter in named_trainable]
@@ -334,7 +375,10 @@ def enable_layernorm_training(model: Any) -> dict[str, Any]:
     trainable_count = 0
     for name, parameter in model.named_parameters():
         normalized = name.lower()
-        if not any(token in normalized for token in ("layernorm", "layer_norm", "rmsnorm", ".norm", "_norm")):
+        if not any(
+            token in normalized
+            for token in ("layernorm", "layer_norm", "rmsnorm", ".norm", "_norm")
+        ):
             continue
         parameter.requires_grad = True
         trainable_names.append(name)
@@ -507,14 +551,26 @@ def _config_get(config: Any, key: str) -> Any:
     return None
 
 
-def build_balanced_npu_layer_device_map(config: Any, visible_npus: list[int]) -> dict[str, int]:
+def build_balanced_npu_layer_device_map(config: Any, visible_npus: list[int]) -> dict[str, str]:
     text_config = _config_get(config, "text_config") or _config_get(config, "llm_config") or config
-    num_layers = _config_get(text_config, "num_hidden_layers") or _config_get(text_config, "num_layers")
+    num_layers = _config_get(text_config, "num_hidden_layers") or _config_get(
+        text_config, "num_layers"
+    )
     if not num_layers:
-        raise SystemExit("Cannot build balanced NPU device map: config does not expose num_hidden_layers.")
-    devices = list(range(len(visible_npus)))
+        raise SystemExit(
+            "Cannot build balanced NPU device map: config does not expose num_hidden_layers."
+        )
+    # NOTE: torch.device(int) is always interpreted as a CUDA device index by PyTorch's
+    # core semantics, regardless of which accelerator backends are registered. Passing
+    # bare ints here (as this function used to) breaks NPU-only pods with
+    # "AssertionError: Torch not compiled with CUDA enabled" once the device_map dict
+    # values reach torch.device() construction inside transformers' weight-materialization
+    # path. Use explicit "npu:N" device strings instead, mirroring the fix already applied
+    # to the DDP device_map branch above.
+    indices = list(range(len(visible_npus)))
+    devices = [f"npu:{i}" for i in indices]
     last_device = devices[-1]
-    device_map: dict[str, int] = {
+    device_map: dict[str, str] = {
         "model.embed_tokens": devices[0],
         "model.norm": last_device,
         "model.rotary_emb": devices[0],
@@ -534,8 +590,12 @@ def build_balanced_npu_layer_device_map(config: Any, visible_npus: list[int]) ->
         "model.multi_modal_projector": devices[0],
     }
     for layer_idx in range(int(num_layers)):
-        device_map[f"model.layers.{layer_idx}"] = devices[layer_idx * len(devices) // int(num_layers)]
-        device_map[f"model.language_model.layers.{layer_idx}"] = devices[layer_idx * len(devices) // int(num_layers)]
+        device_map[f"model.layers.{layer_idx}"] = devices[
+            layer_idx * len(devices) // int(num_layers)
+        ]
+        device_map[f"model.language_model.layers.{layer_idx}"] = devices[
+            layer_idx * len(devices) // int(num_layers)
+        ]
     return device_map
 
 
@@ -566,7 +626,7 @@ def maybe_force_compressed_tensors_decompression(config: Any) -> bool:
         quantization_config["run_compressed"] = False
     else:
         try:
-            setattr(quantization_config, "run_compressed", False)
+            quantization_config.run_compressed = False
         except Exception:
             return False
     return True
@@ -579,12 +639,20 @@ def first_parameter_device(model: Any, fallback: Any) -> Any:
         return fallback
 
 
-def require_training_dependencies(lora_backend: str, adapter_init: Path | None) -> tuple[Any, Any, Any, Any, Any, Any, Any, Any, Any, Any, Any, Any]:
+def require_training_dependencies(
+    lora_backend: str, adapter_init: Path | None
+) -> tuple[Any, Any, Any, Any, Any, Any, Any, Any, Any, Any, Any, Any]:
     try:
         import torch
         import transformers
         from torch.utils.data import DataLoader, Dataset
-        from transformers import AutoConfig, AutoModelForCausalLM, AutoProcessor, AutoTokenizer, PreTrainedTokenizerFast
+        from transformers import (
+            AutoConfig,
+            AutoModelForCausalLM,
+            AutoProcessor,
+            AutoTokenizer,
+            PreTrainedTokenizerFast,
+        )
     except ImportError as exc:
         raise SystemExit(
             "Missing training dependencies. Install the bootstrap stack first, for example: "
@@ -724,7 +792,14 @@ def summarize_trainable_label_counts(dataset: ChatSftDataset) -> dict[str, Any]:
 
 
 class PaddingCollator:
-    def __init__(self, text_backend: Any, torch_module: Any, *, add_mm_token_type_ids: bool = False, pad_to_max_length: int | None = None) -> None:
+    def __init__(
+        self,
+        text_backend: Any,
+        torch_module: Any,
+        *,
+        add_mm_token_type_ids: bool = False,
+        pad_to_max_length: int | None = None,
+    ) -> None:
         self.text_backend = text_backend
         self.torch_module = torch_module
         self.add_mm_token_type_ids = add_mm_token_type_ids
@@ -862,7 +937,9 @@ def build_run_signature(args: argparse.Namespace) -> dict[str, Any]:
         "research_methods": list(args.research_methods),
         "target_modules": list(args.target_modules) if args.target_modules else None,
         "target_module_regex": list(args.target_module_regex) if args.target_module_regex else None,
-        "trainable_param_regex": list(args.trainable_param_regex) if args.trainable_param_regex else None,
+        "trainable_param_regex": list(args.trainable_param_regex)
+        if args.trainable_param_regex
+        else None,
         "freeze_param_regex": list(args.freeze_param_regex) if args.freeze_param_regex else None,
     }
     signature_json = json.dumps(signature, sort_keys=True)
@@ -872,7 +949,11 @@ def build_run_signature(args: argparse.Namespace) -> dict[str, Any]:
 
 def validate_output_dir(args: argparse.Namespace, run_signature: dict[str, Any]) -> None:
     config_path = args.output_dir / "run_config.json"
-    has_existing_artifacts = config_path.exists() or (args.output_dir / "adapter").exists() or (args.output_dir / "metrics.json").exists()
+    has_existing_artifacts = (
+        config_path.exists()
+        or (args.output_dir / "adapter").exists()
+        or (args.output_dir / "metrics.json").exists()
+    )
 
     if args.overwrite_output_dir:
         return
@@ -903,8 +984,25 @@ def main() -> int:
     run_signature = build_run_signature(args)
     validate_output_dir(args, run_signature)
     research_methods = load_research_methods(args.research_methods)
-    print(json.dumps({"stage": "args_parsed", "output_dir": str(args.output_dir), "train_file": str(args.train_file), "eval_file": str(args.eval_file) if args.eval_file else None}, ensure_ascii=False), flush=True)
-    print(json.dumps({"stage": "research_methods_loaded", "methods": summarize_methods(research_methods)}, ensure_ascii=False), flush=True)
+    print(
+        json.dumps(
+            {
+                "stage": "args_parsed",
+                "output_dir": str(args.output_dir),
+                "train_file": str(args.train_file),
+                "eval_file": str(args.eval_file) if args.eval_file else None,
+            },
+            ensure_ascii=False,
+        ),
+        flush=True,
+    )
+    print(
+        json.dumps(
+            {"stage": "research_methods_loaded", "methods": summarize_methods(research_methods)},
+            ensure_ascii=False,
+        ),
+        flush=True,
+    )
 
     (
         torch,
@@ -934,7 +1032,13 @@ def main() -> int:
             "error": str(exc),
         }
     print(json.dumps({"stage": "deps_loaded"}, ensure_ascii=False), flush=True)
-    print(json.dumps({"stage": "qwen35_moe_runtime_registration", **qwen35_runtime_registration}, ensure_ascii=False), flush=True)
+    print(
+        json.dumps(
+            {"stage": "qwen35_moe_runtime_registration", **qwen35_runtime_registration},
+            ensure_ascii=False,
+        ),
+        flush=True,
+    )
 
     try:
         model_loader, runtime_compat, model_loader_metadata = select_transformers_model_loader(
@@ -970,9 +1074,14 @@ def main() -> int:
             ),
             flush=True,
         )
-    print(json.dumps({"stage": "model_loader_selected", **model_loader_metadata}, ensure_ascii=False), flush=True)
+    print(
+        json.dumps({"stage": "model_loader_selected", **model_loader_metadata}, ensure_ascii=False),
+        flush=True,
+    )
 
-    text_preprocessor = load_text_preprocessor_backend(args.model_name, AutoTokenizer, AutoProcessor, PreTrainedTokenizerFast)
+    text_preprocessor = load_text_preprocessor_backend(
+        args.model_name, AutoTokenizer, AutoProcessor, PreTrainedTokenizerFast
+    )
     print(
         json.dumps(
             {
@@ -988,7 +1097,13 @@ def main() -> int:
     )
 
     device = resolve_device(torch, args.device)
-    print(json.dumps({"stage": "device_resolved", "device": str(device), "requested": args.device}, ensure_ascii=False), flush=True)
+    print(
+        json.dumps(
+            {"stage": "device_resolved", "device": str(device), "requested": args.device},
+            ensure_ascii=False,
+        ),
+        flush=True,
+    )
 
     # DDP setup
     local_rank = int(os.environ.get("LOCAL_RANK", 0))
@@ -1007,7 +1122,19 @@ def main() -> int:
     else:
         if device.type == "npu":
             torch.npu.set_device(0)
-    print(json.dumps({"stage": "ddp_ready", "distributed": distributed, "rank": rank, "world_size": world_size, "device": str(device)}, ensure_ascii=False), flush=True)
+    print(
+        json.dumps(
+            {
+                "stage": "ddp_ready",
+                "distributed": distributed,
+                "rank": rank,
+                "world_size": world_size,
+                "device": str(device),
+            },
+            ensure_ascii=False,
+        ),
+        flush=True,
+    )
 
     if rank == 0:
         (args.output_dir / "sft_step_metrics.jsonl").unlink(missing_ok=True)
@@ -1017,7 +1144,17 @@ def main() -> int:
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
     tokenizer.padding_side = "right"
-    print(json.dumps({"stage": "tokenizer_loaded", "pad_token": tokenizer.pad_token, "padding_side": tokenizer.padding_side}, ensure_ascii=False), flush=True)
+    print(
+        json.dumps(
+            {
+                "stage": "tokenizer_loaded",
+                "pad_token": tokenizer.pad_token,
+                "padding_side": tokenizer.padding_side,
+            },
+            ensure_ascii=False,
+        ),
+        flush=True,
+    )
 
     train_dataset = ChatSftDataset(
         args.train_file,
@@ -1027,16 +1164,22 @@ def main() -> int:
         research_methods=research_methods,
         stage="sft_train",
     )
-    eval_dataset = ChatSftDataset(
-        args.eval_file,
-        text_preprocessor,
-        args.max_length,
-        train_on_completions_only=args.train_on_completions_only,
-        research_methods=research_methods,
-        stage="sft_eval",
-    ) if args.eval_file else None
+    eval_dataset = (
+        ChatSftDataset(
+            args.eval_file,
+            text_preprocessor,
+            args.max_length,
+            train_on_completions_only=args.train_on_completions_only,
+            research_methods=research_methods,
+            stage="sft_eval",
+        )
+        if args.eval_file
+        else None
+    )
     train_label_summary = summarize_trainable_label_counts(train_dataset)
-    eval_label_summary = summarize_trainable_label_counts(eval_dataset) if eval_dataset is not None else None
+    eval_label_summary = (
+        summarize_trainable_label_counts(eval_dataset) if eval_dataset is not None else None
+    )
     print(
         json.dumps(
             {
@@ -1046,10 +1189,22 @@ def main() -> int:
                 "max_length": args.max_length,
                 "train_label_tokens": train_label_summary,
                 "eval_label_tokens": eval_label_summary,
-                "train_skipped_empty_completion_examples": len(train_dataset.skipped_empty_completion_examples),
-                "train_skipped_empty_completion_sample": train_dataset.skipped_empty_completion_examples[:5],
-                "eval_skipped_empty_completion_examples": len(eval_dataset.skipped_empty_completion_examples) if eval_dataset is not None else 0,
-                "eval_skipped_empty_completion_sample": eval_dataset.skipped_empty_completion_examples[:5] if eval_dataset is not None else [],
+                "train_skipped_empty_completion_examples": len(
+                    train_dataset.skipped_empty_completion_examples
+                ),
+                "train_skipped_empty_completion_sample": train_dataset.skipped_empty_completion_examples[
+                    :5
+                ],
+                "eval_skipped_empty_completion_examples": len(
+                    eval_dataset.skipped_empty_completion_examples
+                )
+                if eval_dataset is not None
+                else 0,
+                "eval_skipped_empty_completion_sample": eval_dataset.skipped_empty_completion_examples[
+                    :5
+                ]
+                if eval_dataset is not None
+                else [],
             },
             ensure_ascii=False,
         ),
@@ -1071,15 +1226,31 @@ def main() -> int:
         text_preprocessor.text_backend,
         torch,
         add_mm_token_type_ids=(
-            str(runtime_compat.get("config_model_type") if runtime_compat is not None else "").startswith("gemma4")
+            str(
+                runtime_compat.get("config_model_type") if runtime_compat is not None else ""
+            ).startswith("gemma4")
         ),
         pad_to_max_length=_pad_to_max_length,
     )
-    train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset, num_replicas=world_size, rank=rank, shuffle=True) if distributed else None
-    train_loader = DataLoader(train_dataset, batch_size=args.per_device_batch_size, shuffle=(train_sampler is None), collate_fn=collator, sampler=train_sampler)
+    train_sampler = (
+        torch.utils.data.distributed.DistributedSampler(
+            train_dataset, num_replicas=world_size, rank=rank, shuffle=True
+        )
+        if distributed
+        else None
+    )
+    train_loader = DataLoader(
+        train_dataset,
+        batch_size=args.per_device_batch_size,
+        shuffle=(train_sampler is None),
+        collate_fn=collator,
+        sampler=train_sampler,
+    )
     eval_loader = None
     if eval_dataset is not None:
-        eval_loader = DataLoader(eval_dataset, batch_size=args.per_device_batch_size, shuffle=False, collate_fn=collator)
+        eval_loader = DataLoader(
+            eval_dataset, batch_size=args.per_device_batch_size, shuffle=False, collate_fn=collator
+        )
     preflight_batch = collator([train_dataset[0]])
 
     optimizer_steps_per_epoch = len(train_loader) // args.gradient_accumulation_steps
@@ -1122,7 +1293,9 @@ def main() -> int:
         and os.environ.get("QWEN_SFT_DECOMPRESS_COMPRESSED_TENSORS", "1") != "0"
     )
     decompressed_compressed_tensors = (
-        maybe_force_compressed_tensors_decompression(model_config) if decompress_quantized else False
+        maybe_force_compressed_tensors_decompression(model_config)
+        if decompress_quantized
+        else False
     )
     if decompressed_compressed_tensors:
         load_dtype: Any = torch.bfloat16
@@ -1163,12 +1336,16 @@ def main() -> int:
     )
     if args.device == "npu":
         if distributed:
-            model_kwargs["device_map"] = {"": local_rank}
+            model_kwargs["device_map"] = {"": f"npu:{local_rank}"}
         elif args.npu_device_map == "balanced-layers":
             visible_npus = _visible_npu_indices()
-            model_kwargs["device_map"] = build_balanced_npu_layer_device_map(model_config, visible_npus)
+            model_kwargs["device_map"] = build_balanced_npu_layer_device_map(
+                model_config, visible_npus
+            )
+            # max_memory keys must match the device_map's device identifiers
+            # ("npu:N" strings), not bare ints (which torch.device() would treat as CUDA).
             model_kwargs["max_memory"] = {
-                device_idx: f"{args.npu_max_memory_gib}GiB"
+                f"npu:{device_idx}": f"{args.npu_max_memory_gib}GiB"
                 for device_idx in range(len(visible_npus))
             }
             print(
@@ -1191,7 +1368,13 @@ def main() -> int:
         model_kwargs.pop("torch_dtype", None)
         model_kwargs["load_in_8bit"] = True
         model_kwargs["device_map"] = "auto"
-    print(json.dumps({"stage": "model_load_start", "model_name": args.model_name, "t": time.time()}, ensure_ascii=False), flush=True)
+    print(
+        json.dumps(
+            {"stage": "model_load_start", "model_name": args.model_name, "t": time.time()},
+            ensure_ascii=False,
+        ),
+        flush=True,
+    )
     model_load_started_at = time.time()
     try:
         model = model_loader.from_pretrained(args.model_name, **model_kwargs)
@@ -1210,11 +1393,23 @@ def main() -> int:
             flush=True,
         )
         raise
-    print(json.dumps({"stage": "model_loaded", "t": time.time(), "dt_model_load_sec": round(time.time() - model_load_started_at, 3)}, ensure_ascii=False), flush=True)
+    print(
+        json.dumps(
+            {
+                "stage": "model_loaded",
+                "t": time.time(),
+                "dt_model_load_sec": round(time.time() - model_load_started_at, 3),
+            },
+            ensure_ascii=False,
+        ),
+        flush=True,
+    )
     lora_wrap_summary: dict[str, Any] = {"backend": args.lora_backend}
     if args.adapter_init is not None:
         if PeftModel is None:
-            raise SystemExit("--adapter-init requires PEFT; native backend can only create new LoRA adapters.")
+            raise SystemExit(
+                "--adapter-init requires PEFT; native backend can only create new LoRA adapters."
+            )
         model = PeftModel.from_pretrained(model, str(args.adapter_init), is_trainable=True)
         resolved_target_modules = None
         print(
@@ -1245,7 +1440,17 @@ def main() -> int:
         )
         model = get_peft_model(model, lora_config)
         lora_wrap_summary = {"backend": "peft"}
-        print(json.dumps({"stage": "lora_wrapped", "resolved_target_modules": resolved_target_modules, **lora_wrap_summary}, ensure_ascii=False), flush=True)
+        print(
+            json.dumps(
+                {
+                    "stage": "lora_wrapped",
+                    "resolved_target_modules": resolved_target_modules,
+                    **lora_wrap_summary,
+                },
+                ensure_ascii=False,
+            ),
+            flush=True,
+        )
     else:
         resolved_target_modules = resolve_lora_target_modules(
             args.target_modules,
@@ -1260,7 +1465,17 @@ def main() -> int:
             args.lora_alpha,
             args.lora_dropout,
         )
-        print(json.dumps({"stage": "lora_wrapped", "resolved_target_modules": resolved_target_modules, **lora_wrap_summary}, ensure_ascii=False), flush=True)
+        print(
+            json.dumps(
+                {
+                    "stage": "lora_wrapped",
+                    "resolved_target_modules": resolved_target_modules,
+                    **lora_wrap_summary,
+                },
+                ensure_ascii=False,
+            ),
+            flush=True,
+        )
     if args.gradient_checkpointing:
         if hasattr(model, "config"):
             model.config.use_cache = False
@@ -1278,18 +1493,33 @@ def main() -> int:
             ),
             flush=True,
         )
-    layernorm_training = {"enabled": False, "trainable_layernorm_count": 0, "trainable_layernorm_parameter_count": 0}
+    layernorm_training = {
+        "enabled": False,
+        "trainable_layernorm_count": 0,
+        "trainable_layernorm_parameter_count": 0,
+    }
     if args.train_layernorm:
         layernorm_training = enable_layernorm_training(model)
-        print(json.dumps({"stage": "layernorm_training_enabled", **layernorm_training}, ensure_ascii=False), flush=True)
+        print(
+            json.dumps(
+                {"stage": "layernorm_training_enabled", **layernorm_training}, ensure_ascii=False
+            ),
+            flush=True,
+        )
     selective_training = apply_selective_training_controls(
         model,
         trainable_param_regex=getattr(args, "trainable_param_regex", None),
         freeze_param_regex=getattr(args, "freeze_param_regex", None),
     )
-    trainable_param_tensors, trainable_param_names, trainable_param_count = collect_trainable_parameters(model)
-    trainable_parameter_budget = enforce_trainable_parameter_budget(trainable_param_count, args.max_trainable_parameters)
-    trainable_parameter_floor = enforce_min_trainable_parameters(trainable_param_count, args.min_trainable_parameters)
+    trainable_param_tensors, trainable_param_names, trainable_param_count = (
+        collect_trainable_parameters(model)
+    )
+    trainable_parameter_budget = enforce_trainable_parameter_budget(
+        trainable_param_count, args.max_trainable_parameters
+    )
+    trainable_parameter_floor = enforce_min_trainable_parameters(
+        trainable_param_count, args.min_trainable_parameters
+    )
     print(
         json.dumps(
             {
@@ -1382,7 +1612,10 @@ def main() -> int:
     use_chunked_loss = os.environ.get("QWEN_SFT_CHUNKED_LOSS", "0") == "1"
     loss_chunk_size = int(os.environ.get("QWEN_SFT_LOSS_CHUNK", "1024") or "1024")
     print(
-        json.dumps({"stage": "loss_mode", "chunked": use_chunked_loss, "chunk_size": loss_chunk_size}, ensure_ascii=False),
+        json.dumps(
+            {"stage": "loss_mode", "chunked": use_chunked_loss, "chunk_size": loss_chunk_size},
+            ensure_ascii=False,
+        ),
         flush=True,
     )
     print(
@@ -1401,27 +1634,65 @@ def main() -> int:
     for epoch in range(args.num_epochs):
         if train_sampler is not None:
             train_sampler.set_epoch(epoch)
-        print(json.dumps({"stage": "epoch_start", "epoch": epoch + 1}, ensure_ascii=False), flush=True)
+        print(
+            json.dumps({"stage": "epoch_start", "epoch": epoch + 1}, ensure_ascii=False), flush=True
+        )
         for batch_index, batch in enumerate(train_loader, start=1):
             if batch_index == 1:
                 first_batch_time = time.time()
-                print(json.dumps({"stage": "first_batch_loaded", "batch_index": batch_index, "input_shape": list(batch["input_ids"].shape), "t": first_batch_time}, ensure_ascii=False), flush=True)
+                print(
+                    json.dumps(
+                        {
+                            "stage": "first_batch_loaded",
+                            "batch_index": batch_index,
+                            "input_shape": list(batch["input_ids"].shape),
+                            "t": first_batch_time,
+                        },
+                        ensure_ascii=False,
+                    ),
+                    flush=True,
+                )
             batch = {name: tensor.to(batch_device) for name, tensor in batch.items()}
             if use_chunked_loss:
-                raw_loss = chunked_causal_lm_loss(
-                    model, batch, torch, chunk_size=loss_chunk_size
-                )
+                raw_loss = chunked_causal_lm_loss(model, batch, torch, chunk_size=loss_chunk_size)
             else:
                 outputs = model(**batch)
                 raw_loss = outputs.loss
             if batch_index == 1:
-                print(json.dumps({"stage": "first_forward_done", "batch_index": batch_index, "t": time.time(), "dt_from_batch_loaded_sec": round(time.time() - first_batch_time, 3)}, ensure_ascii=False), flush=True)
+                print(
+                    json.dumps(
+                        {
+                            "stage": "first_forward_done",
+                            "batch_index": batch_index,
+                            "t": time.time(),
+                            "dt_from_batch_loaded_sec": round(time.time() - first_batch_time, 3),
+                        },
+                        ensure_ascii=False,
+                    ),
+                    flush=True,
+                )
             loss = raw_loss / args.gradient_accumulation_steps
             if batch_index == 1:
-                print(json.dumps({"stage": "first_loss_ready", "batch_index": batch_index, "loss": float(loss.item())}, ensure_ascii=False), flush=True)
+                print(
+                    json.dumps(
+                        {
+                            "stage": "first_loss_ready",
+                            "batch_index": batch_index,
+                            "loss": float(loss.item()),
+                        },
+                        ensure_ascii=False,
+                    ),
+                    flush=True,
+                )
             loss.backward()
             if batch_index == 1:
-                print(json.dumps({"stage": "first_backward_done", "batch_index": batch_index}, ensure_ascii=False), flush=True)
+                print(
+                    json.dumps(
+                        {"stage": "first_backward_done", "batch_index": batch_index},
+                        ensure_ascii=False,
+                    ),
+                    flush=True,
+                )
 
             if batch_index % args.gradient_accumulation_steps == 0:
                 # Manual grad-norm clipping that is safe for model-parallel
@@ -1436,7 +1707,7 @@ def main() -> int:
                         continue
                     local_norm = p.grad.detach().float().norm(2).item()
                     total_norm_sq += local_norm * local_norm
-                total_norm = total_norm_sq ** 0.5
+                total_norm = total_norm_sq**0.5
                 clip_coef = 1.0
                 if total_norm > 0:
                     clip_coef = min(1.0, 1.0 / total_norm)
@@ -1445,20 +1716,45 @@ def main() -> int:
                         if p.grad is not None:
                             p.grad.detach().mul_(clip_coef)
                 if batch_index == 1:
-                    print(json.dumps({"stage": "first_clip_done", "batch_index": batch_index}, ensure_ascii=False), flush=True)
+                    print(
+                        json.dumps(
+                            {"stage": "first_clip_done", "batch_index": batch_index},
+                            ensure_ascii=False,
+                        ),
+                        flush=True,
+                    )
                 optimizer.step()
                 if batch_index == 1:
-                    print(json.dumps({"stage": "first_optimizer_step_done", "batch_index": batch_index}, ensure_ascii=False), flush=True)
+                    print(
+                        json.dumps(
+                            {"stage": "first_optimizer_step_done", "batch_index": batch_index},
+                            ensure_ascii=False,
+                        ),
+                        flush=True,
+                    )
                 scheduler.step()
                 if batch_index == 1:
-                    print(json.dumps({"stage": "first_scheduler_step_done", "batch_index": batch_index}, ensure_ascii=False), flush=True)
+                    print(
+                        json.dumps(
+                            {"stage": "first_scheduler_step_done", "batch_index": batch_index},
+                            ensure_ascii=False,
+                        ),
+                        flush=True,
+                    )
                 optimizer.zero_grad(set_to_none=True)
                 if batch_index == 1:
-                    print(json.dumps({"stage": "first_zero_grad_done", "batch_index": batch_index}, ensure_ascii=False), flush=True)
+                    print(
+                        json.dumps(
+                            {"stage": "first_zero_grad_done", "batch_index": batch_index},
+                            ensure_ascii=False,
+                        ),
+                        flush=True,
+                    )
                 global_step += 1
 
                 if global_step % args.log_steps == 0:
                     import datetime
+
                     record: dict[str, Any] = {
                         "step": global_step,
                         "epoch": epoch + 1,
@@ -1467,20 +1763,69 @@ def main() -> int:
                         "timestamp_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(),
                     }
                     if batch_index == 1:
-                        print(json.dumps({"stage": "first_record_ready", "batch_index": batch_index}, ensure_ascii=False), flush=True)
+                        print(
+                            json.dumps(
+                                {"stage": "first_record_ready", "batch_index": batch_index},
+                                ensure_ascii=False,
+                            ),
+                            flush=True,
+                        )
                     if eval_loader is not None and global_step % args.eval_steps == 0:
                         if batch_index == 1:
-                            print(json.dumps({"stage": "first_eval_start", "batch_index": batch_index, "t": time.time()}, ensure_ascii=False), flush=True)
+                            print(
+                                json.dumps(
+                                    {
+                                        "stage": "first_eval_start",
+                                        "batch_index": batch_index,
+                                        "t": time.time(),
+                                    },
+                                    ensure_ascii=False,
+                                ),
+                                flush=True,
+                            )
                         eval_started_at = time.time()
                         try:
-                            record.update({f"eval_{k}": v for k, v in evaluate(model.module if distributed else model, eval_loader, batch_device, torch).items()})
+                            record.update(
+                                {
+                                    f"eval_{k}": v
+                                    for k, v in evaluate(
+                                        model.module if distributed else model,
+                                        eval_loader,
+                                        batch_device,
+                                        torch,
+                                    ).items()
+                                }
+                            )
                             if batch_index == 1:
-                                print(json.dumps({"stage": "first_eval_done", "batch_index": batch_index, "t": time.time(), "dt_eval_sec": round(time.time() - eval_started_at, 3)}, ensure_ascii=False), flush=True)
+                                print(
+                                    json.dumps(
+                                        {
+                                            "stage": "first_eval_done",
+                                            "batch_index": batch_index,
+                                            "t": time.time(),
+                                            "dt_eval_sec": round(time.time() - eval_started_at, 3),
+                                        },
+                                        ensure_ascii=False,
+                                    ),
+                                    flush=True,
+                                )
                         except Exception as eval_err:  # in-loop eval must never kill training
                             record["eval_error"] = str(eval_err)
-                            print(json.dumps({"stage": "eval_skipped", "step": global_step, "error": str(eval_err)}, ensure_ascii=False), flush=True)
+                            print(
+                                json.dumps(
+                                    {
+                                        "stage": "eval_skipped",
+                                        "step": global_step,
+                                        "error": str(eval_err),
+                                    },
+                                    ensure_ascii=False,
+                                ),
+                                flush=True,
+                            )
                             try:
-                                if getattr(torch, "npu", None) is not None and hasattr(torch.npu, "empty_cache"):
+                                if getattr(torch, "npu", None) is not None and hasattr(
+                                    torch.npu, "empty_cache"
+                                ):
                                     torch.npu.empty_cache()
                             except Exception:
                                 pass
@@ -1492,9 +1837,13 @@ def main() -> int:
                         try:
                             step_metrics_file.parent.mkdir(parents=True, exist_ok=True)
                             with step_metrics_file.open("a", encoding="utf-8") as handle:
-                                handle.write(json.dumps(record, ensure_ascii=False, sort_keys=True) + "\n")
+                                handle.write(
+                                    json.dumps(record, ensure_ascii=False, sort_keys=True) + "\n"
+                                )
                         except Exception as e:
-                            print(f"Warning: failed to write sft_step_metrics.jsonl: {e}", sys.stderr)
+                            print(
+                                f"Warning: failed to write sft_step_metrics.jsonl: {e}", sys.stderr
+                            )
 
                 # Periodic (hourly) wall-clock checkpoint to a durable path so no
                 # progress is lost if the session/pod ends mid-run. Rank 0 only.
@@ -1503,11 +1852,18 @@ def main() -> int:
                     and checkpoint_interval_seconds > 0
                     and (time.time() - last_checkpoint_time) >= checkpoint_interval_seconds
                 ):
-                    ckpt_adapter_dir = args.output_dir / "checkpoints" / f"step-{global_step}" / "adapter"
+                    ckpt_adapter_dir = (
+                        args.output_dir / "checkpoints" / f"step-{global_step}" / "adapter"
+                    )
                     ckpt_started_at = time.time()
                     print(
                         json.dumps(
-                            {"stage": "periodic_checkpoint_start", "step": global_step, "t": ckpt_started_at, "adapter_dir": str(ckpt_adapter_dir)},
+                            {
+                                "stage": "periodic_checkpoint_start",
+                                "step": global_step,
+                                "t": ckpt_started_at,
+                                "adapter_dir": str(ckpt_adapter_dir),
+                            },
                             ensure_ascii=False,
                         ),
                         flush=True,
@@ -1523,19 +1879,38 @@ def main() -> int:
                             text_preprocessor=text_preprocessor,
                         )
                         (ckpt_adapter_dir.parent / "checkpoint_meta.json").write_text(
-                            json.dumps({"step": global_step, "epoch": epoch + 1, "saved_at_utc": datetime.datetime.now(datetime.timezone.utc).isoformat()}, indent=2) + "\n",
+                            json.dumps(
+                                {
+                                    "step": global_step,
+                                    "epoch": epoch + 1,
+                                    "saved_at_utc": datetime.datetime.now(
+                                        datetime.timezone.utc
+                                    ).isoformat(),
+                                },
+                                indent=2,
+                            )
+                            + "\n",
                             encoding="utf-8",
                         )
                         last_checkpoint_time = time.time()
                         print(
                             json.dumps(
-                                {"stage": "periodic_checkpoint_done", "step": global_step, "t": last_checkpoint_time, "dt_ckpt_sec": round(last_checkpoint_time - ckpt_started_at, 3)},
+                                {
+                                    "stage": "periodic_checkpoint_done",
+                                    "step": global_step,
+                                    "t": last_checkpoint_time,
+                                    "dt_ckpt_sec": round(last_checkpoint_time - ckpt_started_at, 3),
+                                },
                                 ensure_ascii=False,
                             ),
                             flush=True,
                         )
                     except Exception as e:  # never let checkpointing kill the run
-                        print(f"Warning: periodic checkpoint failed at step {global_step}: {e}", file=sys.stderr, flush=True)
+                        print(
+                            f"Warning: periodic checkpoint failed at step {global_step}: {e}",
+                            file=sys.stderr,
+                            flush=True,
+                        )
                         model.train()
 
                 if global_step >= args.max_steps:
@@ -1551,7 +1926,13 @@ def main() -> int:
     if rank == 0:
         save_model = model.module if distributed else model
         adapter_dir = args.output_dir / "adapter"
-        print(json.dumps({"stage": "save_start", "t": time.time(), "adapter_dir": str(adapter_dir)}, ensure_ascii=False), flush=True)
+        print(
+            json.dumps(
+                {"stage": "save_start", "t": time.time(), "adapter_dir": str(adapter_dir)},
+                ensure_ascii=False,
+            ),
+            flush=True,
+        )
         save_started_at = time.time()
         persist_adapter(
             save_model=save_model,
@@ -1562,18 +1943,49 @@ def main() -> int:
             native_config=native_adapter_config,
             text_preprocessor=text_preprocessor,
         )
-        print(json.dumps({"stage": "save_done", "t": time.time(), "dt_save_sec": round(time.time() - save_started_at, 3)}, ensure_ascii=False), flush=True)
+        print(
+            json.dumps(
+                {
+                    "stage": "save_done",
+                    "t": time.time(),
+                    "dt_save_sec": round(time.time() - save_started_at, 3),
+                },
+                ensure_ascii=False,
+            ),
+            flush=True,
+        )
 
     final_eval = None
     if eval_loader is not None:
-        print(json.dumps({"stage": "final_eval_start", "t": time.time()}, ensure_ascii=False), flush=True)
+        print(
+            json.dumps({"stage": "final_eval_start", "t": time.time()}, ensure_ascii=False),
+            flush=True,
+        )
         final_eval_started_at = time.time()
         try:
-            final_eval = evaluate(model.module if distributed else model, eval_loader, batch_device, torch)
-            print(json.dumps({"stage": "final_eval_done", "t": time.time(), "dt_final_eval_sec": round(time.time() - final_eval_started_at, 3)}, ensure_ascii=False), flush=True)
+            final_eval = evaluate(
+                model.module if distributed else model, eval_loader, batch_device, torch
+            )
+            print(
+                json.dumps(
+                    {
+                        "stage": "final_eval_done",
+                        "t": time.time(),
+                        "dt_final_eval_sec": round(time.time() - final_eval_started_at, 3),
+                    },
+                    ensure_ascii=False,
+                ),
+                flush=True,
+            )
         except Exception as eval_err:  # never let final eval destroy the saved adapter
             final_eval = {"error": str(eval_err)}
-            print(json.dumps({"stage": "final_eval_failed", "t": time.time(), "error": str(eval_err)}, ensure_ascii=False), flush=True)
+            print(
+                json.dumps(
+                    {"stage": "final_eval_failed", "t": time.time(), "error": str(eval_err)},
+                    ensure_ascii=False,
+                ),
+                flush=True,
+            )
             try:
                 empty = getattr(torch, "npu", None)
                 if empty is not None and hasattr(empty, "empty_cache"):
@@ -1582,11 +1994,12 @@ def main() -> int:
                 pass
 
     if rank == 0:
-
         summary = {
             "model_name": args.model_name,
             "signature": run_signature,
-            "resolved_target_modules": resolved_target_modules if args.adapter_init is None else None,
+            "resolved_target_modules": resolved_target_modules
+            if args.adapter_init is None
+            else None,
             "lora_wrap_summary": lora_wrap_summary,
             "device": str(device),
             "text_forward_preflight": text_forward_preflight,
@@ -1612,7 +2025,9 @@ def main() -> int:
             json.dumps(
                 {
                     "signature": run_signature,
-                    "resolved_target_modules": resolved_target_modules if args.adapter_init is None else None,
+                    "resolved_target_modules": resolved_target_modules
+                    if args.adapter_init is None
+                    else None,
                     "lora_wrap_summary": lora_wrap_summary,
                     "selective_training": selective_training,
                     "layernorm_training": layernorm_training,
@@ -1625,9 +2040,10 @@ def main() -> int:
             + "\n",
             encoding="utf-8",
         )
-        (args.output_dir / "metrics.json").write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
+        (args.output_dir / "metrics.json").write_text(
+            json.dumps(summary, indent=2) + "\n", encoding="utf-8"
+        )
         print(json.dumps(summary, ensure_ascii=False, indent=2))
-
 
     if distributed:
         torch.distributed.destroy_process_group()

@@ -42,6 +42,7 @@ Add whatever helps you do your job. This is your cheat sheet.
 ## Huanxin
 
 - Codex-skill rule: always use the repo-local Codex Huanxin skill docs plus `scripts/` wrappers for Huanxin work. Do not bypass them with unmanaged browser actions, OpenClaw gateway state, manual paste/upload, or undocumented shell shortcuts.
+- Codex GLM5.2 routing rule: `codex --model glm5.2` / `codex -m glm5.2` means use the Huanxin GLM5.2 URL and API key in the Claude setting, not yunwu. The local wrapper at `/Users/daxu/homebrew/bin/codex` should force profile `yunwu-claude`, start/use the Huanxin GLM5.2 proxy on `http://127.0.0.1:18105/v1`, override `model_providers.yunwu_claude.base_url` to that proxy, and use `HUANXIN_GLM52_API_KEY`.
 - Training environment input rule: every Huanxin training launch or training-control action requires an explicit user-provided environment name in the current user message. Do not infer the training target from notes, daemons, defaults, old choices, or available wrappers.
 - Robust Huanxin wrappers should be environment-agnostic and take `--env <env-name>`, for example `scripts/huanxin_env_shell.sh`, `scripts/huanxin_training_job.sh`, `scripts/launch_huanxin_agentic_grpo.sh`, `scripts/show_huanxin_agentic_grpo_status.sh`, and `scripts/watch_huanxin_checkpoints_to_s3.sh`.
 - Default remote target for current training-style environments: `/root/work/quantum-gpt`; verify it exists in the user-provided environment before launch.

@@ -1,0 +1,132 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "title": "Quantum-computing paper card v1",
+  "description": "Per-paper metadata + provenance + extracted teaching objects for the Stage-2 science corpus. Owned by Track E (parallel session B, 2026-07-07).",
+  "type": "object",
+  "required": [
+    "paper_id", "title", "authors", "venue", "year", "provenance",
+    "field_tags", "prerequisites", "main_claims", "assumptions",
+    "mathematical_objects", "algorithms", "experiments", "limitations",
+    "related_papers", "qa_pairs", "code_artifacts"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "paper_id": {
+      "type": "string",
+      "description": "Stable identifier, e.g. arxiv:2305.11206 or doi:10.xxx. Must be unique across the corpus."
+    },
+    "title": {"type": "string"},
+    "authors": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+    "venue": {"type": "string", "description": "e.g. 'NeurIPS 2023', 'arXiv preprint', 'Nature'"},
+    "year": {"type": "integer", "minimum": 1900, "maximum": 2100},
+    "provenance": {
+      "type": "object",
+      "required": ["source_url", "accessed_date", "license", "ingest_method"],
+      "additionalProperties": false,
+      "properties": {
+        "source_url": {"type": "string"},
+        "accessed_date": {"type": "string", "format": "date"},
+        "license": {"type": "string", "description": "e.g. 'arXiv', 'CC-BY-4.0', 'closed'"},
+        "ingest_method": {"type": "string", "enum": ["pdf_text_extract", "html_scrape", "manual_entry", "author_provided"]}
+      }
+    },
+    "field_tags": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "Curated taxonomy tags, e.g. 'error_mitigation', 'variational_quantum_eigensolver', 'qaoa'."
+    },
+    "prerequisites": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "Concepts the reader must already know, e.g. 'pauli operators', 'trotterization'."
+    },
+    "main_claims": {
+      "type": "array",
+      "items": {"type": "string"},
+      "minItems": 1,
+      "description": "One or two sentence statements of the paper's main contributions."
+    },
+    "assumptions": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "Assumptions made by the paper (noise model, gate set, fault-tolerance threshold, etc.)."
+    },
+    "mathematical_objects": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "latex", "explanation"],
+        "additionalProperties": false,
+        "properties": {
+          "name": {"type": "string"},
+          "latex": {"type": "string"},
+          "explanation": {"type": "string"}
+        }
+      }
+    },
+    "algorithms": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "pseudocode", "complexity"],
+        "additionalProperties": false,
+        "properties": {
+          "name": {"type": "string"},
+          "pseudocode": {"type": "string"},
+          "complexity": {"type": "string", "description": "e.g. 'O(n^2) gates', 'O(log N) depth'"}
+        }
+      }
+    },
+    "experiments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "setup", "result", "reproducible"],
+        "additionalProperties": false,
+        "properties": {
+          "name": {"type": "string"},
+          "setup": {"type": "string"},
+          "result": {"type": "string"},
+          "reproducible": {"type": "boolean"}
+        }
+      }
+    },
+    "limitations": {"type": "array", "items": {"type": "string"}},
+    "related_papers": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "paper_id values of related papers in the corpus."
+    },
+    "qa_pairs": {
+      "type": "array",
+      "description": "Progressive QA pairs at levels L0..L6 (see docs/two-stage-training-roadmap-2026-06-30.md).",
+      "items": {
+        "type": "object",
+        "required": ["level", "question", "answer", "code_artifact_ref"],
+        "additionalProperties": false,
+        "properties": {
+          "level": {"type": "string", "enum": ["L0", "L1", "L2", "L3", "L4", "L5", "L6"]},
+          "question": {"type": "string"},
+          "answer": {"type": "string"},
+          "code_artifact_ref": {"type": "string", "description": "key into code_artifacts, or 'none'"}
+        }
+      }
+    },
+    "code_artifacts": {
+      "type": "array",
+      "description": "Self-contained Python code blocks associated with this paper.",
+      "items": {
+        "type": "object",
+        "required": ["id", "language", "code", "expected_output", "verified_runnable"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {"type": "string"},
+          "language": {"type": "string", "enum": ["python"]},
+          "code": {"type": "string"},
+          "expected_output": {"type": "string"},
+          "verified_runnable": {"type": "boolean", "description": "True if the code was actually executed and produced expected_output."}
+        }
+      }
+    }
+  }
+}

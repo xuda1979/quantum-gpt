@@ -1,0 +1,11 @@
+{
+  "id": "quantum_science_hamiltonian_simulation_trotter_error",
+  "name": "Derive the Trotter error bound for simulating H = sum_j H_j ...",
+  "domain": "quantum_science",
+  "category": "derivation",
+  "level": "L2",
+  "field": "hamiltonian_simulation",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py",
+  "question": "Derive the Trotter error bound for simulating H = sum_j H_j using the first-order Lie-Trotter formula. Show that the error of the product formula of n steps over total time t is O(t^2 / n), and explain how second-order Trotter-Suzuki improves this."
+}

@@ -138,6 +138,11 @@ GUIDANCE_NOTES = [
     "Write maintainable Python that matches the requested behavior exactly.",
 ]
 
+SINGLE_FILE_GUARDRAILS = [
+    "Keep the answer self-contained in one Python file.",
+    "Do not depend on repository-local helpers or invent non-standard modules.",
+]
+
 CODE_STYLE_VARIANTS = (
     "plain",
     "commented",
@@ -250,7 +255,9 @@ def validate_solution(code: str, tests_py: Path, task_dir: Path) -> bool:
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
 
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False, dir=str(task_dir), encoding="utf-8") as handle:
+    with tempfile.NamedTemporaryFile(
+        mode="w", suffix=".py", delete=False, dir=str(task_dir), encoding="utf-8"
+    ) as handle:
         handle.write(code)
         handle.flush()
         candidate_path = handle.name
@@ -291,7 +298,9 @@ def summarize_candidate_interface(candidate_path: Path) -> list[str]:
             if node.args.kwonlyargs:
                 if node.args.vararg is None:
                     args.append("*")
-                for kwarg, default in zip(node.args.kwonlyargs, node.args.kw_defaults):
+                for kwarg, default in zip(
+                    node.args.kwonlyargs, node.args.kw_defaults, strict=False
+                ):
                     kwarg_text = kwarg.arg
                     if kwarg.annotation is not None:
                         kwarg_text += f": {ast.unparse(kwarg.annotation)}"
@@ -344,7 +353,20 @@ def extract_behavior_hints(tests_path: Path) -> list[str]:
         lower = normalized.lower()
         if lower.endswith("was incorrect"):
             hints.append(normalized.removesuffix(" was incorrect"))
-        elif any(token in lower for token in ("should", "expected", "raise", "retry", "preserved", "valid", "round-trip", "reject", "normalize")):
+        elif any(
+            token in lower
+            for token in (
+                "should",
+                "expected",
+                "raise",
+                "retry",
+                "preserved",
+                "valid",
+                "round-trip",
+                "reject",
+                "normalize",
+            )
+        ):
             hints.append(normalized)
 
     deduped: list[str] = []
@@ -388,11 +410,17 @@ def build_prompt(
     interface_lines = task["interface_lines"]
     behavior_hints = task["behavior_hints"]
 
+    constraint_notes = [guidance_note, constraint_block]
+    if not task["meta"].get("candidate_files"):
+        constraint_notes.extend(SINGLE_FILE_GUARDRAILS)
+
     sections = {
         "summary": task_summary(meta, summary_style),
-        "interface": f"{interface_header}\n{bullet_block(interface_lines)}" if interface_lines else "",
+        "interface": f"{interface_header}\n{bullet_block(interface_lines)}"
+        if interface_lines
+        else "",
         "behavior": f"{behavior_header}\n{bullet_block(behavior_hints)}" if behavior_hints else "",
-        "constraints": f"Implementation notes:\n- {guidance_note}\n- {constraint_block}",
+        "constraints": f"Implementation notes:\n{bullet_block(constraint_notes)}",
     }
 
     parts = [headline]
@@ -417,7 +445,9 @@ def apply_code_style(code: str, style_name: str) -> str:
                 last_import_index = index
             elif stripped and last_import_index >= 0:
                 break
-        if last_import_index >= 0 and (last_import_index + 1 >= len(lines) or lines[last_import_index + 1].strip()):
+        if last_import_index >= 0 and (
+            last_import_index + 1 >= len(lines) or lines[last_import_index + 1].strip()
+        ):
             lines.insert(last_import_index + 1, "")
         text = "\n".join(lines)
 
@@ -425,7 +455,7 @@ def apply_code_style(code: str, style_name: str) -> str:
 
 
 def stable_order_key(seed_tag: str, task_id: str, payload: str) -> str:
-    return hashlib.sha256(f"{seed_tag}:{task_id}:{payload}".encode("utf-8")).hexdigest()
+    return hashlib.sha256(f"{seed_tag}:{task_id}:{payload}".encode()).hexdigest()
 
 
 def load_task_ids(path: Path) -> list[str]:
@@ -459,21 +489,27 @@ def split_tasks_for_holdout(
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], dict[str, Any]]:
     if holdout_policy == "split_family_disjoint_v1":
         task_entries = [describe_task(task) for task in tasks]
-        return tasks, tasks, {
-            "name": "split_family_disjoint_v1",
-            "shared_source_tasks": True,
-            "train_task_count": len(tasks),
-            "eval_task_count": len(tasks),
-            "task_overlap_count": len(tasks),
-            "train_tasks": task_entries,
-            "eval_tasks": task_entries,
-        }
+        return (
+            tasks,
+            tasks,
+            {
+                "name": "split_family_disjoint_v1",
+                "shared_source_tasks": True,
+                "train_task_count": len(tasks),
+                "eval_task_count": len(tasks),
+                "task_overlap_count": len(tasks),
+                "train_tasks": task_entries,
+                "eval_tasks": task_entries,
+            },
+        )
 
     if eval_task_id_file is not None:
         eval_task_ids = set(load_task_ids(eval_task_id_file))
     else:
         if eval_tasks_per_domain < 1:
-            raise ValueError("task_disjoint_v1 requires --eval-task-id-file or --eval-tasks-per-domain >= 1")
+            raise ValueError(
+                "task_disjoint_v1 requires --eval-task-id-file or --eval-tasks-per-domain >= 1"
+            )
         eval_task_ids: set[str] = set()
         tasks_by_domain: dict[str, list[dict[str, Any]]] = {}
         for task in tasks:
@@ -493,29 +529,44 @@ def split_tasks_for_holdout(
                     str(task["task_dir"]),
                 ),
             )
-            eval_task_ids.update(str(task["meta"].get("id", task["task_dir"].name)) for task in ranked[:eval_tasks_per_domain])
+            eval_task_ids.update(
+                str(task["meta"].get("id", task["task_dir"].name))
+                for task in ranked[:eval_tasks_per_domain]
+            )
 
     known_task_ids = {str(task["meta"].get("id", task["task_dir"].name)) for task in tasks}
     unknown_eval_task_ids = sorted(eval_task_ids - known_task_ids)
     if unknown_eval_task_ids:
         raise ValueError(f"Unknown eval task ids requested: {unknown_eval_task_ids}")
 
-    train_tasks = [task for task in tasks if str(task["meta"].get("id", task["task_dir"].name)) not in eval_task_ids]
-    eval_tasks = [task for task in tasks if str(task["meta"].get("id", task["task_dir"].name)) in eval_task_ids]
+    train_tasks = [
+        task
+        for task in tasks
+        if str(task["meta"].get("id", task["task_dir"].name)) not in eval_task_ids
+    ]
+    eval_tasks = [
+        task
+        for task in tasks
+        if str(task["meta"].get("id", task["task_dir"].name)) in eval_task_ids
+    ]
     if not train_tasks or not eval_tasks:
         raise ValueError("Task holdout must produce non-empty train and eval task sets")
 
-    return train_tasks, eval_tasks, {
-        "name": "task_disjoint_v1",
-        "shared_source_tasks": False,
-        "train_task_count": len(train_tasks),
-        "eval_task_count": len(eval_tasks),
-        "task_overlap_count": 0,
-        "eval_task_id_file": str(eval_task_id_file) if eval_task_id_file else None,
-        "eval_tasks_per_domain": eval_tasks_per_domain if eval_task_id_file is None else None,
-        "train_tasks": [describe_task(task) for task in train_tasks],
-        "eval_tasks": [describe_task(task) for task in eval_tasks],
-    }
+    return (
+        train_tasks,
+        eval_tasks,
+        {
+            "name": "task_disjoint_v1",
+            "shared_source_tasks": False,
+            "train_task_count": len(train_tasks),
+            "eval_task_count": len(eval_tasks),
+            "task_overlap_count": 0,
+            "eval_task_id_file": str(eval_task_id_file) if eval_task_id_file else None,
+            "eval_tasks_per_domain": eval_tasks_per_domain if eval_task_id_file is None else None,
+            "train_tasks": [describe_task(task) for task in train_tasks],
+            "eval_tasks": [describe_task(task) for task in eval_tasks],
+        },
+    )
 
 
 def make_examples_for_split(
@@ -544,7 +595,15 @@ def make_examples_for_split(
             CONSTRAINT_BLOCKS,
         )
         for combo_index, combo in enumerate(combo_iter):
-            headline_index, summary_style, section_order, interface_header, behavior_header, guidance_note, constraint_block = combo
+            (
+                headline_index,
+                summary_style,
+                section_order,
+                interface_header,
+                behavior_header,
+                guidance_note,
+                constraint_block,
+            ) = combo
             prompt = build_prompt(
                 task=task,
                 family_name=family_name,
@@ -560,7 +619,9 @@ def make_examples_for_split(
                 continue
             seen_prompts.add(prompt)
 
-            code_style = CODE_STYLE_VARIANTS[(combo_index + headline_index) % len(CODE_STYLE_VARIANTS)]
+            code_style = CODE_STYLE_VARIANTS[
+                (combo_index + headline_index) % len(CODE_STYLE_VARIANTS)
+            ]
             assistant_code = apply_code_style(task["code"], code_style)
             prompt_key = stable_order_key(seed_tag, task_id, prompt)
             family_records.append(
@@ -637,6 +698,45 @@ def summarize(rows: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def build_dataset_contract_manifest(
+    *,
+    tasks_dir: Path,
+    seed_tag: str,
+    holdout_policy_name: str,
+    train_task_ids: set[str],
+    eval_task_ids: set[str],
+    train_families: set[str],
+    eval_families: set[str],
+) -> dict[str, Any]:
+    return {
+        "generation_script": str(Path(__file__).resolve().relative_to(ROOT)),
+        "tasks_source_root": str(
+            tasks_dir.relative_to(ROOT) if tasks_dir.is_relative_to(ROOT) else tasks_dir
+        ),
+        "source_task_ids": sorted(train_task_ids | eval_task_ids),
+        "train_task_ids": sorted(train_task_ids),
+        "eval_task_ids": sorted(eval_task_ids),
+        "prompt_families": {
+            "train": sorted(train_families),
+            "eval": sorted(eval_families),
+        },
+        "benchmark_contracts": [
+            {
+                "name": f"{seed_tag}_eval_task_ids",
+                "kind": "task_id_list",
+                "task_ids": sorted(eval_task_ids),
+                "must_be_absent_from_train": True,
+                "matches_eval_split": True,
+            }
+        ],
+        "integrity_expectations": {
+            "require_example_id_disjoint": True,
+            "require_prompt_family_disjoint": True,
+            "require_task_id_disjoint": holdout_policy_name == "task_disjoint_v1",
+        },
+    }
+
+
 def write_jsonl(path: Path, rows: list[dict[str, Any]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8") as handle:
@@ -659,7 +759,9 @@ def main() -> int:
 
     prepared_tasks = []
     for task in tasks:
-        if not args.skip_validate and not validate_solution(task["code"], task["tests_path"], task["task_dir"]):
+        if not args.skip_validate and not validate_solution(
+            task["code"], task["tests_path"], task["task_dir"]
+        ):
             raise SystemExit(f"Reference solution failed validation for {task['task_dir']}")
         prepared = dict(task)
         prepared["interface_lines"] = summarize_candidate_interface(task["candidate_path"])
@@ -720,14 +822,24 @@ def main() -> int:
     args.out_dir.mkdir(parents=True, exist_ok=True)
     write_jsonl(args.out_dir / "train.jsonl", train_rows)
     write_jsonl(args.out_dir / "eval.jsonl", eval_rows)
-    (args.out_dir / "train_task_ids.txt").write_text("\n".join(sorted(train_task_ids)) + "\n", encoding="utf-8")
-    (args.out_dir / "eval_task_ids.txt").write_text("\n".join(sorted(eval_task_ids)) + "\n", encoding="utf-8")
+    (args.out_dir / "train_task_ids.txt").write_text(
+        "\n".join(sorted(train_task_ids)) + "\n", encoding="utf-8"
+    )
+    (args.out_dir / "eval_task_ids.txt").write_text(
+        "\n".join(sorted(eval_task_ids)) + "\n", encoding="utf-8"
+    )
 
     manifest = {
         "manifest_version": "template-large-v1",
         "seed_tag": args.seed_tag,
-        "tasks_dir": str(args.tasks_dir.relative_to(ROOT) if args.tasks_dir.is_relative_to(ROOT) else args.tasks_dir),
-        "out_dir": str(args.out_dir.relative_to(ROOT) if args.out_dir.is_relative_to(ROOT) else args.out_dir),
+        "tasks_dir": str(
+            args.tasks_dir.relative_to(ROOT)
+            if args.tasks_dir.is_relative_to(ROOT)
+            else args.tasks_dir
+        ),
+        "out_dir": str(
+            args.out_dir.relative_to(ROOT) if args.out_dir.is_relative_to(ROOT) else args.out_dir
+        ),
         "domains": sorted(allowed_domains),
         "single_file_tasks": [describe_task(task) for task in prepared_tasks],
         "train_variants_per_task": args.train_variants_per_task,
@@ -740,10 +852,21 @@ def main() -> int:
             "train_eval_prompt_family_overlap": False,
             "train_eval_task_id_overlap": bool(train_task_ids & eval_task_ids),
         },
+        "dataset_contract": build_dataset_contract_manifest(
+            tasks_dir=args.tasks_dir,
+            seed_tag=args.seed_tag,
+            holdout_policy_name=args.holdout_policy,
+            train_task_ids=train_task_ids,
+            eval_task_ids=eval_task_ids,
+            train_families=train_families,
+            eval_families=eval_families,
+        ),
         "train_summary": summarize(train_rows),
         "eval_summary": summarize(eval_rows),
     }
-    (args.out_dir / "manifest.json").write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    (args.out_dir / "manifest.json").write_text(
+        json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+    )
     print(json.dumps(manifest, indent=2, ensure_ascii=False))
     return 0
 

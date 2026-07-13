@@ -1,0 +1,11 @@
+{
+  "id": "quantum_science_shor_period_finding_explanation",
+  "name": "Step through how Shors algorithm finds the period r of f(x) ...",
+  "domain": "quantum_science",
+  "category": "walkthrough",
+  "level": "L3",
+  "field": "qpe",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py",
+  "question": "Step through how Shors algorithm finds the period r of f(x) = a^x mod N. Explain the role of superposition, the QPE subroutine, and how continued fractions extract r from the measured phase."
+}

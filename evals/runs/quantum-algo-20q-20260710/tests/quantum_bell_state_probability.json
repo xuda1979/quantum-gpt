@@ -1,0 +1,8 @@
+{
+  "id": "quantum_bell_state_probability",
+  "title": "Bell-state measurement probabilities",
+  "expected_substrings": [
+    "P(00) = 0.",
+    "P(11) = 0."
+  ]
+}

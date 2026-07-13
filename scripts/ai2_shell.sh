@@ -4,7 +4,7 @@ set -euo pipefail
 # Wrapper for Huanxin ai2 shell access.
 # Uses the persistent browser daemon by default.
 # Usage:
-#   scripts/ai2_shell.sh "cd /root/root/work/quantum-gpt && ls"
+#   scripts/ai2_shell.sh "cd /root/work/quantum-gpt && ls"
 
 if [[ $# -lt 1 ]]; then
   echo 'Usage: scripts/ai2_shell.sh "<remote command>"' >&2

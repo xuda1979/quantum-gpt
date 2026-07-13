@@ -6,7 +6,6 @@ from __future__ import annotations
 import argparse
 import inspect
 import json
-import os
 import subprocess
 import sys
 import time
@@ -22,11 +21,23 @@ from training.runtime_overlay import configure_runtime_overlay_from_env
 configure_runtime_overlay_from_env()
 
 import torch
-from transformers import AutoConfig, AutoModelForCausalLM, AutoProcessor, AutoTokenizer, PreTrainedTokenizerFast
+from transformers import (
+    AutoConfig,
+    AutoModelForCausalLM,
+    AutoProcessor,
+    AutoTokenizer,
+    PreTrainedTokenizerFast,
+)
 
 from evals.runner.candidate_sanitize import sanitize_candidate_text
-from training.model_backend import ensure_text_backend_preflight, load_causal_lm_with_text_backend_preflight
-from training.text_preprocessor_backend import TextPreprocessorBackend, load_text_preprocessor_backend
+from training.model_backend import (
+    ensure_text_backend_preflight,
+    load_causal_lm_with_text_backend_preflight,
+)
+from training.text_preprocessor_backend import (
+    TextPreprocessorBackend,
+    load_text_preprocessor_backend,
+)
 
 TOKEN_BUDGET_PRESETS = {
     "default": 192,
@@ -49,8 +60,14 @@ def parse_args() -> argparse.Namespace:
         help="Named max-new-token preset. If provided, overrides --max-new-tokens.",
     )
     parser.add_argument("--temperature", type=float, default=0.0)
-    parser.add_argument("--limit", type=int, default=0, help="Optional max tasks to execute from manifest order.")
-    parser.add_argument("--score", action="store_true", help="Run evals/runner/run_eval.py on the filled candidate map.")
+    parser.add_argument(
+        "--limit", type=int, default=0, help="Optional max tasks to execute from manifest order."
+    )
+    parser.add_argument(
+        "--score",
+        action="store_true",
+        help="Run evals/runner/run_eval.py on the filled candidate map.",
+    )
     parser.add_argument(
         "--turboquant-enable",
         action="store_true",
@@ -104,9 +121,22 @@ def load_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def write_candidate_map(run_dir: Path, tasks: list[dict[str, Any]]) -> Path:
+    candidate_map = {
+        str(task["id"]): str(task["candidate_file"])
+        for task in tasks
+        if task.get("id") and task.get("candidate_file")
+    }
+    candidate_map_path = run_dir / "candidate-map.json"
+    candidate_map_path.write_text(json.dumps(candidate_map, indent=2) + "\n", encoding="utf-8")
+    return candidate_map_path
+
+
 def load_text_backend(model_path: Path) -> TextPreprocessorBackend:
     ensure_text_backend_preflight(str(model_path), AutoConfig)
-    return load_text_preprocessor_backend(str(model_path), AutoTokenizer, AutoProcessor, PreTrainedTokenizerFast)
+    return load_text_preprocessor_backend(
+        str(model_path), AutoTokenizer, AutoProcessor, PreTrainedTokenizerFast
+    )
 
 
 def load_model(model_path: Path, device: str):
@@ -145,7 +175,9 @@ def render_prompt(backend: TextPreprocessorBackend, system_prompt: str, user_pro
                 enable_thinking=False,
             )
         except TypeError:
-            return render_backend.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+            return render_backend.apply_chat_template(
+                messages, tokenize=False, add_generation_prompt=True
+            )
     return "\n\n".join(f"{message['role'].upper()}: {message['content']}" for message in messages)
 
 
@@ -159,13 +191,17 @@ def _filter_kwargs(callable_obj: Any, raw_kwargs: dict[str, Any]) -> dict[str, A
         signature = inspect.signature(callable_obj)
     except (TypeError, ValueError):
         return raw_kwargs
-    accepts_var_kw = any(parameter.kind == inspect.Parameter.VAR_KEYWORD for parameter in signature.parameters.values())
+    accepts_var_kw = any(
+        parameter.kind == inspect.Parameter.VAR_KEYWORD
+        for parameter in signature.parameters.values()
+    )
     if accepts_var_kw:
         return raw_kwargs
     allowed = {
         name
         for name, parameter in signature.parameters.items()
-        if parameter.kind in (inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.KEYWORD_ONLY)
+        if parameter.kind
+        in (inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.KEYWORD_ONLY)
     }
     return {key: value for key, value in raw_kwargs.items() if key in allowed}
 
@@ -258,7 +294,9 @@ def generate_candidate(
     }
     if turboquant_settings is not None:
         generation_kwargs["past_key_values"] = build_turboquant_cache(turboquant_settings, model)
-    generation_kwargs = {key: value for key, value in generation_kwargs.items() if value is not None}
+    generation_kwargs = {
+        key: value for key, value in generation_kwargs.items() if value is not None
+    }
     with torch.inference_mode():
         output = model.generate(**inputs, **generation_kwargs)
     completion = output[0][prompt_len:]
@@ -298,6 +336,7 @@ def main() -> int:
     tasks = manifest.get("tasks", [])
     if args.limit > 0:
         tasks = tasks[: args.limit]
+    write_candidate_map(run_dir, tasks)
 
     backend = load_text_backend(args.base_model)
     tokenizer = backend.text_backend
@@ -305,13 +344,24 @@ def main() -> int:
         tokenizer.pad_token = tokenizer.eos_token
     tokenizer.padding_side = "right"
 
-    print(json.dumps({"stage": "load_base_start", "model": str(args.base_model), "device": args.device}, ensure_ascii=False), flush=True)
+    print(
+        json.dumps(
+            {"stage": "load_base_start", "model": str(args.base_model), "device": args.device},
+            ensure_ascii=False,
+        ),
+        flush=True,
+    )
     base_model = load_model(args.base_model, args.device)
     active_model = base_model
     if args.adapter is not None:
         from peft import PeftModel
 
-        print(json.dumps({"stage": "load_adapter_start", "adapter": str(args.adapter)}, ensure_ascii=False), flush=True)
+        print(
+            json.dumps(
+                {"stage": "load_adapter_start", "adapter": str(args.adapter)}, ensure_ascii=False
+            ),
+            flush=True,
+        )
         active_model = PeftModel.from_pretrained(base_model, str(args.adapter))
         active_model.eval()
         print(json.dumps({"stage": "load_adapter_done"}, ensure_ascii=False), flush=True)
@@ -322,7 +372,13 @@ def main() -> int:
         prompt_path = run_dir / task["prompt_file"]
         candidate_path = run_dir / task["candidate_file"]
         user_prompt = prompt_path.read_text(encoding="utf-8")
-        print(json.dumps({"stage": "generate", "index": index, "total": len(tasks), "task_id": task["id"]}, ensure_ascii=False), flush=True)
+        print(
+            json.dumps(
+                {"stage": "generate", "index": index, "total": len(tasks), "task_id": task["id"]},
+                ensure_ascii=False,
+            ),
+            flush=True,
+        )
         candidate_text = generate_candidate(
             active_model,
             backend,
@@ -356,7 +412,12 @@ def main() -> int:
     }
     generation_log_path = run_dir / "hf-pass1-generation-log.json"
     generation_log_path.write_text(json.dumps(generation_log, indent=2) + "\n", encoding="utf-8")
-    print(json.dumps({"stage": "generation_done", "log_path": str(generation_log_path)}, ensure_ascii=False), flush=True)
+    print(
+        json.dumps(
+            {"stage": "generation_done", "log_path": str(generation_log_path)}, ensure_ascii=False
+        ),
+        flush=True,
+    )
 
     if not args.score:
         return 0

@@ -46,7 +46,13 @@ from typing import Any
 import torch
 import transformers
 from peft import PeftModel
-from transformers import AutoConfig, AutoModelForCausalLM, AutoProcessor, AutoTokenizer, PreTrainedTokenizerFast
+from transformers import (
+    AutoConfig,
+    AutoModelForCausalLM,
+    AutoProcessor,
+    AutoTokenizer,
+    PreTrainedTokenizerFast,
+)
 
 # ── silence noisy transformers repr crash (Qwen3.5-MoE nested sub-config) ────
 logging.getLogger("transformers").setLevel(logging.ERROR)
@@ -107,21 +113,25 @@ STANDARD_12_TASK_IDS = [
 FULL_TASK_IDS: list[str] | None = None  # populated by discover_all_tasks()
 
 # Failure type labels
-FAILURE_SYNTAX       = "syntax"
-FAILURE_IMPORT       = "import_error"
-FAILURE_ASSERTION    = "assertion"
-FAILURE_TIMEOUT      = "timeout"
+FAILURE_SYNTAX = "syntax"
+FAILURE_IMPORT = "import_error"
+FAILURE_ASSERTION = "assertion"
+FAILURE_TIMEOUT = "timeout"
 FAILURE_EMPTY_OUTPUT = "empty_output"
-FAILURE_RUNTIME      = "runtime"
+FAILURE_RUNTIME = "runtime"
 
 
 def _log(msg: str, **kw: Any) -> None:
-    print(json.dumps({"ts": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), **kw, "msg": msg}), flush=True)
+    print(
+        json.dumps({"ts": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), **kw, "msg": msg}),
+        flush=True,
+    )
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Task discovery
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def discover_all_tasks() -> list[str]:
     """Return all task IDs found under evals/tasks/. Cached."""
@@ -155,10 +165,12 @@ def resolve_task_list(spec: str) -> list[str]:
         return discover_all_tasks()
     if spec == "standard12":
         return STANDARD_12_TASK_IDS
-    if spec in ("quantum", "software"):
-        tasks_root = ROOT / "evals" / "tasks"
+    # Any directory under evals/tasks/ whose name matches `spec` is treated
+    # as a domain glob (quantum, software, quantum_science, ...).
+    tasks_root = ROOT / "evals" / "tasks"
+    if (tasks_root / spec).is_dir():
         ids = []
-        for path in sorted(tasks_root.glob(f"{spec}/*/task.json")):
+        for path in sorted((tasks_root / spec).glob("*/task.json")):
             try:
                 meta = json.loads(path.read_text(encoding="utf-8"))
                 if meta.get("id"):
@@ -186,6 +198,7 @@ def find_task_json(task_id: str) -> Path:
 # NPU helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def visible_npus() -> list[int]:
     raw = os.environ.get("ASCEND_RT_VISIBLE_DEVICES") or os.environ.get("ASCEND_VISIBLE_DEVICES")
     if not raw:
@@ -208,7 +221,9 @@ def config_get(config: Any, key: str) -> Any:
 
 def build_balanced_npu_layer_device_map(config: Any, devices: list[int]) -> dict[str, int]:
     text_config = config_get(config, "text_config") or config_get(config, "llm_config") or config
-    num_layers = config_get(text_config, "num_hidden_layers") or config_get(text_config, "num_layers")
+    num_layers = config_get(text_config, "num_hidden_layers") or config_get(
+        text_config, "num_layers"
+    )
     if not num_layers:
         raise SystemExit("Cannot build device map: num_hidden_layers missing from config")
     ordinals = list(range(len(devices)))
@@ -234,9 +249,12 @@ def build_balanced_npu_layer_device_map(config: Any, devices: list[int]) -> dict
     return device_map
 
 
-def filter_device_map_to_existing_modules(device_map: dict[str, int], model_loader: Any, model_config: Any) -> dict[str, int]:
+def filter_device_map_to_existing_modules(
+    device_map: dict[str, int], model_loader: Any, model_config: Any
+) -> dict[str, int]:
     try:
         from accelerate import init_empty_weights
+
         with init_empty_weights():
             meta_model = model_loader.from_config(model_config, trust_remote_code=True)
         valid_names = {name for name, _ in meta_model.named_modules()}
@@ -276,9 +294,13 @@ def _coerce_sub_configs(config: Any) -> None:
 # Model loading
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def load_backend(model_path: Path) -> Any:
     from training.text_preprocessor_backend import load_text_preprocessor_backend
-    backend = load_text_preprocessor_backend(str(model_path), AutoTokenizer, AutoProcessor, PreTrainedTokenizerFast)
+
+    backend = load_text_preprocessor_backend(
+        str(model_path), AutoTokenizer, AutoProcessor, PreTrainedTokenizerFast
+    )
     tok = backend.text_backend
     if tok.pad_token is None:
         tok.pad_token = tok.eos_token
@@ -287,20 +309,31 @@ def load_backend(model_path: Path) -> Any:
 
 
 def load_model(model_path: Path, args: argparse.Namespace) -> tuple[Any, dict[str, Any]]:
-    from training.runtime_overlay import apply_transformers_peft_compat_shims, register_qwen35_moe_runtime
     from training.model_backend import select_transformers_model_loader
+    from training.runtime_overlay import (
+        apply_transformers_peft_compat_shims,
+        register_qwen35_moe_runtime,
+    )
 
     registration = register_qwen35_moe_runtime(
-        transformers, auto_config_cls=AutoConfig, auto_model_for_causal_lm_cls=AutoModelForCausalLM,
+        transformers,
+        auto_config_cls=AutoConfig,
+        auto_model_for_causal_lm_cls=AutoModelForCausalLM,
     )
     apply_transformers_peft_compat_shims(transformers)
     model_config = AutoConfig.from_pretrained(str(model_path), trust_remote_code=True)
     _coerce_sub_configs(model_config)
     devices = visible_npus()
-    kwargs: dict[str, Any] = {"trust_remote_code": True, "low_cpu_mem_usage": True, "torch_dtype": "auto"}
+    kwargs: dict[str, Any] = {
+        "trust_remote_code": True,
+        "low_cpu_mem_usage": True,
+        "torch_dtype": "auto",
+    }
     model_loader, runtime_compat, loader_metadata = select_transformers_model_loader(
-        str(model_path), auto_config_cls=AutoConfig,
-        auto_model_for_causal_lm_cls=AutoModelForCausalLM, transformers_module=transformers,
+        str(model_path),
+        auto_config_cls=AutoConfig,
+        auto_model_for_causal_lm_cls=AutoModelForCausalLM,
+        transformers_module=transformers,
     )
     if args.device == "npu":
         device_map = build_balanced_npu_layer_device_map(model_config, devices)
@@ -334,10 +367,14 @@ def first_parameter_device(model: Any, fallback: str) -> Any:
 # Generation
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def render_prompt(backend: Any, task_prompt: str) -> str:
     messages = [
-        {"role": "system", "content": "Return only a complete Python candidate.py file. No markdown. No explanation."},
-        {"role": "user",   "content": task_prompt},
+        {
+            "role": "system",
+            "content": "Return only a complete Python candidate.py file. No markdown. No explanation.",
+        },
+        {"role": "user", "content": task_prompt},
     ]
     renderer = backend.render_backend
     if hasattr(renderer, "apply_chat_template"):
@@ -346,14 +383,20 @@ def render_prompt(backend: Any, task_prompt: str) -> str:
                 messages, tokenize=False, add_generation_prompt=True, enable_thinking=False
             )
         except TypeError:
-            return renderer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+            return renderer.apply_chat_template(
+                messages, tokenize=False, add_generation_prompt=True
+            )
     return "\n\n".join(f"{m['role'].upper()}: {m['content']}" for m in messages)
 
 
 def build_task_prompt(task_dir: Path, meta: dict[str, Any]) -> str:
     tests = (task_dir / meta.get("test_file", "tests.py")).read_text(encoding="utf-8")
     candidate_name = meta.get("candidate_file", "candidate.py")
-    existing = (task_dir / candidate_name).read_text(encoding="utf-8") if (task_dir / candidate_name).exists() else ""
+    existing = (
+        (task_dir / candidate_name).read_text(encoding="utf-8")
+        if (task_dir / candidate_name).exists()
+        else ""
+    )
     return (
         f"Task: {meta['name']}\n"
         f"Domain: {meta['domain']}\n"
@@ -379,8 +422,13 @@ def sanitize_code(text: str) -> str:
 
 
 def generate_samples(
-    model: Any, backend: Any, prompt: str, device: Any,
-    max_new_tokens: int, num_samples: int, temperature: float,
+    model: Any,
+    backend: Any,
+    prompt: str,
+    device: Any,
+    max_new_tokens: int,
+    num_samples: int,
+    temperature: float,
 ) -> list[tuple[str, str]]:
     """Generate `num_samples` completions.  Returns [(code, raw_output), ...]."""
     prompt_text = render_prompt(backend, prompt)
@@ -424,6 +472,7 @@ def generate_samples(
 # Test execution
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def load_test_module(path: Path) -> Any:
     spec = importlib.util.spec_from_file_location(path.stem, path)
     if spec is None or spec.loader is None:
@@ -448,7 +497,9 @@ def classify_failure(details: list[str]) -> str:
     return FAILURE_RUNTIME
 
 
-def run_test(task_dir: Path, meta: dict[str, Any], code: str, candidate_path: Path) -> dict[str, Any]:
+def run_test(
+    task_dir: Path, meta: dict[str, Any], code: str, candidate_path: Path
+) -> dict[str, Any]:
     candidate_path.parent.mkdir(parents=True, exist_ok=True)
     candidate_path.write_text(code, encoding="utf-8")
     try:
@@ -474,6 +525,7 @@ def run_test(task_dir: Path, meta: dict[str, Any], code: str, candidate_path: Pa
 # pass@k estimator (unbiased Codex formula)
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def pass_at_k(n: int, c: int, k: int) -> float:
     """Unbiased estimator: P(at least 1 of k passes) = 1 - C(n-c,k)/C(n,k)."""
     if n - c < k:
@@ -485,9 +537,13 @@ def pass_at_k(n: int, c: int, k: int) -> float:
 # CE-loss / perplexity on held-out JSONL
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def run_heldout_loss_eval(
-    model: Any, backend: Any, device: Any,
-    eval_jsonl: Path, limit: int = 0,
+    model: Any,
+    backend: Any,
+    device: Any,
+    eval_jsonl: Path,
+    limit: int = 0,
 ) -> dict[str, Any]:
     """Compute completions-only CE loss on a chat-SFT JSONL (same metric as trainer)."""
     rows: list[dict] = []
@@ -511,14 +567,16 @@ def run_heldout_loss_eval(
                 full_text = tok.apply_chat_template(messages, tokenize=False)
                 # Build completion-only mask: find assistant turn boundaries
                 prompt_messages = [m for m in messages if m.get("role") != "assistant"]
-                prompt_text = tok.apply_chat_template(prompt_messages, tokenize=False, add_generation_prompt=True)
+                prompt_text = tok.apply_chat_template(
+                    prompt_messages, tokenize=False, add_generation_prompt=True
+                )
             except Exception:  # noqa: BLE001
                 continue
 
             full_ids = tok(full_text, return_tensors="pt")["input_ids"].to(device)
             prompt_ids = tok(prompt_text, return_tensors="pt")["input_ids"].to(device)
             n_prompt = prompt_ids.shape[1]
-            n_full   = full_ids.shape[1]
+            n_full = full_ids.shape[1]
             if n_full <= n_prompt:
                 continue
 
@@ -529,7 +587,7 @@ def run_heldout_loss_eval(
                 out = model(input_ids=full_ids, labels=labels)
                 loss_val = out.loss.item()
                 completion_len = n_full - n_prompt
-                total_loss   += loss_val * completion_len
+                total_loss += loss_val * completion_len
                 total_tokens += completion_len
             except Exception:  # noqa: BLE001
                 continue
@@ -548,6 +606,7 @@ def run_heldout_loss_eval(
 # ─────────────────────────────────────────────────────────────────────────────
 # Main evaluation loop
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def eval_model(
     model_name: str,
@@ -568,7 +627,10 @@ def eval_model(
         t0 = time.time()
 
         samples = generate_samples(
-            model, backend, prompt, device,
+            model,
+            backend,
+            prompt,
+            device,
             max_new_tokens=args.max_new_tokens,
             num_samples=args.k,
             temperature=args.temperature,
@@ -578,19 +640,18 @@ def eval_model(
         # evaluate each sample
         sample_results = []
         for si, (code, raw) in enumerate(samples):
-            cpath = (
-                args.output.parent / "candidates" / model_name
-                / f"{task_id}_s{si}.py"
-            )
+            cpath = args.output.parent / "candidates" / model_name / f"{task_id}_s{si}.py"
             test_result = run_test(task_dir, meta, code, cpath)
-            sample_results.append({
-                "passed": test_result["passed"],
-                "failure_category": test_result.get("failure_category"),
-                "details": test_result["details"][:10],  # cap detail lines
-                "code_chars": len(code),
-                "raw_head": raw[:300],
-                "code_head": code[:300],
-            })
+            sample_results.append(
+                {
+                    "passed": test_result["passed"],
+                    "failure_category": test_result.get("failure_category"),
+                    "details": test_result["details"][:10],  # cap detail lines
+                    "code_chars": len(code),
+                    "raw_head": raw[:300],
+                    "code_head": code[:300],
+                }
+            )
 
         n_pass = sum(1 for sr in sample_results if sr["passed"])
         # pass@k estimates for all standard k values up to num_samples
@@ -601,37 +662,41 @@ def eval_model(
 
         _log(
             "result",
-            model=model_name, task=task_id,
-            passed=n_pass, total_samples=args.k,
+            model=model_name,
+            task=task_id,
+            passed=n_pass,
+            total_samples=args.k,
             pass_at_1=pass_at.get("pass_at_1"),
             gen_sec=gen_sec,
         )
 
-        records.append({
-            "model": model_name,
-            "task_id": task_id,
-            "name": meta.get("name"),
-            "domain": meta.get("domain"),
-            "category": meta.get("category"),
-            "n_samples": args.k,
-            "n_pass": n_pass,
-            **pass_at,
-            "gen_sec": gen_sec,
-            "samples": sample_results,
-        })
+        records.append(
+            {
+                "model": model_name,
+                "task_id": task_id,
+                "name": meta.get("name"),
+                "domain": meta.get("domain"),
+                "category": meta.get("category"),
+                "n_samples": args.k,
+                "n_pass": n_pass,
+                **pass_at,
+                "gen_sec": gen_sec,
+                "samples": sample_results,
+            }
+        )
 
     # aggregate
-    overall_pass1 = sum(
-        r.get("pass_at_1", 1.0 if r["n_pass"] > 0 else 0.0) for r in records
-    ) / max(1, len(records))
+    overall_pass1 = sum(r.get("pass_at_1", 1.0 if r["n_pass"] > 0 else 0.0) for r in records) / max(
+        1, len(records)
+    )
     by_domain: dict[str, Any] = defaultdict(lambda: {"n": 0, "pass_sum": 0.0})
-    by_cat:    dict[str, Any] = defaultdict(lambda: {"n": 0, "pass_sum": 0.0})
-    by_fail:   dict[str, int] = defaultdict(int)
+    by_cat: dict[str, Any] = defaultdict(lambda: {"n": 0, "pass_sum": 0.0})
+    by_fail: dict[str, int] = defaultdict(int)
 
     for r in records:
         dom = r["domain"] or "unknown"
         cat = r["category"] or "unknown"
-        p1  = r.get("pass_at_1", 1.0 if r["n_pass"] > 0 else 0.0)
+        p1 = r.get("pass_at_1", 1.0 if r["n_pass"] > 0 else 0.0)
         by_domain[dom]["n"] += 1
         by_domain[dom]["pass_sum"] += p1
         by_cat[cat]["n"] += 1
@@ -670,7 +735,10 @@ def eval_model(
     if heldout_eval_jsonl is not None:
         _log("heldout_loss_eval_start", model=model_name)
         loss_result = run_heldout_loss_eval(
-            model, backend, device, heldout_eval_jsonl,
+            model,
+            backend,
+            device,
+            heldout_eval_jsonl,
             limit=args.heldout_limit,
         )
         result["heldout_loss"] = loss_result
@@ -683,22 +751,39 @@ def eval_model(
 # CLI
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def parse_args() -> argparse.Namespace:
-    p = argparse.ArgumentParser(description="Comprehensive pass@k eval harness for quantum-gpt adapters")
-    p.add_argument("--base-model",    type=Path, required=True, help="Path to base model directory")
-    p.add_argument("--adapter",       type=Path, default=None,  help="Path to LoRA adapter directory (omit for base-only)")
-    p.add_argument("--output",        type=Path, required=True, help="Output JSON path")
-    p.add_argument("--device",        default="npu", choices=["npu", "cuda", "cpu"])
+    p = argparse.ArgumentParser(
+        description="Comprehensive pass@k eval harness for quantum-gpt adapters"
+    )
+    p.add_argument("--base-model", type=Path, required=True, help="Path to base model directory")
+    p.add_argument(
+        "--adapter",
+        type=Path,
+        default=None,
+        help="Path to LoRA adapter directory (omit for base-only)",
+    )
+    p.add_argument("--output", type=Path, required=True, help="Output JSON path")
+    p.add_argument("--device", default="npu", choices=["npu", "cuda", "cpu"])
     p.add_argument("--npu-max-memory-gib", type=int, default=56)
-    p.add_argument("--max-new-tokens",     type=int, default=768)
-    p.add_argument("--k",             type=int, default=1, help="Samples per task for pass@k (1=greedy)")
-    p.add_argument("--temperature",   type=float, default=0.8, help="Sampling temperature (used when --k > 1)")
-    p.add_argument("--tasks",         default="standard12",
-                   help="Task selection: 'all', 'standard12', 'quantum', 'software', or comma-separated IDs")
-    p.add_argument("--models",        choices=["base", "adapter", "both"], default="both")
-    p.add_argument("--limit",         type=int, default=0, help="Limit tasks (0=all selected)")
-    p.add_argument("--eval-file",     type=Path, default=None, help="Optional held-out JSONL for CE-loss eval")
-    p.add_argument("--heldout-limit", type=int, default=0,    help="Rows to use from eval-file (0=all)")
+    p.add_argument("--max-new-tokens", type=int, default=768)
+    p.add_argument("--k", type=int, default=1, help="Samples per task for pass@k (1=greedy)")
+    p.add_argument(
+        "--temperature", type=float, default=0.8, help="Sampling temperature (used when --k > 1)"
+    )
+    p.add_argument(
+        "--tasks",
+        default="standard12",
+        help="Task selection: 'all', 'standard12', 'quantum', 'software', or comma-separated IDs",
+    )
+    p.add_argument("--models", choices=["base", "adapter", "both"], default="both")
+    p.add_argument("--limit", type=int, default=0, help="Limit tasks (0=all selected)")
+    p.add_argument(
+        "--eval-file", type=Path, default=None, help="Optional held-out JSONL for CE-loss eval"
+    )
+    p.add_argument(
+        "--heldout-limit", type=int, default=0, help="Rows to use from eval-file (0=all)"
+    )
     return p.parse_args()
 
 
@@ -750,12 +835,14 @@ def main() -> int:
             adapter_base, load_meta = load_model(args.base_model, args)
             adapter_model = PeftModel.from_pretrained(adapter_base, str(args.adapter))
             adapter_model.eval()
-            all_results["adapter"] = eval_model("adapter", adapter_model, backend, tasks, args, heldout)
+            all_results["adapter"] = eval_model(
+                "adapter", adapter_model, backend, tasks, args, heldout
+            )
 
     # compute delta (base vs adapter)
     delta: dict[str, Any] | None = None
     if "base" in all_results and "adapter" in all_results:
-        base_p1    = all_results["base"]["summary"]["pass_at_1"]
+        base_p1 = all_results["base"]["summary"]["pass_at_1"]
         adapter_p1 = all_results["adapter"]["summary"]["pass_at_1"]
         delta = {
             "pass_at_1": round(adapter_p1 - base_p1, 4),
@@ -763,16 +850,22 @@ def main() -> int:
             "base_pass_at_1": base_p1,
             "adapter_pass_at_1": adapter_p1,
             "fixed_tasks": [
-                r["task_id"] for r in all_results["adapter"]["records"]
-                if r.get("pass_at_1", 0) > 0 and
-                   not any(br["task_id"] == r["task_id"] and br.get("pass_at_1", 0) > 0
-                           for br in all_results["base"]["records"])
+                r["task_id"]
+                for r in all_results["adapter"]["records"]
+                if r.get("pass_at_1", 0) > 0
+                and not any(
+                    br["task_id"] == r["task_id"] and br.get("pass_at_1", 0) > 0
+                    for br in all_results["base"]["records"]
+                )
             ],
             "broken_tasks": [
-                r["task_id"] for r in all_results["adapter"]["records"]
-                if not (r.get("pass_at_1", 0) > 0) and
-                   any(br["task_id"] == r["task_id"] and br.get("pass_at_1", 0) > 0
-                       for br in all_results["base"]["records"])
+                r["task_id"]
+                for r in all_results["adapter"]["records"]
+                if not (r.get("pass_at_1", 0) > 0)
+                and any(
+                    br["task_id"] == r["task_id"] and br.get("pass_at_1", 0) > 0
+                    for br in all_results["base"]["records"]
+                )
             ],
         }
 

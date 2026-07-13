@@ -26,7 +26,7 @@ fi
 cd "$ROOT_DIR"
 
 S3_MODEL_DIR="$S3_ROOT/models/$MODEL_SUBDIR"
-SMOKE_CMD="cd /root/root/work/quantum-gpt && python3 training/huanxin_cpu_smoke.py --model-name models/$MODEL_SUBDIR --dataset data/seed/splits-auto-seed/train.jsonl > /tmp/omnicoder-smoke.log 2>&1; rc=\$?; echo __OMNI_SMOKE_RC__:\$rc; tail -n 200 /tmp/omnicoder-smoke.log"
+SMOKE_CMD="cd /root/work/quantum-gpt && python3 training/huanxin_cpu_smoke.py --model-name models/$MODEL_SUBDIR --dataset data/seed/splits-auto-seed/train.jsonl > /tmp/omnicoder-smoke.log 2>&1; rc=\$?; echo __OMNI_SMOKE_RC__:\$rc; tail -n 200 /tmp/omnicoder-smoke.log"
 
 while true; do
   ts="$(date '+%F %T %Z')"

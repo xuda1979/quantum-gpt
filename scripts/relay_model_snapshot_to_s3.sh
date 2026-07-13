@@ -11,10 +11,11 @@ fi
 usage() {
   cat >&2 <<'EOF'
 Usage:
-  scripts/relay_model_snapshot_to_s3.sh <model-subdir> [--dry-run]
+  scripts/relay_model_snapshot_to_s3.sh <model-subdir> [--local-dir <path>] [--expected-family-substring <family>] [--dry-run]
 
 Examples:
   scripts/relay_model_snapshot_to_s3.sh gemma-4-31B-it
+  scripts/relay_model_snapshot_to_s3.sh Qwen2.5-1.5B-Instruct --local-dir /path/to/snapshot --expected-family-substring qwen
   POLL_SECONDS=30 scripts/relay_model_snapshot_to_s3.sh gemma-4-31B-it --dry-run
 EOF
   exit 1
@@ -32,15 +33,38 @@ if [[ "$MODEL_SUBDIR" == /* ]]; then
   exit 1
 fi
 
+LOCAL_MODEL_DIR_OVERRIDE=""
+EXPECTED_FAMILY_SUBSTRING_OVERRIDE=""
 DRY_RUN=0
-if [[ "${1:-}" == "--dry-run" ]]; then
-  DRY_RUN=1
-  shift
-fi
+while [[ $# -gt 0 ]]; do
+  case "${1:-}" in
+    --local-dir)
+      LOCAL_MODEL_DIR_OVERRIDE="${2:-}"
+      shift 2
+      ;;
+    --expected-family-substring)
+      EXPECTED_FAMILY_SUBSTRING_OVERRIDE="${2:-}"
+      shift 2
+      ;;
+    --dry-run)
+      DRY_RUN=1
+      shift
+      ;;
+    *)
+      usage
+      ;;
+  esac
+done
 
-if [[ $# -gt 0 ]]; then
-  usage
-fi
+infer_expected_family_substring() {
+  local lowered
+  lowered="$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')"
+  case "$lowered" in
+    *gemma*) printf '%s' 'gemma' ;;
+    *qwen*|*omnicoder*) printf '%s' 'qwen' ;;
+    *) printf '%s' '' ;;
+  esac
+}
 
 if [[ -z "$RCLONE_BIN" || ! -x "$RCLONE_BIN" ]]; then
   echo 'rclone not found. Set RCLONE_BIN or install rclone.' >&2
@@ -48,7 +72,8 @@ if [[ -z "$RCLONE_BIN" || ! -x "$RCLONE_BIN" ]]; then
 fi
 
 POLL_SECONDS="${POLL_SECONDS:-60}"
-LOCAL_MODEL_DIR="$ROOT_DIR/models/$MODEL_SUBDIR"
+LOCAL_MODEL_DIR="${LOCAL_MODEL_DIR_OVERRIDE:-$ROOT_DIR/models/$MODEL_SUBDIR}"
+EXPECTED_FAMILY_SUBSTRING="${EXPECTED_FAMILY_SUBSTRING_OVERRIDE:-$(infer_expected_family_substring "$MODEL_SUBDIR")}"
 S3_MODEL_DIR="$S3_ROOT/models/$MODEL_SUBDIR"
 MODEL_RELAY_TRANSFERS="${MODEL_RELAY_TRANSFERS:-8}"
 MODEL_RELAY_MULTI_THREAD_STREAMS="${MODEL_RELAY_MULTI_THREAD_STREAMS:-8}"
@@ -63,6 +88,7 @@ if [[ ! -d "$LOCAL_MODEL_DIR" ]]; then
 fi
 
 COPY_ARGS=(
+  --copy-links
   --s3-no-check-bucket
   --exclude ".cache/**"
   --exclude "__pycache__/**"
@@ -89,7 +115,7 @@ verify_local_snapshot() {
   if python3 "$ROOT_DIR/training/verify_qwen_snapshot.py" \
     "$LOCAL_MODEL_DIR" \
     --expected-substring "$MODEL_SUBDIR" \
-    --expected-family-substring gemma \
+    --expected-family-substring "$EXPECTED_FAMILY_SUBSTRING" \
     >/tmp/relay_model_snapshot_verify.json 2>&1; then
     return 0
   fi

@@ -1,0 +1,12 @@
+Write a complete, runnable Python program using Qiskit 2.x that:
+1. Demonstrates phase kickback through a CNOT gate.
+2. Initializes qubit 0 (control) in |+> = (|0>+|1>)/sqrt(2) via H.
+3. Initializes qubit 1 (target) in |-> = (|0>-|1>)/sqrt(2) via X then H.
+4. Applies CNOT(0,1). Due to phase kickback, the control qubit picks up a phase flip
+   (equivalent to Z being applied), changing it from |+> to |->.
+5. Measures the control qubit in the X basis (apply H then measure) with StatevectorSampler (>= 4000 shots).
+6. In `def main()`, prints:
+     P(control=1) = <value rounded to 3 decimals>
+     kickback: <True|False>
+   Expected: P(control=1) ≈ 1.000 (close to 1, since |-> measured in X basis yields 1), kickback: True.
+Call main() under `if __name__ == "__main__":`.

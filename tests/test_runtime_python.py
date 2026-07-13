@@ -8,8 +8,7 @@ from training.runtime_python import parse_min_version, resolve_python_interprete
 
 def _write_fake_python(path: Path, version: str) -> None:
     path.write_text(
-        "#!/bin/sh\n"
-        f"echo {version}\n",
+        "#!/bin/sh\n" f"echo {version}\n",
         encoding="utf-8",
     )
     path.chmod(0o755)
@@ -37,6 +36,7 @@ def test_resolve_python_interpreter_prefers_first_matching_candidate_on_path(
 
 
 def test_resolve_python_interpreter_reports_missing_minimum(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(runtime_python, "candidate_python_prefixes", lambda: [])
     python39 = tmp_path / "python3"
     _write_fake_python(python39, "3.9.6")
     monkeypatch.setattr(runtime_python, "WORKSPACE_ROOT", tmp_path)

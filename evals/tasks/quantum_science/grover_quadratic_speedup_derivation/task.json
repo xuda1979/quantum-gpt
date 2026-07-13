@@ -1,0 +1,11 @@
+{
+  "id": "quantum_science_grover_quadratic_speedup_derivation",
+  "name": "Derive the number of Grover iterations needed to find a mark...",
+  "domain": "quantum_science",
+  "category": "derivation",
+  "level": "L2",
+  "field": "grover",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py",
+  "question": "Derive the number of Grover iterations needed to find a marked item among N items with high probability. Show that after O(sqrt(N/M)) iterations (M marked items), the success probability is maximized, and explain the geometric interpretation of the rotation toward the marked subspace."
+}

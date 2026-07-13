@@ -2,6 +2,45 @@
 
 ## Stable Decisions
 
+- Training execution policy clarified `2026-07-10`:
+  - **All training runs must be submitted as training jobs (e.g. ASI1/ASI2/ASI3 launch scripts via the Huanxin job-submission flow), never run directly on the environment's own NPU.** The local/box NPU is not to be used for training anymore.
+  - This applies to RL+distill orchestrator runs, LoRA SFT, GRPO, and any other training. Eval/inference may still use local resources where appropriate.
+  - Rationale: keeps the shared NPU box free for serving/eval and gives each training run a clean, queued, observable lifecycle.
+  - Practical effect: the Phase 5 ablation sweep (per-artifact scoring plan) and the science-distill iter-1 runs must all go through the launcher job-submission path, not a foreground `bash` on the NPU host.
+
+- DR-GRPO trainer integration completed `2026-07-09`:
+  - `training/grpo_trainer.py` now wires in BOTH DR terms when the
+    `doubly_robust_quantum_grpo` plugin is enabled: (1) the DPO pair
+    loss via `compute_dr_pair_loss()` and (2) the PPO-side variance
+    correction `psi * E[(r-1)*A]` via `compute_dr_variance_correction()`.
+  - Previously only term (1) was wired; term (2) was defined in
+    `dr_pair_loss.py` but never called. This was a real paper-vs-impl
+    gap — "doubly robust" needs both terms.
+  - Both terms are no-ops when the plugin is absent or hyperparams are
+    zero, so base GRPO is unchanged. Step records now carry
+    `dr_variance_correction_value` and `dr_psi` fields.
+  - Tests: `tests/test_doubly_robust_quantum_grpo.py` (20 tests) all
+    pass; 30 pass across DR + GRPO metrics suites.
+- Huanxin webshell daemon transport caveat `2026-07-09`:
+  - `scripts/ai_shell.sh` reports "Using daemon transport" but shell
+    stdout is intermittently NOT captured back through the
+    browser-automation transport. When this happens, remote state
+    (DR-GRPO run status, eval JSONs, training logs) cannot be
+    refreshed locally. Needs transport debug or an SSH fallback.
+- Local eval gap-analysis toolchain works `2026-07-09`:
+  - `python3 -m evals.subsystem.dataset_gap recommend --eval <scorecard.json>
+    --model adapter` produces concrete "add 3-5 examples for <task>"
+    recommendations on the local 25-task scorecards.
+  - The 44-task / 495-task holdout eval JSONs live on remote and the
+    one pulled copy (`evals/runs/iter2-pull/eval-27b-...json`) is
+    CORRUPTED (truncated to 2179 bytes by an incomplete S3 download).
+    Re-pull needed before full-holdout gap analysis.
+
+- Codex GLM5.2 routing clarified on `2026-07-07`:
+  - when invoking Codex with `--model glm5.2` or `-m glm5.2`, use the Huanxin GLM5.2 URL and API key in the Claude setting, not yunwu
+  - the local wrapper `/Users/daxu/homebrew/bin/codex` should force profile `yunwu-claude`, start/use the `127.0.0.1:18105` Huanxin GLM5.2 proxy, override `model_providers.yunwu_claude.base_url` to that proxy, and use `HUANXIN_GLM52_API_KEY`
+  - generated Codex configs should put `glm5.2` in the Claude provider/profile slot with Huanxin GLM5.2 URL/key; do not represent `glm5.2` as a normal yunwu model alias
+
 - Two-stage training direction clarified on `2026-06-30`:
   - current phase is model code ability: quantum code generation, general software engineering, RAG-assisted API correctness, executable tests, SFT/trajectory cloning, then GRPO/RLVR on code verifiers
   - later phase is quantum-computing scientific capability: select 1000 important/classic papers, generate progressive paper-grounded QA/code/research-direction data, distill with SFT, then run mixed distillation + RL while preserving code replay

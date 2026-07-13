@@ -24,7 +24,7 @@ for remote_path in "${REMOTE_PATHS[@]}"; do
   else
     remote_file_dest="$S3_ROOT/$remote_parent"
   fi
-  REMOTE_CMD="cd /root/root/work/quantum-gpt && if [[ -d '$remote_path' ]]; then rclone copy '$remote_path' '$S3_ROOT/$remote_path' --s3-no-check-bucket --progress"
+  REMOTE_CMD="cd /root/work/quantum-gpt && if [[ -d '$remote_path' ]]; then rclone copy '$remote_path' '$S3_ROOT/$remote_path' --s3-no-check-bucket --progress"
   if [[ $DRY_RUN -eq 1 ]]; then
     REMOTE_CMD+=" --dry-run"
   fi

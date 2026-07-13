@@ -1,6 +1,7 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const { assertAutomationAllowed } = require('./huanxin_manual_lock');
 
 function getBaseProfileDir() {
   return path.resolve(process.env.HUANXIN_BASE_PROFILE_DIR || path.join(__dirname, 'profile'));
@@ -25,8 +26,28 @@ function getRequestedProfileDir() {
   return getBaseProfileDir();
 }
 
+function baseProfileHasSingletonLock(baseProfileDir = getBaseProfileDir()) {
+  return ['SingletonCookie', 'SingletonLock', 'SingletonSocket', 'lockfile'].some((name) =>
+    fs.existsSync(path.join(baseProfileDir, name))
+  );
+}
+
+function autoProfileCopyName() {
+  return `auto-${Date.now()}-${process.pid}`;
+}
+
 function shouldSkipEntry(sourcePath) {
   const name = path.basename(sourcePath);
+  const normalized = String(sourcePath).split(path.sep).join('/');
+  if (
+    normalized.includes('/Cache/') ||
+    normalized.includes('/Code Cache/') ||
+    normalized.includes('/GPUCache/') ||
+    normalized.includes('/ShaderCache/') ||
+    normalized.includes('/GrShaderCache/')
+  ) {
+    return true;
+  }
   return [
     'SingletonCookie',
     'SingletonLock',
@@ -68,9 +89,14 @@ function copyProfileTree(sourceDir, targetDir) {
 
   removeDirRobust(targetDir);
   fs.mkdirSync(path.dirname(targetDir), { recursive: true });
+  if (fs.existsSync(targetDir)) {
+    removeDirRobust(targetDir);
+  }
   fs.cpSync(sourceDir, targetDir, {
     recursive: true,
     force: true,
+    errorOnExist: false,
+    dereference: false,
     filter: (sourcePath) => !shouldSkipEntry(sourcePath),
   });
 }
@@ -85,12 +111,27 @@ function syncProfileTree(sourceDir, targetDir) {
 }
 
 function ensureProfileDir() {
+  assertAutomationAllowed('ensureProfileDir');
   const baseProfileDir = getBaseProfileDir();
+  const explicitProfileDir = Boolean(process.env.HUANXIN_PROFILE_DIR);
+  const explicitCopyName = Boolean(process.env.HUANXIN_PROFILE_COPY_NAME);
+  if (!explicitProfileDir && !explicitCopyName && process.env.HUANXIN_AUTO_ISOLATE_LOCKED_PROFILE !== '0') {
+    fs.mkdirSync(baseProfileDir, { recursive: true });
+    if (baseProfileHasSingletonLock(baseProfileDir)) {
+      process.env.HUANXIN_PROFILE_COPY_NAME = autoProfileCopyName();
+    }
+  }
   const resolvedProfileDir = getRequestedProfileDir();
 
   if (!process.env.HUANXIN_PROFILE_COPY_NAME) {
     fs.mkdirSync(resolvedProfileDir, { recursive: true });
-    return { profileDir: resolvedProfileDir, isolated: false, sourceDir: baseProfileDir };
+    return {
+      profileDir: resolvedProfileDir,
+      isolated: false,
+      sourceDir: baseProfileDir,
+      autoIsolated: false,
+      baseProfileLocked: false,
+    };
   }
 
   if (!fs.existsSync(baseProfileDir)) {
@@ -99,10 +140,18 @@ function ensureProfileDir() {
 
   copyProfileTree(baseProfileDir, resolvedProfileDir);
 
-  return { profileDir: resolvedProfileDir, isolated: true, sourceDir: baseProfileDir };
+  return {
+    profileDir: resolvedProfileDir,
+    isolated: true,
+    sourceDir: baseProfileDir,
+    autoIsolated: !explicitCopyName && !explicitProfileDir,
+    baseProfileLocked: baseProfileHasSingletonLock(baseProfileDir),
+  };
 }
 
 module.exports = {
+  autoProfileCopyName,
+  baseProfileHasSingletonLock,
   copyProfileTree,
   ensureProfileDir,
   getBaseProfileDir,

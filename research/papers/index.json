@@ -77,6 +77,12 @@
       "title": "Autonomous R&D Cycle System",
       "type": "system",
       "has_plugin": false
+    },
+    {
+      "paper_id": "doubly_robust_quantum_grpo",
+      "title": "Doubly-Robust GRPO for Quantum Code Generation",
+      "type": "method",
+      "has_plugin": true
     }
   ]
 }

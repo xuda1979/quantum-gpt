@@ -7,11 +7,11 @@ import argparse
 import json
 from pathlib import Path
 
-
 OUTPUT = Path("artifacts/timeboxed-8npu-scaleup-command-sheet.txt")
 DEFAULT_REQS = "training/requirements-huanxin-cpu.txt"
 GEMMA_REQS = "training/requirements-gemma4-runtime.txt"
 DEFAULT_ITERATION_PROFILE = "fast"
+DEFAULT_TARGET = "qwen36-27b"
 
 ITERATION_PROFILES = {
     "fast": {
@@ -55,6 +55,26 @@ ITERATION_PROFILES = {
 }
 
 TARGET_PRESETS = {
+    "qwen36-27b": {
+        "bootstrap_requirements": DEFAULT_REQS,
+        "model_name": "models/Qwen3.6-27B",
+        "train_file": "data/generated/omnicoder-quantum-generalization-holdout-v1/train.jsonl",
+        "eval_file": "data/generated/omnicoder-quantum-generalization-holdout-v1/eval.jsonl",
+        "benchmark_file": "evals/benchmarks/quantum_generalization_holdout_v1.txt",
+        "paper_inputs": "paper",
+        "paper_output_dir": "data/generated/quantum-paper-router-warmup-v1",
+        "paper_dataset_name": "quantum_paper_router_warmup",
+        "paper_train_file": "data/generated/quantum-paper-router-warmup-v1/messages/quantum_paper_router_warmup_messages_train.jsonl",
+        "paper_eval_file": "data/generated/quantum-paper-router-warmup-v1/messages/quantum_paper_router_warmup_messages_valid.jsonl",
+        "paper_router_output_dir": "outputs/qwen36-27b-quantum-paper-router-warmup",
+        "paper_router_target_module_regex": None,
+        "paper_router_trainable_param_regex": None,
+        "paper_router_freeze_param_regex": None,
+        "sft_adapter_init": None,
+        "grpo_adapter_init": "outputs/qwen36-27b-quantum-generalization-sft-8npu-true40/adapter",
+        "sft_output_dir": "outputs/qwen36-27b-quantum-generalization-sft-8npu-true40",
+        "grpo_output_dir": "outputs/qwen36-27b-quantum-generalization-grpo-8npu-true8",
+    },
     "omnicoder9b": {
         "bootstrap_requirements": DEFAULT_REQS,
         "model_name": "models/OmniCoder-9B",
@@ -118,8 +138,8 @@ TARGET_PRESETS = {
     "gemma4-26b-a4b-it": {
         "bootstrap_requirements": GEMMA_REQS,
         "model_name": "models/gemma-4-26B-A4B-it",
-        "train_file": "data/generated/omnicoder-quantum-generalization-holdout-v1/train.jsonl",
-        "eval_file": "data/generated/omnicoder-quantum-generalization-holdout-v1/eval.jsonl",
+        "train_file": "data/generated/gemma4-curriculum-mix-v1/train.jsonl",
+        "eval_file": "data/generated/gemma4-curriculum-mix-v1/eval.jsonl",
         "benchmark_file": "evals/benchmarks/quantum_generalization_holdout_v1.txt",
         "paper_inputs": "paper",
         "paper_output_dir": "data/generated/quantum-paper-router-warmup-v1",
@@ -131,9 +151,9 @@ TARGET_PRESETS = {
         "paper_router_trainable_param_regex": r"lora_",
         "paper_router_freeze_param_regex": None,
         "sft_adapter_init": None,
-        "grpo_adapter_init": "outputs/gemma4-26b-a4b-it-quantum-generalization-sft-8npu-true40/adapter",
-        "sft_output_dir": "outputs/gemma4-26b-a4b-it-quantum-generalization-sft-8npu-true40",
-        "grpo_output_dir": "outputs/gemma4-26b-a4b-it-quantum-generalization-grpo-8npu-true8",
+        "grpo_adapter_init": "outputs/gemma4-26b-a4b-it-curriculum-sft-v1/adapter",
+        "sft_output_dir": "outputs/gemma4-26b-a4b-it-curriculum-sft-v1",
+        "grpo_output_dir": "outputs/gemma4-26b-a4b-it-curriculum-grpo-v1",
     },
     "gemma4-31b-it": {
         "bootstrap_requirements": GEMMA_REQS,
@@ -160,7 +180,7 @@ TARGET_PRESETS = {
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--target", choices=sorted(TARGET_PRESETS), default="omnicoder9b")
+    parser.add_argument("--target", choices=sorted(TARGET_PRESETS), default=DEFAULT_TARGET)
     parser.add_argument(
         "--iteration-profile",
         choices=sorted(ITERATION_PROFILES),

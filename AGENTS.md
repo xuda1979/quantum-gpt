@@ -157,6 +157,7 @@ Local workspace skill of note:
 
 - Default orchestration model is yunwu/gpt-5.4.
 - Treat yunwu as the active provider for both model calls and memory search compatibility.
+- Exception: when Codex is invoked with `--model glm5.2` or `-m glm5.2`, route it through the Claude provider/profile setting using the Huanxin GLM5.2 URL and API key, not yunwu. The local Codex wrapper should force profile `yunwu-claude`, start/use the `127.0.0.1:18105` Huanxin GLM5.2 proxy, override `model_providers.yunwu_claude.base_url` to that proxy, and use `HUANXIN_GLM52_API_KEY`.
 - Operate Huanxin and S3 directly from this repo with `scripts/`, `browser-automation/`, and local `rclone`/`node` binaries.
 - Ignore `.openclaw/` state unless the user explicitly asks for OpenClaw-specific debugging.
 - For Huanxin work, use local validation first, then S3 transfer, then execution in the Huanxin `AI` train-dev environment.

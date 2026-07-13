@@ -3,6 +3,16 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
+MANUAL_MODE_LOCK="$ROOT_DIR/.huanxin_manual_mode"
+AUTOMATION_ENABLE_FILE="$ROOT_DIR/.huanxin_automation_enabled"
+if [[ ! -f "$AUTOMATION_ENABLE_FILE" || -f "$MANUAL_MODE_LOCK" ]]; then
+  echo "Huanxin browser automation is disabled; refusing profile repair/browser automation." >&2
+  exit 125
+fi
+if [[ "${HUANXIN_ALLOW_SAFARI_SSO_BRIDGE:-0}" != "1" ]]; then
+  echo "Safari SSO profile repair is disabled because it can foreground the user browser. Set HUANXIN_ALLOW_SAFARI_SSO_BRIDGE=1 only after explicit user approval." >&2
+  exit 125
+fi
 
 resolve_node() {
   local candidate

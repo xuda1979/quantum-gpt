@@ -1,0 +1,8 @@
+{
+  "id": "quantum_grover_3qubit_marked101",
+  "title": "Grover 3-qubit finds |101>",
+  "expected_substrings": [
+    "Most likely: 101",
+    "Probability: 0."
+  ]
+}

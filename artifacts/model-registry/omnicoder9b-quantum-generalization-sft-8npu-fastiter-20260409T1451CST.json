@@ -1,0 +1,723 @@
+{
+  "archive_version": "model-run-archive-v2",
+  "archived_at_utc": "2026-04-11T06:18:43.365307+00:00",
+  "label": "omnicoder9b-quantum-generalization-sft-8npu-fastiter-20260409",
+  "output_dir": "outputs/omnicoder9b-quantum-generalization-sft-8npu-fastiter-20260409T1451CST",
+  "artifacts": {
+    "metrics_path": "outputs/omnicoder9b-quantum-generalization-sft-8npu-fastiter-20260409T1451CST/metrics.json",
+    "metrics_sha256": "37fe18b412a7d0cf7a84b452c1b1737d0eec78b2f53902406152163e294a458a",
+    "run_config_path": "outputs/omnicoder9b-quantum-generalization-sft-8npu-fastiter-20260409T1451CST/run_config.json",
+    "run_config_sha256": "d406008c7a18da9b613b836a31c3a90eab594990827640a594baae6be3dba120",
+    "adapter_dir": "outputs/omnicoder9b-quantum-generalization-sft-8npu-fastiter-20260409T1451CST/adapter",
+    "adapter_exists": true,
+    "adapter_model_path": "outputs/omnicoder9b-quantum-generalization-sft-8npu-fastiter-20260409T1451CST/adapter/adapter_model.safetensors",
+    "adapter_model_exists": true,
+    "adapter_files": [
+      "README.md",
+      "adapter_config.json",
+      "adapter_model.safetensors",
+      "chat_template.jinja",
+      "processor_config.json",
+      "tokenizer.json",
+      "tokenizer_config.json"
+    ]
+  },
+  "model": {
+    "base_model": "models/OmniCoder-9B",
+    "base_model_family": "omnicoder",
+    "training_method": "LoRA SFT",
+    "training_method_detail": {
+      "stage": "supervised_fine_tuning",
+      "adapter_strategy": "LoRA",
+      "training_method": "LoRA SFT",
+      "loss_function": {
+        "name": "causal_lm_cross_entropy",
+        "label_masking": "padding tokens masked to -100; prompt tokens also masked when train_on_completions_only=true",
+        "train_on_completions_only": true
+      },
+      "optimizer": {
+        "name": "AdamW",
+        "learning_rate": 0.0002
+      },
+      "scheduler": {
+        "name": "CosineAnnealingLR",
+        "t_max_steps": 12
+      }
+    },
+    "training_script": "training/qwen_sft_peft.py",
+    "training_command_reconstructed": "python3 training/qwen_sft_peft.py --model-name models/OmniCoder-9B --train-file data/generated/omnicoder-quantum-generalization-holdout-v1/train.jsonl --eval-file data/generated/omnicoder-quantum-generalization-holdout-v1/eval.jsonl --device npu --max-length 512 --per-device-batch-size 1 --gradient-accumulation-steps 2 --learning-rate 0.0002 --num-epochs 1 --max-steps 12 --eval-steps 6 --log-steps 1 --lora-rank 16 --lora-alpha 32 --lora-dropout 0.05 --train-on-completions-only"
+  },
+  "training_signature": {
+    "model_name": "models/OmniCoder-9B",
+    "adapter_init": "outputs/interface-prefix-omnicoder9b-semantic-v4-2npu-true20-20260329T2219CST/adapter",
+    "train_file": "data/generated/omnicoder-quantum-generalization-holdout-v1/train.jsonl",
+    "eval_file": "data/generated/omnicoder-quantum-generalization-holdout-v1/eval.jsonl",
+    "device": "npu",
+    "max_length": 512,
+    "per_device_batch_size": 1,
+    "gradient_accumulation_steps": 2,
+    "learning_rate": 0.0002,
+    "num_epochs": 1,
+    "max_steps": 12,
+    "eval_steps": 6,
+    "log_steps": 1,
+    "lora_rank": 16,
+    "lora_alpha": 32,
+    "lora_dropout": 0.05,
+    "load_in_8bit": false,
+    "train_on_completions_only": true,
+    "research_methods": [
+      "verifier_guided_repair_curriculum",
+      "ast_anchor_interface_grounding"
+    ],
+    "target_modules": null,
+    "target_module_regex": null,
+    "trainable_param_regex": null,
+    "freeze_param_regex": null,
+    "signature_sha256": "44ab188a989c796b153d4526a22a7e3432143e36e7956993d140c1b2ee38c039"
+  },
+  "lineage": {
+    "parent_output_dir": "outputs/interface-prefix-omnicoder9b-semantic-v4-2npu-true20-20260329T2219CST",
+    "adapter_init": "outputs/interface-prefix-omnicoder9b-semantic-v4-2npu-true20-20260329T2219CST/adapter",
+    "paper_ids": [
+      "ast_anchor_interface_grounding",
+      "verifier_guided_repair_curriculum"
+    ]
+  },
+  "training_data": {
+    "train": {
+      "path": "data/generated/omnicoder-quantum-generalization-holdout-v1/train.jsonl",
+      "exists": true,
+      "sha256": "b9b8f64e323072986976b16fcf6757456f5c4e4b27016b956c0af6adf4c585f8",
+      "rows": 1024,
+      "manifest_path": "data/generated/omnicoder-quantum-generalization-holdout-v1/manifest.json",
+      "manifest_exists": true,
+      "manifest_valid_json": true,
+      "manifest_error": null,
+      "dataset_summary": {
+        "row_count": 1024,
+        "unique_example_ids": 1024,
+        "unique_task_ids": 8,
+        "task_ids": [
+          "quantum_bell_pair_construction",
+          "quantum_circuit_depth_optimization",
+          "quantum_circuit_phase_repair",
+          "quantum_measurement_bug_repair",
+          "quantum_qft_phase_pattern",
+          "quantum_stabilizer_tableau_update_repair",
+          "quantum_teleportation_corrections",
+          "quantum_vqe_energy_minimization"
+        ],
+        "formats": {
+          "chat-sft-v1": 1024
+        },
+        "source_schemas": {
+          "template-large-v1": 1024
+        },
+        "domains": {
+          "quantum": 1024
+        },
+        "categories": {
+          "algorithm_implementation": 128,
+          "algorithm_reasoning": 128,
+          "circuit_construction": 128,
+          "circuit_optimization": 128,
+          "debug_repair": 384,
+          "protocol_logic": 128
+        },
+        "task_types": {
+          "implementation": 1024
+        },
+        "sources": {
+          "template-large": 1024
+        },
+        "prompt_variants": {}
+      },
+      "manifest": {
+        "manifest_version": "template-large-v1",
+        "seed_tag": "omnicoder-quantum-generalization-holdout-v1",
+        "tasks_dir": "evals/tasks",
+        "out_dir": "data/generated/omnicoder-quantum-generalization-holdout-v1",
+        "domains": [
+          "quantum"
+        ],
+        "single_file_tasks": [
+          {
+            "task_id": "quantum_bell_pair_construction",
+            "task_dir": "evals/tasks/quantum/bell_pair_construction",
+            "domain": "quantum",
+            "category": "circuit_construction"
+          },
+          {
+            "task_id": "quantum_circuit_depth_optimization",
+            "task_dir": "evals/tasks/quantum/circuit_depth_optimization",
+            "domain": "quantum",
+            "category": "circuit_optimization"
+          },
+          {
+            "task_id": "quantum_circuit_phase_repair",
+            "task_dir": "evals/tasks/quantum/circuit_phase_repair",
+            "domain": "quantum",
+            "category": "debug_repair"
+          },
+          {
+            "task_id": "quantum_gate_alias_normalization",
+            "task_dir": "evals/tasks/quantum/gate_alias_normalization",
+            "domain": "quantum",
+            "category": "api_normalization"
+          },
+          {
+            "task_id": "quantum_measurement_bug_repair",
+            "task_dir": "evals/tasks/quantum/measurement_bug_repair",
+            "domain": "quantum",
+            "category": "debug_repair"
+          },
+          {
+            "task_id": "quantum_phase_estimation_circuit",
+            "task_dir": "evals/tasks/quantum/phase_estimation_circuit",
+            "domain": "quantum",
+            "category": "algorithm_implementation"
+          },
+          {
+            "task_id": "quantum_qaoa_maxcut",
+            "task_dir": "evals/tasks/quantum/qaoa_maxcut",
+            "domain": "quantum",
+            "category": "algorithm_implementation"
+          },
+          {
+            "task_id": "quantum_qft_phase_pattern",
+            "task_dir": "evals/tasks/quantum/qft_phase_pattern",
+            "domain": "quantum",
+            "category": "algorithm_reasoning"
+          },
+          {
+            "task_id": "quantum_stabilizer_tableau_update_repair",
+            "task_dir": "evals/tasks/quantum/stabilizer_tableau_update_repair",
+            "domain": "quantum",
+            "category": "debug_repair"
+          },
+          {
+            "task_id": "quantum_superdense_coding",
+            "task_dir": "evals/tasks/quantum/superdense_coding",
+            "domain": "quantum",
+            "category": "reasoning"
+          },
+          {
+            "task_id": "quantum_teleportation_corrections",
+            "task_dir": "evals/tasks/quantum/teleportation_corrections",
+            "domain": "quantum",
+            "category": "protocol_logic"
+          },
+          {
+            "task_id": "quantum_vqe_energy_minimization",
+            "task_dir": "evals/tasks/quantum/vqe_energy_minimization",
+            "domain": "quantum",
+            "category": "algorithm_implementation"
+          }
+        ],
+        "train_variants_per_task": 128,
+        "eval_variants_per_task": 126,
+        "holdout_policy": {
+          "name": "task_disjoint_v1",
+          "shared_source_tasks": false,
+          "train_task_count": 8,
+          "eval_task_count": 4,
+          "task_overlap_count": 0,
+          "eval_task_id_file": null,
+          "eval_tasks_per_domain": 4,
+          "train_tasks": [
+            {
+              "task_id": "quantum_bell_pair_construction",
+              "task_dir": "evals/tasks/quantum/bell_pair_construction",
+              "domain": "quantum",
+              "category": "circuit_construction"
+            },
+            {
+              "task_id": "quantum_circuit_depth_optimization",
+              "task_dir": "evals/tasks/quantum/circuit_depth_optimization",
+              "domain": "quantum",
+              "category": "circuit_optimization"
+            },
+            {
+              "task_id": "quantum_circuit_phase_repair",
+              "task_dir": "evals/tasks/quantum/circuit_phase_repair",
+              "domain": "quantum",
+              "category": "debug_repair"
+            },
+            {
+              "task_id": "quantum_measurement_bug_repair",
+              "task_dir": "evals/tasks/quantum/measurement_bug_repair",
+              "domain": "quantum",
+              "category": "debug_repair"
+            },
+            {
+              "task_id": "quantum_qft_phase_pattern",
+              "task_dir": "evals/tasks/quantum/qft_phase_pattern",
+              "domain": "quantum",
+              "category": "algorithm_reasoning"
+            },
+            {
+              "task_id": "quantum_stabilizer_tableau_update_repair",
+              "task_dir": "evals/tasks/quantum/stabilizer_tableau_update_repair",
+              "domain": "quantum",
+              "category": "debug_repair"
+            },
+            {
+              "task_id": "quantum_teleportation_corrections",
+              "task_dir": "evals/tasks/quantum/teleportation_corrections",
+              "domain": "quantum",
+              "category": "protocol_logic"
+            },
+            {
+              "task_id": "quantum_vqe_energy_minimization",
+              "task_dir": "evals/tasks/quantum/vqe_energy_minimization",
+              "domain": "quantum",
+              "category": "algorithm_implementation"
+            }
+          ],
+          "eval_tasks": [
+            {
+              "task_id": "quantum_gate_alias_normalization",
+              "task_dir": "evals/tasks/quantum/gate_alias_normalization",
+              "domain": "quantum",
+              "category": "api_normalization"
+            },
+            {
+              "task_id": "quantum_phase_estimation_circuit",
+              "task_dir": "evals/tasks/quantum/phase_estimation_circuit",
+              "domain": "quantum",
+              "category": "algorithm_implementation"
+            },
+            {
+              "task_id": "quantum_qaoa_maxcut",
+              "task_dir": "evals/tasks/quantum/qaoa_maxcut",
+              "domain": "quantum",
+              "category": "algorithm_implementation"
+            },
+            {
+              "task_id": "quantum_superdense_coding",
+              "task_dir": "evals/tasks/quantum/superdense_coding",
+              "domain": "quantum",
+              "category": "reasoning"
+            }
+          ],
+          "train_prompt_families": [
+            "behavior_first",
+            "deliverable_note",
+            "implementation_ticket",
+            "interface_contract",
+            "refactor_request",
+            "repo_handoff"
+          ],
+          "eval_prompt_families": [
+            "acceptance_gate",
+            "audit_followup",
+            "maintainer_check",
+            "spec_translation"
+          ],
+          "train_eval_example_id_overlap": false,
+          "train_eval_prompt_family_overlap": false,
+          "train_eval_task_id_overlap": false
+        },
+        "train_summary": {
+          "count": 1024,
+          "domains": {
+            "quantum": 1024
+          },
+          "tasks": {
+            "quantum_bell_pair_construction": 128,
+            "quantum_circuit_depth_optimization": 128,
+            "quantum_circuit_phase_repair": 128,
+            "quantum_measurement_bug_repair": 128,
+            "quantum_qft_phase_pattern": 128,
+            "quantum_stabilizer_tableau_update_repair": 128,
+            "quantum_teleportation_corrections": 128,
+            "quantum_vqe_energy_minimization": 128
+          },
+          "prompt_families": {
+            "behavior_first": 176,
+            "deliverable_note": 176,
+            "implementation_ticket": 168,
+            "interface_contract": 168,
+            "refactor_request": 168,
+            "repo_handoff": 168
+          }
+        },
+        "eval_summary": {
+          "count": 504,
+          "domains": {
+            "quantum": 504
+          },
+          "tasks": {
+            "quantum_gate_alias_normalization": 126,
+            "quantum_phase_estimation_circuit": 126,
+            "quantum_qaoa_maxcut": 126,
+            "quantum_superdense_coding": 126
+          },
+          "prompt_families": {
+            "acceptance_gate": 128,
+            "audit_followup": 128,
+            "maintainer_check": 124,
+            "spec_translation": 124
+          }
+        }
+      }
+    },
+    "eval": {
+      "path": "data/generated/omnicoder-quantum-generalization-holdout-v1/eval.jsonl",
+      "exists": true,
+      "sha256": "f0c8cf9dcbbee9793cd6477ffde96ddd5ee789dba009caab34a3e6430100e0e7",
+      "rows": 504,
+      "manifest_path": "data/generated/omnicoder-quantum-generalization-holdout-v1/manifest.json",
+      "manifest_exists": true,
+      "manifest_valid_json": true,
+      "manifest_error": null,
+      "dataset_summary": {
+        "row_count": 504,
+        "unique_example_ids": 504,
+        "unique_task_ids": 4,
+        "task_ids": [
+          "quantum_gate_alias_normalization",
+          "quantum_phase_estimation_circuit",
+          "quantum_qaoa_maxcut",
+          "quantum_superdense_coding"
+        ],
+        "formats": {
+          "chat-sft-v1": 504
+        },
+        "source_schemas": {
+          "template-large-v1": 504
+        },
+        "domains": {
+          "quantum": 504
+        },
+        "categories": {
+          "algorithm_implementation": 252,
+          "api_normalization": 126,
+          "reasoning": 126
+        },
+        "task_types": {
+          "implementation": 504
+        },
+        "sources": {
+          "template-large": 504
+        },
+        "prompt_variants": {}
+      },
+      "manifest": {
+        "manifest_version": "template-large-v1",
+        "seed_tag": "omnicoder-quantum-generalization-holdout-v1",
+        "tasks_dir": "evals/tasks",
+        "out_dir": "data/generated/omnicoder-quantum-generalization-holdout-v1",
+        "domains": [
+          "quantum"
+        ],
+        "single_file_tasks": [
+          {
+            "task_id": "quantum_bell_pair_construction",
+            "task_dir": "evals/tasks/quantum/bell_pair_construction",
+            "domain": "quantum",
+            "category": "circuit_construction"
+          },
+          {
+            "task_id": "quantum_circuit_depth_optimization",
+            "task_dir": "evals/tasks/quantum/circuit_depth_optimization",
+            "domain": "quantum",
+            "category": "circuit_optimization"
+          },
+          {
+            "task_id": "quantum_circuit_phase_repair",
+            "task_dir": "evals/tasks/quantum/circuit_phase_repair",
+            "domain": "quantum",
+            "category": "debug_repair"
+          },
+          {
+            "task_id": "quantum_gate_alias_normalization",
+            "task_dir": "evals/tasks/quantum/gate_alias_normalization",
+            "domain": "quantum",
+            "category": "api_normalization"
+          },
+          {
+            "task_id": "quantum_measurement_bug_repair",
+            "task_dir": "evals/tasks/quantum/measurement_bug_repair",
+            "domain": "quantum",
+            "category": "debug_repair"
+          },
+          {
+            "task_id": "quantum_phase_estimation_circuit",
+            "task_dir": "evals/tasks/quantum/phase_estimation_circuit",
+            "domain": "quantum",
+            "category": "algorithm_implementation"
+          },
+          {
+            "task_id": "quantum_qaoa_maxcut",
+            "task_dir": "evals/tasks/quantum/qaoa_maxcut",
+            "domain": "quantum",
+            "category": "algorithm_implementation"
+          },
+          {
+            "task_id": "quantum_qft_phase_pattern",
+            "task_dir": "evals/tasks/quantum/qft_phase_pattern",
+            "domain": "quantum",
+            "category": "algorithm_reasoning"
+          },
+          {
+            "task_id": "quantum_stabilizer_tableau_update_repair",
+            "task_dir": "evals/tasks/quantum/stabilizer_tableau_update_repair",
+            "domain": "quantum",
+            "category": "debug_repair"
+          },
+          {
+            "task_id": "quantum_superdense_coding",
+            "task_dir": "evals/tasks/quantum/superdense_coding",
+            "domain": "quantum",
+            "category": "reasoning"
+          },
+          {
+            "task_id": "quantum_teleportation_corrections",
+            "task_dir": "evals/tasks/quantum/teleportation_corrections",
+            "domain": "quantum",
+            "category": "protocol_logic"
+          },
+          {
+            "task_id": "quantum_vqe_energy_minimization",
+            "task_dir": "evals/tasks/quantum/vqe_energy_minimization",
+            "domain": "quantum",
+            "category": "algorithm_implementation"
+          }
+        ],
+        "train_variants_per_task": 128,
+        "eval_variants_per_task": 126,
+        "holdout_policy": {
+          "name": "task_disjoint_v1",
+          "shared_source_tasks": false,
+          "train_task_count": 8,
+          "eval_task_count": 4,
+          "task_overlap_count": 0,
+          "eval_task_id_file": null,
+          "eval_tasks_per_domain": 4,
+          "train_tasks": [
+            {
+              "task_id": "quantum_bell_pair_construction",
+              "task_dir": "evals/tasks/quantum/bell_pair_construction",
+              "domain": "quantum",
+              "category": "circuit_construction"
+            },
+            {
+              "task_id": "quantum_circuit_depth_optimization",
+              "task_dir": "evals/tasks/quantum/circuit_depth_optimization",
+              "domain": "quantum",
+              "category": "circuit_optimization"
+            },
+            {
+              "task_id": "quantum_circuit_phase_repair",
+              "task_dir": "evals/tasks/quantum/circuit_phase_repair",
+              "domain": "quantum",
+              "category": "debug_repair"
+            },
+            {
+              "task_id": "quantum_measurement_bug_repair",
+              "task_dir": "evals/tasks/quantum/measurement_bug_repair",
+              "domain": "quantum",
+              "category": "debug_repair"
+            },
+            {
+              "task_id": "quantum_qft_phase_pattern",
+              "task_dir": "evals/tasks/quantum/qft_phase_pattern",
+              "domain": "quantum",
+              "category": "algorithm_reasoning"
+            },
+            {
+              "task_id": "quantum_stabilizer_tableau_update_repair",
+              "task_dir": "evals/tasks/quantum/stabilizer_tableau_update_repair",
+              "domain": "quantum",
+              "category": "debug_repair"
+            },
+            {
+              "task_id": "quantum_teleportation_corrections",
+              "task_dir": "evals/tasks/quantum/teleportation_corrections",
+              "domain": "quantum",
+              "category": "protocol_logic"
+            },
+            {
+              "task_id": "quantum_vqe_energy_minimization",
+              "task_dir": "evals/tasks/quantum/vqe_energy_minimization",
+              "domain": "quantum",
+              "category": "algorithm_implementation"
+            }
+          ],
+          "eval_tasks": [
+            {
+              "task_id": "quantum_gate_alias_normalization",
+              "task_dir": "evals/tasks/quantum/gate_alias_normalization",
+              "domain": "quantum",
+              "category": "api_normalization"
+            },
+            {
+              "task_id": "quantum_phase_estimation_circuit",
+              "task_dir": "evals/tasks/quantum/phase_estimation_circuit",
+              "domain": "quantum",
+              "category": "algorithm_implementation"
+            },
+            {
+              "task_id": "quantum_qaoa_maxcut",
+              "task_dir": "evals/tasks/quantum/qaoa_maxcut",
+              "domain": "quantum",
+              "category": "algorithm_implementation"
+            },
+            {
+              "task_id": "quantum_superdense_coding",
+              "task_dir": "evals/tasks/quantum/superdense_coding",
+              "domain": "quantum",
+              "category": "reasoning"
+            }
+          ],
+          "train_prompt_families": [
+            "behavior_first",
+            "deliverable_note",
+            "implementation_ticket",
+            "interface_contract",
+            "refactor_request",
+            "repo_handoff"
+          ],
+          "eval_prompt_families": [
+            "acceptance_gate",
+            "audit_followup",
+            "maintainer_check",
+            "spec_translation"
+          ],
+          "train_eval_example_id_overlap": false,
+          "train_eval_prompt_family_overlap": false,
+          "train_eval_task_id_overlap": false
+        },
+        "train_summary": {
+          "count": 1024,
+          "domains": {
+            "quantum": 1024
+          },
+          "tasks": {
+            "quantum_bell_pair_construction": 128,
+            "quantum_circuit_depth_optimization": 128,
+            "quantum_circuit_phase_repair": 128,
+            "quantum_measurement_bug_repair": 128,
+            "quantum_qft_phase_pattern": 128,
+            "quantum_stabilizer_tableau_update_repair": 128,
+            "quantum_teleportation_corrections": 128,
+            "quantum_vqe_energy_minimization": 128
+          },
+          "prompt_families": {
+            "behavior_first": 176,
+            "deliverable_note": 176,
+            "implementation_ticket": 168,
+            "interface_contract": 168,
+            "refactor_request": 168,
+            "repo_handoff": 168
+          }
+        },
+        "eval_summary": {
+          "count": 504,
+          "domains": {
+            "quantum": 504
+          },
+          "tasks": {
+            "quantum_gate_alias_normalization": 126,
+            "quantum_phase_estimation_circuit": 126,
+            "quantum_qaoa_maxcut": 126,
+            "quantum_superdense_coding": 126
+          },
+          "prompt_families": {
+            "acceptance_gate": 128,
+            "audit_followup": 128,
+            "maintainer_check": 124,
+            "spec_translation": 124
+          }
+        }
+      }
+    }
+  },
+  "evaluation": {
+    "quantitative": {
+      "local_eval_runner": "evals/runner/run_eval.py",
+      "datasets": [
+        {
+          "path": "evals/tasks",
+          "exists": true,
+          "kind": "executable_task_suite"
+        }
+      ],
+      "scorecard": {
+        "path": "evals/runner/scorecard.json",
+        "exists": true,
+        "sha256": "6486b5ccb6d809efbe399d18c1f01f6277d217dee89b7b136e6c30ffeda7e76a",
+        "valid_json": true,
+        "validation_error": null
+      },
+      "metrics": {
+        "device": "npu:0",
+        "world_size": 8,
+        "train_examples": 1024,
+        "eval_examples": 504,
+        "optimizer_steps_per_epoch": 64,
+        "max_available_steps": 64,
+        "requested_max_steps": 12,
+        "completed_steps": 12,
+        "final_eval": {
+          "loss": 0.38625643340249854,
+          "perplexity": 1.4714619544342373
+        }
+      }
+    },
+    "qualitative": {
+      "reports": [],
+      "slices": [],
+      "eval_commands": []
+    },
+    "result_artifacts": [
+      {
+        "path": "reports/omnicoder9b_quantum_generalization_holdout_8npu_fastiter_eval_20260409_override_summary.json",
+        "exists": true,
+        "sha256": "73dc5bd3572241830cc23251ff393a6ba37e6a669ae54638a9fcc105b47ed880",
+        "valid_json": true,
+        "validation_error": null,
+        "summary": {
+          "kind": "override_summary",
+          "override_passes": 2,
+          "override_total": 4,
+          "override_pass_rate": 0.5
+        }
+      },
+      {
+        "path": "reports/strict_holdout_base_vs_adapter_comparison_20260410.json",
+        "exists": true,
+        "sha256": "2e58ecec381b1085395781ba129a1c98e38401e4d156957b2b6073590efc1fa2",
+        "valid_json": true,
+        "validation_error": null,
+        "summary": {
+          "kind": "strict_override_comparison",
+          "base_passes": 3,
+          "base_total": 4,
+          "adapter_passes": 2,
+          "adapter_total": 4,
+          "adapter_minus_base_passes": -1,
+          "adapter_minus_base_pass_rate": -0.25
+        }
+      }
+    ],
+    "headline_summary": {
+      "kind": "override_summary",
+      "override_passes": 2,
+      "override_total": 4,
+      "override_pass_rate": 0.5
+    }
+  },
+  "linked_artifacts": {
+    "delivery_manifest": null,
+    "handoff_manifest": null
+  },
+  "git": {
+    "head_commit": "15961aa8acf184a1d4b64122f91e18ca4781ee34",
+    "head_commit_short": "15961aa",
+    "status_porcelain": "M browser-automation/huanxin-shell-ai2.png\n M evals/runner/candidate_sanitize.py\n M evals/runs/omnicoder-quantum-generalization-holdout-base-omnicoder9b-20260410/candidate-map.json\n M evals/runs/omnicoder-quantum-generalization-holdout-base-omnicoder9b-20260410/candidates/quantum_gate_alias_normalization.py\n M evals/runs/omnicoder-quantum-generalization-holdout-base-omnicoder9b-20260410/candidates/quantum_phase_estimation_circuit.py\n M evals/runs/omnicoder-quantum-generalization-holdout-base-omnicoder9b-20260410/candidates/quantum_qaoa_maxcut.py\n M evals/runs/omnicoder-quantum-generalization-holdout-base-omnicoder9b-20260410/candidates/quantum_superdense_coding.py\n M memory/2026-04-10.md\n M reports/omnicoder9b_quantum_generalization_holdout_base_ai2_20260410_blocker.json\n M research/RESEARCH-REPORT.tex\n M research/build/RESEARCH-REPORT.aux\n M research/build/RESEARCH-REPORT.log\n M research/build/RESEARCH-REPORT.out\n M research/build/RESEARCH-REPORT.pdf\n M research/build/RESEARCH-REPORT.toc\n M scripts/ai2_start_merged_codex_server.sh\n M scripts/archive_model_run.py\n M scripts/run_ai2_omnicoder_base_prefill_eval.py\n M scripts/system_tokenizer_probe.py\n M tests/test_candidate_sanitize.py\n M tests/test_text_preprocessor_backend.py\n M training/runtime_overlay.py\n M training/text_preprocessor_backend.py\n?? .git_ssh/\n?? .huanxin_jobs/omnicoder-base-holdout-npu-20260410T114339Z.json\n?? .huanxin_jobs/omnicoder-base-npu-v2-20260410T142112Z.json\n?? .local-python/\n?? .tmp-home/\n?? .venv-gemma4-smoke-py311/\n?? .venv-gemma4-smoke/\n?? .venv-omnicoder-qwen35-py311/\n?? artifacts/delivery-registry/\n?? artifacts/runtime-bundles/\n?? browser-automation/profile.last-known-good/\n?? data/generated/quantum-paper-router-warmup-v1/\n?? data/generated/quantum-paper-smoke-v1/\n?? evals/runner/__pycache__/\n?? evals/runs/omnicoder-quantum-generalization-holdout-base-omnicoder9b-20260410/candidates/__pycache__/\n?? evals/runs/omnicoder-quantum-generalization-holdout-base-omnicoder9b-20260410/scorecard.json\n?? evals/tasks/quantum/bell_pair_construction/__pycache__/\n?? evals/tasks/quantum/circuit_depth_optimization/__pycache__/\n?? evals/tasks/quantum/circuit_phase_repair/__pycache__/\n?? evals/tasks/quantum/error_detection_bit_flip/__pycache__/\n?? evals/tasks/quantum/gate_alias_normalization/__pycache__/\n?? evals/tasks/quantum/measurement_bug_repair/__pycache__/\n?? evals/tasks/quantum/phase_estimation_circuit/__pycache__/\n?? evals/tasks/quantum/qaoa_maxcut/__pycache__/\n?? evals/tasks/quantum/qft_phase_pattern/__pycache__/\n?? evals/tasks/quantum/stabilizer_tableau_update_repair/__pycache__/\n?? evals/tasks/quantum/superdense_coding/__pycache__/\n?? evals/tasks/quantum/teleportation_corrections/__pycache__/\n?? evals/tasks/quantum/vqe_energy_minimization/__pycache__/\n?? evals/tasks/software/config_merge/__pycache__/\n?? evals/tasks/software/docstring_contract/__pycache__/\n?? evals/tasks/software/duplicate_logic_refactor/__pycache__/\n?? evals/tasks/software/multifile_patch_conflict_repair/__pycache__/\n?? evals/tasks/software/off_by_one_bugfix/__pycache__/\n?? evals/tasks/software/parser_regression_tests/__pycache__/\n?? evals/tasks/software/patch_application_conflict_resolver/__pycache__/\n?? evals/tasks/software/retry_decorator/__pycache__/\n?? evals/tasks/software/session_event_log/__pycache__/\n?? evals/tasks/software/session_window_summary/__pycache__/\n?? evals/tasks/software/tree_serialization/__pycache__/\n?? evals/tasks/software/workspace_patch_bundle_repair/__pycache__/\n?? evals/tasks/software/workspace_runner_smoke/__pycache__/\n?? gemini.html\n?? gemini_content.txt\n?? memory/2026-04-11.md\n?? models/gemma-4-26B-A4B-it/\n?? models/gemma-4-E2B-it/\n?? outputs/omnicoder9b-quantum-generalization-sft-8npu-fastiter-20260409T1451CST/adapter/\n?? outputs/omnicoder9b-quantum-generalization-sft-8npu-fastiter-20260409T1451CST/run_config.json\n?? reports/omnicoder9b_quantum_generalization_holdout_base_ai2_20260410_override_summary.json\n?? reports/omnicoder9b_quantum_generalization_holdout_base_ai2_20260410_summary.json\n?? reports/strict_holdout_base_vs_adapter_comparison_20260410.json\n?? scripts/__pycache__/\n?? scripts/ai2_upload_small_file.py\n?? scripts/build_delivery_artifact.py\n?? scripts/build_delivery_registry.py\n?? scripts/delivery_registry.py\n?? scripts/fetch_ai2_text_via_daemon.py\n?? scripts/fix_ai2_codex_bashrc.py\n?? scripts/local_openai_response_probe.py\n?? tests/test_archive_model_run.py\n?? tests/test_build_delivery_artifact.py\n?? tests/test_delivery_registry.py\n?? training/__pycache__/"
+  },
+  "notes": ""
+}

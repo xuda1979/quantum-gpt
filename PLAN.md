@@ -1,14 +1,16 @@
 # PLAN.md
 
-## 核心任务总览与估时
+## 核心任务总览与估时（2026-07-08 更新，对齐两阶段路线）
+
 | 任务 (Task) | 做什么 (What) | 怎么做 (How) | 优先级 | 状态 | 风险 (Risk) | 价值 (Value) | 估时 (Time) |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **1. 模型与Prompt基线建立** | 选定本地适合CPU开发的Qwen3.5小模型，设计并建立 baseline 及 3 大 Prompt 配方。 | 基于参数量/Tokenizer/上下文分析锁定小模型，生成 `model-target.md` 规范。 | 高 | 进行中 | 模型因尺寸过小导致量子逻辑语法在初期幻觉严重。 | 无 GPU 开销完成本地低门槛探索，对齐后续微调的标准。 | 1 - 2 天 |
-| **2. 双领域高质数据集构建** | 收集量子算法设计与经典软件工程（Code edit/Fix/单测）的高质量指示数据集。 | 整合 Qiskit 样板、经典 Python edit 任务，设计 JSONL schema 自动过滤生成。 | 高 | 拟启动 | 自动化清洗不够干净或量子数据多样性不足，产生不精确写法。 | 丰富微调样本，保证模型兼具专业量子编程与极佳通用软质规范。 | 3 - 5 天 |
-| **3. 本地自动化评测沙盒** | 建立秒级执行的本地执行沙盒，包含约40个黄金任务评测集（量+软）。 | 编写 `run_eval.py` 等轻量脚本，执行并比对输出与数值误差以计算 Pass@1。 | 高 | 框架已定，任务填充中 | 本地代码执行存在死循环或指令干扰，判定存在少许数值摆动。 | 在 GPU 预算投入前快速进行模型表现评估、防护退化，实现自动化测试熔断。 | 2 - 3 天 |
-| **4. 远程微调与强化对齐** | 在远程 Huanxin `AI` 环境执行 Qwen3.6-27B 上的 LoRA/QLoRA 监督微调和 GRPO/RLvr 强化对齐。 | 通过 INER S3 同步无误代码与模型，使用 `ai_shell.sh` 远程拉起多卡微调。 | 中 | 路线连通，等待数据 | 显存 OOM、NPU 分布式框架不匹配或配额被非用户任务侵占。 | 突破小模型智力上限，获得兼具经典软工实力和高纯度量子编程的大模型。 | 4 - 7 天 |
+| **1. 模型与Prompt基线建立** | 锁定 Qwen3.6-27B（ASI1）与 Qwen3.6-35B-A3B（ASI2/ASI3）作为目标模型，建立 base-vs-adapter baseline prompt 与评测对照。 | 已在 `research/model-target.md` 与 `reports/qwen36_35b_finetune_evaluation_summary_2026-06-30.md` 记录基线；GLM5.2 作为教师。 | 高 | ✅ 完成 | 模型因尺寸/上下文导致量子语法幻觉。 | 为后续 LoRA 蒸馏提供可对照的冻结基线。 | 已交付 |
+| **2. 双领域高质数据集构建** | 构建 GLM5.2 软蒸馏 SFT 数据集（量子代码 + 通用软工），含教师 top-logprobs 以支持后续 KL 蒸馏。 | `data/generated/glm52_soft_distill_sft_100`（90 训练/10 评测）已生成；iter-2 数据已用于训练；iter-3 数据脚手架 `scripts/prepare_iter3_distill_sft.py` 就绪，等 iter-2 eval gap report 填充。 | 高 | 进行中（iter-2 已训练，iter-3 待 gap report） | 量子数据多样性不足，`quantum_channel_depolarizing` 等噪声信道任务持续失败。 | 丰富微调样本，保证模型兼具专业量子编程与通用软工规范。 | 持续迭代 |
+| **3. 评测子系统与本地沙盒** | 维护 `evals/subsystem/` 多维度评测基础设施（harness/analyzer/dataset_gap/reporter/tracker）+ ~44 任务黄金集 + 495 holdout。 | 2026-07-08 修复 v1 scorecard 解析 bug（analyzer/dataset_gap/reporter），新增 6 个回归测试；NPU 上 harness.py 运行 pass@1。 | 高 | ✅ 框架稳定，持续填充任务 | v1/v2 scorecard 格式兼容、远程 eval JSON 拉取延迟。 | 在 NPU 预算投入前快速评估、防护退化，自动生成 iter-N+1 数据缺口。 | 持续维护 |
+| **4. 远程微调与强化对齐** | 在 Huanxin `AI`（ASI1/ASI2/ASI3）上对 Qwen3.6-27B/35B 执行 GLM5.2 软蒸馏 LoRA SFT，后续接 RL+软蒸馏迭代（`docs/rl-distill-iteration-process-2026-07.md`）。 | iter-1/iter-2 LoRA SFT 已在 ASI1(27B)/ASI3(35B) 完成；iter-2 adapter eval 进行中；RL+软蒸馏 pipeline 设计完成。 | 高 | 进行中（iter-2 eval 阶段） | NPU OOM、W8A8 解压耗时、Huanxin 会话保活、分布式框架兼容。 | 突破基模型上限，获得兼具量子编程与通用软工的大模型。 | 持续迭代（每轮 ~1.5 天） |
+| **5. 阶段二：1000 篇论文科学能力** | 选择 1000 篇重要量子计算论文，生成循序渐进 QA + 代码实现任务，做蒸馏 SFT + 混合 RL。 | manifest schema 与验证脚本已就绪（`docs/stage2-science-corpus-manifest-schema-2026-07-07.md`）；paper-card 生成、QA 生成、验证工具待阶段一稳定后启动。 | 中 | 规划中（spec-only） | 论文版权/获取、QA 知觉正确性、与阶段一代码能力相互稀释。 | 赋予模型论文级科学推理与前沿研究感知能力。 | 阶段一稳定后启动 |
 
-**项目总体时间跨度估计：约 10 - 17 天**
+**当前迭代节奏：** 每轮 SFT ~1.5 天（含 W8A8 解压、训练、评测、诊断、数据生成、质量校验）。详见 `docs/glm52-distillation-rd-iteration-process-2026-07.md`。
 
 ## 2026-06-30 两阶段训练优先级
 

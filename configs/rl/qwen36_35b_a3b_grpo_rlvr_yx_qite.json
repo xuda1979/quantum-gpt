@@ -1,0 +1,56 @@
+{
+  "name": "qwen36_35b_a3b_grpo_rlvr_yx_qite",
+  "environment": "yx-QITE",
+  "remote_root": "/root/work/quantum-gpt",
+  "model_name": "/root/work/filestorage/Qwen3.6-35B-A3B-W8A8",
+  "benchmark_file": "evals/benchmarks/agentic_coding_trajectory_training_v1.txt",
+  "algorithm": "grpo",
+  "phase": "rlvr_v1",
+  "status": "blocked_until_yx_qite_preflight_passes",
+  "rollout": {
+    "group_size": 8,
+    "max_turns": 30,
+    "max_new_tokens": 32768,
+    "temperature": 0.8,
+    "top_p": 0.95
+  },
+  "optimization": {
+    "kl_coef": 0.02,
+    "lr": 0.000005,
+    "advantage_normalization": "group",
+    "clip_range": 0.2,
+    "checkpoint_interval_seconds": 3600
+  },
+  "reward": {
+    "hidden_tests": 0.4,
+    "public_tests": 0.2,
+    "build_compile": 0.1,
+    "regression_tests": 0.1,
+    "lint_typecheck": 0.05,
+    "minimal_patch": 0.05,
+    "security": 0.05,
+    "final_summary": 0.05
+  },
+  "penalties": {
+    "unnecessary_large_rewrite": -0.1,
+    "breaks_existing_api": -0.2,
+    "hardcodes_test_or_cheats": -0.5,
+    "destructive_or_unsafe_tool_use": -1.0,
+    "secrets_access": -1.0,
+    "network_abuse": -1.0
+  },
+  "preflight_gates": [
+    "local tests pass",
+    "yx-QITE login or task-submission control path verified",
+    "yx-QITE task-submission preflight passes",
+    "remote root exists",
+    "repo code synced to remote root",
+    "model path exists on yx-QITE",
+    "torch, torch_npu, transformers, peft, and accelerate import or the run is blocked",
+    "benchmark file exists on yx-QITE"
+  ],
+  "notes": [
+    "Created after the user switched the active Huanxin target from ASI1 to yx-QITE on 2026-05-23.",
+    "Do not launch training from this config until a yx-QITE preflight verifies the exact remote paths and dependencies."
+  ]
+}

@@ -1,0 +1,173 @@
+{
+  "name": "rl_distill_science_35b_asi3_v1",
+  "student_model": {
+    "base_model": "Qwen/Qwen3.6-35B-A3B",
+    "adapter_init_path": "outputs/qg-35b-asi3-glm52-distill-sft-iter2/adapter",
+    "serving": {
+      "api_base": "http://127.0.0.1:8019/v1",
+      "api_key_env": "STUDENT_35B_API_KEY",
+      "model": "rl_distill_science_latest",
+      "temperature": 0.7,
+      "max_tokens": 3072,
+      "timeout_seconds": 600
+    }
+  },
+  "teacher_model": {
+    "model": "glm5.2",
+    "api_base_env": "GLM52_API_BASE",
+    "api_key_env": "GLM52_API_KEY",
+    "temperature": 0.0,
+    "max_tokens": 4096,
+    "top_logprobs": 20,
+    "timeout_seconds": 900
+  },
+  "question_generation": {
+    "task_domain": "science",
+    "science_levels": [
+      "L0",
+      "L1",
+      "L2",
+      "L3",
+      "L5",
+      "L6"
+    ],
+    "science_level_distribution": {
+      "L0": 0.05,
+      "L1": 0.25,
+      "L2": 0.2,
+      "L3": 0.2,
+      "L5": 0.2,
+      "L6": 0.1
+    },
+    "science_fields": [
+      "vqe",
+      "qaoa",
+      "qpe",
+      "grover",
+      "qec",
+      "error_mitigation",
+      "hamiltonian_simulation",
+      "quantum_ml",
+      "quantum_comm",
+      "variational_theory",
+      "compilation",
+      "tomography"
+    ],
+    "science_field_distribution": {
+      "vqe": 0.14,
+      "qaoa": 0.12,
+      "qpe": 0.09,
+      "grover": 0.09,
+      "qec": 0.1,
+      "error_mitigation": 0.08,
+      "hamiltonian_simulation": 0.08,
+      "quantum_ml": 0.08,
+      "quantum_comm": 0.06,
+      "variational_theory": 0.07,
+      "compilation": 0.05,
+      "tomography": 0.04
+    },
+    "frameworks": [],
+    "topics": [],
+    "difficulties": [
+      "easy",
+      "medium",
+      "hard"
+    ],
+    "difficulty_distribution": {
+      "easy": 0.2,
+      "medium": 0.5,
+      "hard": 0.3
+    },
+    "max_resamples_per_question": 3,
+    "rejection_buffer_size": 64
+  },
+  "pipeline": {
+    "student_samples_per_question": 1,
+    "max_teacher_corrections_per_question": 1,
+    "execution_timeout_seconds": 30,
+    "pass_threshold": 1.0,
+    "run_harness_when_available": false,
+    "teacher_judge_when_no_harness": true,
+    "target_buffer_size_per_round": 256,
+    "trainer_max_length": 3072,
+    "task_domain": "science"
+  },
+  "splits": {
+    "train_ratio": 0.95,
+    "eval_ratio": 0.05,
+    "split_method": "stable_sha256_sorted_95_5"
+  },
+  "output_dir": "data/generated/rl_distill_science_35b_asi3_v1",
+  "seed": 20260706,
+  "concurrency": 4,
+  "guardrail": {
+    "max_consecutive_teacher_rejections": 12,
+    "max_teacher_qgate_rejection_rate": 0.85,
+    "min_teacher_confidence": 0.3,
+    "min_corrected_answer_chars": 80,
+    "rolling_window": 32,
+    "max_fabricated_claim_rate": 0.2,
+    "min_citation_grounding": 0.4
+  },
+  "eval_gate": {
+    "enabled": false,
+    "verdict_path": "",
+    "poll_every_seconds": 300,
+    "tolerance_pass_at_1": 0.03,
+    "tolerance_r_runnable": 0.2,
+    "required_consecutive": 2,
+    "_comment": "Set enabled=true and verdict_path=<NAS path to verdict.json> to arm the eval-regression gate. See skills/quantum-eval-verifier and docs/STATE.md."
+  },
+  "reward_weighting": {
+    "w_teacher_already_correct": 0.35,
+    "w_teacher_confidence": 0.2,
+    "w_first_pass_qgate": 0.15,
+    "w_answer_substance": 0.1,
+    "w_citation_grounding": 0.2
+  },
+  "per_artifact_scoring": {
+    "enabled": true,
+    "issue_classifier": "rule_science_v1",
+    "description": "Science-mode per-artifact scoring. Decomposes teacher issues into science rubric categories (incorrect_math, unsupported_claim, conceptual_error, incomplete, ungrounded_comparison, notation, other) and writes metadata.artifact_scores.",
+    "trainer": {
+      "reward_weighted_nll": true,
+      "per_artifact_kl_gate": true,
+      "partial_credit_upweight": 0.5
+    }
+  },
+  "dedup": {
+    "enabled": true,
+    "max_entries": 20000
+  },
+  "eval": {
+    "enabled": true,
+    "every_rounds": 2,
+    "tasks": "quantum_science",
+    "k": 1,
+    "max_new_tokens": 2048,
+    "npu_max_memory_gib": 58,
+    "reward_floor_for_train": 0.2
+  },
+  "git_sync": {
+    "enabled": true,
+    "interval": 50,
+    "push": true,
+    "remote": "origin",
+    "branch": "",
+    "add_paths": [],
+    "author_name": "rl-distill-bot",
+    "author_email": "rl-distill-bot@local"
+  },
+  "sandbox": {
+    "enabled": false,
+    "exec_is_ground_truth": false
+  },
+  "weakness_aware": {
+    "enabled": true,
+    "report_path": "data/generated/rl_distill_35b_asi3_v1/weakness_report.json",
+    "alpha": 0.4,
+    "min_weight": 0.05,
+    "reload_every_samples": 100
+  }
+}
