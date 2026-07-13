@@ -83,6 +83,60 @@ class TestExtractCodeBlock(unittest.TestCase):
         self.assertEqual(rld.extract_code_block(text), "print('hi')")
 
 
+class TestCriticLoRASeam(unittest.TestCase):
+    """N2 quantum-critic-LoRA wiring seam (docs/rd-line-quantum-critic-lora-2026-07-13.md).
+
+    Verifies the config flag routes teacher_eval correctly and fails loud
+    when the adapter path is missing (no silent fallback to GLM5.2).
+    """
+
+    def test_default_critic_mode_is_glm52_api(self):
+        t = rld.TeacherConfig("http://t/v1", "k", "glm5.2", 0.0, 1024, 20, 60)
+        self.assertEqual(t.critic_mode, "glm52_api")
+        self.assertEqual(t.critic_adapter_path, "")
+
+    def test_local_lora_empty_adapter_raises(self):
+        t = rld.TeacherConfig(
+            "http://t/v1",
+            "k",
+            "glm5.2",
+            0.0,
+            1024,
+            20,
+            60,
+            critic_mode="local_lora",
+            critic_adapter_path="",
+        )
+        with self.assertRaises(RuntimeError) as ctx:
+            rld.teacher_eval(t, "q", "print('hi')")
+        self.assertIn("critic_adapter_path", str(ctx.exception))
+
+    def test_local_lora_with_adapter_raises_on_box_seam(self):
+        # With a non-empty adapter path, the function proceeds past the
+        # empty-path guard and hits the on-box inference seam, which
+        # raises RuntimeError (cannot run 27B on CPU). This confirms the
+        # routing reaches _critic_lora_eval rather than the GLM5.2 API.
+        t = rld.TeacherConfig(
+            "http://t/v1",
+            "k",
+            "glm5.2",
+            0.0,
+            1024,
+            20,
+            60,
+            critic_mode="local_lora",
+            critic_adapter_path="/tmp/fake",
+        )
+        with self.assertRaises(RuntimeError) as ctx:
+            rld.teacher_eval(t, "q", "print('hi')")
+        # The on-box seam message mentions the launch script or peft
+        msg = str(ctx.exception)
+        self.assertTrue(
+            "on-box" in msg or "peft" in msg or "launch script" in msg,
+            f"unexpected error: {msg}",
+        )
+
+
 class TestSampleBuilder(unittest.TestCase):
     def _make_cfg(self):
         student = rld.StudentConfig("http://s/v1", "k", "stu", 0.7, 1024, 60)
@@ -876,7 +930,7 @@ class TestKlDistillLoss(unittest.TestCase):
 
         from training.qwen_sft_peft_kl import kl_distill_loss
 
-        T, V, K = 4, 100, 3
+        T, V, _K = 4, 100, 3
         torch.manual_seed(0)
         student_logits = torch.randn(T, V, dtype=torch.float32)
         teacher_token_ids = torch.tensor([10, 20, 30, 40], dtype=torch.long)
@@ -938,7 +992,7 @@ class TestKlDistillLoss(unittest.TestCase):
 
         from training.qwen_sft_peft_kl import kl_distill_loss
 
-        T, V, K = 2, 50, 3
+        T, V, _K = 2, 50, 3
         torch.manual_seed(1)
         student_logits = torch.randn(T, V, dtype=torch.float32)
         teacher_token_ids = torch.tensor([5, 6], dtype=torch.long)

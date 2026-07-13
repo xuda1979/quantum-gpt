@@ -1,0 +1,52 @@
+{
+  "name": "aux_quantum_critic_v1",
+  "description": "Auxiliary quantum-critic LoRA (NOT deployed standalone). Used as reward signal for Adapter A's RL stage, and as self-consistency selector at inference. Merges former N2 (critic) + N9 (selector) — same judge model, two uses.",
+  "base_model": "Qwen/Qwen3.6-27B",
+  "method": "lora",
+  "precision": "bf16",
+
+  "sft": {
+    "name": "qwen36_aux_critic_sft_v1",
+    "data": "data/generated/rd_lines_2026_07_13/n2_critic_sft_rows.jsonl",
+    "data_split": "data/generated/rd_lines_2026_07_13/n2_critic_split.json",
+    "io_contract": {
+      "input": "task_spec + candidate_code + rubric",
+      "output": "JSON: {\"pass\": bool, \"scores\": {dim: 0.0-1.0}, \"reasoning\": str}"
+    },
+    "sequence_length": 4096,
+    "lora": {
+      "rank": 32,
+      "alpha": 64,
+      "target_modules": ["q_proj", "k_proj", "v_proj", "o_proj"],
+      "dropout": 0.05
+    },
+    "learning_rate": 0.0001,
+    "epochs": 3
+  },
+
+  "usage_1_reward_signal": {
+    "description": "Replaces GLM5.2 teacher in Adapter A's RL grade step",
+    "wiring": "scripts/rl_distill_pipeline.py TeacherConfig.critic_mode=local_lora",
+    "adapter_path_field": "TeacherConfig.critic_adapter_path"
+  },
+
+  "usage_2_self_consistency_selector": {
+    "description": "At inference, run K candidates through the critic; argmax(pass) is the selected answer",
+    "inference_aggregation": "argmax over critic.pass for k in candidates",
+    "no_separate_training": true
+  },
+
+  "success_metrics": {
+    "agreement_with_execution": {"baseline": "50% (random)", "target": ">=85%", "glm52_reference": "~92%"},
+    "eval_split": "20% held-out, task-disjoint, stratified",
+    "eval_script": "scripts/eval_critic_agreement.py"
+  },
+
+  "stop_conditions": [
+    "critic agreement < 60% after epoch 1 (abort)",
+    "JSON parse error rate > 5% on eval split",
+    "reasoning field empty on > 10% of eval outputs"
+  ],
+
+  "deploy_standalone": false
+}

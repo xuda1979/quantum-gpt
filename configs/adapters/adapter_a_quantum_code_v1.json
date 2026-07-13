@@ -1,0 +1,75 @@
+{
+  "name": "adapter_a_quantum_code_v1",
+  "description": "Unified quantum-code adapter: fixes ALL coding error categories. Merges former N1,N3,N4,N5,N6,N7,N8,N10 + base-SFT. This is the primary production adapter.",
+  "base_model": "Qwen/Qwen3.6-27B",
+  "base_model_alt": "Qwen/Qwen3.6-35B-A3B",
+  "method": "sft_then_dpo_then_rl",
+  "precision": "bf16",
+
+  "stage_1_sft": {
+    "name": "qwen36_adapter_a_sft_v1",
+    "base_checkpoint": "qwen36_35b_a3b_lora_sft_v1",
+    "data": [
+      "data/generated/glm52_soft_distill_sft_iter2/train_chatml.jsonl",
+      "data/generated/rd_lines_2026_07_13/unified_sft_curriculum.jsonl"
+    ],
+    "data_source_lines": ["base-distill", "N4-OSE", "N5-CC", "N8-QCC"],
+    "objective": "structural + deterministic-error fixes: output-string exactness, circuit-construction NameError, QAOA cut-value",
+    "sequence_length": 8192,
+    "lora": {
+      "rank": 64,
+      "alpha": 128,
+      "target_modules": ["q_proj", "k_proj", "v_proj", "o_proj"],
+      "dropout": 0.05
+    },
+    "learning_rate": 0.0001,
+    "epochs": 2
+  },
+
+  "stage_2_dpo": {
+    "name": "qwen36_adapter_a_dpo_v1",
+    "base_checkpoint": "qwen36_adapter_a_sft_v1",
+    "data": "data/generated/rd_lines_2026_07_13/unified_dpo_pairs.jsonl",
+    "data_source_lines": ["N1-UF", "N3-IP", "N6-fmt", "N7-DM", "N10-TR"],
+    "negative_types": [
+      "assertion", "import_error", "prose_only", "no_main", "no_guard",
+      "type_error_precedence", "traceback_repair"
+    ],
+    "objective": "unified preference: reject ALL error categories, prefer correct executable code",
+    "sequence_length": 4096,
+    "beta": 0.1,
+    "learning_rate": 0.00002,
+    "epochs": 1,
+    "reference_model": "sft_checkpoint_frozen",
+    "reward_source_policy": "execution-grounded where applicable (N1 chosen verified by tests.py); format-only for N6; no model judge"
+  },
+
+  "stage_3_rl": {
+    "name": "qwen36_adapter_a_rl_grpo_v1",
+    "base_checkpoint": "qwen36_adapter_a_dpo_v1",
+    "config": "configs/rl/qwen36_35b_a3b_grpo_rlvr_asi1.json",
+    "algorithm": "grpo",
+    "reward_source": "execution-grounded (tests.py) + optional critic-LoRA (TeacherConfig.critic_mode=local_lora)",
+    "eval_gate": {
+      "enabled": true,
+      "verdict_path": "<NAS path to verdict.json>",
+      "tolerance_pass_at_1": 0.2,
+      "required_consecutive": 2
+    }
+  },
+
+  "success_metrics": {
+    "qaoa_5cycle_56task": {"baseline": "48/56", "target": ">=52/56"},
+    "import_error_failures": {"baseline": ">=3", "target": "0"},
+    "prose_only_failures": {"baseline": "1", "target": "0"},
+    "type_error_failures": {"baseline": ">=1", "target": "0"},
+    "general_coding_holdout_regression": {"target": "<0.5%"}
+  },
+
+  "stop_conditions": [
+    "any success metric regresses beyond tolerance",
+    "eval_gate trips (2 consecutive below-threshold verdicts)",
+    "DPO loss NaN / KL explosion",
+    "format drift on tool-use contract"
+  ]
+}

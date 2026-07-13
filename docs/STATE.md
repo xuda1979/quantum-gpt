@@ -1,6 +1,6 @@
 # STATE.md — Current R&D Snapshot
 
-**Last updated:** 2026-07-13
+**Last updated:** 2026-07-13 (consolidation — 13 lines → 2 adapters + 1 aux)
 **Purpose:** One-page index. Read this first, then drill into PLAN.md / docs/ for depth.
 **Refresh rule:** Update whenever an iteration boundary changes (eval result lands,
 new adapter trained, blocker moves). Keep ≤100 lines.
@@ -63,6 +63,9 @@ verification scripts ready. No training until Stage 1 adapter is stable.
 - ✅ `qiskit 2.5.0`, `pennylane 0.45.1`, `qiskit-algorithms`, `qiskit-optimization` installed locally
 - ⚠️ `cirq` NOT installable on local py3.14 (needs 3.11-3.13) — cirq tasks run on NAS-side py3.9 verifier only
 - ✅ Reference QAOA 5-cycle solution verified locally: cut=4 (optimum)
+- ✅ N1/N6/N2 full-scale training data generated + validated (`data/generated/rd_lines_2026_07_13/`) — new 2026-07-13 iter-2
+- ✅ `scripts/eval_critic_agreement.py` (N2 ≥85% agreement harness, task-disjoint stratified split, oracle + mock + real-critic modes) + 4 tests — new 2026-07-13 iter-2
+- ✅ N2 critic-LoRA seam in `rl_distill_pipeline.py` (`TeacherConfig.critic_mode` + `_critic_lora_eval`) + 3 tests — new 2026-07-13 iter-2
 - ✅ 704 tests pass / 13 fail / 11 collection errors (full suite, 2026-07-11). The 13 failures are pre-existing and unrelated to the DR-GRPO changes: 7 are `braket`/`cirq`/`pennylane` module-not-installed in `test_grpo_pipeline_fast`, 1 is a stale default-target assertion in `test_autonomous_rd_cycle`, 1 is an `isq_sft` launcher flag drift, 1 is a runtime-overlay image-loader check, 3 are reference-candidate reward checks depending on missing optional deps. The 11 collection errors are all `ModuleNotFoundError: No module named 'transformers'` (transformers not installable on local py3.14). Focused suites: 23 DR-GRPO + 4 GRPO-metrics-analyzer + 40 artifact-scoring + 14 KL-loss + 30 trust-eval = 111 pass clean.
 
 ## Verified Result (2026-07-09, QAOA Max-Cut 5-cycle)
@@ -104,7 +107,10 @@ Fresh eval today on the gold-standard full-program task (`quantum_qaoa_maxcut_5c
 | Eval verifier skill | `skills/quantum-eval-verifier/SKILL.md` |
 | Huanxin + S3 ops | `skills/huanxin-s3-ops/SKILL.md` |
 | Frontier infra practices | `docs/frontier_llm_rd_infrastructure_practices_2026-05-26.md` |
-| **New R&D lines (2026-07-13)** | |
-| N6: Format-constrained DPO | `docs/rd-line-format-constrained-sft-2026-07-13.md` |
-| N1: Universal-failure DPO | `docs/rd-line-universal-failure-dpo-2026-07-13.md` |
-| N2: Quantum-critic LoRA | `docs/rd-line-quantum-critic-lora-2026-07-13.md` |
+| **Consolidated R&D plan (2026-07-13)** | |
+| Master plan (replaces 10 line docs) | `docs/RD_PLAN_CONSOLIDATED_2026_07_13.md` |
+| Manager report | `reports/MANAGER_REPORT_2026_07_13.md` |
+| Adapter A config (quantum-code, primary) | `configs/adapters/adapter_a_quantum_code_v1.json` |
+| Adapter B config (quantum-science Q&A) | `configs/adapters/adapter_b_quantum_science_v1.json` |
+| Auxiliary critic config (training-time) | `configs/adapters/aux_quantum_critic_v1.json` |
+| Archived per-line docs (10) | `docs/archive/rd-lines-2026-07-13/` |

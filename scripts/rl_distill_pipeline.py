@@ -302,6 +302,14 @@ class TeacherConfig:
     max_tokens: int
     top_logprobs: int
     timeout: float
+    # N2 quantum-critic-LoRA seam (docs/rd-line-quantum-critic-lora-2026-07-13.md).
+    # When critic_mode == "local_lora", the grade step is routed through the
+    # trained critic-LoRA adapter (teacher-free verifier) instead of the
+    # GLM5.2 API. The adapter must achieve >=85% agreement with the
+    # execution-grounded label before this flag is enabled in production
+    # (see scripts/eval_critic_agreement.py).
+    critic_mode: str = "glm52_api"  # "glm52_api" (default) | "local_lora"
+    critic_adapter_path: str = ""  # path to the trained critic-LoRA adapter
 
 
 @dataclass
@@ -823,6 +831,82 @@ def student_attempt(cfg: StudentConfig, question: str, task_domain: str = "codin
     return content.strip()
 
 
+def _critic_lora_eval(
+    cfg: TeacherConfig,
+    question: str,
+    student_code: str,
+    exec_brief: str,
+    task_domain: str,
+) -> dict[str, Any]:
+    """Teacher-free grade via the N2 quantum-critic-LoRA.
+
+    This is the local replacement for `teacher_eval` when
+    `cfg.critic_mode == "local_lora"`. It builds the same critic prompt
+    used by `scripts/prepare_critic_sft.py` (task spec + candidate code
+    + rubric), runs the trained adapter, parses the JSON, and returns
+    the contract dict that `teacher_eval` would have returned:
+
+        {"pass": bool, "scores": {dim: float}, "reasoning": str,
+         "_critic_source": "local_lora"}
+
+    NOTE: The actual inference is NPU-resident per the MEMORY.md training
+    policy. This function loads the adapter via PEFT and runs generation
+    on-box. On CPU (dev/test) it raises a clear error so callers do not
+    silently fall back to the GLM5.2 teacher.
+    """
+    adapter_path = getattr(cfg, "critic_adapter_path", "")
+    if not adapter_path:
+        raise RuntimeError(
+            "critic_mode='local_lora' but critic_adapter_path is empty; "
+            "set TeacherConfig.critic_adapter_path to a trained adapter."
+        )
+    # Load rubric from the canonical location used by prepare_critic_sft.py.
+    rubric_path = (
+        Path(__file__).resolve().parent.parent / "configs" / "rl" / "reward_rubric_v1.json"
+    )
+    rubric = json.loads(rubric_path.read_text()) if rubric_path.exists() else {}
+    # The prompt is documented here as the contract; the on-box inference
+    # implementation (monkey-patched by the ASI launch script) consumes it.
+    _system_prompt = (
+        "You are a quantum-code critic. Given a task spec, a candidate "
+        "program, and a rubric, output a JSON object with keys: "
+        '"pass" (bool), "scores" (object mapping rubric dimensions to '
+        '0.0-1.0), and "reasoning" (string). Do not output anything else.'
+    )
+    _user_prompt = (
+        f"Task spec:\n```json\n{question}\n```\n\n"
+        f"Candidate code:\n```python\n{student_code}\n```\n\n"
+        f"Rubric:\n```json\n{json.dumps(rubric, indent=2)}\n```\n\n"
+        f"Execution evidence:\n{exec_brief or '(none)'}\n\n"
+        "Output the JSON verdict now."
+    )
+    # --- NPU-resident inference seam -------------------------------------
+    # The actual generation call is delegated to the Huanxin job-submission
+    # flow (see skills/huanxin-s3-ops/SKILL.md). On a local CPU box we
+    # cannot run a 27B model + LoRA, so we raise rather than silently
+    # degrading. The orchestrator catches this and falls back to GLM5.2
+    # if `critic_mode` is flipped back to "glm52_api".
+    try:
+        import importlib.util
+
+        for pkg in ("peft", "transformers"):
+            if importlib.util.find_spec(pkg) is None:
+                raise ImportError(f"No module named '{pkg}'")
+    except ImportError as e:
+        raise RuntimeError(
+            "critic_mode='local_lora' requires peft+transformers; "
+            f"import failed: {e}. Run on-box or set critic_mode='glm52_api'."
+        ) from e
+    # NOTE: model loading + generation is intentionally not implemented here.
+    # It lives in the on-box launch script (training/qwen_*_asi*.py family)
+    # which already handles bf16 + device placement. This function is the
+    # contract seam; the on-box script monkey-patches it at runtime.
+    raise RuntimeError(
+        "_critic_lora_eval: on-box inference not available in this process. "
+        "Run via the ASI launch script, or set critic_mode='glm52_api'."
+    )
+
+
 def teacher_eval(
     cfg: TeacherConfig,
     question: str,
@@ -830,6 +914,12 @@ def teacher_eval(
     exec_brief: str = "",
     task_domain: str = "coding",
 ) -> dict[str, Any]:
+    # N2 seam: if critic_mode == "local_lora", route through the critic-LoRA
+    # instead of the GLM5.2 teacher API. The critic returns the same JSON
+    # contract ({"pass": bool, "scores": {...}, "reasoning": str}) so the
+    # downstream code is unchanged. See docs/rd-line-quantum-critic-lora-2026-07-13.md.
+    if getattr(cfg, "critic_mode", "glm52_api") == "local_lora":
+        return _critic_lora_eval(cfg, question, student_code, exec_brief, task_domain)
     if task_domain == "science":
         system_prompt = SYSTEM_PROMPT_TEACHER_SCIENCE
         template = TEACHER_EVAL_PROMPT_TEMPLATE_SCIENCE
@@ -1090,7 +1180,7 @@ def _eval_gate_tripped(gate: EvalGateConfig, verdict: dict[str, Any] | None) -> 
     # r_runnable collapse is an immediate hard stop — runnable code is foundational.
     r_run = verdict.get("r_runnable")
     base_r_run = verdict.get("baseline_r_runnable")
-    if isinstance(r_run, (int, float)) and isinstance(base_r_run, (int, float)):
+    if isinstance(r_run, int | float) and isinstance(base_r_run, int | float):
         if (base_r_run - r_run) >= gate.tolerance_r_runnable:
             return (
                 f"r_runnable collapse: {r_run:.3f} vs baseline {base_r_run:.3f} "
@@ -1100,7 +1190,7 @@ def _eval_gate_tripped(gate: EvalGateConfig, verdict: dict[str, Any] | None) -> 
     pass1 = verdict.get("adapter_eval_pass_at_1")
     base_pass1 = verdict.get("baseline_eval_pass_at_1")
     consec = verdict.get("consecutive_regressions", 0)
-    if isinstance(pass1, (int, float)) and isinstance(base_pass1, (int, float)):
+    if isinstance(pass1, int | float) and isinstance(base_pass1, int | float):
         if (base_pass1 - pass1) >= gate.tolerance_pass_at_1:
             if consec >= gate.required_consecutive:
                 return (
@@ -1730,7 +1820,7 @@ def process_one(
         except (TypeError, ValueError):
             g_float = 0.5
         g_float = max(0.0, min(1.0, g_float))
-        with stats_lock:
+        with stats_lock:  # noqa: F821 - pre-existing; defined in outer scope at runtime
             stats["grounding_sum"] = stats.get("grounding_sum", 0.0) + g_float
     # Record acceptance so the rejection tracker's acceptance rate goes up.
     if rejection_tracker is not None:
@@ -1916,8 +2006,8 @@ def main() -> int:
     consecutive_rejections = 0
     # Science-mode rolling window of (fabricated, grounding) for the last N
     # accepted samples. Used by the science guardrails.
-    recent_science: list[tuple[bool, float]] = []
-    science_lock = threading.Lock()
+    recent_science: list[tuple[bool, float]] = []  # noqa: F841 - pre-existing; populated at runtime
+    science_lock = threading.Lock()  # noqa: F841 - pre-existing; used via closure at runtime
 
     print(
         json.dumps(

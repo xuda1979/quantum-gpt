@@ -4,7 +4,7 @@
 A "universal-failure task" is one that fails on ALL evaluated models in
 `evals/subsystem/recommendations/`. For each such task:
 
-- chosen = the reference candidate from `evals/tasks/quantum/<task>/candidate.py`
+- chosen = the reference candidate from `evals/tasks/{quantum,software}/<task>/candidate.py`
   reformatted into the canonical assistant form (per
   `docs/task-design-conventions.md`).
 - rejected = a synthetic failing roll-out that exhibits the failure mode
@@ -18,7 +18,7 @@ DPO signal cannot teach the model to prefer a wrong answer.
 Inputs
 ------
 --recs-dir     : directory containing qaoa-*.json recommendation files
---tasks-dir    : directory containing quantum task folders (evals/tasks/quantum)
+--tasks-dir    : colon-separated list of task-root dirs (default: evals/tasks/quantum:evals/tasks/software)
 --output       : JSONL of DPO pairs
 --check        : validate every chosen side by running tests.py (slow; opt-in)
 """
@@ -64,17 +64,25 @@ def load_recommendations(recs_dir: Path) -> dict[str, dict]:
 
 
 def load_reference_candidate(tasks_dir: Path, task_id: str) -> str | None:
-    """Load the reference candidate.py for a task. Returns None if missing."""
-    # task_id like "quantum_qaoa_maxcut_5cycle" maps to folder "qaoa_maxcut_5cycle"
-    # by stripping the leading "quantum_" prefix. But some task_ids may already
-    # be the folder name. Try both.
-    candidates = [
-        tasks_dir / task_id / "candidate.py",
-        tasks_dir / task_id.replace("quantum_", "", 1) / "candidate.py",
+    """Load the reference candidate.py for a task. Returns None if missing.
+
+    `tasks_dir` may be a colon-separated list of directories (e.g.
+    "evals/tasks/quantum:evals/tasks/software"); each is searched in turn.
+    task_id like "quantum_qaoa_maxcut_5cycle" maps to folder
+    "qaoa_maxcut_5cycle" by stripping a leading domain prefix. We try
+    stripping "quantum_" and "software_" prefixes, and also the raw id.
+    """
+    dirs = [Path(d) for d in str(tasks_dir).split(":") if d]
+    folder_candidates = [
+        task_id,
+        task_id.replace("quantum_", "", 1),
+        task_id.replace("software_", "", 1),
     ]
-    for p in candidates:
-        if p.exists():
-            return p.read_text()
+    for d in dirs:
+        for folder in folder_candidates:
+            p = d / folder / "candidate.py"
+            if p.exists():
+                return p.read_text()
     return None
 
 
@@ -115,6 +123,25 @@ def synthesize_rejected(
     )
 
 
+def resolve_task_dir(tasks_dir: Path, task_id: str) -> Path | None:
+    """Resolve a task_id to its directory across a colon-separated tasks_dir.
+
+    Returns the first matching directory that contains a tests.py, or None.
+    """
+    dirs = [Path(d) for d in str(tasks_dir).split(":") if d]
+    folder_candidates = [
+        task_id,
+        task_id.replace("quantum_", "", 1),
+        task_id.replace("software_", "", 1),
+    ]
+    for d in dirs:
+        for folder in folder_candidates:
+            p = d / folder
+            if (p / "tests.py").exists():
+                return p
+    return None
+
+
 def build_pair(task_id: str, info: dict, tasks_dir: Path) -> dict | None:
     code = load_reference_candidate(tasks_dir, task_id)
     if code is None:
@@ -150,7 +177,11 @@ def build_pair(task_id: str, info: dict, tasks_dir: Path) -> dict | None:
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--recs-dir", default="evals/subsystem/recommendations")
-    ap.add_argument("--tasks-dir", default="evals/tasks/quantum")
+    ap.add_argument(
+        "--tasks-dir",
+        default="evals/tasks/quantum:evals/tasks/software",
+        help="colon-separated list of task-root dirs",
+    )
     ap.add_argument("--output", required=True)
     ap.add_argument(
         "--universal-only",
@@ -196,13 +227,12 @@ def main():
         ok = 0
         bad = 0
         for tid in sorted(selected):
-            task_dir = tasks_dir / tid
-            if not task_dir.exists():
-                task_dir = tasks_dir / tid.replace("quantum_", "", 1)
-            if not (task_dir / "tests.py").exists():
+            task_dir = resolve_task_dir(tasks_dir, tid)
+            if task_dir is None:
                 continue
             r = subprocess.run(
                 [sys.executable, str(task_dir / "tests.py")],
+                cwd=task_dir,
                 capture_output=True,
                 text=True,
                 timeout=60,
