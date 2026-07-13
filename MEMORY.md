@@ -164,3 +164,42 @@
   - the fresh `reports/autonomous_rd_cycle_gemma4-26b-a4b-it_2026-04-10_state.json` state shows `local_eval_gate` and `holdout_integrity` passed, `gemma_local_python_gate` passed, and the current blocker moved forward to `gemma_runtime_bootstrap`
   - a second 2026-04-10 experiment narrowed this further: the stable wheel stack from `training/requirements-huanxin-cpu.txt` installs successfully on the py311 environment, but `transformers==4.57.1` still fails Gemma at `runtime_compat`
   - the current precise Gemma blocker is therefore no longer “missing Python >=3.10” or “generic py311 wheel bootstrap”; it is obtaining a newer-than-4.57.1 Transformers source/runtime that actually recognizes `gemma4`, and that source-fetch path is still failing on the local machine/network path
+
+## 2026-07-13 — Three new post-training R&D lines scaffolded
+
+- **Three new post-training R&D lines** scaffolded in loop iteration 14:35
+  (all post-training only, no architecture change to 27B/35B):
+  - **N6 (format-constrained DPO)**: `scripts/prepare_format_dpo_pairs.py`
+    reformats SFT assistant turns into canonical form
+    (`def main()` + `if __name__` guard + fenced python) and synthesizes
+    3 negative types (prose-only, no-main, no-guard). Smoke: 228 DPO
+    pairs from 90 SFT rows. Config: `configs/dpo/qwen36_formatter_dpo_v1.json`.
+  - **N1 (universal-failure DPO)**: `scripts/prepare_universal_failure_dpo.py`
+    intersects the 3 recommendation JSONs in
+    `evals/subsystem/recommendations/` to find tasks failing on ALL
+    evaluated models (7 found), pairs each task's reference candidate
+    (machine-verified to pass `tests.py`) as chosen vs. a synthetic
+    failure-mode roll-out as rejected. Config:
+    `configs/dpo/qwen36_universal_failure_dpo_v1.json`.
+  - **N2 (quantum-critic LoRA)**: `scripts/prepare_critic_sft.py` builds
+    SFT data for a critic-LoRA with I/O contract
+    `{task_spec, candidate_code, rubric} -> JSON {pass, scores, reasoning}`.
+    58 positive rows (reference candidates) + 8 negative (from recs).
+    Config: `configs/sft/qwen36_critic_lora_v1.json`. This removes the
+    GLM5.2 teacher bottleneck for future RL.
+
+- **Reusable pattern learned**: the most defensible DPO pairs are those
+  where the chosen side is *machine-verified to pass* (by a task's own
+  `tests.py`) and the rejected side is *constructed to fail* on a
+  documented axis. This makes the DPO signal corruption-proof — the
+  model cannot learn to prefer a wrong answer because no wrong answer
+  is ever on the chosen side.
+
+- **Test discipline**: every new scaffold script ships with a unit test
+  that runs the script end-to-end on real repo data and asserts the
+  output schema. 16 new tests, 0 regressions on the 77 pre-existing
+  focused-suite tests.
+
+- **`docs/STATE.md` drill-down table** now lists all 3 new R&D lines.
+  Future loops should check this table before proposing new lines to
+  avoid duplication.

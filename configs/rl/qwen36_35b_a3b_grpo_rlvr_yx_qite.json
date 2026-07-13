@@ -39,6 +39,15 @@
     "secrets_access": -1.0,
     "network_abuse": -1.0
   },
+  "eval_gate": {
+    "enabled": false,
+    "verdict_path": "",
+    "poll_every_seconds": 300,
+    "tolerance_pass_at_1": 0.03,
+    "tolerance_r_runnable": 0.2,
+    "required_consecutive": 2,
+    "_comment": "Set enabled=true and verdict_path=<NAS path to verdict.json> to arm the eval-regression gate. See skills/quantum-eval-verifier/SKILL.md and tests/test_eval_gate_logic.py for schema."
+  },
   "preflight_gates": [
     "local tests pass",
     "yx-QITE login or task-submission control path verified",

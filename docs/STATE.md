@@ -1,6 +1,6 @@
 # STATE.md — Current R&D Snapshot
 
-**Last updated:** 2026-07-12
+**Last updated:** 2026-07-13
 **Purpose:** One-page index. Read this first, then drill into PLAN.md / docs/ for depth.
 **Refresh rule:** Update whenever an iteration boundary changes (eval result lands,
 new adapter trained, blocker moves). Keep ≤100 lines.
@@ -83,9 +83,9 @@ Fresh eval today on the gold-standard full-program task (`quantum_qaoa_maxcut_5c
 1. **Materialize 27B adapter weights (628 MB)** from NAS via Huanxin chunked-base64 fetch — build reusable helper, reassemble locally, verify SHA256. ✅ config already verified 2026-07-12.
 2. **Materialize 35B adapter weights (5.3 GB)** — too large for base64-over-xterm; use S3 sync or tarball-via-HTTP fallback. ✅ config already verified 2026-07-12.
 3. **Re-run iter-2 12-task eval** with materialized adapters to verify the "11/12" claim.
-4. **Fill iter-3 dataset rows** using the machine-generated gap recs in `docs/iter3-gap-rec-crossref-2026-07-12.md` (7 universal-gap tasks identified across glm5.2/deepseek/qwen).
-5. Wire `eval_gate` block into active RL config (`configs/rl/*.json`)
-6. Run first RL + soft-distill round with eval gate armed
+4. ~~Fill iter-3 dataset rows~~ ✅ DONE 2026-07-13 — all 16/16 gap rows in `scripts/iter3_reference_solutions.py` now have reference solutions (9 Qiskit A-rows authored this session + 7 B/C rows from prior). Syntax 16/16 clean; 98 regression tests pass. Build gate still waits on iter-2 eval (item #3) per `scripts/prepare_iter3_distill_sft.py` line 400.
+5. ~~Wire `eval_gate` block into active RL config (`configs/rl/*.json`)~~ ✅ DONE 2026-07-13 — both `qwen36_35b_a3b_grpo_rlvr_asi1.json` and `qwen36_35b_a3b_grpo_rlvr_yx_qite.json` have the `eval_gate` block; 13/13 `test_eval_gate_logic.py` pass.
+6. Run first RL + soft-distill round with eval gate armed (set `enabled=true` + `verdict_path` when ready)
 
 ## Drill-Down
 
@@ -104,3 +104,7 @@ Fresh eval today on the gold-standard full-program task (`quantum_qaoa_maxcut_5c
 | Eval verifier skill | `skills/quantum-eval-verifier/SKILL.md` |
 | Huanxin + S3 ops | `skills/huanxin-s3-ops/SKILL.md` |
 | Frontier infra practices | `docs/frontier_llm_rd_infrastructure_practices_2026-05-26.md` |
+| **New R&D lines (2026-07-13)** | |
+| N6: Format-constrained DPO | `docs/rd-line-format-constrained-sft-2026-07-13.md` |
+| N1: Universal-failure DPO | `docs/rd-line-universal-failure-dpo-2026-07-13.md` |
+| N2: Quantum-critic LoRA | `docs/rd-line-quantum-critic-lora-2026-07-13.md` |
