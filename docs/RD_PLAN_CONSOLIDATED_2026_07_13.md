@@ -152,9 +152,12 @@ datasets. Only the *adapter* count is reduced.
 | 6 | Adapter B science SFT + RL | separate NPU job | ⏳ blocked on S3 |
 | 7 | Manager report: eval comparison vs baseline | phases 3–6 | — |
 
-**Critical path blocker:** Huanxin MinIO S3 endpoint down (HTTP 500/404)
-blocks iter-2 adapter weight recovery, which blocks all NPU training-job
-submissions. Escalated to platform team.
+**Critical path blocker (updated 2026-07-14):** S3 (MinIO) endpoint has
+**RECOVERED** — uploads/downloads verified working. However, the Huanxin
+shell terminal service is now DOWN (error 170022 "获取shell终端信息失败"
+on ASI1/ASI2/ASI3), which blocks ALL NPU training job submissions. Down
+since 2026-07-10 (4 days). See `docs/BLOCKER_STATUS_2026_07_14.md`.
+All training data is staged on S3 and ready to submit once shell recovers.
 
 ---
 

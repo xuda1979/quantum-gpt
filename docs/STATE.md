@@ -1,9 +1,21 @@
 # STATE.md — Current R&D Snapshot
 
-**Last updated:** 2026-07-13 (consolidation — 13 lines → 2 adapters + 1 aux)
+**Last updated:** 2026-07-14 (S3 recovered; Huanxin shell terminal still down — platform outage)
 **Purpose:** One-page index. Read this first, then drill into PLAN.md / docs/ for depth.
 **Refresh rule:** Update whenever an iteration boundary changes (eval result lands,
 new adapter trained, blocker moves). Keep ≤100 lines.
+
+---
+
+## ⚠️ Critical Blocker (2026-07-14)
+
+**Huanxin shell terminal service is DOWN (platform-wide outage).**
+Error 170022 "获取shell终端信息失败" on ASI1/ASI2/ASI3. Blocks ALL NPU
+training job submissions. Down since 2026-07-10 (4 days). See
+`docs/BLOCKER_STATUS_2026_07_14.md`.
+
+**S3 (MinIO) is UP** — all training data staged on S3. Ready to submit
+the moment shell terminal recovers.
 
 ---
 

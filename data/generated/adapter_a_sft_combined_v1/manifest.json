@@ -1,0 +1,17 @@
+{
+  "name": "adapter_a_sft_combined_v1",
+  "created": "2026-07-14",
+  "total_rows": 164,
+  "train_rows": 148,
+  "eval_rows": 16,
+  "sources": {
+    "curriculum": "data/generated/rd_lines_2026_07_13/unified_sft_curriculum.jsonl",
+    "n4_ose": "data/generated/rd_lines_2026_07_13/n4_ose_sft.jsonl",
+    "n5_circuit": "data/generated/rd_lines_2026_07_13/n5_circuit_sft.jsonl",
+    "n8_qcc": "data/generated/rd_lines_2026_07_13/n8_qcc_sft.jsonl",
+    "glm52_distill_iter2": "data/generated/glm52_soft_distill_sft_iter2/train_chatml.jsonl"
+  },
+  "format": "chat-sft-v1 (messages: [system, user, assistant])",
+  "purpose": "Adapter A (quantum-code) SFT stage - combined from all rd_lines SFT sources + iter2 distill",
+  "dedup": "full-message-content SHA256 hash"
+}
