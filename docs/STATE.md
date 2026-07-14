@@ -1,21 +1,21 @@
 # STATE.md — Current R&D Snapshot
 
-**Last updated:** 2026-07-14 (S3 recovered; Huanxin shell terminal still down — platform outage)
+**Last updated:** 2026-07-14 (training RUNNING on ASI1+ASI2 — 27B LoRA SFT on 1K dedup)
 **Purpose:** One-page index. Read this first, then drill into PLAN.md / docs/ for depth.
 **Refresh rule:** Update whenever an iteration boundary changes (eval result lands,
 new adapter trained, blocker moves). Keep ≤100 lines.
 
 ---
 
-## ⚠️ Critical Blocker (2026-07-14)
+## ✅ Training Active (2026-07-14 12:08 UTC)
 
-**Huanxin shell terminal service is DOWN (platform-wide outage).**
-Error 170022 "获取shell终端信息失败" on ASI1/ASI2/ASI3. Blocks ALL NPU
-training job submissions. Down since 2026-07-10 (4 days). See
-`docs/BLOCKER_STATUS_2026_07_14.md`.
+- **ASI1**: Qwen3.6-27B LoRA SFT, 1K dedup dataset, step 31/250, loss ~0.14
+- **ASI2**: Qwen3.6-27B LoRA SFT, 1K dedup dataset, step 13/250, loss ~0.07
+- Both using: NPROC=1, MAX_LENGTH=256, LoRA rank 16, lr 1e-4, ~27s/step
+- ETA: ~2 hours per epoch (250 steps × 27s)
 
-**S3 (MinIO) is UP** — all training data staged on S3. Ready to submit
-the moment shell terminal recovers.
+**Previous blocker RESOLVED:** Error 170022 was stopped environments, not
+platform outage. User started them from Huanxin UI. See `docs/BLOCKER_STATUS_2026_07_14.md`.
 
 ---
 

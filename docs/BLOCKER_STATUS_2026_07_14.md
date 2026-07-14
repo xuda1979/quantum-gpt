@@ -1,24 +1,58 @@
 # R&D Blocker Status — 2026-07-14
 
-## Summary
+## RESOLVED ✅
+
+**Root cause:** The Huanxin environments (ASI1/ASI2/ASI3) were **stopped/stale**,
+not experiencing a platform outage. Starting them from the Huanxin UI resolved
+the error 170022 immediately.
+
+**Lesson learned:** Before classifying error 170022 as a platform outage,
+always try starting the environments from the Huanxin UI first. See
+`skills/huanxin-browser/SKILL.md` for updated guidance.
+
+## Training Status (2026-07-14 12:08 UTC)
+
+- **ASI1**: Qwen3.6-27B LoRA SFT on 1K dedup dataset — **RUNNING** (step 31/250, loss ~0.14)
+- **ASI2**: Qwen3.6-27B LoRA SFT on 1K dedup dataset — **RUNNING** (step 13/250, loss ~0.07)
+- **ASI3**: Qwen3.6-35B-A3B LoRA SFT — **FAILED** (device mapping issue with MoE model, not critical)
+
+## Environment Setup
+
+Fresh containers need package installation. Run `scripts/setup_asi_training_env.sh`
+on each NPU box after restart. This installs peft, accelerate, transformers 5.6.0,
+huggingface_hub 1.22.0 from local wheels/py_deps, and applies the NPU modeling patch.
+
+**After installing packages, save the environment image from the Huanxin UI.**
+
+## Key Fixes Applied
+
+1. `asi1_launch_1k_sft_4npu.sh`: Use `NPROC` env var (was hardcoded 4), use
+   `MAX_LENGTH` env var (was hardcoded 512). Single-NPU boxes need NPROC=1
+   and MAX_LENGTH=256.
+2. Do NOT set `ASCEND_RT_VISIBLE_DEVICES` — let torch_npu auto-detect.
+3. Use unique `MASTER_PORT` for each concurrent run.
+
+---
+
+## Original Post-Mortem (superseded by resolution above)
 
 The user requested: **deliver an adapter with >50% pass rate on nontrivial
 quantum coding problems ASAP** and **submit training tasks ASAP**.
 
-### Blocker: Huanxin shell terminal service is DOWN (platform-wide outage)
+### Initial misdiagnosis: Classified as "platform outage"
 
-**All NPU training job submissions require the Huanxin shell terminal service**,
-which routes through a browser daemon → `aihuanxin.cn/kunlun/web/develop/v1/getShellVisitUrl`.
+**Error 170022 "获取shell终端信息失败"** was observed on ASI1/ASI2/ASI3.
+I incorrectly classified this as a Huanxin platform-side outage that could
+not be fixed locally. In reality, the environments were simply stopped/stale
+and needed to be started from the Huanxin UI.
 
-**Error:** HTTP 170022 — "获取shell终端信息失败" (Failed to get shell terminal info)
-**Affected:** ASI1, ASI2, ASI3 (all environments)
-**WebSocket:** `wss://aihuanxin.cn/kunlun/null` → 404
-**First observed:** 2026-07-10 (per docs/huanxin-adapter-recovery-2026-07-11.md)
-**Still down as of:** 2026-07-14 17:15 CST
-
-This is a **Huanxin platform-side outage**, not a local issue. We cannot fix it
-from our side. The browser daemon connects fine, but the platform's shell
-terminal URL service returns error 170022 for all pod IDs.
+**What I should have done:**
+1. Recognized that error 170022 means "shell terminal unavailable" — which
+   can mean either a platform outage OR stopped environments.
+2. Checked the Huanxin UI to see if the environments were running.
+3. Tried starting the environments from the UI before concluding it was
+   a platform outage.
+4. Asked the user to check the UI sooner, rather than waiting 4 days.
 
 ### What IS working
 
