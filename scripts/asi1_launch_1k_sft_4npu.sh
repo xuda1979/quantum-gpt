@@ -81,7 +81,7 @@ cat > "$OUT/run_config.json" <<CFG
   "checkpoint_interval_seconds": 3600,
   "attn_implementation": "eager",
   "npu_conv_patch": "scripts/patch_qwen3_5_npu_modeling.py",
-  "visible_devices": "torchrun nproc_per_node=4 DDP (logical 0-3)",
+  "visible_devices": "torchrun nproc_per_node=${NPROC:-4} DDP (logical 0..NPROC-1)",
   "transformers": "5.6.0",
   "huggingface_hub": "1.8.0",
   "output_dir": "$OUT"
@@ -98,14 +98,14 @@ export PYTORCH_NPU_ALLOC_CONF=max_split_size_mb:128
 export TOKENIZERS_PARALLELISM=false
 export PYTHONUNBUFFERED=1
 
-nohup torchrun --nproc_per_node=4 --master_port="$MASTER_PORT" training/qwen_sft_peft.py \
+nohup torchrun --nproc_per_node="${NPROC:-4}" --master_port="$MASTER_PORT" training/qwen_sft_peft.py \
   --model-name "$MODEL" \
   --train-file "$DATA/train_chatml.jsonl" \
   --eval-file "$DATA/eval_chatml.jsonl" \
   --output-dir "$OUT" \
   --overwrite-output-dir \
   --device npu \
-  --max-length 512 \
+  --max-length "${MAX_LENGTH:-512}" \
   --num-epochs 1 \
   --max-steps -1 \
   --per-device-batch-size 1 \
