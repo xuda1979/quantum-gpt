@@ -79,6 +79,13 @@ if [[ $GIT_ONLY -eq 0 ]]; then
   echo "--- training/ ---"
   rclone copy "$ROOT_DIR/training/" "${INER_S3_ROOT}/training/" "${RCLONE_ARGS[@]}" 2>&1 | tail -5 || true
 
+  # 1e. Generated datasets (distillation seed questions + teacher responses).
+  # These are small JSONL files (a few MB) but extremely valuable — expensive
+  # to regenerate (requires teacher API calls). Explicitly include them here
+  # so they are backed up to S3 alongside the code.
+  echo "--- data/generated/ ---"
+  rclone copy "$ROOT_DIR/data/generated/" "${INER_S3_ROOT}/data/generated/" "${RCLONE_ARGS[@]}" 2>&1 | tail -5 || true
+
   echo "=== S3 backup done ==="
 fi
 

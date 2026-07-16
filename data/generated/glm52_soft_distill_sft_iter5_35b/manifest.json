@@ -1,0 +1,48 @@
+{
+  "iteration": 5,
+  "adapter_target": "35b",
+  "created": "2026-07-16",
+  "total_questions": 1000,
+  "teacher": "glm5.2",
+  "teacher_logprobs": true,
+  "teacher_top_logprobs": 20,
+  "system_prompt": "You are a careful quantum software engineering assistant. Use the user's task and any supplied context to produce correct, testable Python or precise repair guidance. Always produce a complete, runnable Python program with `def main()` that prints the exact specified marker string. Do not include markdown fences or surrounding commentary.",
+  "task_family_distribution": {
+    "pennylane_qml": 67,
+    "full_program_contract": 101,
+    "error_mitigation_qml": 67,
+    "vqe_expectation": 85,
+    "cirq_qaoa_simulation": 122,
+    "pennylane_vqe": 81,
+    "software_domain": 67,
+    "rare_algorithms": 80,
+    "density_matrix_partial_trace": 96,
+    "qaoa_end_to_end": 101,
+    "braket_general": 69,
+    "qft_phase_estimation": 64
+  },
+  "framework_distribution": {
+    "pennylane": 148,
+    "mixed": 168,
+    "qiskit": 426,
+    "cirq": 122,
+    "general": 67,
+    "braket": 69
+  },
+  "difficulty_distribution": {
+    "hard": 461,
+    "medium": 446,
+    "easy": 93
+  },
+  "source_gap_report": "docs/iter4-comprehensive-eval-report-2026-07-16.md",
+  "plan": "docs/iter5-distill-sft-plan-2026-07-16.md",
+  "dedup_removed": 0,
+  "quality_gates": [
+    "No truncation at max_length (768 for 27B, 2048 for 35B)",
+    "No <think> tags in teacher responses",
+    "All teacher responses pass ast.parse",
+    "All teacher responses print the expected_marker (runnable code)",
+    "No duplicate questions (dedup by SHA-256 of prompt)",
+    "Train/eval split disjoint by task_family"
+  ]
+}

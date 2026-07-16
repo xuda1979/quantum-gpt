@@ -1,0 +1,51 @@
+{
+  "name": "glm52_distill_100qa_v1",
+  "version": "1.0",
+  "created": "2026-07-16",
+  "total_questions": 100,
+  "teacher": "glm5.2",
+  "teacher_api_format": "anthropic_messages",
+  "teacher_temperature": 0.2,
+  "teacher_max_tokens": 4096,
+  "system_prompt": "You are a careful quantum software engineering assistant. Use the user's task to produce correct, testable Python code. Always produce a complete, runnable Python program with `def main()` that prints the exact specified marker string. Do not include markdown fences or surrounding commentary.",
+  "family_distribution": {
+    "qiskit_basics": 20,
+    "qiskit_algorithms": 15,
+    "pennylane_basics": 10,
+    "pennylane_vqe": 4,
+    "pennylane_qml": 3,
+    "pennylane_algorithms": 3,
+    "cirq_basics": 10,
+    "cirq_algorithms": 5,
+    "braket_basics": 9,
+    "braket_algorithms": 6,
+    "software_eng": 15
+  },
+  "framework_distribution": {
+    "qiskit": 34,
+    "python": 16,
+    "pennylane": 20,
+    "cirq": 15,
+    "braket": 15
+  },
+  "difficulty_distribution": {
+    "easy": 17,
+    "medium": 52,
+    "hard": 31
+  },
+  "quality_gates": [
+    "No ildi tags in teacher responses",
+    "No markdown fences in teacher responses",
+    "ast.parse passes (valid Python syntax)",
+    "def main() defined and called",
+    "Required framework imported",
+    "Code runs in sandbox and prints expected_marker",
+    "Reference solution fallback guarantees 100% dataset completeness"
+  ],
+  "output_files": {
+    "seed_questions": "seed_questions.jsonl",
+    "teacher_responses": "teacher_responses.jsonl",
+    "sft_chatml": "distill100_sft_chatml.jsonl",
+    "quality_report": "quality_report.json"
+  }
+}

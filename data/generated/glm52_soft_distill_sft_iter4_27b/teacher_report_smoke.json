@@ -1,0 +1,17 @@
+{
+  "already_completed": 0,
+  "api_format": "anthropic_messages",
+  "errors": [
+    "iter4-27b-pennylane_qml-0002: teacher output is empty",
+    "iter4-27b-pennylane_qml-0001: teacher output is empty"
+  ],
+  "force": true,
+  "generated": 1,
+  "input_jsonl": "data/generated/glm52_soft_distill_sft_iter4_27b/seed_questions.jsonl",
+  "logprobs_supported": false,
+  "model": "glm5.2",
+  "ok": false,
+  "output_jsonl": "data/generated/glm52_soft_distill_sft_iter4_27b/teacher_responses.jsonl",
+  "seed_rows": 100,
+  "selected": 3
+}
