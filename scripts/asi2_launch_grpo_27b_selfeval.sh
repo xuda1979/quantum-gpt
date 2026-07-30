@@ -60,6 +60,30 @@ MIN_REWARD_STD="${MIN_REWARD_STD:-0.05}"
 ADAPTIVE_TEMP_STEP="${ADAPTIVE_TEMP_STEP:-0.15}"
 ADAPTIVE_TEMP_MAX="${ADAPTIVE_TEMP_MAX:-2.0}"
 
+# ---- dry-run mode (for browser-automation deriveLaunchSpec) ----
+if [[ "${1:-}" == "--dry-run" ]]; then
+  # Output JSON launch spec for the browser-automation submit script
+  python3 -c "
+import json
+spec = {
+    'remote_root': '$NAS_ROOT',
+    'execution_command': 'cd $NAS_ROOT && bash scripts/asi2_launch_grpo_27b_selfeval.sh launch',
+    'remote_command': 'bash scripts/asi2_launch_grpo_27b_selfeval.sh launch',
+    'output_dir': '$OUT',
+    'log_path': '$TRAIN_LOG',
+    'job_name': 'asi2-grpo-27b-selfeval',
+    'group_size': '$GROUP_SIZE',
+    'grpo_steps': '$GRPO_STEPS',
+    'checkpoint_interval_seconds': '$CHECKPOINT_INTERVAL_SECONDS',
+    'model_path': '$MODEL_PATH',
+    'nas_checkpoint_root': '$NAS_CHECKPOINT_ROOT',
+    'self_eval_enabled': 'true',
+}
+print(json.dumps(spec, indent=2))
+"
+  exit 0
+fi
+
 mkdir -p "$LOGDIR" "$OUT" "$NAS_CHECKPOINT_ROOT"
 
 # ---- resume support ----
