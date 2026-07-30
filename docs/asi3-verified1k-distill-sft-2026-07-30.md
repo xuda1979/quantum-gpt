@@ -48,9 +48,29 @@ only** (no teacher logits), to avoid training on unverified code.
 - Output dir is forced under `/root/work/*` (persistent NAS) by the launcher's
   durability guardrail.
 - Adapter checkpoints mirrored to NAS every 900 s.
+- **Parallelism:** ASI3 exposes 8 × 910B2 NPUs (64 GB each). The 35B-A3B model
+  is ~67 GB in bf16 → too large for one-NPU DDP, so the launcher uses
+  single-process `balanced-layers` sharding (pipeline-parallel across all 8
+  NPUs). The pipeline bubble leaves ~35 GB free per NPU, so the lever for
+  throughput is `per_device_batch_size`, not NPU count.
+
+## Throughput tuning (2026-07-30)
+
+| Config | per_device_batch | grad_accum | max_length | step time | 2-epoch ETA |
+|--------|------------------|------------|------------|-----------|-------------|
+| v1 (initial) | 1 | 4 | 2048 | ~90 s/step | ~11 h |
+| v2 (current) | **4** | **1** | **1536** | **~28 s/step** | **~3.5 h** |
+
+- v2 uses the same effective batch (4 samples/step) but 4× the optimizer steps
+  per epoch, filling the pipeline bubble. NPU memory 27–39 GB / 65 GB (safe).
+- 98.2% of samples are < 1024 tokens; max_length 1536 covers 99.4%. The 0.6%
+  tail is truncated, which is acceptable for SFT.
+- Job id: `asi3-verified1k-distill-sft-35b-batch4-20260730T095003Z`.
+- If more speed is needed: batch=8 (~45 GB/NPU) is the next ceiling, but risks
+  OOM on the 2560-token tail; consider sorting by length or capping at 2048.
 
 ## Iteration log entry
 
 | Iter | Date       | Dataset                                  | ASI3 (35B) | Notes |
 |------|------------|------------------------------------------|-----------|-------|
-| v3-verified | 2026-07-30 | `quantum_dedup_1k_glm52_soft_distill_v3_verified_nologit` (900 train / 37 eval) | launched | plain SFT, strict-PASS only, no logits |
+| v3-verified | 2026-07-30 | `quantum_dedup_1k_glm52_soft_distill_v3_verified_nologit` (900 train / 37 eval) | running (batch4 config) | plain SFT, strict-PASS only, no logits, ~3.5 h ETA |
