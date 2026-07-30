@@ -23,6 +23,7 @@ import os
 import random
 import sys
 import tempfile
+import time
 import uuid
 from pathlib import Path
 from typing import Any
@@ -181,6 +182,38 @@ def parse_args() -> argparse.Namespace:
         default=1.5,
         help="Sampling multiplier for quantum tasks in the adaptive curriculum.",
     )
+    # ── self-evaluation: the model judges its own generated code ──
+    p.add_argument(
+        "--self-evaluation-enabled",
+        action="store_true",
+        default=False,
+        help="Enable self-evaluation: the model judges its own generated code samples.",
+    )
+    p.add_argument(
+        "--reward-self-eval-weight",
+        type=float,
+        default=0.25,
+        help="Weight for the self-evaluation reward component.",
+    )
+    p.add_argument(
+        "--self-eval-judge-temperature",
+        type=float,
+        default=0.3,
+        help="Temperature for the self-judge generation.",
+    )
+    p.add_argument(
+        "--self-eval-judge-max-tokens",
+        type=int,
+        default=512,
+        help="Max tokens for the self-judge response.",
+    )
+    # ── checkpoint interval (periodic adapter save to disk) ──
+    p.add_argument(
+        "--checkpoint-interval-seconds",
+        type=int,
+        default=7200,
+        help="Save adapter checkpoint to disk every N seconds (0 = only at end).",
+    )
     return p.parse_args()
 
 
@@ -338,10 +371,121 @@ def extract_code(response: str) -> str:
     return response.strip()
 
 
+SELF_EVAL_JUDGE_PROMPT = """You are a quantum computing code reviewer. Evaluate the following code solution
+against these criteria on a scale of 0-10 (0 = completely wrong/fails, 10 = perfect):
+
+1. Correctness: Does the algorithm produce the right quantum state / result?
+2. Runnability: Will the code execute without errors in a standard quantum SDK environment?
+3. Efficiency: Is the circuit depth / gate count / resource usage reasonable for the problem?
+4. Code quality: Is it well-structured, readable, and uses proper quantum computing patterns?
+
+First, analyze the code briefly. Then output ONLY a single JSON object with this format:
+{"score": <float 0-10>, "analysis": "<one-line summary>"}
+
+CODE TO EVALUATE:
+```python
+{code}
+```
+
+TASK CONTEXT:
+{task_context}
+
+EVALUATION:"""
+
+
+def _self_evaluate_code(code: str, task: dict, model, backend, args, device) -> float:
+    """Ask the model to judge its own generated code and return a score 0-1."""
+    task_desc = task.get("meta", {}).get(
+        "description",
+        task.get("meta", {}).get("name", str(task.get("task_dir", task.get("task_id", "unknown")))),
+    )
+    prompt = SELF_EVAL_JUDGE_PROMPT.format(code=code, task_context=task_desc)
+
+    with torch.no_grad():
+        # Tokenize
+        messages = [
+            {"role": "user", "content": prompt},
+        ]
+        if hasattr(backend, "tokenizer"):
+            tokenized_inputs = backend.tokenizer.apply_chat_template(
+                messages, tokenize=True, return_tensors="pt", add_generation_prompt=True
+            ).to(device)
+            input_len = tokenized_inputs.shape[1]
+        elif hasattr(backend, "encode_chat"):
+            tokenized_ids = backend.encode_chat(messages, add_generation_prompt=True)
+            tokenized_inputs = torch.tensor([tokenized_ids], dtype=torch.long, device=device)
+            input_len = tokenized_inputs.shape[1]
+        else:
+            return 0.0
+
+        # Generate judgement
+        try:
+            outputs = model.generate(
+                input_ids=tokenized_inputs,
+                max_new_tokens=args.self_eval_judge_max_tokens,
+                temperature=args.self_eval_judge_temperature,
+                top_p=0.95,
+                do_sample=True,
+                pad_token_id=backend.tokenizer.pad_token_id
+                if hasattr(backend, "tokenizer")
+                else getattr(backend, "pad_token_id", 0),
+            )
+            response_ids = outputs[0][input_len:]
+            if hasattr(backend, "tokenizer"):
+                response_text = backend.tokenizer.decode(response_ids, skip_special_tokens=True)
+            else:
+                response_text = backend.decode(response_ids.tolist())
+        except Exception:
+            return 0.0
+
+    # Parse the score from JSON response
+    score = _parse_self_eval_score(response_text)
+    return score
+
+
+def _parse_self_eval_score(text: str) -> float:
+    """Extract score 0-10 from model's judge response, normalize to 0-1."""
+    import re
+
+    try:
+        # Try to find JSON block
+        json_match = re.search(r"\{[^}]+\}", text)
+        if json_match:
+            data = json.loads(json_match.group(0))
+            raw = float(data.get("score", 5.0))
+        else:
+            # Fallback: look for "score: X" or "X/10"
+            score_match = re.search(
+                r"(?:score[:\s]*)?(\d+(?:\.\d+)?)\s*(?:/\s*10|out of 10)?", text
+            )
+            if score_match:
+                raw = float(score_match.group(1))
+            else:
+                return 0.5  # neutral default
+    except (json.JSONDecodeError, ValueError, KeyError):
+        return 0.5
+
+    # Normalize: clamp to [0, 10], then divide to [0, 1]
+    raw = max(0.0, min(10.0, raw))
+    return raw / 10.0
+
+
 def evaluate_candidate(
-    code: str, test_harness, task: dict, args, research_methods: list[Any] | None = None
+    code: str,
+    test_harness,
+    task: dict,
+    args,
+    research_methods: list[Any] | None = None,
+    model=None,
+    backend=None,
+    device=None,
 ) -> dict[str, Any]:
-    """Run tests and return a shaped reward breakdown."""
+    """Run tests and return a shaped reward breakdown.
+
+    When self_evaluation is enabled, also evaluates the code by asking the model
+    to judge its own output against quality criteria (correctness, runnability,
+    efficiency, code quality).
+    """
     with tempfile.NamedTemporaryFile(
         mode="w", suffix=".py", delete=False, dir=str(task["task_dir"])
     ) as f:
@@ -387,6 +531,16 @@ def evaluate_candidate(
             task=task,
             stage="grpo",
         )
+
+    # ── self-evaluation: ask the model to judge its own generated code ──
+    if args.self_evaluation_enabled and model is not None and backend is not None:
+        self_eval_score = _self_evaluate_code(code, task, model, backend, args, device)
+        reward["self_eval_reward"] = self_eval_score * args.reward_self_eval_weight
+        reward["self_eval_raw_score"] = self_eval_score
+    else:
+        reward["self_eval_reward"] = 0.0
+        reward["self_eval_raw_score"] = 0.0
+
     return reward
 
 
@@ -1011,6 +1165,7 @@ def main() -> int:
         )
 
     random.seed(42 + rank)
+    _last_checkpoint_time = time.time()
 
     for step in range(1, args.grpo_steps + 1):
         # Skip steps already covered by warm restart
@@ -1056,11 +1211,25 @@ def main() -> int:
         old_log_probs = torch.stack(consistent_old_log_probs)
         old_token_counts = torch.stack(consistent_old_token_counts)
 
-        # Score each solution with verifier-aware shaped rewards.
+        # Score each solution with verifier-aware shaped rewards + optional self-evaluation.
         evaluations = [
-            evaluate_candidate(c, test_harness, task, args, research_methods=research_methods)
+            evaluate_candidate(
+                c,
+                test_harness,
+                task,
+                args,
+                research_methods=research_methods,
+                model=active_model if args.self_evaluation_enabled else None,
+                backend=text_preprocessor if args.self_evaluation_enabled else None,
+                device=device if args.self_evaluation_enabled else None,
+            )
             for c in codes
         ]
+        # Incorporate self-eval reward into total
+        for entry in evaluations:
+            entry["total_reward"] = entry.get("total_reward", entry.get("reward", 0.0))
+            entry["total_reward"] = entry["total_reward"] + entry.get("self_eval_reward", 0.0)
+
         rewards = torch.tensor(
             [float(entry["total_reward"]) for entry in evaluations], device=device
         )
@@ -1078,6 +1247,9 @@ def main() -> int:
         )
         brevity_rewards = torch.tensor(
             [float(entry.get("brevity_reward", 0.0)) for entry in evaluations], device=device
+        )
+        self_eval_rewards = torch.tensor(
+            [float(entry.get("self_eval_reward", 0.0)) for entry in evaluations], device=device
         )
 
         # Compute group-relative advantages (GRPO core idea)
@@ -1249,6 +1421,9 @@ def main() -> int:
                 advantage_scale=advantage_scale,
                 loss=float(total_loss.item()),
                 adapter_init=args.adapter_init,
+                self_eval_rate=float(self_eval_rewards.mean())
+                if args.self_evaluation_enabled
+                else None,
             )
             if dr_pair_info:
                 record["dr_pair_mined"] = bool(dr_pair_info.get("dr_pair_mined"))
@@ -1268,7 +1443,22 @@ def main() -> int:
             if step % args.log_steps == 0:
                 print(json.dumps(record))
 
-    # Save
+            # ── Periodic checkpoint: save adapter every checkpoint_interval_seconds ──
+            if args.checkpoint_interval_seconds > 0 and rank == 0:
+                now = time.time()
+                if now - _last_checkpoint_time >= args.checkpoint_interval_seconds:
+                    _last_checkpoint_time = now
+                    ckpt_dir = output_dir / f"step_{step:06d}_adapter"
+                    save_model = model.module if distributed else model
+                    save_model.save_pretrained(ckpt_dir)
+                    text_preprocessor.save_backend.save_pretrained(ckpt_dir)
+                    # Also update the main adapter dir (for sync daemon)
+                    main_adapter = output_dir / "adapter"
+                    save_model.save_pretrained(main_adapter)
+                    text_preprocessor.save_backend.save_pretrained(main_adapter)
+                    print(f"[checkpoint] saved adapter at step {step} to {ckpt_dir}")
+
+    # Save final
     if rank == 0:
         save_model = model.module if distributed else model
         adapter_dir = output_dir / "adapter"

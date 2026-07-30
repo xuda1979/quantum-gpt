@@ -1,0 +1,296 @@
+#!/usr/bin/env bash
+# =============================================================================
+# ASI2 launcher: GRPO training for Qwen3.6-27B quantum coding with self-evaluation.
+#
+# Architecture
+# ------------
+#   NPU 0,1  -> GRPO trainer (Qwen3.6-27B + LoRA, generates samples + trains)
+#   CPU      -> Periodic checkpoint sync to NAS (/root/work/filestorage/grpo_checkpoints)
+#
+# Key features:
+#   - Model generates candidate solutions, then EVALUATES THEM ITSELF (self-judge)
+#   - Adapters saved to NAS every 2 hours (checkpoint_interval_seconds=7200)
+#   - Adaptive difficulty: curriculum EMA adjusts task weights based on reward signal
+#   - Durable: all outputs on NAS, resume-capable via --resume-from
+#
+# Usage:
+#   bash scripts/asi2_launch_grpo_27b_selfeval.sh launch
+#   bash scripts/asi2_launch_grpo_27b_selfeval.sh status
+#   bash scripts/asi2_launch_grpo_27b_selfeval.sh stop
+# =============================================================================
+
+set -euo pipefail
+
+SCRIPT_NAME="asi2_launch_grpo_27b_selfeval"
+export TZ="${TZ:-Asia/Shanghai}"
+
+log() { printf '[%s] %s\n' "$(date '+%Y-%m-%dT%H:%M:%S%z')" "$*"; }
+
+# ---- paths ----
+NAS_ROOT="${NAS_ROOT:-/root/work/software/quantum-gpt}"
+MODEL_PATH="${MODEL_PATH:-/root/work/filestorage/Qwen3.6-27B}"
+CONFIG_FILE="${CONFIG_FILE:-$NAS_ROOT/configs/rl/qwen36_27b_grpo_selfeval_asi2.json}"
+RUN_ID="${RUN_ID:-$(date +%Y%m%dT%H%M%S)}"
+OUT="${OUT:-$NAS_ROOT/outputs/grpo-27b-selfeval-${RUN_ID}}"
+NAS_CHECKPOINT_ROOT="${NAS_CHECKPOINT_ROOT:-/root/work/filestorage/grpo_checkpoints/qwen36_27b_selfeval}"
+LOGDIR="${LOGDIR:-$NAS_ROOT/logs/grpo_27b_selfeval}"
+TRAIN_LOG="$LOGDIR/grpo_train_${RUN_ID}.log"
+PID_FILE="$LOGDIR/grpo_27b_selfeval.pid"
+CHECKPOINT_PID_FILE="$LOGDIR/grpo_27b_checkpoint_sync.pid"
+
+# ---- training hyperparams ----
+GROUP_SIZE="${GROUP_SIZE:-8}"
+GRPO_STEPS="${GRPO_STEPS:-500}"
+LR="${LR:-1e-5}"
+KL_COEFF="${KL_COEFF:-0.05}"
+TEMPERATURE="${TEMPERATURE:-0.8}"
+LORA_RANK="${LORA_RANK:-16}"
+LORA_ALPHA="${LORA_ALPHA:-32}"
+CHECKPOINT_INTERVAL_SECONDS="${CHECKPOINT_INTERVAL_SECONDS:-7200}"
+MAX_NEW_TOKENS="${MAX_NEW_TOKENS:-1024}"
+MAX_SEQ_LENGTH="${MAX_SEQ_LENGTH:-2048}"
+SELF_EVAL_WEIGHT="${SELF_EVAL_WEIGHT:-0.25}"
+DEVICE="${DEVICE:-npu}"
+NUM_NPU="${NUM_NPU:-2}"
+
+# ---- adaptive difficulty (boundary of capability) ----
+CURRICULUM_EMA_DECAY="${CURRICULUM_EMA_DECAY:-0.9}"
+CURRICULUM_MIN_WEIGHT="${CURRICULUM_MIN_WEIGHT:-0.05}"
+MIN_REWARD_STD="${MIN_REWARD_STD:-0.05}"
+ADAPTIVE_TEMP_STEP="${ADAPTIVE_TEMP_STEP:-0.15}"
+ADAPTIVE_TEMP_MAX="${ADAPTIVE_TEMP_MAX:-2.0}"
+
+mkdir -p "$LOGDIR" "$OUT" "$NAS_CHECKPOINT_ROOT"
+
+# ---- resume support ----
+RESUME_FLAGS=()
+if [[ "${RESUME_FROM:-}" != "" ]]; then
+  RESUME_FLAGS=(--resume-from "$RESUME_FROM")
+  log "RESUME_FROM=$RESUME_FROM"
+fi
+if [[ "${ADAPTER_INIT:-}" != "" ]]; then
+  RESUME_FLAGS+=(--adapter-init "$ADAPTER_INIT")
+  log "ADAPTER_INIT=$ADAPTER_INIT"
+fi
+
+# ---- stop subcommand ----
+if [[ "${1:-}" == "stop" ]]; then
+  log "stopping GRPO training and checkpoint sync..."
+  for pf in "$PID_FILE" "$CHECKPOINT_PID_FILE"; do
+    if [[ -f "$pf" ]]; then
+      pid="$(cat "$pf" 2>/dev/null || true)"
+      if [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null; then
+        log "killing $pf pid=$pid"
+        kill -TERM "$pid" 2>/dev/null || true
+      fi
+      rm -f "$pf"
+    fi
+  done
+  sleep 3
+  for pf in "$PID_FILE" "$CHECKPOINT_PID_FILE"; do
+    if [[ -f "$pf" ]]; then
+      pid="$(cat "$pf" 2>/dev/null || true)"
+      if [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null; then
+        kill -KILL "$pid" 2>/dev/null || true
+      fi
+      rm -f "$pf"
+    fi
+  done
+  log "stopped."
+  exit 0
+fi
+
+# ---- status subcommand ----
+if [[ "${1:-}" == "status" ]]; then
+  log "=== GRPO 27B Self-Eval Status ==="
+  if [[ -f "$PID_FILE" ]]; then
+    pid="$(cat "$PID_FILE")"
+    if kill -0 "$pid" 2>/dev/null; then
+      log "GRPO trainer: RUNNING pid=$pid"
+    else
+      log "GRPO trainer: STOPPED (pid file stale)"
+    fi
+  else
+    log "GRPO trainer: NOT RUNNING"
+  fi
+  if [[ -f "$CHECKPOINT_PID_FILE" ]]; then
+    pid="$(cat "$CHECKPOINT_PID_FILE")"
+    if kill -0 "$pid" 2>/dev/null; then
+      log "Checkpoint sync: RUNNING pid=$pid"
+    else
+      log "Checkpoint sync: STOPPED (pid file stale)"
+    fi
+  else
+    log "Checkpoint sync: NOT RUNNING"
+  fi
+  log "NAS checkpoint root: $NAS_CHECKPOINT_ROOT"
+  if [[ -d "$NAS_CHECKPOINT_ROOT" ]]; then
+    log "Checkpoints on NAS:"
+    ls -la "$NAS_CHECKPOINT_ROOT/" 2>/dev/null | tail -20 || log "(empty)"
+  fi
+  log "Train log: $TRAIN_LOG"
+  if [[ -f "$TRAIN_LOG" ]]; then
+    log "Last 10 lines:"
+    tail -10 "$TRAIN_LOG"
+  fi
+  exit 0
+fi
+
+# ---- launch (default) ----
+if [[ "${1:-}" != "launch" ]]; then
+  echo "Usage: $0 {launch|status|stop}" >&2
+  exit 1
+fi
+
+# ---- preflight checks ----
+if [[ ! -d "$NAS_ROOT" ]]; then
+  log "ERROR: NAS root $NAS_ROOT does not exist" >&2
+  exit 1
+fi
+if [[ ! -d "$MODEL_PATH" ]]; then
+  log "ERROR: model path $MODEL_PATH does not exist" >&2
+  exit 1
+fi
+cd "$NAS_ROOT"
+
+log "============================================================"
+log "GRPO 27B Self-Eval Training Launch"
+log "============================================================"
+log "NAS root:       $NAS_ROOT"
+log "Model:          $MODEL_PATH"
+log "Output dir:     $OUT"
+log "Checkpoint NAS: $NAS_CHECKPOINT_ROOT"
+log "Log:            $TRAIN_LOG"
+log "Group size:     $GROUP_SIZE"
+log "GRPO steps:     $GRPO_STEPS"
+log "LR:             $LR"
+log "Temperature:    $TEMPERATURE"
+log "Self-eval wt:   $SELF_EVAL_WEIGHT"
+log "Checkpoint interval: ${CHECKPOINT_INTERVAL_SECONDS}s (= every 2h)"
+log "Curriculum EMA decay: $CURRICULUM_EMA_DECAY"
+log "============================================================"
+
+# ---- checkpoint sync daemon (saves adapters to NAS every 2h) ----
+CHECKPOINT_SYNC_SCRIPT="$OUT/checkpoint_sync_daemon.sh"
+cat > "$CHECKPOINT_SYNC_SCRIPT" << 'DAEMONEOF'
+#!/usr/bin/env bash
+# Runs as a background daemon: every CHECKPOINT_INTERVAL_SECONDS, copies the
+# latest adapter from the GRPO output dir to the NAS checkpoint root.
+set -euo pipefail
+OUT="${1:?need output dir}"
+NAS_ROOT="${2:?need NAS root}"
+INTERVAL="${3:-7200}"
+LOGFILE="${4:-/dev/null}"
+
+logd() { printf '[%s] checkpoint-daemon: %s\n' "$(date '+%Y-%m-%dT%H:%M:%S%z')" "$*" | tee -a "$LOGFILE"; }
+
+logd "daemon started. interval=${INTERVAL}s, out=$OUT, nas=$NAS_ROOT"
+while true; do
+  sleep "$INTERVAL"
+
+  # Find the current adapter directory
+  ADAPTER_DIR="$OUT/adapter"
+  if [[ ! -d "$ADAPTER_DIR" ]]; then
+    # Try step-based checkpoints
+    STEP_DIRS=$(ls -dt "$OUT"/step_*_adapter 2>/dev/null || true)
+    if [[ -z "$STEP_DIRS" ]]; then
+      logd "no adapter dir found yet, skipping this sync cycle"
+      continue
+    fi
+    ADAPTER_DIR=$(echo "$STEP_DIRS" | head -1)
+  fi
+
+  TS=$(date +%Y%m%dT%H%M%S)
+  SNAPSHOT_DIR="$NAS_ROOT/checkpoint_${TS}"
+  mkdir -p "$SNAPSHOT_DIR"
+
+  logd "syncing adapter from $ADAPTER_DIR -> $SNAPSHOT_DIR"
+  if cp -a "$ADAPTER_DIR"/* "$SNAPSHOT_DIR/" 2>/dev/null; then
+    # Copy metrics if available
+    for mf in "$OUT"/grpo_metrics.json "$OUT"/grpo_step_metrics.jsonl; do
+      if [[ -f "$mf" ]]; then
+        cp "$mf" "$SNAPSHOT_DIR/" 2>/dev/null || true
+      fi
+    done
+    logd "checkpoint saved: $SNAPSHOT_DIR"
+
+    # Rotate: keep only the latest N checkpoints
+    RETAIN="${5:-5}"
+    ALL_CHECKPOINTS=$(ls -dt "$NAS_ROOT"/checkpoint_* 2>/dev/null || true)
+    COUNT=0
+    for CP in $ALL_CHECKPOINTS; do
+      COUNT=$((COUNT + 1))
+      if [[ $COUNT -gt $RETAIN ]]; then
+        logd "rotating old checkpoint: $CP"
+        rm -rf "$CP"
+      fi
+    done
+  else
+    logd "ERROR: failed to copy adapter to $SNAPSHOT_DIR"
+  fi
+done
+DAEMONEOF
+chmod +x "$CHECKPOINT_SYNC_SCRIPT"
+
+nohup bash "$CHECKPOINT_SYNC_SCRIPT" \
+  "$OUT" "$NAS_CHECKPOINT_ROOT" "$CHECKPOINT_INTERVAL_SECONDS" "$LOGDIR/checkpoint_sync.log" "5" \
+  >> "$LOGDIR/checkpoint_sync.log" 2>&1 &
+echo "$!" > "$CHECKPOINT_PID_FILE"
+disown "$(cat "$CHECKPOINT_PID_FILE")" 2>/dev/null || true
+log "checkpoint sync daemon launched pid=$(cat "$CHECKPOINT_PID_FILE")"
+
+# ---- GRPO trainer ----
+log "launching GRPO trainer on $NUM_NPU NPUs..."
+
+nohup python3 training/grpo_trainer.py \
+  --model-name "$MODEL_PATH" \
+  --output-dir "$OUT" \
+  --overwrite-output-dir \
+  --device "$DEVICE" \
+  --group-size "$GROUP_SIZE" \
+  --grpo-steps "$GRPO_STEPS" \
+  --lr "$LR" \
+  --kl-coeff "$KL_COEFF" \
+  --temperature "$TEMPERATURE" \
+  --adaptive-temp-step "$ADAPTIVE_TEMP_STEP" \
+  --adaptive-temp-max "$ADAPTIVE_TEMP_MAX" \
+  --top-p 0.95 \
+  --max-new-tokens "$MAX_NEW_TOKENS" \
+  --max-seq-length "$MAX_SEQ_LENGTH" \
+  --reward-pass-weight 0.45 \
+  --reward-syntax-weight 0.05 \
+  --reward-interface-weight 0.10 \
+  --reward-verifier-weight 0.10 \
+  --reward-import-hygiene-weight 0.05 \
+  --reward-self-eval-weight "$SELF_EVAL_WEIGHT" \
+  --lora-rank "$LORA_RANK" \
+  --lora-alpha "$LORA_ALPHA" \
+  --target-modules q_proj v_proj o_proj gate_proj up_proj down_proj \
+  --freeze-param-regex '.*\.(mlp\.gate|router)\..*' \
+  --domain-filter quantum \
+  --curriculum-ema-decay "$CURRICULUM_EMA_DECAY" \
+  --curriculum-min-weight "$CURRICULUM_MIN_WEIGHT" \
+  --min-reward-std "$MIN_REWARD_STD" \
+  --checkpoint-interval-seconds "$CHECKPOINT_INTERVAL_SECONDS" \
+  --logit-clip 5.0 \
+  --self-evaluation-enabled \
+  --self-eval-judge-temperature 0.3 \
+  --self-eval-judge-max-tokens 512 \
+  "${RESUME_FLAGS[@]}" \
+  > "$TRAIN_LOG" 2>&1 &
+
+PID=$!
+echo "$PID" > "$PID_FILE"
+disown "$PID" 2>/dev/null || true
+
+log "============================================================"
+log "__ASI2_GRPO_27B_SELFEVAL_LAUNCHED__"
+log "Trainer PID: $PID"
+log "Checkpoint daemon PID: $(cat "$CHECKPOINT_PID_FILE")"
+log "Train log: $TRAIN_LOG"
+log "Output dir: $OUT"
+log "NAS checkpoints: $NAS_CHECKPOINT_ROOT"
+log "Monitor:  bash scripts/asi2_launch_grpo_27b_selfeval.sh status"
+log "Stop:     bash scripts/asi2_launch_grpo_27b_selfeval.sh stop"
+log "Tail log: tail -f $TRAIN_LOG"
+log "============================================================"

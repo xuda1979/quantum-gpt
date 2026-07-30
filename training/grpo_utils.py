@@ -125,6 +125,7 @@ def build_grpo_step_record(
     reason: str | None = None,
     loss: float | None = None,
     adapter_init: str | None = None,
+    self_eval_rate: float | None = None,
 ) -> dict[str, float | int | bool | str]:
     record: dict[str, float | int | bool | str] = {
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),
@@ -164,6 +165,8 @@ def build_grpo_step_record(
         record["loss"] = loss
     if adapter_init is not None:
         record["adapter_init"] = adapter_init
+    if self_eval_rate is not None:
+        record["self_eval_rate"] = self_eval_rate
     return record
 
 
