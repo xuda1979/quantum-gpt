@@ -33,6 +33,7 @@ for arg in "${@}"; do
   case "$arg" in
     --submit) SUBMIT="1" ;;
     --dry-run) DRY_RUN="1" ;;
+    __launch-spec) ;;  # no-op: used by browser-automation deriveLaunchSpec
     *) echo "Unknown arg: $arg" >&2; exit 2 ;;
   esac
 done
@@ -94,6 +95,8 @@ launch_spec = {
     "nas_checkpoint_root": "$NAS_CHECKPOINT_ROOT",
     "checkpoint_interval_hours": 2,
     "remote_script_body": remote_script,
+    "remote_command": remote_script,
+    "execution_command": remote_script,
     "description": "GRPO training for Qwen3.6-27B quantum coding with self-evaluation. Adapters saved to NAS every 2h.",
     "embed_patches": False,
 }
@@ -104,19 +107,18 @@ PYEOF
 if [[ "$SUBMIT" == "1" ]]; then
   # Use browser-automation to submit
   if [[ -z "$TRAIN_DEV_URL" ]]; then
-    TRAIN_DEV_URL="https://huanxin.alibaba.com/train-dev"
+    TRAIN_DEV_URL="https://aihuanxin.cn/kunlun/kl-web?poolId=6&projectId=21b4208dde424e96b159362ef49c9c96#/train-dev/environment/dl-868c196fb82d3e0b8cfbbe826d8afd0a?name=ASI2"
   fi
 
   CMD=(
     node
     "$ROOT_DIR/browser-automation/huanxin_submit_task_run.js"
     --url "$TRAIN_DEV_URL"
-    --env "$ENV_NAME"
     --task-name "$TASK_NAME"
     --image-name "$IMAGE_NAME"
     --resource-group "$RESOURCE_GROUP"
-    --npu-count "$NPU_COUNT"
-    --cpu-cores "$CPU_CORES"
+    --instance-count "$NPU_COUNT"
+    --accelerator-cards "$NPU_COUNT"
     --memory-gb "$MEMORY_GB"
     --remote-root "$REMOTE_ROOT"
     --launcher-script "$ROOT_DIR/scripts/submit_asi2_grpo_27b_selfeval_task.sh"
@@ -126,10 +128,16 @@ if [[ "$SUBMIT" == "1" ]]; then
     --dump-json "$ROOT_DIR/browser-automation/${ARTIFACT_STEM}.json"
     --submit
   )
+  if [[ "${ASI2_GRPO_IGNORE_QUOTA:-1}" == "1" ]]; then
+    CMD+=(--ignore-project-quota-text)
+  fi
+  if [[ "${ASI2_GRPO_DIRECT_SUBMIT:-0}" == "1" ]]; then
+    CMD+=(--direct-submit-only)
+  fi
   echo "Submitting to ASI2..."
   "${CMD[@]}"
 else
   echo ""
-  echo "=== DRY RUN === To actually submit, run:"
-  echo "  bash scripts/submit_asi2_grpo_27b_selfeval_task.sh --submit"
+  echo "=== DRY RUN === To actually submit, run:" >&2
+  echo "  bash scripts/submit_asi2_grpo_27b_selfeval_task.sh --submit" >&2
 fi
