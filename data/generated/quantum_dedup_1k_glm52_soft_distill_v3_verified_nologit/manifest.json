@@ -1,24 +1,11 @@
 {
-  "source_dir": "/Users/daxu/software/quantum-gpt/data/generated/quantum_dedup_1k_glm52_soft_distill_v3",
-  "filter": "strict-verify PASS only; teacher_logits dropped",
-  "pass_ids": 937,
-  "kept_rows": 937,
+  "dataset": "quantum_dedup_1k_glm52_soft_distill_v3_verified_nologit",
+  "source": "quantum_dedup_1k_glm52_soft_distill_v3",
+  "filter": "verified_pass_ids only (937 of 1000)",
+  "split": "900 train / 37 eval (random seed 42)",
+  "format": "chat-sft-v1",
+  "no_teacher_logits": true,
+  "created": "2026-08-04",
   "train_rows": 900,
-  "eval_rows": 37,
-  "eval_seed": 20260730,
-  "eval_fraction": 0.03948772678762007,
-  "frameworks_in_metadata": {
-    "qiskit": 464,
-    "cirq": 122,
-    "pennylane": 88,
-    "dwave_ocean": 70,
-    "stim": 34,
-    "openqasm3": 32,
-    "qutip": 29,
-    "unknown": 24,
-    "pytket": 23,
-    "qsharp": 22,
-    "braket": 16,
-    "qulacs": 13
-  }
+  "eval_rows": 37
 }
