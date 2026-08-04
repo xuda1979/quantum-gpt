@@ -1,11 +1,10 @@
 {
   "dataset": "quantum_dedup_1k_glm52_soft_distill_v3_verified_nologit",
-  "source": "quantum_dedup_1k_glm52_soft_distill_v3",
-  "filter": "verified_pass_ids only (937 of 1000)",
-  "split": "900 train / 37 eval (random seed 42)",
-  "format": "chat-sft-v1",
-  "no_teacher_logits": true,
-  "created": "2026-08-04",
+  "description": "Verified-PASS-only subset. 937 rows, 900 train / 37 eval. No teacher_logits.",
+  "total_verified": 937,
   "train_rows": 900,
-  "eval_rows": 37
+  "eval_rows": 37,
+  "shuffle_seed": 42,
+  "format": "chat-sft-v1",
+  "no_teacher_logits": true
 }
