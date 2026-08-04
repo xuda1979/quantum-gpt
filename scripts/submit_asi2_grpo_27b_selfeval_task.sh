@@ -26,6 +26,16 @@ TRAIN_DEV_URL="${ASI2_GRPO_TRAIN_DEV_URL:-}"
 MODEL_PATH="/root/work/filestorage/Qwen3.6-27B"
 NAS_CHECKPOINT_ROOT="/root/work/filestorage/grpo_checkpoints/qwen36_27b_selfeval"
 
+# FV-GSPO run parameters (overridable for short frontier-yield probes)
+# Short probe: ASI2_GRPO_STEPS=24 ASI2_GRPO_CHECKPOINT_SECONDS=3600
+RUN_STEPS="${ASI2_GRPO_STEPS:-500}"
+RUN_LR="${ASI2_GRPO_LR:-2e-6}"
+RUN_KL_COEFF="${ASI2_GRPO_KL_COEFF:-0.005}"
+RUN_CHECKPOINT_SECONDS="${ASI2_GRPO_CHECKPOINT_SECONDS:-7200}"
+RUN_LOSS_MODE="${ASI2_GRPO_LOSS_MODE:-gspo}"
+RUN_GSPO_CLIP_LOW="${ASI2_GRPO_GSPO_CLIP_LOW:-0.0003}"
+RUN_GSPO_CLIP_HIGH="${ASI2_GRPO_GSPO_CLIP_HIGH:-0.0004}"
+
 DRY_RUN="1"
 SUBMIT="0"
 
@@ -39,7 +49,9 @@ for arg in "${@}"; do
 done
 
 # ---- Build remote script ----
-cat > /tmp/asi2_grpo_27b_selfeval_remote.sh << 'REMOTEEOF'
+# NOTE: unquoted heredoc so RUN_* values are baked into the remote script;
+# keep any literal '$' (none currently) escaped as \$.
+cat > /tmp/asi2_grpo_27b_selfeval_remote.sh << REMOTEEOF
 #!/usr/bin/env bash
 set -euo pipefail
 echo "__ASI2_GRPO_27B_SELFEVAL_START__"
@@ -64,7 +76,16 @@ python3 --version
 echo "Pulling latest code..."
 git fetch origin && git checkout codex/asi2-qwen36-distillation-lora 2>/dev/null || true
 
-# Launch GRPO training
+# FV-GSPO run parameters (probe: short GRPO_STEPS; long run: full steps)
+export GRPO_STEPS="$RUN_STEPS"
+export LR="$RUN_LR"
+export KL_COEFF="$RUN_KL_COEFF"
+export CHECKPOINT_INTERVAL_SECONDS="$RUN_CHECKPOINT_SECONDS"
+export LOSS_MODE="$RUN_LOSS_MODE"
+export GSPO_CLIP_LOW="$RUN_GSPO_CLIP_LOW"
+export GSPO_CLIP_HIGH="$RUN_GSPO_CLIP_HIGH"
+
+# Launch FV-GSPO training
 bash scripts/asi2_launch_grpo_27b_selfeval.sh launch
 
 # Wait for training to complete (poll log)
@@ -97,7 +118,7 @@ launch_spec = {
     "remote_script_body": remote_script,
     "remote_command": remote_script,
     "execution_command": remote_script,
-    "description": "GRPO training for Qwen3.6-27B quantum coding with self-evaluation. Adapters saved to NAS every 2h.",
+    "description": "FV-GSPO training for Qwen3.6-27B quantum coding: frontier-router GRPO on learnable mixed-outcome groups, leave-one-out advantages, GSPO sequence clipping (3e-4/4e-4), all-fail tasks routed to repair queue, 50/25/25 targeted/neighbor/replay mix, circuit breakers. Executable tests authoritative (self-judge weight 0).",
     "embed_patches": False,
 }
 

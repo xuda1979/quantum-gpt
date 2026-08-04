@@ -25,6 +25,7 @@ import sys
 import tempfile
 import time
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -35,18 +36,31 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from training.grpo_utils import (  # noqa: E402
+    INVALID_OR_NOISY,
+    MASTERED_REPLAY,
+    REPAIR_SFT,
+    RL_ROUTES,
     AdaptiveTemperatureState,
+    CircuitBreakerState,
+    FrontierRouter,
+    RunningMAD,
     TaskCurriculum,
     append_grpo_metric,
     append_grpo_metric_jsonl,
+    append_repair_queue_record,
     build_grpo_metrics_payload,
     build_grpo_step_record,
+    build_mixture_weights,
     build_reward_breakdown,
+    completion_entropy,
+    count_repair_conversions,
     estimate_detail_budget,
     extract_behavior_hints_from_test_source,
+    leave_one_out_advantages,
     load_grpo_step_metrics_jsonl,
     reward_signal_stats,
     stable_grpo_loss,
+    stable_gspo_loss_metrics,
     stable_token_log_probs,
     summarize_python_interface,
 )
@@ -165,6 +179,98 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--reward-detail-budget-cap", type=int, default=8)
     p.add_argument("--advantage-clip", type=float, default=2.5)
     p.add_argument("--ratio-clip-log-delta", type=float, default=8.0)
+    p.add_argument("--top-p", type=float, default=0.95)
+    p.add_argument(
+        "--overwrite-output-dir",
+        action="store_true",
+        default=False,
+        help="Allow overwriting an existing output dir with prior step metrics.",
+    )
+    # ── FV-GSPO (frontier-verifier GSPO): see docs/frontier-verifier-gspo-design-2026-08-04.md ──
+    p.add_argument(
+        "--loss-mode",
+        choices=["grpo", "gspo"],
+        default="gspo",
+        help="'grpo' keeps the old unclipped sequence-ratio loss (ablation baseline); "
+        "'gspo' uses the GSPO sequence-level clipped proximal objective.",
+    )
+    p.add_argument(
+        "--gspo-clip-low",
+        type=float,
+        default=3e-4,
+        help="Lower GSPO sequence-ratio clip (27B sweep 1e-4..1e-3; 35B start 3e-4). "
+        "GSPO ratios differ by orders of magnitude from token PPO ratios, so do NOT "
+        "copy DAPO's 0.2/0.28 values.",
+    )
+    p.add_argument(
+        "--gspo-clip-high",
+        type=float,
+        default=4e-4,
+        help="Upper GSPO sequence-ratio clip (default 1.3 * gspo-clip-low; 35B start 4e-4).",
+    )
+    p.add_argument(
+        "--numerical-log-ratio-clip",
+        type=float,
+        default=8.0,
+        help="Wide log-ratio clamp kept only for finite exponentiation; the proximal "
+        "objective is controlled by gspo-clip-low/high, not by this value.",
+    )
+    p.add_argument(
+        "--advantage-mode",
+        choices=["loo", "group_std"],
+        default="loo",
+        help="'loo' is the FV-GSPO Dr.GRPO leave-one-out advantage (no per-task "
+        "std normalization); 'group_std' reproduces the legacy per-group "
+        "normalization for the ablation baseline.",
+    )
+    p.add_argument(
+        "--loo-advantage-scale",
+        choices=["none", "shared_mad"],
+        default="none",
+        help="Dr.GRPO leave-one-out advantages without per-task standard-deviation "
+        "normalization. 'shared_mad' optionally divides by one fixed running MAD "
+        "shared across tasks; 'none' keeps raw leave-one-out advantages.",
+    )
+    p.add_argument("--frontier-threshold", type=float, default=0.10)
+    p.add_argument("--mastered-threshold", type=float, default=0.95)
+    p.add_argument("--mix-targeted", type=float, default=0.5)
+    p.add_argument("--mix-neighbor", type=float, default=0.25)
+    p.add_argument("--mix-replay", type=float, default=0.25)
+    p.add_argument("--neighbor-window", type=int, default=10)
+    p.add_argument(
+        "--repair-queue-path",
+        default=None,
+        help="JSONL queue for all-fail groups (execution-grounded repair candidates). "
+        "Defaults to <output-dir>/repair_queue.jsonl.",
+    )
+    p.add_argument(
+        "--repair-converted-jsonl",
+        default=None,
+        help="Optional JSONL written by the repair SFT/DPO stage recording verified "
+        "conversions; used by the all-fail-without-repair circuit breaker.",
+    )
+    p.add_argument(
+        "--coverage-json",
+        default=None,
+        help="Optional JSON mapping task_id -> coverage need from the training-only "
+        "skill/failure inventory (WeaknessReport-style cells).",
+    )
+    p.add_argument(
+        "--circuit-breaker-window",
+        type=int,
+        default=10,
+        help="Steps per evaluation window for circuit breakers; a breaker trips only "
+        "after persisting across two windows.",
+    )
+    p.add_argument(
+        "--no-stop-on-severe-breaker",
+        action="store_false",
+        dest="stop_on_severe_breaker",
+        default=True,
+        help="Do not halt training when a severe in-loop circuit breaker trips "
+        "(non-finite loss, clip fraction above 50 percent, entropy collapse, "
+        "all-fail without repair).",
+    )
     p.add_argument("--logit-clip", type=float, default=50.0)
     p.add_argument(
         "--min-reward-std",
@@ -590,6 +696,7 @@ def generate_group(
                 **inputs,
                 max_new_tokens=args.max_new_tokens,
                 temperature=effective_temp,
+                top_p=args.top_p,
                 do_sample=True,
                 return_dict_in_generate=True,
                 output_scores=True,
@@ -612,7 +719,8 @@ def compute_completion_log_prob(
     logit_clip: float,
     *,
     add_mm_token_type_ids: bool = False,
-) -> tuple[torch.Tensor, torch.Tensor]:
+    return_entropy: bool = False,
+) -> tuple[torch.Tensor, torch.Tensor] | tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     prompt_inputs = tokenizer(
         prompt_text, return_tensors="pt", truncation=True, max_length=max_seq_length
     )
@@ -640,8 +748,14 @@ def compute_completion_log_prob(
         completion_mask &= attention_mask[:, 1:].bool()
     token_count = completion_mask.sum()
     if token_count.item() == 0:
-        return token_log_probs.new_tensor(0.0), token_count
+        zero = token_log_probs.new_tensor(0.0)
+        if return_entropy:
+            return zero, token_count, zero
+        return zero, token_count
     seq_log_prob = token_log_probs.masked_select(completion_mask).sum()
+    if return_entropy:
+        entropy = completion_entropy(logits, completion_mask)
+        return seq_log_prob, token_count, entropy
     return seq_log_prob, token_count
 
 
@@ -851,6 +965,8 @@ def compute_dr_variance_correction(
 
     # Reuse the plugin helper if importable; fall back to inline math.
     try:
+        import sys as _sys
+
         plugin_root = Path(__file__).resolve().parent.parent / (
             "research/papers/doubly_robust_quantum_grpo/code"
         )
@@ -899,6 +1015,119 @@ def compute_dr_variance_correction(
     return correction, info
 
 
+def observe_and_evaluate_breakers(
+    breaker: CircuitBreakerState,
+    *,
+    step: int,
+    route: str,
+    non_finite: bool,
+    clip_fraction: float,
+    entropy_mean: float | None,
+    repair_queued: bool,
+    repair_converted_jsonl: str | None,
+    all_fail: bool,
+) -> list[dict[str, Any]]:
+    """Feed one step's facts to the circuit-breaker monitor and close a window.
+
+    Returns newly tripped breaker events (see ``CircuitBreakerState.evaluate``).
+    """
+    breaker.observe_step(
+        step=step,
+        route=route,
+        non_finite=non_finite,
+        clip_fraction=clip_fraction,
+        entropy=entropy_mean,
+        repair_queued=repair_queued,
+        repair_converted=count_repair_conversions(repair_converted_jsonl),
+        all_fail_share=1.0 if all_fail else 0.0,
+    )
+    return breaker.evaluate(step=step)
+
+
+def maybe_stop_for_breaker(
+    breaker: CircuitBreakerState,
+    args: argparse.Namespace,
+    rank: int,
+    trips: list[dict[str, Any]],
+) -> bool:
+    """Log newly tripped breakers; return True when the run must halt.
+
+    A severe in-loop breaker (non-finite, clip fraction, entropy collapse,
+    all-fail without repair) that persists across two evaluation windows stops
+    the run so NPU-hours are not burned on a broken policy.
+    """
+    if trips and rank == 0:
+        print(
+            json.dumps({"stage": "circuit_breaker_trip", "trips": trips}, ensure_ascii=False),
+            flush=True,
+        )
+    if breaker.should_stop and args.stop_on_severe_breaker:
+        if rank == 0:
+            print(
+                json.dumps(
+                    {"stage": "circuit_breaker_stop", "trips": breaker.tripped},
+                    ensure_ascii=False,
+                ),
+                flush=True,
+            )
+        return True
+    return False
+
+
+def emit_step_record(
+    *,
+    rank: int,
+    metrics: list[dict[str, Any]],
+    step_metrics_path: Path,
+    log_steps: int,
+    ctx: dict[str, Any],
+    skipped: bool,
+    reason: str | None = None,
+    loss: float | None = None,
+    trips: list[dict[str, Any]] | None = None,
+    **extra: Any,
+) -> dict[str, Any] | None:
+    """Persist one step record (skipped or updated) on rank 0.
+
+    ``ctx`` carries the step-scoped record fields (built once per step in
+    ``main``); ``extra`` fields are merged into the record (e.g. GSPO loss
+    statistics).
+    """
+    if rank != 0:
+        return None
+    record = build_grpo_step_record(
+        step=int(ctx["step"]),
+        task_name=str(ctx["task_name"]),
+        domain=str(ctx["domain"]),
+        mean_reward=float(ctx["mean_reward"]),
+        signal_stats=ctx["signal_stats"],
+        pass_rate=ctx.get("pass_rate"),
+        syntax_rate=ctx.get("syntax_rate"),
+        interface_rate=ctx.get("interface_rate"),
+        verifier_rate=ctx.get("verifier_rate"),
+        task_prob=float(ctx["task_prob"]),
+        task_state=ctx["task_state"],
+        advantage_scale=ctx.get("advantage_scale"),
+        skipped=skipped,
+        reason=reason,
+        loss=loss,
+        adapter_init=ctx.get("adapter_init"),
+        route=ctx.get("route"),
+        entropy_mean=ctx.get("entropy_mean"),
+        generation_tokens=ctx.get("generation_tokens"),
+        repair_queued=ctx.get("repair_queued"),
+        all_fail=ctx.get("all_fail"),
+        frontier_fraction=ctx.get("frontier_fraction"),
+        breaker_trips=trips,
+        **extra,
+    )
+    append_grpo_metric(metrics, record=record)
+    append_grpo_metric_jsonl(step_metrics_path, record)
+    if int(ctx["step"]) % max(1, log_steps) == 0:
+        print(json.dumps(record))
+    return record
+
+
 def main() -> int:
     args = parse_args()
     research_methods = load_research_methods(args.research_methods)
@@ -914,7 +1143,6 @@ def main() -> int:
     distributed = "RANK" in os.environ
     local_rank = int(os.environ.get("LOCAL_RANK", 0))
     rank = int(os.environ.get("RANK", 0))
-    world_size = int(os.environ.get("WORLD_SIZE", 1))
 
     if distributed:
         if args.device == "npu":
@@ -953,6 +1181,11 @@ def main() -> int:
 
     if rank == 0:
         if not args.resume_from:
+            if step_metrics_path.exists() and not args.overwrite_output_dir:
+                raise SystemExit(
+                    f"Output dir already contains {step_metrics_path.name}; pass "
+                    "--overwrite-output-dir to start fresh."
+                )
             step_metrics_path.unlink(missing_ok=True)
         metrics_path.unlink(missing_ok=True)
         run_config_path.unlink(missing_ok=True)
@@ -1148,12 +1381,51 @@ def main() -> int:
         step_size=args.adaptive_temp_step,
         max_temp=args.adaptive_temp_max,
     )
+    # ── FV-GSPO: frontier router, mixture sampling, circuit breakers ──
+    router = FrontierRouter(
+        frontier_threshold=args.frontier_threshold,
+        mastered_threshold=args.mastered_threshold,
+    )
+    if args.coverage_json:
+        coverage_path = Path(args.coverage_json)
+        if coverage_path.exists():
+            try:
+                router.load_coverage_map(json.loads(coverage_path.read_text(encoding="utf-8")))
+            except json.JSONDecodeError as exc:
+                raise SystemExit(f"Invalid --coverage-json {coverage_path}: {exc}")
+    breaker = CircuitBreakerState(window_size=args.circuit_breaker_window)
+    running_mad = RunningMAD()
+    repair_queue_path = (
+        Path(args.repair_queue_path)
+        if args.repair_queue_path
+        else output_dir / "repair_queue.jsonl"
+    )
+    recent_frontier: list[str] = []
+    total_probes = 0
     # Replay curriculum state from resumed records
     for prior in resume_metrics:
         task_name = str(prior.get("task", ""))
         mr = float(prior.get("mean_reward", 0.0))
         if task_name:
             curriculum.record(task_name, mr)
+            pass_rate = prior.get("pass_rate")
+            shaped_std = max(
+                [
+                    float(prior.get(key, 0.0))
+                    for key in (
+                        "reward_std",
+                        "pass_std",
+                        "syntax_std",
+                        "interface_std",
+                        "verifier_std",
+                    )
+                ]
+            )
+            if pass_rate is not None:
+                router.probe_record(
+                    task_name, int(prior.get("step", 0)), float(pass_rate), shaped_std
+                )
+                total_probes += 1
         if bool(prior.get("skipped")) and prior.get("reason") == "low_reward_signal":
             adaptive_temp.record_skip("low_reward_signal")
         elif not bool(prior.get("skipped")):
@@ -1171,12 +1443,26 @@ def main() -> int:
         # Skip steps already covered by warm restart
         if step <= resume_step:
             continue
-        weights = []
-        for task in tasks:
-            weight = curriculum.weight(task["task_id"], task["meta"].get("domain"))
+        # FV-GSPO mixture sampling: 50% targeted frontier/repair, 25% neighboring
+        # variants, 25% replay (see docs/frontier-verifier-gspo-design-2026-08-04.md §6).
+        weights = build_mixture_weights(
+            router,
+            tasks,
+            step,
+            mix_targeted=args.mix_targeted,
+            mix_neighbor=args.mix_neighbor,
+            mix_replay=args.mix_replay,
+            recent_frontier=recent_frontier,
+            neighbor_window=args.neighbor_window,
+        )
+        for index, task in enumerate(tasks):
+            if weights[index] <= 0.0:
+                continue
             for method in research_methods:
-                weight = max(0.0, float(method.adjust_task_weight(weight, task=task, stage="grpo")))
-            weights.append(weight)
+                weights[index] = max(
+                    0.0,
+                    float(method.adjust_task_weight(weights[index], task=task, stage="grpo")),
+                )
         weight_sum = sum(weights)
         task_index = random.choices(range(len(tasks)), weights=weights, k=1)[0]
         task = tasks[task_index]
@@ -1194,9 +1480,10 @@ def main() -> int:
 
         consistent_old_log_probs = []
         consistent_old_token_counts = []
+        consistent_entropies = []
         with torch.no_grad():
             for code in codes:
-                old_log_prob, old_token_count = compute_completion_log_prob(
+                old_log_prob, old_token_count, entropy = compute_completion_log_prob(
                     active_model,
                     tokenizer,
                     prompt_text,
@@ -1205,11 +1492,16 @@ def main() -> int:
                     args.max_seq_length,
                     args.logit_clip,
                     add_mm_token_type_ids=_needs_mm_token_type_ids,
+                    return_entropy=True,
                 )
                 consistent_old_log_probs.append(old_log_prob.detach())
                 consistent_old_token_counts.append(old_token_count.detach())
+                consistent_entropies.append(entropy.detach())
         old_log_probs = torch.stack(consistent_old_log_probs)
         old_token_counts = torch.stack(consistent_old_token_counts)
+        entropy_values = [float(value.item()) for value in consistent_entropies]
+        entropy_mean = float(sum(entropy_values) / len(entropy_values)) if entropy_values else None
+        generation_tokens = int(old_token_counts.sum().item())
 
         # Score each solution with verifier-aware shaped rewards + optional self-evaluation.
         evaluations = [
@@ -1252,7 +1544,7 @@ def main() -> int:
             [float(entry.get("self_eval_reward", 0.0)) for entry in evaluations], device=device
         )
 
-        # Compute group-relative advantages (GRPO core idea)
+        # Compute group-relative rewards.
         mean_reward = rewards.mean()
         signal_stats = reward_signal_stats(
             rewards,
@@ -1262,37 +1554,173 @@ def main() -> int:
             verifier_rewards,
             brevity_rewards,
         )
-        std_reward = rewards.std(unbiased=False)
-        advantage_scale = max(signal_stats["signal_std"], float(std_reward.item()), 1e-8)
-        advantages = ((rewards - mean_reward) / advantage_scale).clamp(
-            -args.advantage_clip,
-            args.advantage_clip,
-        )
         task_state = curriculum.record(task["task_id"], float(mean_reward))
 
-        # Skip only when both total and component reward signals are flat.
-        if signal_stats["signal_std"] < args.min_reward_std:
-            adaptive_temp.record_skip("low_reward_signal")
-            if rank == 0:
-                record = build_grpo_step_record(
-                    step=step,
-                    task_name=task["task_dir"].name,
-                    domain=task["meta"].get("domain", "?"),
-                    mean_reward=float(mean_reward),
-                    signal_stats=signal_stats,
-                    pass_rate=float(pass_rewards.mean()),
-                    syntax_rate=float(syntax_rewards.mean()),
-                    interface_rate=float(interface_rewards.mean()),
-                    verifier_rate=float(verifier_rewards.mean()),
-                    task_prob=float(task_prob),
-                    task_state=task_state,
-                    skipped=True,
-                    reason="low_reward_signal",
+        # ── FV-GSPO: probe the group and route it (frontier router) ──
+        pass_rate = float(pass_rewards.mean().item())
+        probe = router.probe_record(task["task_id"], step, pass_rate, signal_stats["signal_std"])
+        route = str(probe["route"])
+        total_probes += 1
+        all_fail = pass_rate == 0.0
+        frontier_fraction = router.frontier_fraction()
+        if route in RL_ROUTES:
+            recent_frontier.append(task["task_id"])
+            del recent_frontier[: -args.neighbor_window]
+
+        # ── FV-GSPO: leave-one-out advantages (Dr.GRPO) ──
+        # No per-task standard-deviation normalization; optional shared running
+        # MAD is the only allowed batch-level scaling.
+        if args.advantage_mode == "group_std":
+            # Ablation baseline: reproduce the legacy per-group normalized advantage.
+            std_reward = rewards.std(unbiased=False)
+            advantage_scale = max(signal_stats["signal_std"], float(std_reward.item()), 1e-8)
+            advantages = ((rewards - mean_reward) / advantage_scale).clamp(
+                -args.advantage_clip,
+                args.advantage_clip,
+            )
+        else:  # loo (FV-GSPO default)
+            advantages = leave_one_out_advantages(rewards)
+            if args.loo_advantage_scale == "shared_mad":
+                running_mad.update(advantages)
+                advantages = advantages / running_mad.scale
+            advantage_scale = (
+                running_mad.scale if args.loo_advantage_scale == "shared_mad" else None
+            )
+            advantages = advantages.clamp(-args.advantage_clip, args.advantage_clip)
+
+        repair_queued = False
+        step_ctx: dict[str, Any] = {
+            "step": step,
+            "task_name": task["task_dir"].name,
+            "domain": task["meta"].get("domain", "?"),
+            "mean_reward": float(mean_reward),
+            "signal_stats": signal_stats,
+            "pass_rate": pass_rate,
+            "syntax_rate": float(syntax_rewards.mean()),
+            "interface_rate": float(interface_rewards.mean()),
+            "verifier_rate": float(verifier_rewards.mean()),
+            "task_prob": float(task_prob),
+            "task_state": task_state,
+            "advantage_scale": advantage_scale,
+            "adapter_init": args.adapter_init,
+            "route": route,
+            "entropy_mean": entropy_mean,
+            "generation_tokens": generation_tokens,
+            "repair_queued": repair_queued,
+            "all_fail": all_fail,
+            "frontier_fraction": frontier_fraction,
+        }
+
+        # ── Route the group ──
+        # All-fail groups with no shaped variation are NOT RL batches: they go to
+        # the execution-verified repair lane (repair SFT/DPO queue) instead.
+        if route in (REPAIR_SFT, INVALID_OR_NOISY):
+            if route == REPAIR_SFT:
+                best_index = max(
+                    range(len(evaluations)),
+                    key=lambda idx: (
+                        float(evaluations[idx].get("verifier_reward", 0.0)),
+                        float(evaluations[idx].get("total_reward", 0.0)),
+                    ),
                 )
-                append_grpo_metric(metrics, record=record)
-                append_grpo_metric_jsonl(step_metrics_path, record)
-                if step % args.log_steps == 0:
-                    print(json.dumps(record))
+                best = evaluations[best_index]
+                failures = [str(detail) for detail in (best.get("details") or [])]
+                append_repair_queue_record(
+                    repair_queue_path,
+                    {
+                        "timestamp_utc": datetime.now(timezone.utc).isoformat(),
+                        "step": step,
+                        "task_id": task["task_id"],
+                        "domain": task["meta"].get("domain", "?"),
+                        "category": task["meta"].get("category", "?"),
+                        "best_code": codes[best_index],
+                        "failures": failures[:8],
+                        "pass_rate": pass_rate,
+                        "verifier_rate": float(verifier_rewards[best_index].item()),
+                    },
+                )
+                repair_queued = True
+                step_ctx["repair_queued"] = True
+            trips = observe_and_evaluate_breakers(
+                breaker,
+                step=step,
+                route=route,
+                non_finite=False,
+                clip_fraction=0.0,
+                entropy_mean=entropy_mean,
+                repair_queued=repair_queued,
+                repair_converted_jsonl=args.repair_converted_jsonl,
+                all_fail=all_fail,
+            )
+            emit_step_record(
+                rank=rank,
+                metrics=metrics,
+                step_metrics_path=step_metrics_path,
+                log_steps=args.log_steps,
+                ctx=step_ctx,
+                skipped=True,
+                reason=f"{route}_queued",
+                trips=trips,
+            )
+            if maybe_stop_for_breaker(breaker, args, rank, trips):
+                break
+            continue
+
+        # Skip flat mastered groups: keep a small replay quota but do not burn
+        # an optimizer step on a group whose leave-one-out advantages are ~0.
+        if route == MASTERED_REPLAY and signal_stats["signal_std"] < args.min_reward_std:
+            trips = observe_and_evaluate_breakers(
+                breaker,
+                step=step,
+                route=route,
+                non_finite=False,
+                clip_fraction=0.0,
+                entropy_mean=entropy_mean,
+                repair_queued=repair_queued,
+                repair_converted_jsonl=args.repair_converted_jsonl,
+                all_fail=all_fail,
+            )
+            emit_step_record(
+                rank=rank,
+                metrics=metrics,
+                step_metrics_path=step_metrics_path,
+                log_steps=args.log_steps,
+                ctx=step_ctx,
+                skipped=True,
+                reason="mastered_replay_flat",
+                trips=trips,
+            )
+            if maybe_stop_for_breaker(breaker, args, rank, trips):
+                break
+            continue
+
+        # Skip only when both total and component reward signals are flat on an
+        # RL route (adaptive temperature escalation applies here).
+        if route in RL_ROUTES and signal_stats["signal_std"] < args.min_reward_std:
+            adaptive_temp.record_skip("low_reward_signal")
+            trips = observe_and_evaluate_breakers(
+                breaker,
+                step=step,
+                route=route,
+                non_finite=False,
+                clip_fraction=0.0,
+                entropy_mean=entropy_mean,
+                repair_queued=repair_queued,
+                repair_converted_jsonl=args.repair_converted_jsonl,
+                all_fail=all_fail,
+            )
+            emit_step_record(
+                rank=rank,
+                metrics=metrics,
+                step_metrics_path=step_metrics_path,
+                log_steps=args.log_steps,
+                ctx=step_ctx,
+                skipped=True,
+                reason="low_reward_signal",
+                trips=trips,
+            )
+            if maybe_stop_for_breaker(breaker, args, rank, trips):
+                break
             continue
 
         # Forward pass to get current completion-only log probs and apply GRPO loss.
@@ -1319,36 +1747,51 @@ def main() -> int:
 
         if not current_log_probs:
             adaptive_temp.record_skip("empty_completion_mask")
-            if rank == 0:
-                record = build_grpo_step_record(
-                    step=step,
-                    task_name=task["task_dir"].name,
-                    domain=task["meta"].get("domain", "?"),
-                    mean_reward=float(mean_reward),
-                    signal_stats=signal_stats,
-                    pass_rate=float(pass_rewards.mean()),
-                    syntax_rate=float(syntax_rewards.mean()),
-                    interface_rate=float(interface_rewards.mean()),
-                    verifier_rate=float(verifier_rewards.mean()),
-                    task_prob=float(task_prob),
-                    task_state=task_state,
-                    advantage_scale=advantage_scale,
-                    skipped=True,
-                    reason="empty_completion_mask",
-                )
-                append_grpo_metric(metrics, record=record)
-                append_grpo_metric_jsonl(step_metrics_path, record)
-                if step % args.log_steps == 0:
-                    print(json.dumps(record))
+            trips = observe_and_evaluate_breakers(
+                breaker,
+                step=step,
+                route=route,
+                non_finite=False,
+                clip_fraction=0.0,
+                entropy_mean=entropy_mean,
+                repair_queued=repair_queued,
+                repair_converted_jsonl=args.repair_converted_jsonl,
+                all_fail=all_fail,
+            )
+            emit_step_record(
+                rank=rank,
+                metrics=metrics,
+                step_metrics_path=step_metrics_path,
+                log_steps=args.log_steps,
+                ctx=step_ctx,
+                skipped=True,
+                reason="empty_completion_mask",
+                trips=trips,
+            )
+            if maybe_stop_for_breaker(breaker, args, rank, trips):
+                break
             continue
 
-        total_loss = grpo_loss(
-            torch.stack(current_log_probs),
-            torch.stack(normalized_old_log_probs),
-            torch.stack(filtered_advantages),
-            args.kl_coeff,
-            args.ratio_clip_log_delta,
-        )
+        # ── FV-GSPO: sequence-level clipped objective (GSPO) or legacy ablation ──
+        gspo_stats: dict[str, float] | None = None
+        if args.loss_mode == "gspo":
+            total_loss, gspo_stats = stable_gspo_loss_metrics(
+                torch.stack(current_log_probs),
+                torch.stack(normalized_old_log_probs),
+                torch.stack(filtered_advantages),
+                clip_low=args.gspo_clip_low,
+                clip_high=args.gspo_clip_high,
+                kl_coeff=args.kl_coeff,
+                numerical_log_ratio_clip=args.numerical_log_ratio_clip,
+            )
+        else:
+            total_loss = grpo_loss(
+                torch.stack(current_log_probs),
+                torch.stack(normalized_old_log_probs),
+                torch.stack(filtered_advantages),
+                args.kl_coeff,
+                args.ratio_clip_log_delta,
+            )
         # Doubly-Robust DPO pair loss (only active when the
         # doubly_robust_quantum_grpo research method is enabled).
         # The helper is a no-op (returns zero) when the plugin is
@@ -1377,54 +1820,73 @@ def main() -> int:
             total_loss = total_loss + dr_variance_term
         if not torch.isfinite(total_loss):
             adaptive_temp.record_skip("non_finite_loss")
-            if rank == 0:
-                record = build_grpo_step_record(
-                    step=step,
-                    task_name=task["task_dir"].name,
-                    domain=task["meta"].get("domain", "?"),
-                    mean_reward=float(mean_reward),
-                    signal_stats=signal_stats,
-                    pass_rate=float(pass_rewards.mean()),
-                    syntax_rate=float(syntax_rewards.mean()),
-                    interface_rate=float(interface_rewards.mean()),
-                    verifier_rate=float(verifier_rewards.mean()),
-                    task_prob=float(task_prob),
-                    task_state=task_state,
-                    advantage_scale=advantage_scale,
-                    skipped=True,
-                    reason="non_finite_loss",
-                )
-                append_grpo_metric(metrics, record=record)
-                append_grpo_metric_jsonl(step_metrics_path, record)
-                if step % args.log_steps == 0:
-                    print(json.dumps(record))
+            trips = observe_and_evaluate_breakers(
+                breaker,
+                step=step,
+                route=route,
+                non_finite=True,
+                clip_fraction=0.0,
+                entropy_mean=entropy_mean,
+                repair_queued=repair_queued,
+                repair_converted_jsonl=args.repair_converted_jsonl,
+                all_fail=all_fail,
+            )
+            emit_step_record(
+                rank=rank,
+                metrics=metrics,
+                step_metrics_path=step_metrics_path,
+                log_steps=args.log_steps,
+                ctx=step_ctx,
+                skipped=True,
+                reason="non_finite_loss",
+                trips=trips,
+            )
+            if maybe_stop_for_breaker(breaker, args, rank, trips):
+                break
             continue
         optimizer.zero_grad()
         total_loss.backward()
         torch.nn.utils.clip_grad_norm_(trainable_param_tensors, 1.0)
         optimizer.step()
         adaptive_temp.record_update()
+        router.record_rl_update(task["task_id"])
 
-        if rank == 0:
-            record = build_grpo_step_record(
-                step=step,
-                task_name=task["task_dir"].name,
-                domain=task["meta"].get("domain", "?"),
-                mean_reward=float(mean_reward),
-                signal_stats=signal_stats,
-                pass_rate=float(pass_rewards.mean()),
-                syntax_rate=float(syntax_rewards.mean()),
-                interface_rate=float(interface_rewards.mean()),
-                verifier_rate=float(verifier_rewards.mean()),
-                task_prob=float(task_prob),
-                task_state=task_state,
-                advantage_scale=advantage_scale,
-                loss=float(total_loss.item()),
-                adapter_init=args.adapter_init,
-                self_eval_rate=float(self_eval_rewards.mean())
-                if args.self_evaluation_enabled
-                else None,
-            )
+        clip_fraction = (
+            float(gspo_stats.get("clip_total_fraction", 0.0)) if gspo_stats is not None else 0.0
+        )
+        trips = observe_and_evaluate_breakers(
+            breaker,
+            step=step,
+            route=route,
+            non_finite=False,
+            clip_fraction=clip_fraction,
+            entropy_mean=entropy_mean,
+            repair_queued=repair_queued,
+            repair_converted_jsonl=args.repair_converted_jsonl,
+            all_fail=all_fail,
+        )
+        record = emit_step_record(
+            rank=rank,
+            metrics=metrics,
+            step_metrics_path=step_metrics_path,
+            log_steps=args.log_steps,
+            ctx=step_ctx,
+            skipped=False,
+            loss=float(total_loss.item()),
+            trips=trips,
+            ratio_mean=float(gspo_stats.get("ratio_mean", 0.0)) if gspo_stats is not None else None,
+            clip_low_fraction=float(gspo_stats.get("clip_low_fraction", 0.0))
+            if gspo_stats is not None
+            else None,
+            clip_high_fraction=float(gspo_stats.get("clip_high_fraction", 0.0))
+            if gspo_stats is not None
+            else None,
+            seq_kl=float(gspo_stats.get("seq_kl", 0.0)) if gspo_stats is not None else None,
+            self_eval_rate=float(self_eval_rewards.mean())
+            if args.self_evaluation_enabled
+            else None,
+        )
+        if record is not None:
             if dr_pair_info:
                 record["dr_pair_mined"] = bool(dr_pair_info.get("dr_pair_mined"))
                 record["dr_pair_reward_gap"] = float(dr_pair_info.get("dr_pair_reward_gap", 0.0))
@@ -1438,10 +1900,8 @@ def main() -> int:
                 record["dr_psi_init"] = float(dr_variance_info.get("dr_psi_init", 0.0))
                 record["dr_psi_warmup_steps"] = int(dr_variance_info.get("dr_psi_warmup_steps", 0))
                 record["dr_psi_current_step"] = dr_variance_info.get("dr_psi_current_step")
-            append_grpo_metric(metrics, record=record)
-            append_grpo_metric_jsonl(step_metrics_path, record)
-            if step % args.log_steps == 0:
-                print(json.dumps(record))
+        if maybe_stop_for_breaker(breaker, args, rank, trips):
+            break
 
             # ── Periodic checkpoint: save adapter every checkpoint_interval_seconds ──
             if args.checkpoint_interval_seconds > 0 and rank == 0:
@@ -1498,14 +1958,36 @@ def main() -> int:
                     "reward_detail_budget_cap": args.reward_detail_budget_cap,
                     "advantage_clip": args.advantage_clip,
                     "ratio_clip_log_delta": args.ratio_clip_log_delta,
+                    "top_p": args.top_p,
                     "logit_clip": args.logit_clip,
                     "min_reward_std": args.min_reward_std,
                     "curriculum_ema_decay": args.curriculum_ema_decay,
                     "curriculum_min_weight": args.curriculum_min_weight,
                     "curriculum_uncertainty_bonus": args.curriculum_uncertainty_bonus,
                     "quantum_priority": args.quantum_priority,
+                    "loss_mode": args.loss_mode,
+                    "gspo_clip_low": args.gspo_clip_low,
+                    "gspo_clip_high": args.gspo_clip_high,
+                    "numerical_log_ratio_clip": args.numerical_log_ratio_clip,
+                    "advantage_mode": args.advantage_mode,
+                    "loo_advantage_scale": args.loo_advantage_scale,
+                    "frontier_threshold": args.frontier_threshold,
+                    "mastered_threshold": args.mastered_threshold,
+                    "mix_targeted": args.mix_targeted,
+                    "mix_neighbor": args.mix_neighbor,
+                    "mix_replay": args.mix_replay,
+                    "neighbor_window": args.neighbor_window,
+                    "repair_queue_path": str(repair_queue_path),
+                    "repair_converted_jsonl": args.repair_converted_jsonl,
+                    "coverage_json": args.coverage_json,
+                    "stop_on_severe_breaker": args.stop_on_severe_breaker,
                     "research_methods": summarize_methods(research_methods),
                     "curriculum_state": curriculum.state,
+                    "frontier_router_state": router.state,
+                    "frontier_fraction": router.frontier_fraction(),
+                    "circuit_breaker_state": breaker.to_dict(),
+                    "running_mad_scale": running_mad.scale,
+                    "total_probes": total_probes,
                     "target_modules": list(args.target_modules) if args.target_modules else None,
                     "target_module_regex": list(args.target_module_regex)
                     if args.target_module_regex

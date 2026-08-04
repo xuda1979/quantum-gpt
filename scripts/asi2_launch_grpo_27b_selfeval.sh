@@ -1,17 +1,21 @@
 #!/usr/bin/env bash
 # =============================================================================
-# ASI2 launcher: GRPO training for Qwen3.6-27B quantum coding with self-evaluation.
+# ASI2 launcher: Frontier-Verifier GSPO (FV-GSPO) training for Qwen3.6-27B.
 #
 # Architecture
 # ------------
-#   NPU 0,1  -> GRPO trainer (Qwen3.6-27B + LoRA, generates samples + trains)
+#   NPU 0..N -> GRPO trainer (Qwen3.6-27B + LoRA, generates samples + trains)
 #   CPU      -> Periodic checkpoint sync to NAS (/root/work/filestorage/grpo_checkpoints)
 #
-# Key features:
-#   - Model generates candidate solutions, then EVALUATES THEM ITSELF (self-judge)
-#   - Adapters saved to NAS every 2 hours (checkpoint_interval_seconds=7200)
-#   - Adaptive difficulty: curriculum EMA adjusts task weights based on reward signal
-#   - Durable: all outputs on NAS, resume-capable via --resume-from
+# FV-GSPO (docs/frontier-verifier-gspo-design-2026-08-04.md):
+#   - frontier router: probe each group, train only learnable frontier groups
+#   - all-fail groups -> execution-verified repair queue (repair SFT/DPO stage)
+#   - leave-one-out advantages (Dr.GRPO), no per-task std normalization
+#   - GSPO sequence-level clipping (calibrated 3e-4/4e-4, NOT DAPO's 0.2/0.28)
+#   - 50% targeted / 25% neighboring variants / 25% replay sampling
+#   - executable tests authoritative; self-judge reward weight = 0
+#   - circuit breakers: non-finite, clip fraction, entropy collapse,
+#     all-fail-without-repair (trips after two windows -> halt)
 #
 # Usage:
 #   bash scripts/asi2_launch_grpo_27b_selfeval.sh launch
@@ -29,7 +33,7 @@ log() { printf '[%s] %s\n' "$(date '+%Y-%m-%dT%H:%M:%S%z')" "$*"; }
 # ---- paths ----
 NAS_ROOT="${NAS_ROOT:-/root/work/software/quantum-gpt}"
 MODEL_PATH="${MODEL_PATH:-/root/work/filestorage/Qwen3.6-27B}"
-CONFIG_FILE="${CONFIG_FILE:-$NAS_ROOT/configs/rl/qwen36_27b_grpo_selfeval_asi2.json}"
+CONFIG_FILE="${CONFIG_FILE:-$NAS_ROOT/configs/rl/qwen36_27b_fv_gspo_asi2.json}"
 RUN_ID="${RUN_ID:-$(date +%Y%m%dT%H%M%S)}"
 OUT="${OUT:-$NAS_ROOT/outputs/grpo-27b-selfeval-${RUN_ID}}"
 NAS_CHECKPOINT_ROOT="${NAS_CHECKPOINT_ROOT:-/root/work/filestorage/grpo_checkpoints/qwen36_27b_selfeval}"
@@ -41,17 +45,30 @@ CHECKPOINT_PID_FILE="$LOGDIR/grpo_27b_checkpoint_sync.pid"
 # ---- training hyperparams ----
 GROUP_SIZE="${GROUP_SIZE:-8}"
 GRPO_STEPS="${GRPO_STEPS:-500}"
-LR="${LR:-1e-5}"
-KL_COEFF="${KL_COEFF:-0.05}"
+LR="${LR:-2e-6}"                       # FV-GSPO: 1e-6..3e-6 LoRA; legacy 1e-5 is aggressive
+KL_COEFF="${KL_COEFF:-0.005}"          # FV-GSPO initial KL beta (design table)
 TEMPERATURE="${TEMPERATURE:-0.8}"
 LORA_RANK="${LORA_RANK:-16}"
 LORA_ALPHA="${LORA_ALPHA:-32}"
 CHECKPOINT_INTERVAL_SECONDS="${CHECKPOINT_INTERVAL_SECONDS:-7200}"
 MAX_NEW_TOKENS="${MAX_NEW_TOKENS:-1024}"
 MAX_SEQ_LENGTH="${MAX_SEQ_LENGTH:-2048}"
-SELF_EVAL_WEIGHT="${SELF_EVAL_WEIGHT:-0.25}"
 DEVICE="${DEVICE:-npu}"
-NUM_NPU="${NUM_NPU:-2}"
+NUM_NPU="${NUM_NPU:-4}"
+BENCHMARK_FILE="${BENCHMARK_FILE:-evals/benchmarks/quantum_grpo_training_v1.txt}"
+
+# ---- FV-GSPO: frontier router + mixture + GSPO clipping + breakers ----
+LOSS_MODE="${LOSS_MODE:-gspo}"
+GSPO_CLIP_LOW="${GSPO_CLIP_LOW:-0.0003}"
+GSPO_CLIP_HIGH="${GSPO_CLIP_HIGH:-0.0004}"
+ADVANTAGE_MODE="${ADVANTAGE_MODE:-loo}"
+FRONTIER_THRESHOLD="${FRONTIER_THRESHOLD:-0.10}"
+MASTERED_THRESHOLD="${MASTERED_THRESHOLD:-0.95}"
+MIX_TARGETED="${MIX_TARGETED:-0.5}"
+MIX_NEIGHBOR="${MIX_NEIGHBOR:-0.25}"
+MIX_REPLAY="${MIX_REPLAY:-0.25}"
+NEIGHBOR_WINDOW="${NEIGHBOR_WINDOW:-10}"
+CIRCUIT_BREAKER_WINDOW="${CIRCUIT_BREAKER_WINDOW:-10}"
 
 # ---- adaptive difficulty (boundary of capability) ----
 CURRICULUM_EMA_DECAY="${CURRICULUM_EMA_DECAY:-0.9}"
@@ -77,7 +94,12 @@ spec = {
     'checkpoint_interval_seconds': '$CHECKPOINT_INTERVAL_SECONDS',
     'model_path': '$MODEL_PATH',
     'nas_checkpoint_root': '$NAS_CHECKPOINT_ROOT',
-    'self_eval_enabled': 'true',
+    'self_eval_enabled': 'false',
+    'loss_mode': 'gspo',
+    'gspo_clip_low': '$GSPO_CLIP_LOW',
+    'gspo_clip_high': '$GSPO_CLIP_HIGH',
+    'advantage_mode': 'loo',
+    'benchmark_file': '$BENCHMARK_FILE',
 }
 print(json.dumps(spec, indent=2))
 "
@@ -189,7 +211,11 @@ log "Group size:     $GROUP_SIZE"
 log "GRPO steps:     $GRPO_STEPS"
 log "LR:             $LR"
 log "Temperature:    $TEMPERATURE"
-log "Self-eval wt:   $SELF_EVAL_WEIGHT"
+log "Loss mode:      $LOSS_MODE (GSPO clips $GSPO_CLIP_LOW/$GSPO_CLIP_HIGH)"
+log "Advantage:      $ADVANTAGE_MODE leave-one-out (no per-task std norm)"
+log "Mix:            $MIX_TARGETED targeted / $MIX_NEIGHBOR neighbor / $MIX_REPLAY replay"
+log "Self-judge:     disabled (zero reward weight until executable-label calibration)"
+log "Benchmark:      $BENCHMARK_FILE (training-only; held-out tasks excluded)"
 log "Checkpoint interval: ${CHECKPOINT_INTERVAL_SECONDS}s (= every 2h)"
 log "Curriculum EMA decay: $CURRICULUM_EMA_DECAY"
 log "============================================================"
@@ -266,7 +292,7 @@ log "checkpoint sync daemon launched pid=$(cat "$CHECKPOINT_PID_FILE")"
 # ---- GRPO trainer ----
 log "launching GRPO trainer on $NUM_NPU NPUs..."
 
-nohup python3 training/grpo_trainer.py \
+nohup torchrun --nproc_per_node="$NUM_NPU" training/grpo_trainer.py \
   --model-name "$MODEL_PATH" \
   --output-dir "$OUT" \
   --overwrite-output-dir \
@@ -286,20 +312,29 @@ nohup python3 training/grpo_trainer.py \
   --reward-interface-weight 0.10 \
   --reward-verifier-weight 0.10 \
   --reward-import-hygiene-weight 0.05 \
-  --reward-self-eval-weight "$SELF_EVAL_WEIGHT" \
   --lora-rank "$LORA_RANK" \
   --lora-alpha "$LORA_ALPHA" \
   --target-modules q_proj v_proj o_proj gate_proj up_proj down_proj \
   --freeze-param-regex '.*\.(mlp\.gate|router)\..*' \
+  --benchmark-file "$BENCHMARK_FILE" \
   --domain-filter quantum \
   --curriculum-ema-decay "$CURRICULUM_EMA_DECAY" \
   --curriculum-min-weight "$CURRICULUM_MIN_WEIGHT" \
   --min-reward-std "$MIN_REWARD_STD" \
   --checkpoint-interval-seconds "$CHECKPOINT_INTERVAL_SECONDS" \
   --logit-clip 5.0 \
-  --self-evaluation-enabled \
-  --self-eval-judge-temperature 0.3 \
-  --self-eval-judge-max-tokens 512 \
+  --loss-mode "$LOSS_MODE" \
+  --gspo-clip-low "$GSPO_CLIP_LOW" \
+  --gspo-clip-high "$GSPO_CLIP_HIGH" \
+  --advantage-mode "$ADVANTAGE_MODE" \
+  --frontier-threshold "$FRONTIER_THRESHOLD" \
+  --mastered-threshold "$MASTERED_THRESHOLD" \
+  --mix-targeted "$MIX_TARGETED" \
+  --mix-neighbor "$MIX_NEIGHBOR" \
+  --mix-replay "$MIX_REPLAY" \
+  --neighbor-window "$NEIGHBOR_WINDOW" \
+  --repair-queue-path "$OUT/repair_queue.jsonl" \
+  --circuit-breaker-window "$CIRCUIT_BREAKER_WINDOW" \
   "${RESUME_FLAGS[@]}" \
   > "$TRAIN_LOG" 2>&1 &
 
