@@ -389,7 +389,21 @@ Primary efficiency metric: Δheld-out pass@1 per generated NPU-token-hour.
 
 ---
 
-## 16. Change Log
+## 16. Research Alignment (verified 2026-08-05)
+
+Every component maps to its cited paper; the two deliberate divergences are documented:
+
+| Design decision | Paper basis | Verification |
+|---|---|---|
+| Skip all-pass groups; route all-fail flat groups to the repair lane instead of training | DAPO "dynamic sampling" (remove zero-variance dead groups) | Our router is a strict superset: all-pass → mastered replay skip; all-fail flat → `repair_sft` queue |
+| Asymmetric clipping, wider on the positive side | DAPO clip-higher (ε_low=0.2 / ε_high=0.28 at token level) | Same asymmetry; GSPO-scale values 3e-4/4e-4 per the GSPO paper (sequence ratios differ by orders of magnitude) |
+| Leave-one-out advantages, no per-group std normalization | Dr.GRPO | `A_i = R_i − mean(other rewards)`; std division is the instability source (near-constant groups explode) |
+| Bounded truncation penalty `T` instead of hard zeroing | DAPO overlong-reward shaping | Soft, capped penalty |
+| Entropy + frontier-yield breaker | Entropy Mechanism / Clip-Cov (entropy collapse limits exploration) | Two-window trip; baseline from first 20 steps |
+| Sequence-level (not token-level) loss aggregation | GSPO (sequence ratios stabilize MoE expert routing) | Deliberate divergence from DAPO's token-level aggregation, kept as a documented ablation (`--loss-mode grpo` is the legacy baseline; token-level aggregation is a future ablation) |
+| KL control + anchor resets | ProRL (prolonged RL benefits from KL control and periodic reference reset) | Adaptive KL controller; anchor resets deferred to the cluster-side eval gate |
+
+## 17. Change Log
 
 **2026-08-05 — full implementation of FV-GSPO** (commits `95d8088` → `7dec163`, branch `codex/asi2-qwen36-distillation-lora`):
 
