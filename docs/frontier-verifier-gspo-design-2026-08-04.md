@@ -1,6 +1,7 @@
 # Frontier-Verifier GSPO for Quantum Code
 
-**Status:** proposed algorithm and ablation plan, not yet implemented or remotely launched
+**Status:** proposed algorithm and ablation plan. **Implemented** (2026-08-05): see
+[docs/fv-gspo-implementation-2026-08-05.md](fv-gspo-implementation-2026-08-05.md) for the implementation reference (router, LOO advantages, GSPO clipping, repair lane, breakers, frozen judge, adaptive KL, ASI2 launch wiring).
 **Target models:** Qwen3.6-27B and Qwen3.6-35B-A3B adapters
 **Primary objective:** improve executable quantum-code and software-engineering pass@1 without wasting rollout compute on mastered or currently unlearnable tasks
 
