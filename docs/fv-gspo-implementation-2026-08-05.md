@@ -216,16 +216,34 @@ User requirement (2026-08-05): the **base model**, and later **older accepted ad
 - **Evidence-anchored, greedy** (temperature 0): the judge prompt includes the executable evidence (test pass/fail, failure details) and must not contradict it;
 - CLI: `--model-judge-enabled --judge-model-path <base> [--judge-adapter-path <older adapter>] --judge-device cpu` (default CPU so training NPUs are untouched).
 
-**Reward blend (P-dominant):**
+**Reward composition** — two modes (`--reward-mode`, user decision 2026-08-05: the
+reward should NOT be executable-dominated):
+
+`p_dominant` (default, FV-GSPO ablation baseline):
 
 ```
 R = P + (1−P) · [ (1−W)·S  +  W · Σ_d (w_d/Σw)·M_d ]  −  T
 W = min( Σ_d w_d , 0.05 )
 ```
 
-- `P` = full test pass — **always dominant**: judge mass comes out of the shaped term `S`, never from `P`; a passing candidate always outranks a failing one;
+- `P` = full test pass — always dominant: judge mass comes out of the shaped term `S`, never from `P`; a passing candidate always outranks a failing one;
 - With all `w_d = 0` (the default until calibration passes), `R = P + (1−P)·S`;
 - `T` = bounded truncation/pathological-length penalty.
+
+`comprehensive` (the user's chosen reward — execution is one component, not the
+dominator):
+
+```
+R = w_P·P  +  w_S·S  +  w_J·J  −  T,        defaults w_P=0.40, w_S=0.35, w_J=0.25
+```
+
+- `J` = frozen-judge composite over calibrated dimensions (relative weights);
+- Judge mass `w_J` is active only once at least one dimension passes calibration;
+  until then the masses renormalize over `P` and `S`;
+- A failing candidate CAN outrank a passing one when its shaped/judge scores are
+  high enough — the judge is evidence-anchored (its prompt shows the executable
+  evidence) and calibration-gated, so it does not contradict the tests;
+- Masses configurable: `--reward-pass-mass / --reward-shaped-mass / --reward-judge-mass`.
 
 **Calibration gates** (`scripts/calibrate_model_judge.py`, pure math: Mann-Whitney AUC, Spearman rank ρ):
 

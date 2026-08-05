@@ -232,3 +232,86 @@ def test_blend_uses_weights_from_calibration_file_shape() -> None:
     )
     # Judge mean = (1.0 + 0.5 + 0.0)/3 = 0.5, mass 0.05 -> 0.025 model term.
     assert abs(reward - (0.5 * (1 - 0.05) + 0.025)) < 1e-9
+
+
+def test_comprehensive_mode_fail_can_outrank_pass() -> None:
+    """In comprehensive mode the pass term does NOT dominate (user decision)."""
+    failing = blend_comprehensive_reward(
+        pass_reward=0.0,
+        shaped_reward=1.0,
+        model_dim_scores={"correctness": 1.0, "efficiency": 1.0},
+        dim_weights={"correctness": 0.025, "efficiency": 0.025},
+        mode="comprehensive",
+    )
+    passing = blend_comprehensive_reward(
+        pass_reward=1.0,
+        shaped_reward=0.0,
+        model_dim_scores={"correctness": 0.0, "efficiency": 0.0},
+        dim_weights={"correctness": 0.025, "efficiency": 0.025},
+        mode="comprehensive",
+    )
+    # 0.40*1 + 0.35*1 + 0.25*1 = 1.0 vs 0.40*1 + 0 = 0.40
+    assert failing > passing
+
+
+def test_comprehensive_mode_masses_renormalize_without_judge() -> None:
+    reward = blend_comprehensive_reward(
+        pass_reward=1.0,
+        shaped_reward=0.0,
+        model_dim_scores={},
+        dim_weights={},  # nothing calibrated yet -> judge mass 0
+        mode="comprehensive",
+    )
+    # masses renormalize over P and S: 0.40/(0.40+0.35) = 0.5333
+    assert abs(reward - 0.40 / 0.75) < 1e-9
+
+
+def test_comprehensive_mode_default_masses() -> None:
+    reward = blend_comprehensive_reward(
+        pass_reward=1.0,
+        shaped_reward=1.0,
+        model_dim_scores={"correctness": 1.0, "runnability": 1.0},
+        dim_weights={"correctness": 0.025, "runnability": 0.025},
+        mode="comprehensive",
+    )
+    assert abs(reward - 1.0) < 1e-9  # all components perfect
+    reward = blend_comprehensive_reward(
+        pass_reward=0.0,
+        shaped_reward=0.0,
+        model_dim_scores={"correctness": 1.0},
+        dim_weights={"correctness": 0.05},
+        mode="comprehensive",
+    )
+    assert abs(reward - 0.25) < 1e-9  # judge mass only
+
+
+def test_comprehensive_mode_judge_mass_uses_relative_dim_weights() -> None:
+    reward = blend_comprehensive_reward(
+        pass_reward=0.0,
+        shaped_reward=0.0,
+        model_dim_scores={"correctness": 1.0, "efficiency": 0.0},
+        dim_weights={"correctness": 0.04, "efficiency": 0.01},
+        mode="comprehensive",
+    )
+    # model term = (0.8*1.0 + 0.2*0.0) = 0.8; judge mass 0.25 -> 0.20
+    assert abs(reward - 0.20) < 1e-9
+
+
+def test_p_dominant_still_dominates_when_requested() -> None:
+    passing = blend_comprehensive_reward(
+        pass_reward=1.0,
+        shaped_reward=0.0,
+        model_dim_scores={"correctness": 0.0},
+        dim_weights={"correctness": 0.05},
+        mode="p_dominant",
+    )
+    failing = blend_comprehensive_reward(
+        pass_reward=0.0,
+        shaped_reward=0.5,
+        model_dim_scores={"correctness": 1.0},
+        dim_weights={"correctness": 0.05},
+        mode="p_dominant",
+    )
+    assert passing == 1.0
+    assert failing < passing
+    assert abs(failing - (0.5 * 0.95 + 0.05)) < 1e-9

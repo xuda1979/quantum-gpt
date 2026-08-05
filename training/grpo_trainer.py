@@ -376,6 +376,21 @@ def parse_args() -> argparse.Namespace:
         "enables per-dimension reward weights only for dimensions whose agreement "
         "with executable anchors passed calibration. Until then weights are zero.",
     )
+    # ── reward composition (user decision 2026-08-05: not executable-dominated) ──
+    p.add_argument(
+        "--reward-mode",
+        choices=["p_dominant", "comprehensive"],
+        default="p_dominant",
+        help="'p_dominant' keeps executable tests authoritative (P clamps failing "
+        "candidates below every passing one; FV-GSPO default and ablation "
+        "baseline). 'comprehensive' makes the reward the comprehensive score "
+        "R = w_P*P + w_S*S + w_J*J with configurable masses below — the pass "
+        "term no longer dominates, and the frozen judge contributes its mass "
+        "once any dimension passes calibration.",
+    )
+    p.add_argument("--reward-pass-mass", type=float, default=0.40)
+    p.add_argument("--reward-shaped-mass", type=float, default=0.35)
+    p.add_argument("--reward-judge-mass", type=float, default=0.25)
     # ── checkpoint interval (periodic adapter save to disk) ──
     p.add_argument(
         "--checkpoint-interval-seconds",
@@ -852,6 +867,10 @@ def evaluate_candidate(
                 shaped_reward=shaped_reward,
                 model_dim_scores=valid,
                 dim_weights=judge_weights or {},
+                mode=args.reward_mode,
+                pass_mass=args.reward_pass_mass,
+                shaped_mass=args.reward_shaped_mass,
+                judge_mass=args.reward_judge_mass,
             )
     return reward
 
@@ -2282,6 +2301,12 @@ def main() -> int:
                     "judge_adapter_path": args.judge_adapter_path,
                     "judge_device": str(args.judge_device),
                     "judge_weights": judge_weights,
+                    "reward_mode": args.reward_mode,
+                    "reward_masses": {
+                        "pass": args.reward_pass_mass,
+                        "shaped": args.reward_shaped_mass,
+                        "judge": args.reward_judge_mass,
+                    },
                     "research_methods": summarize_methods(research_methods),
                     "curriculum_state": curriculum.state,
                     "frontier_router_state": router.state,

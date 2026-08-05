@@ -307,7 +307,20 @@ anchors on held-out judge diagnostics:
 | quality | no executable anchor | never auto-enabled |
 
 Gates: `n >= 200` judged samples; enabled dimensions share the 0.05 cap
-uniformly. Until a dimension passes, its reward weight is zero and its scores
+uniformly.
+
+**Reward composition update (2026-08-05, user decision):** the reward is not
+executable-dominated. Two modes are implemented: `p_dominant` (above; the
+ablation baseline) and `comprehensive` — `R = w_P·P + w_S·S + w_J·J − T` with
+defaults 0.40/0.35/0.25 where `J` is the frozen-judge composite over calibrated
+dimensions. In comprehensive mode the pass term does not clamp failing
+candidates below passing ones; the judge is evidence-anchored and
+calibration-gated so it does not contradict executable evidence. Rationale:
+binary test-pass is sparse and cannot rank failed trajectories (SWE-RM), and
+continuous shaped rewards outperform discrete ones (SWE-RL) — but execution
+remains the correctness anchor, and calibrated dense judges (SWE-RM) beat pure
+execution only with classification accuracy + calibration, which the gates
+enforce. Until a dimension passes, its reward weight is zero and its scores
 are recorded as diagnostics (`model_dim_scores` in step metrics). The trainer
 loads the frozen judge via `--model-judge-enabled --judge-model-path <base>`
 with `--judge-adapter-path <older accepted adapter>` optional; judge device

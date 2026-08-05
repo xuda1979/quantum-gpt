@@ -43,17 +43,36 @@ def blend_comprehensive_reward(
     model_dim_scores: Mapping[str, float],
     dim_weights: Mapping[str, float],
     truncation_penalty: float = 0.0,
+    mode: str = "p_dominant",
+    pass_mass: float = 0.40,
+    shaped_mass: float = 0.35,
+    judge_mass: float = 0.25,
 ) -> float:
-    """P-dominant blend of executable and frozen-judge signals.
+    """Blend executable and frozen-judge signals into one reward.
 
-    R = P + (1 - P) * [ (1 - W) * S + W * mean(w_d * M_d) ] - T
+    ``mode="p_dominant"`` (the FV-GSPO default / ablation baseline):
 
-    - P (full test pass) always dominates: failing candidates can never outrank
-      passing ones, and judge mass is subtracted from the shaped term, never
-      from P.
-    - W = min(sum(dim_weights), MAX_MODEL_JUDGE_WEIGHT); with all weights zero
-      (the default until calibration passes) R reduces to P + (1-P)*S.
-    - Model dimension scores are clamped to [0, 1].
+        R = P + (1 - P) * [ (1 - W) * S + W * mean(w_d * M_d) ] - T
+
+        P (full test pass) always dominates: failing candidates can never
+        outrank passing ones, and judge mass (W <= 0.05) is subtracted from the
+        shaped term, never from P.
+
+    ``mode="comprehensive"`` (user decision 2026-08-05 — the reward should NOT
+    be executable-dominated):
+
+        R = w_P * P + w_S * S + w_J * J - T,   w_P + w_S + w_J = 1
+
+        with defaults w_P=0.40, w_S=0.35, w_J=0.25. J is the frozen judge's
+        composite (relative weights over the calibrated dimensions). The judge
+        mass is active only when at least one dimension passed calibration;
+        until then the masses are renormalized over P and S. A failing
+        candidate CAN outrank a passing one when its shaped/judge scores are
+        high enough — that is the point of the comprehensive mode; the judge is
+        evidence-anchored and calibration-gated so it does not contradict
+        executable evidence.
+
+    Model dimension scores are clamped to [0, 1] in both modes.
     """
     bounded_pass = min(1.0, max(0.0, float(pass_reward)))
     bounded_shaped = min(1.0, max(0.0, float(shaped_reward)))
@@ -61,15 +80,28 @@ def blend_comprehensive_reward(
         dim: min(MAX_MODEL_JUDGE_WEIGHT, max(0.0, float(dim_weights.get(dim, 0.0))))
         for dim in MODEL_JUDGE_DIMENSIONS
     }
-    total_w = min(sum(weights.values()), MAX_MODEL_JUDGE_WEIGHT)
+    weight_sum = sum(weights.values())
     model_term = 0.0
-    if total_w > 0.0:
-        mass = sum(weights.values())
+    if weight_sum > 0.0:
         model_term = sum(
-            (weights[dim] / mass) * min(1.0, max(0.0, float(model_dim_scores.get(dim, 0.0) or 0.0)))
+            (weights[dim] / weight_sum)
+            * min(1.0, max(0.0, float(model_dim_scores.get(dim, 0.0) or 0.0)))
             for dim in MODEL_JUDGE_DIMENSIONS
         )
     penalty = min(1.0, max(0.0, float(truncation_penalty)))
+    if mode == "comprehensive":
+        effective_judge = max(0.0, float(judge_mass)) if weight_sum > 0.0 else 0.0
+        total_mass = max(
+            1e-8, max(0.0, float(pass_mass)) + max(0.0, float(shaped_mass)) + effective_judge
+        )
+        reward = (
+            max(0.0, float(pass_mass)) / total_mass * bounded_pass
+            + max(0.0, float(shaped_mass)) / total_mass * bounded_shaped
+            + effective_judge / total_mass * model_term
+            - penalty
+        )
+        return min(1.0, max(0.0, reward))
+    total_w = min(weight_sum, MAX_MODEL_JUDGE_WEIGHT)
     reward = (
         bounded_pass
         + (1.0 - bounded_pass) * ((1.0 - total_w) * bounded_shaped + total_w * model_term)
