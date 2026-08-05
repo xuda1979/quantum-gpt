@@ -1452,6 +1452,7 @@ def stable_gspo_loss_metrics(
     clip_high: float,
     kl_coeff: float,
     numerical_log_ratio_clip: float,
+    length_weights: torch.Tensor | None = None,
 ) -> tuple[torch.Tensor, dict[str, float]]:
     """GSPO sequence-level clipped objective with diagnostic statistics.
 
@@ -1461,6 +1462,13 @@ def stable_gspo_loss_metrics(
     are calibrated separately (e.g. 3e-4/4e-4) while
     ``numerical_log_ratio_clip`` remains a wide clamp only for finite
     exponentiation.
+
+    ``length_weights`` (optional, LUSPO-style length neutralization — review
+    2026-08-05 #3): the sequence-mean ratio dilutes long responses; multiplying
+    each surrogate by w_i = min(|y_i| / L_reference, w_max) neutralizes that
+    bias so complete long implementations are not underweighted:
+
+        J = mean_i [ w_i * min(s_i A_i, clip(s_i) A_i) ] - beta * KL
 
     Returns ``(loss, stats)`` where stats include the low/high clip fractions
     used by the clipping circuit breaker.
@@ -1476,6 +1484,7 @@ def stable_gspo_loss_metrics(
         "clip_high_fraction": 0.0,
         "clip_total_fraction": 0.0,
         "seq_kl": 0.0,
+        "length_weight_mean": 0.0,
     }
     if not finite_mask.any():
         return nan_loss, empty_stats
@@ -1493,6 +1502,11 @@ def stable_gspo_loss_metrics(
         sequence_ratio * safe_advantages,
         clipped_ratio * safe_advantages,
     )
+    length_weight_mean = 0.0
+    if length_weights is not None:
+        safe_weights = length_weights[finite_mask].float().clamp_min(0.0)
+        surrogate = surrogate * safe_weights
+        length_weight_mean = float(safe_weights.mean().item())
     approximate_kl = (safe_old_log_probs - safe_log_probs).mean()
     total = -surrogate.mean() + kl_coeff * approximate_kl
     if not torch.isfinite(total):
@@ -1509,6 +1523,7 @@ def stable_gspo_loss_metrics(
             / n
         ),
         "seq_kl": float(approximate_kl.item()),
+        "length_weight_mean": length_weight_mean,
     }
     return total, stats
 

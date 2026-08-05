@@ -207,10 +207,26 @@ def parse_args() -> argparse.Namespace:
     # ── FV-GSPO (frontier-verifier GSPO): see docs/frontier-verifier-gspo-design-2026-08-04.md ──
     p.add_argument(
         "--loss-mode",
-        choices=["grpo", "gspo"],
+        choices=["grpo", "gspo", "gspo_ln"],
         default="gspo",
         help="'grpo' keeps the old unclipped sequence-ratio loss (ablation baseline); "
-        "'gspo' uses the GSPO sequence-level clipped proximal objective.",
+        "'gspo' uses the GSPO sequence-level clipped proximal objective; "
+        "'gspo_ln' is the LUSPO-style length-neutral variant (review 2026-08-05 #3): "
+        "each surrogate is multiplied by w_i = min(|y_i|/L_reference, w_max) to "
+        "neutralize the length bias of the sequence-mean ratio.",
+    )
+    p.add_argument(
+        "--ln-reference-length",
+        type=float,
+        default=256.0,
+        help="L_reference for the length-neutral surrogate weight.",
+    )
+    p.add_argument(
+        "--ln-max-weight",
+        type=float,
+        default=4.0,
+        help="w_max cap on the length multiplier (prevents one very long "
+        "candidate from dominating).",
     )
     p.add_argument(
         "--gspo-clip-low",
@@ -2145,6 +2161,7 @@ def main() -> int:
         current_log_probs = []
         normalized_old_log_probs = []
         filtered_advantages = []
+        filtered_token_counts = []
         for idx, code in enumerate(codes):
             current_log_prob, token_count = compute_completion_log_prob(
                 active_model,
@@ -2161,6 +2178,7 @@ def main() -> int:
             current_log_probs.append(current_log_prob / token_count.clamp_min(1))
             normalized_old_log_probs.append(old_log_probs[idx] / old_token_counts[idx].clamp_min(1))
             filtered_advantages.append(advantages[idx])
+            filtered_token_counts.append(old_token_counts[idx].float())
 
         if not current_log_probs:
             adaptive_temp.record_skip("empty_completion_mask")
@@ -2202,7 +2220,14 @@ def main() -> int:
                 )
             effective_kl = kl_state.update(seq_kl_now)
         gspo_stats: dict[str, float] | None = None
-        if args.loss_mode == "gspo":
+        length_weights: torch.Tensor | None = None
+        if args.loss_mode == "gspo_ln":
+            # LUSPO-style length neutralization: w_i = min(|y_i|/L_ref, w_max).
+            counts = torch.stack(filtered_token_counts)
+            length_weights = torch.clamp(
+                counts / max(args.ln_reference_length, 1.0), max=args.ln_max_weight
+            )
+        if args.loss_mode in ("gspo", "gspo_ln"):
             total_loss, gspo_stats = stable_gspo_loss_metrics(
                 torch.stack(current_log_probs),
                 torch.stack(normalized_old_log_probs),
@@ -2211,6 +2236,7 @@ def main() -> int:
                 clip_high=args.gspo_clip_high,
                 kl_coeff=effective_kl,
                 numerical_log_ratio_clip=args.numerical_log_ratio_clip,
+                length_weights=length_weights,
             )
         else:
             total_loss = grpo_loss(
@@ -2380,6 +2406,10 @@ def main() -> int:
             record["seq_kl_after"] = seq_kl_after
             record["old_policy_age"] = 1
             record["optimizer_substeps_per_rollout"] = 1
+            record["mean_response_length"] = float(old_token_counts.mean().item())
+            record["truncation_rate"] = float(
+                (old_token_counts >= args.max_new_tokens).float().mean().item()
+            )
             if dr_pair_info:
                 record["dr_pair_mined"] = bool(dr_pair_info.get("dr_pair_mined"))
                 record["dr_pair_reward_gap"] = float(dr_pair_info.get("dr_pair_reward_gap", 0.0))
@@ -2462,6 +2492,8 @@ def main() -> int:
                     "gspo_clip_low": args.gspo_clip_low,
                     "gspo_clip_high": args.gspo_clip_high,
                     "numerical_log_ratio_clip": args.numerical_log_ratio_clip,
+                    "ln_reference_length": args.ln_reference_length,
+                    "ln_max_weight": args.ln_max_weight,
                     "advantage_mode": args.advantage_mode,
                     "loo_advantage_scale": args.loo_advantage_scale,
                     "frontier_threshold": args.frontier_threshold,

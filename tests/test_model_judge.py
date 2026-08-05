@@ -21,6 +21,7 @@ from training.grpo_utils import (
     MAX_MODEL_JUDGE_WEIGHT,
     blend_comprehensive_reward,
     sequence_ratio_stats,
+    stable_gspo_loss_metrics,
 )
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -463,3 +464,51 @@ def test_tiered_mode_failures_learnable_and_capped() -> None:
         mode="tiered",
     )
     assert maxed <= 0.95
+
+
+def test_length_neutral_gspo_weights_long_responses() -> None:
+    """Review #3: LUSPO-style length weights neutralize the sequence-mean
+    ratio's dilution of long responses (capped so one long candidate cannot
+    dominate)."""
+    torch.manual_seed(1)
+    log_probs = torch.randn(6)
+    old_log_probs = torch.randn(6) * 0.1
+    advantages = torch.tensor([1.0, -1.0, 1.0, -1.0, 1.0, -1.0])
+    lengths = torch.tensor([50.0, 100.0, 200.0, 400.0, 800.0, 1600.0])
+    weights = torch.clamp(lengths / 256.0, max=4.0)
+    plain, plain_stats = stable_gspo_loss_metrics(
+        log_probs,
+        old_log_probs,
+        advantages,
+        clip_low=3e-4,
+        clip_high=4e-4,
+        kl_coeff=0.005,
+        numerical_log_ratio_clip=8.0,
+    )
+    weighted, weighted_stats = stable_gspo_loss_metrics(
+        log_probs,
+        old_log_probs,
+        advantages,
+        clip_low=3e-4,
+        clip_high=4e-4,
+        kl_coeff=0.005,
+        numerical_log_ratio_clip=8.0,
+        length_weights=weights,
+    )
+    assert not torch.allclose(plain, weighted)
+    assert abs(weighted_stats["length_weight_mean"] - float(weights.mean().item())) < 1e-9
+    # The cap is enforced: the longest response gets w=4.0, not 1600/256=6.25.
+    assert float(weights.max().item()) == 4.0
+    # With weights all 1.0 the loss matches the plain GSPO loss.
+    ones = torch.ones_like(lengths)
+    plain2, _ = stable_gspo_loss_metrics(
+        log_probs,
+        old_log_probs,
+        advantages,
+        clip_low=3e-4,
+        clip_high=4e-4,
+        kl_coeff=0.005,
+        numerical_log_ratio_clip=8.0,
+        length_weights=ones,
+    )
+    assert torch.allclose(plain, plain2)
