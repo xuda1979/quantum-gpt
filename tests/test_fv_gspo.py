@@ -15,6 +15,7 @@ import torch
 
 from training.grpo_utils import (
     FRONTIER_RL,
+    INVALID_OR_NOISY,
     MASTERED_REPLAY,
     PARTIAL_REPAIR_RL,
     REPAIR_SFT,
@@ -48,8 +49,12 @@ def test_router_probe_classifies_mixed_group_as_frontier() -> None:
 
 def test_router_probe_routes_all_fail_flat_to_repair() -> None:
     router = FrontierRouter()
-    probe = router.probe_record("t2", step=1, pass_rate=0.0, shaped_signal_std=0.01)
-    assert probe["route"] == REPAIR_SFT
+    # All-fail evidence must accumulate (posterior upper bound very low).
+    router.probe_record("t2", step=1, pass_rate=0.0, shaped_signal_std=0.01)
+    assert router.route_of("t2") != REPAIR_SFT
+    for step in (2, 3):
+        router.probe_record("t2", step=step, pass_rate=0.0, shaped_signal_std=0.01)
+    assert router.route_of("t2") == REPAIR_SFT
 
 
 def test_router_probe_routes_all_fail_with_signal_to_partial_rl() -> None:
@@ -58,19 +63,65 @@ def test_router_probe_routes_all_fail_with_signal_to_partial_rl() -> None:
     assert probe["route"] == PARTIAL_REPAIR_RL
 
 
-def test_router_probe_routes_all_pass_flat_to_mastered_replay() -> None:
+def test_router_single_all_pass_probe_does_not_master() -> None:
+    """Review #4 headline fix: one lucky 8/8 group must not mark mastered."""
     router = FrontierRouter()
     probe = router.probe_record("t4", step=1, pass_rate=1.0, shaped_signal_std=0.01)
-    assert probe["route"] == MASTERED_REPLAY
+    assert probe["route"] != MASTERED_REPLAY  # posterior lower bound still far below 0.95
+
+
+def test_router_probe_routes_all_pass_flat_to_mastered_replay() -> None:
+    router = FrontierRouter()
+    for step in range(1, 9):  # 8 all-pass probes x G=8 = 64 samples
+        router.probe_record("t4", step=step, pass_rate=1.0, shaped_signal_std=0.01)
+    assert router.route_of("t4") == MASTERED_REPLAY
+
+
+def test_router_flaky_oscillation_routes_to_quarantine() -> None:
+    """Review #8: extreme outcome oscillation (1->0->1) is flakiness, not
+    learnable frontier signal."""
+    router = FrontierRouter()
+    router.probe_record("q", step=1, pass_rate=1.0, shaped_signal_std=0.01)
+    router.probe_record("q", step=2, pass_rate=0.0, shaped_signal_std=0.01)
+    probe = router.probe_record("q", step=3, pass_rate=1.0, shaped_signal_std=0.01)
+    assert probe["route"] == INVALID_OR_NOISY
+    assert probe["flaky"] is True
+
+
+def test_router_recommended_group_size_is_adaptive() -> None:
+    """Review #4: G=4 fresh, G=16 when the posterior straddles a boundary,
+    G=8 when the posterior is decisive."""
+    router = FrontierRouter()
+    assert router.recommended_group_size("fresh") == 4
+    # 1/8 pass: posterior mass ~0.80 straddles the frontier window -> G=16.
+    router.probe_record("mixed", step=1, pass_rate=0.125, shaped_signal_std=0.2, group_size=8)
+    assert router.recommended_group_size("mixed") == 16
+    # 24 all-fail samples: posterior is decisively low -> G=8.
+    for step in range(1, 4):
+        router.probe_record(
+            "decisive", step=step, pass_rate=0.0, shaped_signal_std=0.2, group_size=8
+        )
+    assert router.recommended_group_size("decisive") == 8
+
+
+def test_router_posterior_bounds_narrow_with_evidence() -> None:
+    router = FrontierRouter()
+    router.probe_record("n", step=1, pass_rate=0.5, shaped_signal_std=0.2)
+    first = router.posterior("n")
+    for step in range(2, 6):
+        router.probe_record("n", step=step, pass_rate=0.5, shaped_signal_std=0.2)
+    later = router.posterior("n")
+    assert later.std < first.std  # more evidence -> tighter posterior
 
 
 def test_router_weight_downweights_mastered_and_prefers_unprobed() -> None:
     router = FrontierRouter()
-    router.probe_record("mastered", step=1, pass_rate=1.0, shaped_signal_std=0.01)
+    for step in range(1, 9):
+        router.probe_record("mastered", step=step, pass_rate=1.0, shaped_signal_std=0.01)
     router.probe_record("frontier", step=1, pass_rate=0.5, shaped_signal_std=0.2)
-    mastered_weight = router.weight("mastered", step=2, total_probes=2)
-    frontier_weight = router.weight("frontier", step=2, total_probes=2)
-    unprobed_weight = router.weight("fresh", step=2, total_probes=2)
+    mastered_weight = router.weight("mastered", step=2, total_probes=9)
+    frontier_weight = router.weight("frontier", step=2, total_probes=9)
+    unprobed_weight = router.weight("fresh", step=2, total_probes=9)
     # Never-probed tasks must be explorable (probing is the top priority).
     assert unprobed_weight > mastered_weight
     assert frontier_weight > mastered_weight
@@ -97,7 +148,8 @@ def test_router_frontier_fraction_counts_learnable_routes() -> None:
     router = FrontierRouter()
     router.probe_record("a", step=1, pass_rate=0.5, shaped_signal_std=0.2)  # frontier
     router.probe_record("b", step=1, pass_rate=0.0, shaped_signal_std=0.2)  # partial
-    router.probe_record("c", step=1, pass_rate=1.0, shaped_signal_std=0.01)  # mastered
+    for step in range(1, 9):  # mastered needs accumulating all-pass evidence
+        router.probe_record("c", step=step, pass_rate=1.0, shaped_signal_std=0.01)
     assert router.frontier_fraction() == 2 / 3
 
 
@@ -111,7 +163,8 @@ def test_mixture_weights_split_targeted_neighbor_replay() -> None:
     ]
     router.probe_record("frontier_a", step=1, pass_rate=0.5, shaped_signal_std=0.2)
     router.probe_record("frontier_b", step=1, pass_rate=0.4, shaped_signal_std=0.3)
-    router.probe_record("mastered_c", step=1, pass_rate=1.0, shaped_signal_std=0.01)
+    for step in range(1, 9):
+        router.probe_record("mastered_c", step=step, pass_rate=1.0, shaped_signal_std=0.01)
     weights = build_mixture_weights(
         router,
         tasks,

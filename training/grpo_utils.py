@@ -255,6 +255,10 @@ def build_grpo_step_record(
     breaker_trips: list[dict[str, Any]] | None = None,
     model_dim_scores: dict[str, float] | None = None,
     model_judge_enabled: bool | None = None,
+    posterior_lower: float | None = None,
+    posterior_upper: float | None = None,
+    flaky: bool | None = None,
+    group_size: int | None = None,
 ) -> dict[str, float | int | bool | str]:
     record: dict[str, float | int | bool | str] = {
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),
@@ -322,6 +326,14 @@ def build_grpo_step_record(
         record["model_dim_scores"] = dict(model_dim_scores)
     if model_judge_enabled is not None:
         record["model_judge_enabled"] = bool(model_judge_enabled)
+    if posterior_lower is not None:
+        record["posterior_lower"] = posterior_lower
+    if posterior_upper is not None:
+        record["posterior_upper"] = posterior_upper
+    if flaky is not None:
+        record["flaky"] = bool(flaky)
+    if group_size is not None:
+        record["group_size"] = int(group_size)
     return record
 
 
@@ -762,6 +774,89 @@ def classify_frontier_route(
     return "mastered_replay"
 
 
+@dataclass
+class BetaPosterior:
+    """Beta posterior over a task's pass probability (review 2026-08-05 #4).
+
+    p_x ~ Beta(alpha_0 + s_x, beta_0 + f_x) with a weak uniform prior
+    (alpha_0 = beta_0 = 1). Credible bounds use a normal approximation
+    (z = 1.28 gives an ~80% interval); frontier_mass approximates
+    P(0.10 < p < 0.90) — the probability the task is genuinely learnable.
+    """
+
+    alpha: float = 1.0
+    beta: float = 1.0
+
+    def update(self, successes: int, failures: int) -> None:
+        self.alpha += max(0, int(successes))
+        self.beta += max(0, int(failures))
+
+    @property
+    def samples(self) -> int:
+        return int(self.alpha + self.beta - 2)
+
+    @property
+    def mean(self) -> float:
+        return self.alpha / (self.alpha + self.beta)
+
+    @property
+    def std(self) -> float:
+        n = self.alpha + self.beta
+        return math.sqrt(self.alpha * self.beta / (n * n * (n + 1.0)))
+
+    def credible_bounds(self, z: float = 1.28) -> tuple[float, float]:
+        margin = z * self.std
+        return (max(0.0, self.mean - margin), min(1.0, self.mean + margin))
+
+    def frontier_mass(self, lo: float = 0.10, hi: float = 0.90) -> float:
+        def _phi(z: float) -> float:
+            return 0.5 * (1.0 + math.erf(z / math.sqrt(2.0)))
+
+        z_lo = (lo - self.mean) / max(self.std, 1e-9)
+        z_hi = (hi - self.mean) / max(self.std, 1e-9)
+        return max(0.0, min(1.0, _phi(z_hi) - _phi(z_lo)))
+
+
+def classify_posterior_route(
+    posterior: BetaPosterior,
+    shaped_signal_std: float,
+    *,
+    flaky: bool = False,
+    frontier_threshold: float = 0.10,
+    mastered_threshold: float = 0.95,
+    repair_threshold: float = 0.10,
+    min_mastered_samples: int = 32,
+) -> str:
+    """Posterior routing with hysteresis (review 2026-08-05 #4).
+
+    With G=8 a single lucky 8/8 group must NOT mark a task mastered and a
+    single stochastic failure must not bounce it back: mastered requires
+    enough cumulative samples AND the lower credible bound above the
+    threshold; repair requires the upper credible bound very low (all-fail
+    evidence accumulating); flaky oscillation routes to quarantine.
+    """
+    if flaky:
+        return INVALID_OR_NOISY
+    lower, upper = posterior.credible_bounds()
+    shaped = max(0.0, float(shaped_signal_std))
+    if (
+        posterior.samples >= min_mastered_samples
+        and lower >= mastered_threshold
+        and shaped < frontier_threshold
+    ):
+        return MASTERED_REPLAY
+    if upper <= repair_threshold and shaped < frontier_threshold:
+        return REPAIR_SFT
+    if shaped >= frontier_threshold:
+        # meaningful partial signal: all-failish posterior -> partial repair RL
+        if posterior.mean < 0.125:
+            return PARTIAL_REPAIR_RL
+        return FRONTIER_RL
+    if posterior.frontier_mass() >= 0.5:
+        return FRONTIER_RL
+    return MASTERED_REPLAY
+
+
 def leave_one_out_advantages(rewards: torch.Tensor) -> torch.Tensor:
     if rewards.numel() <= 1:
         return torch.zeros_like(rewards)
@@ -1043,6 +1138,9 @@ class FrontierRouter:
     ema_decay: float = 0.7
     state: dict[str, dict[str, float]] = field(default_factory=dict)
 
+    min_mastered_samples: int = 32
+    repair_threshold: float = 0.10
+
     def get_state(self, task_id: str) -> dict[str, float]:
         current = self.state.get(task_id)
         if current is None:
@@ -1054,9 +1152,20 @@ class FrontierRouter:
                 "route": "",
                 "coverage_need": 1.0,
                 "rl_updates": 0.0,
+                "posterior_alpha": 1.0,
+                "posterior_beta": 1.0,
+                "flaky": 0.0,
+                "group_size_last": 0.0,
             }
             self.state[task_id] = current
         return current
+
+    def posterior(self, task_id: str) -> BetaPosterior:
+        current = self.get_state(task_id)
+        return BetaPosterior(
+            alpha=float(current["posterior_alpha"]),
+            beta=float(current["posterior_beta"]),
+        )
 
     def set_coverage_need(self, task_id: str, need: float) -> None:
         """Coverage need comes from the training-only skill/failure inventory."""
@@ -1068,13 +1177,22 @@ class FrontierRouter:
             self.set_coverage_need(str(task_id), float(need))
 
     def probe_record(
-        self, task_id: str, step: int, pass_rate: float, shaped_signal_std: float
+        self,
+        task_id: str,
+        step: int,
+        pass_rate: float,
+        shaped_signal_std: float,
+        group_size: int = 8,
     ) -> dict[str, float | str]:
         """Record one G-rollout probe and classify the group's route.
 
-        The route decision uses the *raw* probe stats (the design routes each
-        probed group from its own pass fraction and shaped dispersion); the EMA
-        fields are smoothed state used for stable sampling weights.
+        Posterior routing (review 2026-08-05 #4): the pass posterior
+        Beta(alpha_0 + s, beta_0 + f) accumulates successes/failures across
+        probes, and routing uses credible intervals with hysteresis (a single
+        lucky 8/8 group does NOT mark a task mastered; an all-fail group needs
+        accumulating evidence before the repair lane). EMA fields remain for
+        stable sampling weights. Oscillating extreme outcomes (1 -> 0 -> 1 or
+        0 -> 1 -> 0) flag flakiness and route to quarantine.
         """
         current = self.get_state(task_id)
         probes = float(current["probes"]) + 1.0
@@ -1087,12 +1205,41 @@ class FrontierRouter:
         current["shaped_std_ema"] = shaped_std
         current["probes"] = probes
         current["last_probe_step"] = float(step)
-        current["route"] = classify_frontier_route(
-            pass_rate=float(pass_rate),
+        current["group_size_last"] = float(max(1, int(group_size)))
+
+        successes = int(round(float(pass_rate) * max(1, int(group_size))))
+        failures = max(0, int(group_size) - successes)
+        posterior = BetaPosterior(
+            alpha=float(current["posterior_alpha"]),
+            beta=float(current["posterior_beta"]),
+        )
+        posterior.update(successes, failures)
+        current["posterior_alpha"] = posterior.alpha
+        current["posterior_beta"] = posterior.beta
+
+        # Flake detection: extreme outcomes oscillating across consecutive probes.
+        history = list(current.get("probe_history") or [])
+        history.append(round(float(pass_rate), 3))
+        history = history[-3:]
+        current["probe_history"] = history
+        flaky = (
+            len(history) == 3
+            and all(rate in (0.0, 1.0) for rate in history)
+            and history[0] != history[1]
+            and history[1] != history[2]
+        )
+        current["flaky"] = 1.0 if flaky else 0.0
+
+        current["route"] = classify_posterior_route(
+            posterior,
             shaped_signal_std=float(shaped_signal_std),
+            flaky=flaky,
             frontier_threshold=self.frontier_threshold,
             mastered_threshold=self.mastered_threshold,
+            repair_threshold=self.repair_threshold,
+            min_mastered_samples=self.min_mastered_samples,
         )
+        lower, upper = posterior.credible_bounds()
         return {
             "route": current["route"],
             "learnability": frontier_learnability(
@@ -1101,7 +1248,26 @@ class FrontierRouter:
             "p_pass_ema": p_pass,
             "shaped_std_ema": shaped_std,
             "probes": probes,
+            "posterior_mean": posterior.mean,
+            "posterior_lower": lower,
+            "posterior_upper": upper,
+            "flaky": flaky,
         }
+
+    def recommended_group_size(self, task_id: str) -> int:
+        """Adaptive G (review #4): 4 for fresh/decisive tasks, 16 when the
+        posterior straddles a routing boundary, 8 otherwise."""
+        current = self.get_state(task_id)
+        posterior = BetaPosterior(
+            alpha=float(current["posterior_alpha"]),
+            beta=float(current["posterior_beta"]),
+        )
+        if posterior.samples < 2:
+            return 4
+        mass = posterior.frontier_mass()
+        if 0.2 <= mass <= 0.8:
+            return 16
+        return 8
 
     def record_rl_update(self, task_id: str) -> None:
         current = self.get_state(task_id)

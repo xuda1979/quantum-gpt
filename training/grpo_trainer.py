@@ -975,7 +975,13 @@ def move_batch_to_device(batch: dict[str, torch.Tensor], device: Any) -> dict[st
 
 
 def generate_group(
-    model, backend: TextPreprocessorBackend, prompt: str, args, *, temperature: float | None = None
+    model,
+    backend: TextPreprocessorBackend,
+    prompt: str,
+    args,
+    *,
+    temperature: float | None = None,
+    count: int | None = None,
 ) -> tuple[list[str], str]:
     """Generate a group of solutions and return (codes, prompt_text).
 
@@ -983,14 +989,18 @@ def generate_group(
         temperature: Override the base sampling temperature.  When adaptive
             temperature escalation is active, pass the escalated value here.
             Falls back to ``args.temperature`` if not specified.
+        count: Number of solutions to generate. Defaults to ``args.group_size``;
+            the posterior router may recommend 4/8/16 adaptively (review
+            2026-08-05 #4).
     """
     text = render_generation_prompt(backend.render_backend, prompt)
     inputs = move_batch_to_device(backend.text_backend(text, return_tensors="pt"), args.device)
     effective_temp = temperature if temperature is not None else args.temperature
+    group_size = count if count is not None else args.group_size
 
     codes = []
 
-    for _ in range(args.group_size):
+    for _ in range(group_size):
         with torch.no_grad():
             outputs = model.generate(
                 **inputs,
@@ -1421,6 +1431,10 @@ def emit_step_record(
         breaker_trips=trips,
         model_dim_scores=ctx.get("model_dim_scores"),
         model_judge_enabled=ctx.get("model_judge_enabled"),
+        posterior_lower=ctx.get("posterior_lower"),
+        posterior_upper=ctx.get("posterior_upper"),
+        flaky=ctx.get("flaky"),
+        group_size=ctx.get("group_size"),
         **extra,
     )
     append_grpo_metric(metrics, record=record)
@@ -1833,12 +1847,19 @@ def main() -> int:
         prompt = build_prompt(task, research_methods=research_methods)
         test_harness = load_test_harness(task["tests_py"])
 
-        # Generate group of solutions (adaptive temperature escalation on repeated low-signal skips)
+        # Generate group of solutions (adaptive temperature escalation on repeated low-signal skips;
+        # adaptive group size from the posterior router — review 2026-08-05 #4)
         active_model = model.module if distributed else model
         active_model.eval()
         effective_temperature = adaptive_temp.current_temp()
+        effective_g = router.recommended_group_size(task["task_id"])
         codes, prompt_text = generate_group(
-            active_model, text_preprocessor, prompt, args, temperature=effective_temperature
+            active_model,
+            text_preprocessor,
+            prompt,
+            args,
+            temperature=effective_temperature,
+            count=effective_g,
         )
 
         consistent_old_log_probs = []
@@ -1942,7 +1963,13 @@ def main() -> int:
 
         # ── FV-GSPO: probe the group and route it (frontier router) ──
         pass_rate = float(pass_rewards.mean().item())
-        probe = router.probe_record(task["task_id"], step, pass_rate, signal_stats["signal_std"])
+        probe = router.probe_record(
+            task["task_id"],
+            step,
+            pass_rate,
+            signal_stats["signal_std"],
+            group_size=effective_g,
+        )
         route = str(probe["route"])
         total_probes += 1
         all_fail = pass_rate == 0.0
@@ -1995,6 +2022,10 @@ def main() -> int:
             "frontier_fraction": frontier_fraction,
             "model_dim_scores": model_dim_means or None,
             "model_judge_enabled": judge_enabled or None,
+            "posterior_lower": probe.get("posterior_lower"),
+            "posterior_upper": probe.get("posterior_upper"),
+            "flaky": bool(probe.get("flaky")),
+            "group_size": effective_g,
         }
 
         # ── Route the group ──
