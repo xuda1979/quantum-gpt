@@ -68,10 +68,12 @@ The trainer runs one task group per optimizer step (`grpo_trainer.py`); the rout
 | `scripts/fv_gspo_repair_stage.py` | Off-line repair lane: queue → correction → harness verification → `repair_converted.jsonl` + SFT/DPO JSONL |
 | `scripts/calibrate_model_judge.py` | Frozen-judge calibration: AUC / Spearman vs executable anchors → `judge_calibration.json` |
 | `scripts/analyze_grpo_metrics.py` | Post-run diagnostics: routes, frontier yield, clip fractions, entropy, breaker trips |
-| `scripts/asi2_launch_grpo_27b_selfeval.sh` | ASI2 launcher (launch/status/stop), FV-GSPO flags, NAS checkpoint sync |
-| `scripts/submit_asi2_grpo_27b_selfeval_task.sh` | Browser-automation submission; run params baked into the remote script |
+| `scripts/remote_grpo_status.py` | On-box compact run status (routes, frontier yield, repair queue, breaker trips) for the monitoring loop |
+| `scripts/monitor_asi2_fv_gspo.sh` | Local wrapper polling the remote run through the browser daemon's `/exec` transport |
+| `scripts/asi2_launch_grpo_27b_selfeval.sh` | ASI2 launcher (launch/status/stop), FV-GSPO flags incl. `REWARD_MODE`, NAS checkpoint sync |
+| `scripts/submit_asi2_grpo_27b_selfeval_task.sh` | Browser-automation submission; run params (incl. `ASI2_GRPO_REWARD_MODE`) baked into the remote script |
 | `configs/rl/qwen36_27b_fv_gspo_asi2.json` | Canonical run configuration for the ASI2 launch |
-| `tests/test_fv_gspo.py` `test_fv_gspo_repair_stage.py` `test_model_judge.py` | 79 tests covering all components |
+| `tests/test_fv_gspo.py` `test_fv_gspo_repair_stage.py` `test_model_judge.py` | 89 tests covering all components |
 
 ---
 
@@ -257,6 +259,8 @@ R = w_P·P  +  w_S·S  +  w_J·J  −  T,        defaults w_P=0.40, w_S=0.35, w_
 
 `n ≥ 200` judged samples required; enabled dimensions share the 0.05 cap uniformly. Output `judge_calibration.json` is consumed via `--judge-calibration`. Until a dimension passes, its scores are diagnostics (`model_dim_scores` in step metrics).
 
+**Calibration input — per-candidate judge diagnostics:** when the judge is enabled, the trainer appends one record per judged candidate to `<out>/judge_diagnostics.jsonl` (`--judge-diagnostics-path` to override; rank 0 only). Each record pairs the executable anchors (`passed`, `syntax_ok`, `verifier_rate`, optional `runtime_ms`) with the judge's dimension scores — exactly the schema `calibrate_model_judge.py --records` consumes. This closes the loop: run with the judge on (weight 0) → collect ≥200 diagnostics → calibrate → relaunch with `--reward-mode comprehensive --judge-calibration judge_calibration.json`.
+
 ---
 
 ## 9. Circuit Breakers
@@ -324,6 +328,9 @@ Per-step `kl_beta` recorded. The anchor reset half (accepted-checkpoint referenc
 | `--judge-device` | cpu | judge device (spare NPU allowed) |
 | `--model-judge-max-tokens` / `--model-judge-temperature` | 256 / 0.0 | judge generation |
 | `--judge-calibration` | — | per-dim weights from calibration |
+| `--judge-diagnostics-path` | `<out>/judge_diagnostics.jsonl` | per-candidate calibration input |
+| `--reward-mode {p_dominant,comprehensive}` | p_dominant | reward composition (see §8) |
+| `--reward-pass-mass / --reward-shaped-mass / --reward-judge-mass` | 0.40 / 0.35 / 0.25 | comprehensive-mode masses |
 | `--adaptive-kl` (+ `--kl-*`) | off | adaptive β controller |
 | `--top-p` | 0.95 | sampling |
 | `--overwrite-output-dir` | off | allow replacing prior step metrics |
@@ -339,6 +346,9 @@ Per-step `kl_beta` recorded. The anchor reset half (accepted-checkpoint referenc
 - Training pool **only**: `evals/benchmarks/quantum_grpo_training_v1.txt` (13 quantum tasks); held-out pools (`quantum_generalization_holdout_v1/2/3`) never enter training;
 - Self-judge disabled (zero reward weight per design); frozen judge off until calibration data exists;
 - Repair queue → `$OUT/repair_queue.jsonl`; breakers on (window 10, stop on severe);
+- Reward composition via `REWARD_MODE` (default `p_dominant`; `comprehensive` + masses via `REWARD_PASS_MASS/REWARD_SHAPED_MASS/REWARD_JUDGE_MASS`) — switched end-to-end through `ASI2_GRPO_REWARD_MODE` on the submit script;
+- **Calibration → comprehensive switch path**: probe with the judge enabled (weight 0) collects `$OUT/judge_diagnostics.jsonl`; at ≥200 samples run `scripts/calibrate_model_judge.py` on the box → `judge_calibration.json`; relaunch with `REWARD_MODE=comprehensive` and `--judge-calibration` (submit env `ASI2_GRPO_REWARD_MODE=comprehensive`);
+- Monitoring: `scripts/monitor_asi2_fv_gspo.sh` polls the remote run through the browser daemon's `/exec` (launch status + `remote_grpo_status.py` metrics: routes, frontier yield, all-fail share, repair queue, breaker trips);
 - Checkpoints: every 7200 s → NAS `/root/work/filestorage/grpo_checkpoints/qwen36_27b_selfeval` (sync daemon, retain 5);
 - **Launch order per the design**: short frontier-yield probe first (`ASI2_GRPO_STEPS=24`, ~2–3 breaker windows) — "do not launch a long run before the router produces a healthy frontier yield"; scale to 500 steps after the probe's routes/clip/entropy diagnostics look right.
 
@@ -347,9 +357,9 @@ Per-step `kl_beta` recorded. The anchor reset half (accepted-checkpoint referenc
 ## 13. Validation
 
 - `tests/test_fv_gspo.py` (25): router classification/weights/staleness/coverage/frontier-fraction, mixture pools + fallback, GSPO loss stats, entropy, running MAD, repair queue dedup/conversions, all breakers (trip, recovery, entropy collapse, all-fail with/without conversion, holdout regression), adaptive KL;
-- `tests/test_fv_gspo_repair_stage.py` (3): convert via reference, reject unverified correction, dedup — subprocess end-to-end with a synthetic task harness;
-- `tests/test_model_judge.py` (13): blend P-dominance + cap, judge JSON parsing, AUC/Spearman math, calibration gates, calibration script end-to-end;
-- plus the pre-existing `test_grpo_utils.py` (34), analyzer tests, and trainer-metrics tests — **82 tests green**; ruff clean (pre-commit hooks enforced, incl. pinned ruff v0.6.9).
+- `tests/test_fv_gspo_repair_stage.py` (4): convert via reference, reject unverified correction, dedup, remote-status shape — subprocess end-to-end with a synthetic task harness;
+- `tests/test_model_judge.py` (18): blend P-dominance + cap + comprehensive mode (fail-can-outrank-pass, mass renormalization, relative dim weights), judge JSON parsing, AUC/Spearman math, calibration gates, calibration script end-to-end, judge diagnostics record shape;
+- plus the pre-existing `test_grpo_utils.py` (34), analyzer tests, and trainer-metrics tests — **89 tests green**; ruff clean (pre-commit hooks enforced, incl. pinned ruff v0.6.9).
 - **Paper cross-check:** GSPO ε_left/ε_right = 3e-4/4e-4 for Qwen3-30B-A3B and the length-normalized sequence ratio match the implementation exactly (ar5iv 2507.18071; NVIDIA NeMo `grpo_qwen3_30ba3b_instruct.yaml`).
 
 ---
@@ -376,3 +386,26 @@ Primary efficiency metric: Δheld-out pass@1 per generated NPU-token-hour.
 - The repair stage's default correction source is the task's verified reference; a trusted teacher CLI (`--teacher-command`) is the on-cluster upgrade path.
 - The frozen judge defaults to CPU inference (cost: ~256 tokens × G per step); a spare NPU (`--judge-device npu:N`) reduces latency when available.
 - Per the design's non-goals: the current adapter is never its own correctness source; self-critique language, long reasoning, or confidence are not rewarded unless they improve executable outcomes; the doubly-robust plugin claims nothing until it wins a controlled ablation.
+
+---
+
+## 16. Change Log
+
+**2026-08-05 — full implementation of FV-GSPO** (commits `95d8088` → `7dec163`, branch `codex/asi2-qwen36-distillation-lora`):
+
+| # | Change | Where |
+|---|---|---|
+| 1 | Frontier router: probe → route (`frontier_rl` / `partial_repair_rl` / `mastered_replay` / `repair_sft` / `invalid_or_noisy`), `w_x = c_x[λ_f·L + λ_n·√(log(1+N)/(1+n)) + λ_s·S]` sampling, 50/25/25 targeted/neighbor/replay mixture | `training/grpo_utils.py`, `training/grpo_trainer.py` |
+| 2 | Dr.GRPO leave-one-out advantages without per-task std normalization (`--advantage-mode loo`; `group_std` retained as ablation baseline; optional shared running MAD) | `grpo_utils.py::leave_one_out_advantages`, `RunningMAD` |
+| 3 | GSPO sequence-level clipped objective with paper-verified 3e-4/4e-4 clips; legacy unclipped loss via `--loss-mode grpo` | `grpo_utils.py::stable_gspo_loss_metrics` |
+| 4 | Repair lane: all-fail flat groups → `repair_queue.jsonl` (deduped, exact failures); `scripts/fv_gspo_repair_stage.py` executes corrections against the same harness, writes `repair_converted.jsonl` (breaker feed) + SFT/DPO pairs | trainer + script |
+| 5 | Circuit breakers: non-finite, clip fraction >50%, entropy collapse + frontier-yield decline, all-fail >40% without repair conversion, external holdout/replay regression feeds; two-window persistence, stop on severe | `grpo_utils.py::CircuitBreakerState` |
+| 6 | Frozen comprehensive judge: base model / older accepted adapters, 5 evidence-anchored dimensions, greedy; calibration gates (AUC ≥ 0.85, ρ ≤ −0.6, n ≥ 200) via `scripts/calibrate_model_judge.py`; `model_dim_scores` diagnostics | trainer, `calibrate_model_judge.py` |
+| 7 | **Comprehensive reward mode** (user decision: not executable-dominated): `R = w_P·P + w_S·S + w_J·J − T` (0.40/0.35/0.25 defaults, configurable); `p_dominant` kept as default/ablation; judge mass activates only post-calibration | `grpo_utils.py::blend_comprehensive_reward`, trainer `--reward-mode` |
+| 8 | Per-candidate judge diagnostics → `judge_diagnostics.jsonl` (calibration input, rank 0) | trainer `--judge-diagnostics-path` |
+| 9 | Adaptive KL controller (β from measured sequence KL, ProRL-style anchor preservation) | `grpo_utils.py::AdaptiveKLState`, `--adaptive-kl` |
+| 10 | Monitoring runbook: `scripts/remote_grpo_status.py` (on-box) + `scripts/monitor_asi2_fv_gspo.sh` (local, via daemon `/exec`); analyzer extended with routes/frontier-yield/clips/entropy/trips | scripts |
+| 11 | ASI2 launch wiring: launcher + submit script expose all FV-GSPO knobs (`REWARD_MODE`, GSPO clips, masses, probe steps via `ASI2_GRPO_*`); fixed the legacy `--top-p`/`--overwrite-output-dir` argparse breakage; `configs/rl/qwen36_27b_fv_gspo_asi2.json` | `scripts/asi2_launch_grpo_27b_selfeval.sh`, `scripts/submit_asi2_grpo_27b_selfeval_task.sh` |
+| 12 | Docs: design-doc status → implemented; addenda for the frozen judge, reward composition, and this implementation reference | `docs/` |
+
+**Deferred / cluster-side:** anchor resets on accepted checkpoints (eval gate), held-out/replay regression breaker feeds, repair teacher CLI (`--teacher-command`), multi-group batched updates.
