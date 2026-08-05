@@ -193,3 +193,49 @@ def test_repair_stage_dedupes_converted_records(tmp_path: Path) -> None:
     converted = tmp_path / "repair_stage" / "repair_converted.jsonl"
     assert len(converted.read_text(encoding="utf-8").splitlines()) == 1
     assert count_repair_conversions(converted) == 1
+
+
+def test_remote_grpo_status_compact_summary(tmp_path: Path) -> None:
+    """remote_grpo_status.py prints routes, frontier yield, and last record."""
+    run_dir = tmp_path / "grpo-27b-selfeval-test"
+    run_dir.mkdir(parents=True)
+    queue = tmp_path / "repair_queue.jsonl"
+    queue.write_text('{"task_id": "t", "best_code": "x"}\n', encoding="utf-8")
+    with (run_dir / "grpo_step_metrics.jsonl").open("w", encoding="utf-8") as handle:
+        for step, route in ((1, "frontier_rl"), (2, "repair_sft"), (3, "frontier_rl")):
+            handle.write(
+                json.dumps(
+                    {
+                        "step": step,
+                        "task": f"t{step}",
+                        "route": route,
+                        "all_fail": route == "repair_sft",
+                        "repair_queued": route == "repair_sft",
+                        "pass_rate": 0.5 if route == "frontier_rl" else 0.0,
+                        "frontier_fraction": 0.5,
+                        "clip_low_fraction": 0.1,
+                    }
+                )
+                + "\n"
+            )
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "scripts" / "remote_grpo_status.py"),
+            "--outputs-dir",
+            str(tmp_path),
+            "--queue",
+            str(queue),
+        ],
+        capture_output=True,
+        text=True,
+    )
+    assert proc.returncode == 0, proc.stderr
+    status = json.loads(proc.stdout)
+    assert status["status"] == "running"
+    assert status["records"] == 3
+    assert status["routes"] == {"frontier_rl": 2, "repair_sft": 1}
+    assert status["frontier_yield"] == 2 / 3
+    assert status["all_fail_share"] == 1 / 3
+    assert status["repair_queue_size"] == 1
+    assert status["last"]["step"] == 3
