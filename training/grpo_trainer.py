@@ -63,6 +63,7 @@ from training.grpo_utils import (  # noqa: E402
     leave_one_out_advantages,
     load_grpo_step_metrics_jsonl,
     reward_signal_stats,
+    sequence_ratio_stats,
     stable_grpo_loss,
     stable_gspo_loss_metrics,
     stable_token_log_probs,
@@ -116,7 +117,14 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--grpo-steps", type=int, default=100)
     p.add_argument("--lr", type=float, default=1e-5)
     p.add_argument("--kl-coeff", type=float, default=0.05, help="KL penalty coefficient")
-    p.add_argument("--temperature", type=float, default=0.8)
+    p.add_argument(
+        "--temperature",
+        type=float,
+        default=1.0,
+        help="Sampling temperature. NOTE: with temperature != 1.0 the loss must "
+        "compute ratios under the transformed behavior policy, otherwise the "
+        "policy-gradient estimate is biased (review finding 2026-08-05).",
+    )
     p.add_argument(
         "--adaptive-temp-step",
         type=float,
@@ -183,7 +191,13 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--reward-detail-budget-cap", type=int, default=8)
     p.add_argument("--advantage-clip", type=float, default=2.5)
     p.add_argument("--ratio-clip-log-delta", type=float, default=8.0)
-    p.add_argument("--top-p", type=float, default=0.95)
+    p.add_argument(
+        "--top-p",
+        type=float,
+        default=1.0,
+        help="Nucleus sampling threshold. Default 1.0 for sampling-policy "
+        "consistency with the loss's raw-model ratios (review finding 2026-08-05).",
+    )
     p.add_argument(
         "--overwrite-output-dir",
         action="store_true",
@@ -218,6 +232,28 @@ def parse_args() -> argparse.Namespace:
         default=8.0,
         help="Wide log-ratio clamp kept only for finite exponentiation; the proximal "
         "objective is controlled by gspo-clip-low/high, not by this value.",
+    )
+    # ── trust region (review 2026-08-05, Design B) ──
+    # In the synchronous one-rollout-per-step implementation the pre-update
+    # sequence ratio is 1 by construction, so GSPO clipping cannot constrain
+    # the update. Instead the update is taken, the post-update ratio/KL is
+    # measured on the same rollouts, and the update is rejected (or the LR
+    # scaled) when the trust region is violated.
+    p.add_argument(
+        "--no-trust-region",
+        action="store_false",
+        dest="trust_region_enabled",
+        default=True,
+        help="Disable the post-update trust-region check (kept for ablations).",
+    )
+    p.add_argument("--trust-region-max-seq-kl", type=float, default=0.05)
+    p.add_argument("--trust-region-max-clip-fraction", type=float, default=0.50)
+    p.add_argument(
+        "--trust-region-on-violation",
+        choices=["reject", "scale_lr"],
+        default="reject",
+        help="'reject' restores the pre-update parameters and optimizer state; "
+        "'scale_lr' keeps the update but halves the learning rate.",
     )
     p.add_argument(
         "--advantage-mode",
@@ -789,26 +825,26 @@ def evaluate_candidate(
     the executable reward via ``blend_comprehensive_reward``: P (full test
     pass) always dominates; judge mass comes out of the shaped term only.
     """
-    with tempfile.NamedTemporaryFile(
-        mode="w", suffix=".py", delete=False, dir=str(task["task_dir"])
-    ) as f:
-        f.write(code)
-        f.flush()
-        path = f.name
-    try:
-        result = test_harness.run_tests(path)
-        if not isinstance(result, dict):
+    # Review finding 2026-08-05 (#10): candidates must NOT be written into the
+    # task directory, which also contains tests.py and the reference solution.
+    # Candidates are executed from an isolated temp dir (harnesses load the
+    # candidate by absolute path). Full container-level isolation remains a
+    # deployment requirement.
+    with tempfile.TemporaryDirectory(prefix="fv_gspo_candidate_") as candidate_dir:
+        candidate_path = Path(candidate_dir) / "candidate.py"
+        candidate_path.write_text(code, encoding="utf-8")
+        try:
+            result = test_harness.run_tests(str(candidate_path))
+            if not isinstance(result, dict):
+                result = {
+                    "passed": False,
+                    "details": [f"Unexpected harness return type: {type(result).__name__}"],
+                }
+        except Exception as exc:
             result = {
                 "passed": False,
-                "details": [f"Unexpected harness return type: {type(result).__name__}"],
+                "details": [f"{type(exc).__name__}: {exc}"],
             }
-    except Exception as exc:
-        result = {
-            "passed": False,
-            "details": [f"{type(exc).__name__}: {exc}"],
-        }
-    finally:
-        Path(path).unlink(missing_ok=True)
 
     reward = build_reward_breakdown(
         code=code,
@@ -2193,9 +2229,66 @@ def main() -> int:
         optimizer.zero_grad()
         total_loss.backward()
         torch.nn.utils.clip_grad_norm_(trainable_param_tensors, 1.0)
+
+        # ── trust region (review 2026-08-05, Design B) ──
+        # The pre-update ratio is 1 by construction in the synchronous
+        # one-rollout-per-step implementation, so GSPO clipping cannot
+        # constrain this update. Take the update, then measure the post-update
+        # sequence ratio and KL on the same rollouts and reject (or scale LR
+        # for) violations.
+        saved_params: list[torch.Tensor] | None = None
+        saved_optim: dict | None = None
+        if args.trust_region_enabled:
+            saved_params = [p.detach().clone() for p in trainable_param_tensors]
+            saved_optim = optimizer.state_dict()
         optimizer.step()
         adaptive_temp.record_update()
         router.record_rl_update(task["task_id"])
+
+        trust_region_violated = False
+        ratio_after_update = 0.0
+        clip_fraction_after_update = 0.0
+        seq_kl_after = 0.0
+        if args.trust_region_enabled and saved_params is not None and current_log_probs:
+            active_model.eval()
+            with torch.no_grad():
+                post_log_probs: list[torch.Tensor] = []
+                for code in codes:
+                    post_log_prob, post_token_count = compute_completion_log_prob(
+                        active_model,
+                        tokenizer,
+                        prompt_text,
+                        code,
+                        device,
+                        args.max_seq_length,
+                        args.logit_clip,
+                        add_mm_token_type_ids=_needs_mm_token_type_ids,
+                    )
+                    if post_token_count.item() > 0:
+                        post_log_probs.append(post_log_prob / post_token_count.clamp_min(1))
+            if post_log_probs:
+                trust_stats = sequence_ratio_stats(
+                    torch.stack(post_log_probs),
+                    torch.stack(normalized_old_log_probs),
+                    clip_low=args.gspo_clip_low,
+                    clip_high=args.gspo_clip_high,
+                    numerical_log_ratio_clip=args.numerical_log_ratio_clip,
+                )
+                ratio_after_update = trust_stats["ratio_after_update"]
+                clip_fraction_after_update = trust_stats["clip_fraction_after_update"]
+                seq_kl_after = trust_stats["seq_kl_after"]
+                trust_region_violated = (
+                    seq_kl_after > args.trust_region_max_seq_kl
+                    or clip_fraction_after_update > args.trust_region_max_clip_fraction
+                )
+                if trust_region_violated:
+                    if args.trust_region_on_violation == "reject":
+                        for param, saved in zip(trainable_param_tensors, saved_params, strict=True):
+                            param.data.copy_(saved)
+                        optimizer.load_state_dict(saved_optim)
+                    else:  # scale_lr
+                        for group in optimizer.param_groups:
+                            group["lr"] *= 0.5
 
         clip_fraction = (
             float(gspo_stats.get("clip_total_fraction", 0.0)) if gspo_stats is not None else 0.0
@@ -2235,6 +2328,12 @@ def main() -> int:
         if record is not None:
             if kl_state is not None:
                 record["kl_beta"] = kl_state.beta
+            record["trust_region_violated"] = bool(trust_region_violated)
+            record["ratio_after_update"] = ratio_after_update
+            record["clip_fraction_after_update"] = clip_fraction_after_update
+            record["seq_kl_after"] = seq_kl_after
+            record["old_policy_age"] = 1
+            record["optimizer_substeps_per_rollout"] = 1
             if dr_pair_info:
                 record["dr_pair_mined"] = bool(dr_pair_info.get("dr_pair_mined"))
                 record["dr_pair_reward_gap"] = float(dr_pair_info.get("dr_pair_reward_gap", 0.0))
@@ -2343,6 +2442,10 @@ def main() -> int:
                         "shaped": args.reward_shaped_mass,
                         "judge": args.reward_judge_mass,
                     },
+                    "trust_region_enabled": bool(args.trust_region_enabled),
+                    "trust_region_max_seq_kl": args.trust_region_max_seq_kl,
+                    "trust_region_max_clip_fraction": args.trust_region_max_clip_fraction,
+                    "trust_region_on_violation": args.trust_region_on_violation,
                     "research_methods": summarize_methods(research_methods),
                     "curriculum_state": curriculum.state,
                     "frontier_router_state": router.state,

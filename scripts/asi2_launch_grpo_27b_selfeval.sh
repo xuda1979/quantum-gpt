@@ -47,7 +47,8 @@ GROUP_SIZE="${GROUP_SIZE:-8}"
 GRPO_STEPS="${GRPO_STEPS:-500}"
 LR="${LR:-2e-6}"                       # FV-GSPO: 1e-6..3e-6 LoRA; legacy 1e-5 is aggressive
 KL_COEFF="${KL_COEFF:-0.005}"          # FV-GSPO initial KL beta (design table)
-TEMPERATURE="${TEMPERATURE:-0.8}"
+TEMPERATURE="${TEMPERATURE:-1.0}"      # 1.0 for sampling-policy consistency (review 2026-08-05)
+TOP_P="${TOP_P:-1.0}"                  # 1.0 likewise; diversity comes from sampling
 LORA_RANK="${LORA_RANK:-16}"
 LORA_ALPHA="${LORA_ALPHA:-32}"
 CHECKPOINT_INTERVAL_SECONDS="${CHECKPOINT_INTERVAL_SECONDS:-7200}"
@@ -308,7 +309,7 @@ nohup torchrun --nproc_per_node="$NUM_NPU" training/grpo_trainer.py \
   --temperature "$TEMPERATURE" \
   --adaptive-temp-step "$ADAPTIVE_TEMP_STEP" \
   --adaptive-temp-max "$ADAPTIVE_TEMP_MAX" \
-  --top-p 0.95 \
+  --top-p "$TOP_P" \
   --max-new-tokens "$MAX_NEW_TOKENS" \
   --max-seq-length "$MAX_SEQ_LENGTH" \
   --reward-pass-weight 0.45 \

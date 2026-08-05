@@ -15,9 +15,12 @@ import subprocess
 import sys
 from pathlib import Path
 
+import torch
+
 from training.grpo_utils import (
     MAX_MODEL_JUDGE_WEIGHT,
     blend_comprehensive_reward,
+    sequence_ratio_stats,
 )
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -345,3 +348,52 @@ def test_judge_diagnostics_record_shape() -> None:
         path = handle.name
     loaded = load_records(Path(path))
     assert loaded[0]["model_dim_scores"]["correctness"] == 0.1
+
+
+def test_fp32_ratio_boundaries_stay_distinguishable() -> None:
+    """Review #2: at FP32, the 3e-4/4e-4 clip boundaries must be
+    distinguishable — FP16/BF16 would quantize them away (torch.finfo
+    eps: FP16 ~9.8e-4, BF16 ~7.8e-3 near 1.0)."""
+    log_ratios = torch.tensor(
+        [
+            -0.0010,
+            -0.0004,
+            -0.0003,
+            -0.0001,
+            0.0000,
+            0.0001,
+            0.0003,
+            0.0004,
+            0.0010,
+        ],
+        dtype=torch.float32,
+    )
+    old = torch.zeros_like(log_ratios)
+    stats = sequence_ratio_stats(log_ratios, old, clip_low=3e-4, clip_high=4e-4)
+    ratios = torch.exp(log_ratios)
+    # Values strictly inside the clip window: 0.0000, -0.0001, 0.0001
+    n = float(ratios.numel())
+    expected_clip = float(((ratios < 1.0 - 3e-4) | (ratios > 1.0 + 4e-4)).sum().item() / n)
+    assert stats["clip_fraction_after_update"] == expected_clip
+    assert stats["clip_fraction_after_update"] > 0.0  # clipping is measurable
+    # FP32 spacing near 1.0 is ~1.2e-7 — far below 1e-4, so boundaries resolve.
+    assert torch.finfo(torch.float32).eps < 3e-4 / 10
+    # The same ratios in BF16 would quantize the boundaries away.
+    assert torch.finfo(torch.bfloat16).eps > 3e-4
+    assert torch.finfo(torch.float16).eps > 3e-4
+
+
+def test_sequence_ratio_stats_synchronous_mode() -> None:
+    """Review #1: in the synchronous one-step implementation the pre-update
+    ratio is 1 by construction (clip fraction 0); after a move the stats
+    reflect the post-update policy."""
+    # Pre-update: current == old -> ratios all 1 -> no clipping.
+    old = torch.tensor([-1.0, -0.5, 0.0], dtype=torch.float32)
+    stats = sequence_ratio_stats(old, old, clip_low=3e-4, clip_high=4e-4)
+    assert stats["ratio_before_update"] == 1.0
+    assert stats["clip_fraction_before_update"] == 0.0
+    # Post-update: policy moved.
+    moved = old + torch.tensor([-0.01, 0.0, 0.0], dtype=torch.float32)  # policy moved AWAY
+    stats = sequence_ratio_stats(moved, old, clip_low=3e-4, clip_high=4e-4)
+    assert stats["clip_fraction_after_update"] > 0.0
+    assert stats["seq_kl_after"] > 0.0

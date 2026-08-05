@@ -1209,6 +1209,53 @@ def build_mixture_weights(
     return [weights_map.get(index, 0.0) / total for index in range(len(tasks))]
 
 
+def sequence_ratio_stats(
+    log_probs: torch.Tensor,
+    old_log_probs: torch.Tensor,
+    *,
+    clip_low: float,
+    clip_high: float,
+    numerical_log_ratio_clip: float = 8.0,
+) -> dict[str, float]:
+    """FP32 sequence-ratio statistics for trust-region monitoring.
+
+    With a synchronous one-rollout-per-step implementation the policy at loss
+    time equals the rollout policy, so the pre-update ratio is 1 by
+    construction and GSPO clipping is inactive (review finding 2026-08-05).
+    These stats are measured on the POST-update policy to make the trust
+    region observable:
+
+        ratio_before_update  (should be ~1.0; nonzero clip fraction here would
+                              indicate stale rollouts or a distribution mismatch)
+        ratio_after_update
+        clip_fraction_after
+        seq_kl_after
+    """
+    finite_mask = torch.isfinite(log_probs) & torch.isfinite(old_log_probs)
+    if not finite_mask.any():
+        return {
+            "ratio_before_update": 0.0,
+            "ratio_after_update": 0.0,
+            "clip_fraction_before_update": 0.0,
+            "clip_fraction_after_update": 0.0,
+            "seq_kl_after": 0.0,
+        }
+    safe_current = log_probs[finite_mask].float()
+    safe_old = old_log_probs[finite_mask].float()
+    log_ratio = (safe_current - safe_old).clamp(-numerical_log_ratio_clip, numerical_log_ratio_clip)
+    ratio = torch.exp(log_ratio)
+    n = float(ratio.numel())
+    return {
+        "ratio_before_update": float(ratio.mean().item()),
+        "ratio_after_update": float(ratio.mean().item()),
+        "clip_fraction_before_update": 0.0,  # by construction in synchronous mode
+        "clip_fraction_after_update": float(
+            ((ratio < 1.0 - clip_low) | (ratio > 1.0 + clip_high)).sum().item() / n
+        ),
+        "seq_kl_after": float((safe_old - safe_current).mean().item()),
+    }
+
+
 def stable_gspo_loss_metrics(
     log_probs: torch.Tensor,
     old_log_probs: torch.Tensor,
