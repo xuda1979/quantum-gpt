@@ -69,6 +69,10 @@ MIX_NEIGHBOR="${MIX_NEIGHBOR:-0.25}"
 MIX_REPLAY="${MIX_REPLAY:-0.25}"
 NEIGHBOR_WINDOW="${NEIGHBOR_WINDOW:-10}"
 CIRCUIT_BREAKER_WINDOW="${CIRCUIT_BREAKER_WINDOW:-10}"
+REWARD_MODE="${REWARD_MODE:-p_dominant}"   # comprehensive: R = w_P*P + w_S*S + w_J*J
+REWARD_PASS_MASS="${REWARD_PASS_MASS:-0.40}"
+REWARD_SHAPED_MASS="${REWARD_SHAPED_MASS:-0.35}"
+REWARD_JUDGE_MASS="${REWARD_JUDGE_MASS:-0.25}"
 
 # ---- adaptive difficulty (boundary of capability) ----
 CURRICULUM_EMA_DECAY="${CURRICULUM_EMA_DECAY:-0.9}"
@@ -335,6 +339,10 @@ nohup torchrun --nproc_per_node="$NUM_NPU" training/grpo_trainer.py \
   --neighbor-window "$NEIGHBOR_WINDOW" \
   --repair-queue-path "$OUT/repair_queue.jsonl" \
   --circuit-breaker-window "$CIRCUIT_BREAKER_WINDOW" \
+  --reward-mode "$REWARD_MODE" \
+  --reward-pass-mass "$REWARD_PASS_MASS" \
+  --reward-shaped-mass "$REWARD_SHAPED_MASS" \
+  --reward-judge-mass "$REWARD_JUDGE_MASS" \
   "${RESUME_FLAGS[@]}" \
   > "$TRAIN_LOG" 2>&1 &
 

@@ -315,3 +315,33 @@ def test_p_dominant_still_dominates_when_requested() -> None:
     assert passing == 1.0
     assert failing < passing
     assert abs(failing - (0.5 * 0.95 + 0.05)) < 1e-9
+
+
+def test_judge_diagnostics_record_shape() -> None:
+    """Per-candidate diagnostics pair executable anchors with judge scores."""
+    from training.grpo_utils import build_judge_diagnostics_record
+
+    record = build_judge_diagnostics_record(
+        task_id="t1",
+        passed=False,
+        syntax_ok=True,
+        verifier_rate=0.5,
+        model_dim_scores={"correctness": 0.1, "efficiency": None},
+        step=3,
+    )
+    assert record["passed"] is False
+    assert record["syntax_ok"] is True
+    assert record["verifier_rate"] == 0.5
+    assert record["model_dim_scores"]["correctness"] == 0.1
+    assert record["model_dim_scores"]["efficiency"] is None
+    assert record["step"] == 3
+    # calibrate_model_judge.py's loader consumes this shape directly.
+    import tempfile
+
+    from scripts.calibrate_model_judge import load_records
+
+    with tempfile.NamedTemporaryFile("w", suffix=".jsonl", delete=False) as handle:
+        handle.write(__import__("json").dumps(record) + "\n")
+        path = handle.name
+    loaded = load_records(Path(path))
+    assert loaded[0]["model_dim_scores"]["correctness"] == 0.1

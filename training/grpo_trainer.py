@@ -53,6 +53,7 @@ from training.grpo_utils import (  # noqa: E402
     blend_comprehensive_reward,
     build_grpo_metrics_payload,
     build_grpo_step_record,
+    build_judge_diagnostics_record,
     build_mixture_weights,
     build_reward_breakdown,
     completion_entropy,
@@ -375,6 +376,13 @@ def parse_args() -> argparse.Namespace:
         help="Path to judge_calibration.json (from scripts/calibrate_model_judge.py): "
         "enables per-dimension reward weights only for dimensions whose agreement "
         "with executable anchors passed calibration. Until then weights are zero.",
+    )
+    p.add_argument(
+        "--judge-diagnostics-path",
+        default=None,
+        help="Per-candidate judge diagnostics JSONL (executable anchors + judge "
+        "dimension scores) consumed by scripts/calibrate_model_judge.py. Defaults "
+        "to <output-dir>/judge_diagnostics.jsonl when the judge is enabled.",
     )
     # ── reward composition (user decision 2026-08-05: not executable-dominated) ──
     p.add_argument(
@@ -767,6 +775,8 @@ def evaluate_candidate(
     device=None,
     judge_model=None,
     judge_weights: dict[str, float] | None = None,
+    judge_diagnostics_path: Path | None = None,
+    step: int | None = None,
 ) -> dict[str, Any]:
     """Run tests and return a shaped reward breakdown.
 
@@ -847,6 +857,20 @@ def evaluate_candidate(
         )
         if scores is not None:
             reward["model_dim_scores"] = scores
+            if judge_diagnostics_path is not None:
+                append_grpo_metric_jsonl(
+                    judge_diagnostics_path,
+                    build_judge_diagnostics_record(
+                        task_id=task.get("task_id", "?"),
+                        passed=bool(reward.get("passed")),
+                        syntax_ok=bool(
+                            reward.get("syntax_reward") and reward["syntax_reward"] >= 1.0
+                        ),
+                        verifier_rate=float(reward.get("verifier_reward") or 0.0),
+                        model_dim_scores=scores,
+                        step=step,
+                    ),
+                )
             valid = {dim: value for dim, value in scores.items() if value is not None}
             shaped_mass = (
                 args.reward_syntax_weight
@@ -1585,6 +1609,11 @@ def main() -> int:
     # confirms per-dimension agreement with executable anchors.
     judge_model = None
     judge_weights: dict[str, float] = {}
+    judge_diagnostics_path = (
+        Path(args.judge_diagnostics_path)
+        if args.judge_diagnostics_path
+        else (output_dir / "judge_diagnostics.jsonl" if args.model_judge_enabled else None)
+    )
     if args.model_judge_enabled:
         judge_path = args.judge_model_path or args.model_name
         judge_model = AutoModelForCausalLM.from_pretrained(
@@ -1802,6 +1831,10 @@ def main() -> int:
                 device=device if (args.self_evaluation_enabled or judge_enabled) else None,
                 judge_model=judge_model if judge_enabled else None,
                 judge_weights=judge_weights if judge_enabled else None,
+                judge_diagnostics_path=(
+                    judge_diagnostics_path if (judge_enabled and rank == 0) else None
+                ),
+                step=step,
             )
             for c in codes
         ]
@@ -2301,6 +2334,9 @@ def main() -> int:
                     "judge_adapter_path": args.judge_adapter_path,
                     "judge_device": str(args.judge_device),
                     "judge_weights": judge_weights,
+                    "judge_diagnostics_path": str(judge_diagnostics_path)
+                    if judge_diagnostics_path
+                    else None,
                     "reward_mode": args.reward_mode,
                     "reward_masses": {
                         "pass": args.reward_pass_mass,

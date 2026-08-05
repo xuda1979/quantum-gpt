@@ -1367,6 +1367,35 @@ def append_repair_queue_record(path: Path, record: Mapping[str, Any]) -> dict[st
     return persisted
 
 
+def build_judge_diagnostics_record(
+    *,
+    task_id: str,
+    passed: bool,
+    syntax_ok: bool,
+    verifier_rate: float,
+    model_dim_scores: Mapping[str, float | None],
+    runtime_ms: float | None = None,
+    step: int | None = None,
+) -> dict[str, Any]:
+    """One per-candidate judge diagnostic for calibration.
+
+    Consumed by ``scripts/calibrate_model_judge.py``: executable anchors
+    (passed / syntax_ok / verifier_rate, optional runtime_ms) paired with the
+    frozen judge's per-dimension scores. Dimensions without a usable score are
+    stored as None and excluded from calibration.
+    """
+    return {
+        "timestamp_utc": datetime.now(timezone.utc).isoformat(),
+        "task_id": task_id,
+        "step": step,
+        "passed": bool(passed),
+        "syntax_ok": bool(syntax_ok),
+        "verifier_rate": float(verifier_rate),
+        "runtime_ms": runtime_ms,
+        "model_dim_scores": {dim: model_dim_scores.get(dim) for dim in MODEL_JUDGE_DIMENSIONS},
+    }
+
+
 def count_repair_conversions(path: Path | None) -> int:
     """Number of verified conversion records written by the repair stage."""
     if path is None or not path.exists():
