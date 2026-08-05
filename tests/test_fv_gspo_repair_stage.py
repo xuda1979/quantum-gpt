@@ -239,3 +239,73 @@ def test_remote_grpo_status_compact_summary(tmp_path: Path) -> None:
     assert status["all_fail_share"] == 1 / 3
     assert status["repair_queue_size"] == 1
     assert status["last"]["step"] == 3
+
+
+def test_probe_readiness_ready_and_wait(tmp_path: Path) -> None:
+    """Probe gate: healthy frontier yield -> ready; flat router -> wait."""
+    from scripts.judge_probe_readiness import judge_probe
+
+    def _write(metrics: Path, records: list[dict]) -> None:
+        with metrics.open("w", encoding="utf-8") as handle:
+            for r in records:
+                handle.write(json.dumps(r) + "\n")
+
+    metrics = tmp_path / "grpo_step_metrics.jsonl"
+    # 16 probed records: 50% frontier, low clips, healthy entropy, no all-fail.
+    healthy = [
+        {
+            "step": i,
+            "task": f"t{i}",
+            "route": "frontier_rl" if i % 2 == 0 else "mastered_replay",
+            "clip_low_fraction": 0.05,
+            "clip_high_fraction": 0.03,
+            "entropy_mean": 3.0,
+            "all_fail": False,
+        }
+        for i in range(16)
+    ]
+    _write(metrics, healthy)
+    result = judge_probe(metrics)
+    assert result["verdict"] == "ready", result["reason"]
+    assert result["checks"]["frontier_yield"] == 0.5
+
+    # Flat router: all mastered (no learnable groups) -> wait.
+    flat = [
+        {
+            "step": i,
+            "task": f"t{i}",
+            "route": "mastered_replay",
+            "clip_low_fraction": 0.0,
+            "clip_high_fraction": 0.0,
+            "entropy_mean": 3.0,
+            "all_fail": False,
+        }
+        for i in range(16)
+    ]
+    _write(metrics, flat)
+    result = judge_probe(metrics)
+    assert result["verdict"] == "wait"
+    assert "frontier yield" in result["reason"]
+
+    # Too short -> wait.
+    _write(metrics, healthy[:5])
+    assert judge_probe(metrics)["verdict"] == "wait"
+
+    # All-fail without repair conversion -> wait; with conversions -> pass.
+    all_fail = [
+        {
+            "step": i,
+            "task": f"t{i}",
+            "route": "repair_sft" if i % 2 == 0 else "frontier_rl",
+            "clip_low_fraction": 0.02,
+            "clip_high_fraction": 0.01,
+            "entropy_mean": 2.5,
+            "all_fail": i % 2 == 0,
+        }
+        for i in range(16)
+    ]
+    _write(metrics, all_fail)
+    assert judge_probe(metrics)["verdict"] == "wait"  # all_fail_share 0.5 > 0.4, no conversions
+    converted = tmp_path / "repair_converted.jsonl"
+    converted.write_text('{"converted": true}\n' * 3, encoding="utf-8")
+    assert judge_probe(metrics, converted)["verdict"] == "ready"
