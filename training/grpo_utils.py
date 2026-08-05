@@ -847,6 +847,42 @@ def reward_signal_stats(
 
 
 @dataclass
+class AdaptiveKLState:
+    """Adaptive KL penalty (design §4): beta rises when sequence KL drifts
+    beyond target, falls when it is far below target.
+
+    ProRL-style capability preservation: the anchor policy stays fixed until a
+    checkpoint passes held-out regression gates; the KL controller keeps the
+    policy close to the anchor by adjusting beta from the measured sequence KL
+    (the per-response mean log-ratio already computed by the trainer).
+    """
+
+    target_kl: float = 0.05
+    up_rate: float = 1.2
+    down_rate: float = 0.9
+    min_kl: float = 1e-4
+    max_kl: float = 0.5
+    beta: float = 0.005
+
+    def update(self, seq_kl: float) -> float:
+        if seq_kl > self.target_kl * 1.5:
+            self.beta = min(self.max_kl, self.beta * self.up_rate)
+        elif seq_kl < self.target_kl * 0.5:
+            self.beta = max(self.min_kl, self.beta * self.down_rate)
+        return self.beta
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "target_kl": self.target_kl,
+            "up_rate": self.up_rate,
+            "down_rate": self.down_rate,
+            "min_kl": self.min_kl,
+            "max_kl": self.max_kl,
+            "beta": self.beta,
+        }
+
+
+@dataclass
 class AdaptiveTemperatureState:
     """Tracks consecutive low-reward-signal skips and escalates sampling temperature.
 

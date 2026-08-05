@@ -41,6 +41,7 @@ from training.grpo_utils import (  # noqa: E402
     MODEL_JUDGE_DIMENSIONS,
     REPAIR_SFT,
     RL_ROUTES,
+    AdaptiveKLState,
     AdaptiveTemperatureState,
     CircuitBreakerState,
     FrontierRouter,
@@ -264,6 +265,21 @@ def parse_args() -> argparse.Namespace:
         help="Steps per evaluation window for circuit breakers; a breaker trips only "
         "after persisting across two windows.",
     )
+    # ── adaptive KL controller (design §4: capability preservation) ──
+    p.add_argument(
+        "--adaptive-kl",
+        action="store_true",
+        default=False,
+        help="Adapt the KL penalty beta from measured sequence KL: rise when KL "
+        "drifts beyond target, fall when far below. Keeps the policy close to "
+        "the anchor (accepted checkpoint) until regression gates pass.",
+    )
+    p.add_argument("--kl-target", type=float, default=0.05)
+    p.add_argument("--kl-up-rate", type=float, default=1.2)
+    p.add_argument("--kl-down-rate", type=float, default=0.9)
+    p.add_argument("--kl-min", type=float, default=1e-4)
+    p.add_argument("--kl-max", type=float, default=0.5)
+    p.add_argument("--kl-beta-init", type=float, default=0.005)
     p.add_argument(
         "--no-stop-on-severe-breaker",
         action="store_false",
@@ -1631,6 +1647,18 @@ def main() -> int:
                 raise SystemExit(f"Invalid --coverage-json {coverage_path}: {exc}")
     breaker = CircuitBreakerState(window_size=args.circuit_breaker_window)
     running_mad = RunningMAD()
+    kl_state = (
+        AdaptiveKLState(
+            target_kl=args.kl_target,
+            up_rate=args.kl_up_rate,
+            down_rate=args.kl_down_rate,
+            min_kl=args.kl_min,
+            max_kl=args.kl_max,
+            beta=args.kl_beta_init,
+        )
+        if args.adaptive_kl
+        else None
+    )
     repair_queue_path = (
         Path(args.repair_queue_path)
         if args.repair_queue_path
@@ -2028,6 +2056,17 @@ def main() -> int:
             continue
 
         # ── FV-GSPO: sequence-level clipped objective (GSPO) or legacy ablation ──
+        # Adaptive KL: measure the batch's sequence KL and adjust beta before
+        # the loss so the penalty reflects current drift from the anchor.
+        effective_kl = args.kl_coeff
+        if kl_state is not None:
+            with torch.no_grad():
+                seq_kl_now = float(
+                    (torch.stack(normalized_old_log_probs) - torch.stack(current_log_probs))
+                    .mean()
+                    .item()
+                )
+            effective_kl = kl_state.update(seq_kl_now)
         gspo_stats: dict[str, float] | None = None
         if args.loss_mode == "gspo":
             total_loss, gspo_stats = stable_gspo_loss_metrics(
@@ -2036,7 +2075,7 @@ def main() -> int:
                 torch.stack(filtered_advantages),
                 clip_low=args.gspo_clip_low,
                 clip_high=args.gspo_clip_high,
-                kl_coeff=args.kl_coeff,
+                kl_coeff=effective_kl,
                 numerical_log_ratio_clip=args.numerical_log_ratio_clip,
             )
         else:
@@ -2044,7 +2083,7 @@ def main() -> int:
                 torch.stack(current_log_probs),
                 torch.stack(normalized_old_log_probs),
                 torch.stack(filtered_advantages),
-                args.kl_coeff,
+                effective_kl,
                 args.ratio_clip_log_delta,
             )
         # Doubly-Robust DPO pair loss (only active when the
@@ -2142,6 +2181,8 @@ def main() -> int:
             else None,
         )
         if record is not None:
+            if kl_state is not None:
+                record["kl_beta"] = kl_state.beta
             if dr_pair_info:
                 record["dr_pair_mined"] = bool(dr_pair_info.get("dr_pair_mined"))
                 record["dr_pair_reward_gap"] = float(dr_pair_info.get("dr_pair_reward_gap", 0.0))
@@ -2248,6 +2289,8 @@ def main() -> int:
                     "circuit_breaker_state": breaker.to_dict(),
                     "running_mad_scale": running_mad.scale,
                     "total_probes": total_probes,
+                    "adaptive_kl": bool(args.adaptive_kl),
+                    "kl_state": kl_state.to_dict() if kl_state is not None else None,
                     "target_modules": list(args.target_modules) if args.target_modules else None,
                     "target_module_regex": list(args.target_module_regex)
                     if args.target_module_regex

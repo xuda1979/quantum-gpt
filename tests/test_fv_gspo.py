@@ -395,3 +395,37 @@ def test_breaker_holdout_regression_reports_drop() -> None:
         trips.extend(breaker.evaluate(step=step))
     # Two consecutive windows with a >3pp drop trip the breaker.
     assert any(t["breaker"] == "holdout_regression" for t in trips)
+
+
+def test_adaptive_kl_rises_when_kl_drifts_above_target() -> None:
+    from training.grpo_utils import AdaptiveKLState
+
+    state = AdaptiveKLState(target_kl=0.05, up_rate=1.2, down_rate=0.9, beta=0.005)
+    beta = state.update(0.09)  # > 1.5 * target
+    assert beta > 0.005
+    assert abs(beta - 0.006) < 1e-9
+    # Capped at max_kl under sustained drift.
+    for _ in range(50):
+        state.update(0.5)
+    assert state.beta == state.max_kl
+
+
+def test_adaptive_kl_falls_when_kl_far_below_target() -> None:
+    from training.grpo_utils import AdaptiveKLState
+
+    state = AdaptiveKLState(target_kl=0.05, up_rate=1.2, down_rate=0.9, beta=0.005)
+    beta = state.update(0.01)  # < 0.5 * target
+    assert beta < 0.005
+    assert abs(beta - 0.0045) < 1e-9
+    # Floored at min_kl.
+    for _ in range(50):
+        state.update(0.0)
+    assert state.beta == state.min_kl
+
+
+def test_adaptive_kl_holds_beta_in_deadband() -> None:
+    from training.grpo_utils import AdaptiveKLState
+
+    state = AdaptiveKLState(target_kl=0.05, up_rate=1.2, down_rate=0.9, beta=0.005)
+    for _ in range(5):
+        assert state.update(0.03) == 0.005  # within [0.025, 0.075]
