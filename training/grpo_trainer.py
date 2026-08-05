@@ -71,6 +71,7 @@ from training.grpo_utils import (  # noqa: E402
 )
 from training.model_backend import run_text_forward_preflight  # noqa: E402
 from training.model_family_preflight import trainer_backend_preflight_block  # noqa: E402
+from training.quantum_verifiers import score_from_typed_verifier  # noqa: E402
 from training.qwen_sft_peft import (  # noqa: E402
     TextPreprocessorBackend,
     apply_selective_training_controls,
@@ -885,6 +886,16 @@ def evaluate_candidate(
         allowed_import_roots=task.get("allowed_import_roots", []),
     )
     reward["details"] = result.get("details", []) if isinstance(result, dict) else []
+    # Typed quantum-semantic verifier (review 2026-08-05 #6): a continuous
+    # semantic score (state/process fidelity, distribution distance) replaces
+    # the generic verifier fraction when the task declares a verifier_type.
+    # tests.py remains the authoritative pass gate.
+    typed_score, typed_info = score_from_typed_verifier(
+        code, task["task_dir"], task.get("meta", {})
+    )
+    if typed_info is not None:
+        reward["verifier_reward"] = typed_score
+        reward["typed_verifier"] = str(task.get("meta", {}).get("verifier_type"))
     for method in research_methods or []:
         reward = method.adjust_reward_breakdown(
             reward,
