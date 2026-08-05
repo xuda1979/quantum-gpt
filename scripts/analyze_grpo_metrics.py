@@ -124,7 +124,7 @@ def _summarize_dr(records: list[dict[str, Any]]) -> dict[str, Any]:
 
 
 def _write_csv(records: list[dict[str, Any]], csv_path: Path) -> None:
-    """Write a per-step CSV with the DR columns included."""
+    """Write a per-step CSV with the DR and FV-GSPO columns included."""
     # Stable column order; missing keys become empty strings.
     columns = [
         "step",
@@ -135,6 +135,16 @@ def _write_csv(records: list[dict[str, Any]], csv_path: Path) -> None:
         "syntax_rate",
         "interface_rate",
         "loss",
+        "route",
+        "all_fail",
+        "repair_queued",
+        "frontier_fraction",
+        "entropy_mean",
+        "ratio_mean",
+        "clip_low_fraction",
+        "clip_high_fraction",
+        "seq_kl",
+        "generation_tokens",
         "dr_psi",
         "dr_psi_init",
         "dr_psi_warmup_steps",
@@ -155,6 +165,78 @@ def _write_csv(records: list[dict[str, Any]], csv_path: Path) -> None:
                 if row[key] is None:
                     row[key] = ""
             writer.writerow(row)
+
+
+def _summarize_fv_gspo(records: list[dict[str, Any]]) -> dict[str, Any]:
+    """Aggregate FV-GSPO diagnostics: routing, frontier yield, clipping, entropy.
+
+    Mirrors the design's monitoring list (docs/frontier-verifier-gspo-design-2026-08-04.md
+    §Monitoring): route fractions, frontier yield, all-fail share, clip
+    fractions, sequence ratio, entropy, repair queue, and breaker trips.
+    """
+    routes: dict[str, int] = {}
+    all_fail_steps = 0
+    probed_steps = 0
+    rl_route_steps = 0
+    repair_queued_steps = 0
+    clip_low_values: list[float] = []
+    clip_high_values: list[float] = []
+    ratio_values: list[float] = []
+    seq_kl_values: list[float] = []
+    entropy_values: list[float] = []
+    frontier_fractions: list[float] = []
+    breaker_trips: list[dict[str, Any]] = []
+    generation_tokens = 0
+
+    for record in records:
+        route = record.get("route")
+        if route is not None:
+            routes[str(route)] = routes.get(str(route), 0) + 1
+            probed_steps += 1
+            if str(route) in ("frontier_rl", "partial_repair_rl"):
+                rl_route_steps += 1
+        if bool(record.get("all_fail")):
+            all_fail_steps += 1
+        if bool(record.get("repair_queued")):
+            repair_queued_steps += 1
+        for key, bucket in (
+            ("clip_low_fraction", clip_low_values),
+            ("clip_high_fraction", clip_high_values),
+            ("ratio_mean", ratio_values),
+            ("seq_kl", seq_kl_values),
+            ("entropy_mean", entropy_values),
+            ("frontier_fraction", frontier_fractions),
+        ):
+            value = record.get(key)
+            if value is not None and _is_finite(_float_or_nan(value)):
+                bucket.append(float(value))
+        trips = record.get("breaker_trips")
+        if isinstance(trips, list):
+            breaker_trips.extend(trips)
+        try:
+            generation_tokens += int(record.get("generation_tokens") or 0)
+        except (TypeError, ValueError):
+            pass
+
+    def _mean(values: list[float]) -> float | None:
+        return statistics.fmean(values) if values else None
+
+    summary: dict[str, Any] = {
+        "probed_steps": probed_steps,
+        "route_counts": dict(sorted(routes.items())),
+        "frontier_yield": (rl_route_steps / probed_steps) if probed_steps else None,
+        "all_fail_share": (all_fail_steps / probed_steps) if probed_steps else None,
+        "repair_queued_steps": repair_queued_steps,
+        "clip_low_fraction_mean": _mean(clip_low_values),
+        "clip_high_fraction_mean": _mean(clip_high_values),
+        "ratio_mean": _mean(ratio_values),
+        "seq_kl_mean": _mean(seq_kl_values),
+        "entropy_mean": _mean(entropy_values),
+        "frontier_fraction_last": frontier_fractions[-1] if frontier_fractions else None,
+        "generation_tokens_total": generation_tokens,
+        "breaker_trips": breaker_trips,
+    }
+    return summary
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -194,6 +276,7 @@ def main(argv: list[str] | None = None) -> int:
         "metrics_file": str(metrics_path),
         "total_steps": len(records),
         "dr_summary": _summarize_dr(records),
+        "fv_gspo_summary": _summarize_fv_gspo(records),
     }
     summary_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
 

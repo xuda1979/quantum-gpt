@@ -165,3 +165,55 @@ def test_analyzer_handles_missing_metrics_file(tmp_path: Path) -> None:
     rc, _, stderr = _run_analyzer(metrics, out_prefix)
     assert rc != 0
     assert "not found" in stderr
+
+
+def test_analyzer_reports_fv_gspo_routing_and_clipping(tmp_path: Path) -> None:
+    """FV-GSPO summary surfaces routes, frontier yield, clips, and entropy."""
+    metrics = tmp_path / "grpo_step_metrics.jsonl"
+    _write_jsonl(
+        metrics,
+        [
+            {
+                "step": 1,
+                "task": "a",
+                "route": "frontier_rl",
+                "all_fail": False,
+                "repair_queued": False,
+                "clip_low_fraction": 0.1,
+                "clip_high_fraction": 0.05,
+                "ratio_mean": 1.0001,
+                "seq_kl": 0.02,
+                "entropy_mean": 3.5,
+                "frontier_fraction": 0.5,
+                "generation_tokens": 4000,
+            },
+            {
+                "step": 2,
+                "task": "b",
+                "route": "repair_sft",
+                "all_fail": True,
+                "repair_queued": True,
+                "frontier_fraction": 0.4,
+                "generation_tokens": 3500,
+                "breaker_trips": [{"breaker": "all_fail_without_repair", "step": 2}],
+            },
+        ],
+    )
+    out = tmp_path / "analysis"
+    code, _, stderr = _run_analyzer(metrics, out)
+    assert code == 0, stderr
+    summary = json.loads(out.with_suffix(".summary.json").read_text(encoding="utf-8"))
+    fv = summary["fv_gspo_summary"]
+    assert fv["route_counts"] == {"frontier_rl": 1, "repair_sft": 1}
+    assert fv["frontier_yield"] == 0.5
+    assert fv["all_fail_share"] == 0.5
+    assert fv["repair_queued_steps"] == 1
+    assert abs(fv["clip_low_fraction_mean"] - 0.1) < 1e-9
+    assert abs(fv["entropy_mean"] - 3.5) < 1e-9
+    assert fv["frontier_fraction_last"] == 0.4
+    assert fv["generation_tokens_total"] == 7500
+    assert fv["breaker_trips"] == [{"breaker": "all_fail_without_repair", "step": 2}]
+    # CSV includes the new FV-GSPO columns.
+    rows = list(csv.DictReader(out.with_suffix(".csv").open(encoding="utf-8")))
+    assert rows[0]["route"] == "frontier_rl"
+    assert rows[1]["repair_queued"] == "True"
