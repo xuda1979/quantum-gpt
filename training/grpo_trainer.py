@@ -423,18 +423,25 @@ def parse_args() -> argparse.Namespace:
     # ── reward composition (user decision 2026-08-05: not executable-dominated) ──
     p.add_argument(
         "--reward-mode",
-        choices=["p_dominant", "comprehensive"],
+        choices=["p_dominant", "comprehensive", "tiered"],
         default="p_dominant",
         help="'p_dominant' keeps executable tests authoritative (P clamps failing "
         "candidates below every passing one; FV-GSPO default and ablation "
         "baseline). 'comprehensive' makes the reward the comprehensive score "
         "R = w_P*P + w_S*S + w_J*J with configurable masses below — the pass "
         "term no longer dominates, and the frozen judge contributes its mass "
-        "once any dimension passes calibration.",
+        "once any dimension passes calibration. 'tiered' (review 2026-08-05 #5, "
+        "recommended) uses the constrained hierarchy "
+        "R = (1-P)*min(0.95, Q_progress) + P*(1 + alpha*Q_efficiency + gamma*Q_quality): "
+        "any passer outranks any failure (execution authoritative), failures stay "
+        "learnable via Q_progress, and passers are differentiated by efficiency/"
+        "quality (judge dims, calibration-gated).",
     )
     p.add_argument("--reward-pass-mass", type=float, default=0.40)
     p.add_argument("--reward-shaped-mass", type=float, default=0.35)
     p.add_argument("--reward-judge-mass", type=float, default=0.25)
+    p.add_argument("--tiered-alpha", type=float, default=0.10)
+    p.add_argument("--tiered-gamma", type=float, default=0.10)
     # ── checkpoint interval (periodic adapter save to disk) ──
     p.add_argument(
         "--checkpoint-interval-seconds",
@@ -922,14 +929,22 @@ def evaluate_candidate(
                 + args.reward_brevity_weight * reward["brevity_reward"]
                 + args.reward_import_hygiene_weight * reward["import_hygiene_reward"]
             ) / max(shaped_mass, 1e-8)
+            if args.reward_mode == "tiered":
+                # tiered alpha/gamma are small multipliers on passing rewards
+                # (efficiency/quality bonuses), not linear masses.
+                blend_pass_mass = args.tiered_alpha
+                blend_shaped_mass = args.tiered_gamma
+            else:
+                blend_pass_mass = args.reward_pass_mass
+                blend_shaped_mass = args.reward_shaped_mass
             reward["total_reward"] = blend_comprehensive_reward(
                 pass_reward=reward["pass_reward"],
                 shaped_reward=shaped_reward,
                 model_dim_scores=valid,
                 dim_weights=judge_weights or {},
                 mode=args.reward_mode,
-                pass_mass=args.reward_pass_mass,
-                shaped_mass=args.reward_shaped_mass,
+                pass_mass=blend_pass_mass,
+                shaped_mass=blend_shaped_mass,
                 judge_mass=args.reward_judge_mass,
             )
     return reward

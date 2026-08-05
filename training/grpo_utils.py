@@ -72,7 +72,19 @@ def blend_comprehensive_reward(
         evidence-anchored and calibration-gated so it does not contradict
         executable evidence.
 
-    Model dimension scores are clamped to [0, 1] in both modes.
+    ``mode="tiered"`` (review 2026-08-05 #5 — recommended): a constrained
+    hierarchy that keeps execution authoritative while the reward is rich:
+
+        R = (1-P) * min(0.95, Q_progress)  +  P * (1 + alpha*Q_efficiency + gamma*Q_quality)
+
+    - any passing candidate outranks any failing candidate (hard tier);
+    - all-fail groups still get learnable partial-progress signal;
+    - passing candidates are differentiated by efficiency and quality
+      (frozen-judge dims, only when calibrated);
+    - resource optimization cannot be achieved by deleting required compute
+      (passing is gated on full semantic pass).
+
+    Model dimension scores are clamped to [0, 1] in all modes.
     """
     bounded_pass = min(1.0, max(0.0, float(pass_reward)))
     bounded_shaped = min(1.0, max(0.0, float(shaped_reward)))
@@ -89,6 +101,15 @@ def blend_comprehensive_reward(
             for dim in MODEL_JUDGE_DIMENSIONS
         )
     penalty = min(1.0, max(0.0, float(truncation_penalty)))
+    if mode == "tiered":
+        q_progress = min(0.95, max(0.0, bounded_shaped - penalty))
+        if bounded_pass >= 1.0:
+            efficiency = min(1.0, max(0.0, float(model_dim_scores.get("efficiency", 0.0) or 0.0)))
+            quality = min(1.0, max(0.0, float(model_dim_scores.get("quality", 0.0) or 0.0)))
+            alpha = max(0.0, float(pass_mass))
+            gamma = max(0.0, float(shaped_mass))
+            return min(2.0, 1.0 + alpha * efficiency + gamma * quality)
+        return q_progress
     if mode == "comprehensive":
         effective_judge = max(0.0, float(judge_mass)) if weight_sum > 0.0 else 0.0
         total_mass = max(

@@ -397,3 +397,69 @@ def test_sequence_ratio_stats_synchronous_mode() -> None:
     stats = sequence_ratio_stats(moved, old, clip_low=3e-4, clip_high=4e-4)
     assert stats["clip_fraction_after_update"] > 0.0
     assert stats["seq_kl_after"] > 0.0
+
+
+def test_tiered_mode_hard_tier_separation() -> None:
+    """Review #5: tiered reward keeps execution authoritative while rich."""
+    # Any passing candidate outranks any failing candidate, even with a
+    # hostile judge on the passer and a perfect judge on the failure.
+    passing = blend_comprehensive_reward(
+        pass_reward=1.0,
+        shaped_reward=0.0,
+        model_dim_scores={"efficiency": 0.0, "quality": 0.0},
+        dim_weights={"efficiency": 0.025, "quality": 0.025},
+        mode="tiered",
+    )
+    failing = blend_comprehensive_reward(
+        pass_reward=0.0,
+        shaped_reward=1.0,  # perfect progress on a failing candidate
+        model_dim_scores={"efficiency": 1.0, "quality": 1.0},
+        dim_weights={"efficiency": 0.025, "quality": 0.025},
+        mode="tiered",
+    )
+    assert failing <= 0.95
+    assert passing >= 1.0
+    assert passing > failing
+
+
+def test_tiered_mode_passers_differentiated_by_efficiency_quality() -> None:
+    efficient = blend_comprehensive_reward(
+        pass_reward=1.0,
+        shaped_reward=1.0,
+        model_dim_scores={"efficiency": 1.0, "quality": 1.0},
+        dim_weights={"efficiency": 0.025, "quality": 0.025},
+        mode="tiered",
+        pass_mass=0.10,
+        shaped_mass=0.10,
+    )
+    plain = blend_comprehensive_reward(
+        pass_reward=1.0,
+        shaped_reward=1.0,
+        model_dim_scores={"efficiency": 0.0, "quality": 0.0},
+        dim_weights={"efficiency": 0.025, "quality": 0.025},
+        mode="tiered",
+        pass_mass=0.10,
+        shaped_mass=0.10,
+    )
+    assert abs(efficient - 1.20) < 1e-9
+    assert abs(plain - 1.00) < 1e-9
+    assert efficient > plain
+
+
+def test_tiered_mode_failures_learnable_and_capped() -> None:
+    progress = blend_comprehensive_reward(
+        pass_reward=0.0,
+        shaped_reward=0.7,
+        model_dim_scores={},
+        dim_weights={},
+        mode="tiered",
+    )
+    assert abs(progress - 0.70) < 1e-9
+    maxed = blend_comprehensive_reward(
+        pass_reward=0.0,
+        shaped_reward=1.0,
+        model_dim_scores={"efficiency": 1.0},
+        dim_weights={"efficiency": 0.025},
+        mode="tiered",
+    )
+    assert maxed <= 0.95
