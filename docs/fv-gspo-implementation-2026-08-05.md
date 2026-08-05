@@ -407,7 +407,9 @@ run. Immediate fixes landed (commits `fcc4aaa`, `474ce8b`):
 
 **Landed after review (commit `f05bf35`):** #4 posterior Beta router with hysteresis (mastered needs >= 32 samples AND lower credible bound >= 0.95 — a single lucky 8/8 no longer masters; repair needs upper bound <= 0.10); #8 `invalid_or_noisy` quarantine activation (probe-outcome oscillation 1->0->1 flags flakiness); adaptive G (4/8/16).
 
-**Deferred (tracked):** #3 length-neutral GSPO ablation; #6 typed quantum-semantic verifiers (state/process fidelity, distribution distance) replacing the generic verifier fraction; #7 parameterized family-split curriculum (>13 tasks); #9 repair-lane hardening (minimal patches, AST dedup, conversion-latency breaker); #11 multi-group batching (8–32 groups, minibatch substeps — also enables Design A clipping), adaptive mixture, skill-graph neighbors; #12 pre-training entropy baselines, synchronous eval gates with rollback + anchor resets, 3-seed runs.
+**Landed after review (commit `3d53e47`):** #3 length-neutral GSPO (LUSPO-style) as `--loss-mode gspo_ln` with capped length weights (w = min(|y|/L_ref, w_max)); length/truncation metrics.
+
+**Deferred (tracked):** #6 typed quantum-semantic verifiers (state/process fidelity, distribution distance) replacing the generic verifier fraction; #7 parameterized family-split curriculum (>13 tasks); #9 repair-lane hardening (minimal patches, AST dedup, conversion-latency breaker); #11 multi-group batching (8–32 groups, minibatch substeps — also enables Design A clipping), adaptive mixture, skill-graph neighbors; #12 pre-training entropy baselines, synchronous eval gates with rollback + anchor resets, 3-seed runs.
 
 **Ablation sequence (review):** A base+retrieval+repair → B repair SFT only → C router+sequence RLOO no clipping → D posterior router → E GSPO with active minibatch clipping → F length-neutral GSPO → G tiered vs comprehensive reward → H typed semantic verifier → I multi-framework/version curriculum → J adaptive KL + anchor reset. Each stage: same token budget, ≥3 seeds, metric = Δheld-out pass@1 per generated NPU-token-hour + semantic/version fidelity.
 
