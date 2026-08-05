@@ -269,6 +269,49 @@ Secondary metrics are final pass@1, regression count, repair conversion rate, an
 - Do not claim the existing doubly-robust plugin is beneficial until its terms win a controlled ablation. It cannot recover a truly equal-reward group without a verified preference gap.
 - Do not launch a long run before the router produces a healthy frontier yield on a short probe.
 
+## Addendum: Frozen Comprehensive Judge (2026-08-05)
+
+User requirement: the base model — and later, older accepted adapters — act as
+an evaluation model giving a comprehensive score per sample: code correctness,
+runnable with no error, result correctness, code efficiency, etc.
+
+Design decision: the judge is a **separate frozen evaluator**, never the
+current training policy (a judge that drifts with the policy can be gamed).
+It scores five dimensions per sample — `correctness`, `runnability`,
+`result_correctness`, `efficiency`, `quality` — greedily (temperature 0),
+evidence-anchored: the judge prompt includes the executable evidence (test
+pass/fail, failure details, clause results) and must not contradict it.
+
+Reward integration keeps executable tests authoritative (P-dominant):
+
+$$
+R = P + (1-P)\left[(1-W)\,S + W\sum_d \frac{w_d}{\sum_k w_k} M_d\right] - T,
+\qquad W = \min\Big(\sum_d w_d,\ 0.05\Big)
+$$
+
+Judge mass is subtracted from the shaped term `S`, never from `P`, so a
+passing candidate always outranks a failing one. With all `w_d = 0` (the
+default until calibration passes) `R = P + (1-P)S`.
+
+Per-dimension weights `w_d` are enabled only by
+`scripts/calibrate_model_judge.py`, which measures agreement with executable
+anchors on held-out judge diagnostics:
+
+| dimension | executable anchor | enablement gate |
+|---|---|---|
+| correctness | full test pass | AUC >= 0.85 |
+| runnability | syntax validity + import hygiene | AUC >= 0.85 |
+| result_correctness | full verifier clause pass | AUC >= 0.85 |
+| efficiency | measured runtime | Spearman rho <= -0.6 (faster scores higher) |
+| quality | no executable anchor | never auto-enabled |
+
+Gates: `n >= 200` judged samples; enabled dimensions share the 0.05 cap
+uniformly. Until a dimension passes, its reward weight is zero and its scores
+are recorded as diagnostics (`model_dim_scores` in step metrics). The trainer
+loads the frozen judge via `--model-judge-enabled --judge-model-path <base>`
+with `--judge-adapter-path <older accepted adapter>` optional; judge device
+defaults to CPU so training NPUs are untouched.
+
 ## Primary Sources
 
 1. Shao et al., **DeepSeekMath: Pushing the Limits of Mathematical Reasoning in Open Language Models**, arXiv:2402.03300.

@@ -38,6 +38,7 @@ if str(ROOT) not in sys.path:
 from training.grpo_utils import (  # noqa: E402
     INVALID_OR_NOISY,
     MASTERED_REPLAY,
+    MODEL_JUDGE_DIMENSIONS,
     REPAIR_SFT,
     RL_ROUTES,
     AdaptiveTemperatureState,
@@ -48,6 +49,7 @@ from training.grpo_utils import (  # noqa: E402
     append_grpo_metric,
     append_grpo_metric_jsonl,
     append_repair_queue_record,
+    blend_comprehensive_reward,
     build_grpo_metrics_payload,
     build_grpo_step_record,
     build_mixture_weights,
@@ -313,6 +315,51 @@ def parse_args() -> argparse.Namespace:
         default=512,
         help="Max tokens for the self-judge response.",
     )
+    # ── comprehensive frozen-judge scoring (base model / older adapters) ──
+    p.add_argument(
+        "--model-judge-enabled",
+        action="store_true",
+        default=False,
+        help="Enable per-dimension comprehensive scoring by a FROZEN judge: the base "
+        "model (or an older accepted adapter via --judge-adapter-path), never the "
+        "current training policy. Reward weights stay zero until calibration passes.",
+    )
+    p.add_argument(
+        "--judge-model-path",
+        default=None,
+        help="Frozen judge base model. Defaults to the training model path.",
+    )
+    p.add_argument(
+        "--judge-adapter-path",
+        default=None,
+        help="Optional OLDER accepted adapter checkpoint to evaluate samples with "
+        "(frozen; do not use the current training adapter as its own judge).",
+    )
+    p.add_argument(
+        "--judge-device",
+        default="cpu",
+        help="Device for the frozen judge (cpu by default; a spare npu card when "
+        "available, e.g. npu:2 on a 4-card env).",
+    )
+    p.add_argument(
+        "--model-judge-max-tokens",
+        type=int,
+        default=256,
+        help="Max tokens for one judge evaluation.",
+    )
+    p.add_argument(
+        "--model-judge-temperature",
+        type=float,
+        default=0.0,
+        help="Judge sampling temperature (greedy default for stability).",
+    )
+    p.add_argument(
+        "--judge-calibration",
+        default=None,
+        help="Path to judge_calibration.json (from scripts/calibrate_model_judge.py): "
+        "enables per-dimension reward weights only for dimensions whose agreement "
+        "with executable anchors passed calibration. Until then weights are zero.",
+    )
     # ── checkpoint interval (periodic adapter save to disk) ──
     p.add_argument(
         "--checkpoint-interval-seconds",
@@ -549,6 +596,108 @@ def _self_evaluate_code(code: str, task: dict, model, backend, args, device) -> 
     return score
 
 
+COMPREHENSIVE_JUDGE_PROMPT = """You are a strict code evaluator. Score the candidate solution on five dimensions, each a float 0.0-1.0. Use the executable evidence below as the authoritative anchor — do not contradict it.
+
+Dimensions:
+- correctness: does the algorithm's logic produce the right result (0.0 if tests fail)?
+- runnability: would the code execute without syntax/import/runtime errors?
+- result_correctness: do the actual outputs match the expected values?
+- efficiency: is runtime / circuit depth / gate count / resource use reasonable for the problem?
+- quality: is the code well-structured, readable, and maintainable?
+
+CODE TO EVALUATE:
+```python
+{code}
+```
+
+EXECUTABLE EVIDENCE (authoritative):
+{evidence}
+
+TASK CONTEXT:
+{task_context}
+
+Output ONLY a JSON object:
+{{"correctness": 0.0-1.0, "runnability": 0.0-1.0, "result_correctness": 0.0-1.0, "efficiency": 0.0-1.0, "quality": 0.0-1.0, "evidence": "one line"}}"""
+
+
+def _parse_model_dim_scores(text: str) -> dict[str, float | None] | None:
+    """Parse the judge's JSON response into per-dimension scores (0-1)."""
+    import re
+
+    try:
+        match = re.search(r"\{[^}]+\}", text or "")
+        if not match:
+            return None
+        data = json.loads(match.group(0))
+    except (json.JSONDecodeError, ValueError):
+        return None
+    scores: dict[str, float | None] = {}
+    for dim in MODEL_JUDGE_DIMENSIONS:
+        raw = data.get(dim)
+        if isinstance(raw, int | float) and not isinstance(raw, bool):
+            scores[dim] = min(1.0, max(0.0, float(raw)))
+        else:
+            scores[dim] = None
+    if all(value is None for value in scores.values()):
+        return None
+    return scores
+
+
+def _model_comprehensive_scores(
+    code: str,
+    task: dict,
+    executable_evidence: str,
+    judge_model,
+    backend,
+    args,
+    device,
+) -> dict[str, float | None] | None:
+    """Frozen-judge per-dimension scores (correctness..quality) for one sample.
+
+    The judge is the base model (or an older accepted adapter) — never the
+    current training policy — so the reward model cannot be gamed by policy
+    drift. Runs greedily and returns None when the judge output is unusable
+    (recorded as missing; excluded from calibration).
+    """
+    task_desc = task.get("meta", {}).get(
+        "description",
+        task.get("meta", {}).get("name", str(task.get("task_dir", task.get("task_id", "unknown")))),
+    )
+    prompt = COMPREHENSIVE_JUDGE_PROMPT.format(
+        code=code, evidence=executable_evidence, task_context=task_desc
+    )
+    messages = [{"role": "user", "content": prompt}]
+    try:
+        if hasattr(backend, "tokenizer"):
+            tokenized = backend.tokenizer.apply_chat_template(
+                messages, tokenize=True, return_tensors="pt", add_generation_prompt=True
+            ).to(device)
+            input_len = tokenized.shape[1]
+        elif hasattr(backend, "encode_chat"):
+            tokenized_ids = backend.encode_chat(messages, add_generation_prompt=True)
+            tokenized = torch.tensor([tokenized_ids], dtype=torch.long, device=device)
+            input_len = tokenized.shape[1]
+        else:
+            return None
+        with torch.no_grad():
+            outputs = judge_model.generate(
+                input_ids=tokenized,
+                max_new_tokens=getattr(args, "model_judge_max_tokens", 256),
+                temperature=getattr(args, "model_judge_temperature", 0.0),
+                top_p=1.0,
+                do_sample=False,
+                pad_token_id=backend.tokenizer.pad_token_id
+                if hasattr(backend, "tokenizer")
+                else getattr(backend, "pad_token_id", 0),
+            )
+            response_ids = outputs[0][input_len:]
+            response_text = backend.tokenizer.decode(response_ids, skip_special_tokens=True)
+    except Exception:
+        return None
+
+    return _parse_model_dim_scores(response_text)
+
+
 def _parse_self_eval_score(text: str) -> float:
     """Extract score 0-10 from model's judge response, normalize to 0-1."""
     import re
@@ -585,12 +734,19 @@ def evaluate_candidate(
     model=None,
     backend=None,
     device=None,
+    judge_model=None,
+    judge_weights: dict[str, float] | None = None,
 ) -> dict[str, Any]:
     """Run tests and return a shaped reward breakdown.
 
     When self_evaluation is enabled, also evaluates the code by asking the model
     to judge its own output against quality criteria (correctness, runnability,
     efficiency, code quality).
+
+    When ``judge_model`` is provided (frozen base model / older accepted
+    adapter), per-dimension comprehensive scores are produced and blended with
+    the executable reward via ``blend_comprehensive_reward``: P (full test
+    pass) always dominates; judge mass comes out of the shaped term only.
     """
     with tempfile.NamedTemporaryFile(
         mode="w", suffix=".py", delete=False, dir=str(task["task_dir"])
@@ -647,6 +803,40 @@ def evaluate_candidate(
         reward["self_eval_reward"] = 0.0
         reward["self_eval_raw_score"] = 0.0
 
+    # ── comprehensive frozen-judge scoring (base model / older adapters) ──
+    reward["model_dim_scores"] = {}
+    if args.model_judge_enabled and judge_model is not None and backend is not None:
+        evidence_parts = [f"tests passed: {bool(result.get('passed'))}"]
+        raw_details = result.get("details") or []
+        evidence_parts.append(
+            "failures: " + ("; ".join(str(d)[:200] for d in raw_details[:5]) or "none")
+        )
+        scores = _model_comprehensive_scores(
+            code, task, "\n".join(evidence_parts), judge_model, backend, args, device
+        )
+        if scores is not None:
+            reward["model_dim_scores"] = scores
+            valid = {dim: value for dim, value in scores.items() if value is not None}
+            shaped_mass = (
+                args.reward_syntax_weight
+                + args.reward_interface_weight
+                + args.reward_verifier_weight
+                + args.reward_brevity_weight
+                + args.reward_import_hygiene_weight
+            )
+            shaped_reward = (
+                args.reward_syntax_weight * reward["syntax_reward"]
+                + args.reward_interface_weight * reward["interface_reward"]
+                + args.reward_verifier_weight * reward["verifier_reward"]
+                + args.reward_brevity_weight * reward["brevity_reward"]
+                + args.reward_import_hygiene_weight * reward["import_hygiene_reward"]
+            ) / max(shaped_mass, 1e-8)
+            reward["total_reward"] = blend_comprehensive_reward(
+                pass_reward=reward["pass_reward"],
+                shaped_reward=shaped_reward,
+                model_dim_scores=valid,
+                dim_weights=judge_weights or {},
+            )
     return reward
 
 
@@ -1119,6 +1309,8 @@ def emit_step_record(
         all_fail=ctx.get("all_fail"),
         frontier_fraction=ctx.get("frontier_fraction"),
         breaker_trips=trips,
+        model_dim_scores=ctx.get("model_dim_scores"),
+        model_judge_enabled=ctx.get("model_judge_enabled"),
         **extra,
     )
     append_grpo_metric(metrics, record=record)
@@ -1350,6 +1542,50 @@ def main() -> int:
     model.to(device)
     if rank == 0:
         print(json.dumps({"stage": "model_on_device", "device": str(device)}, ensure_ascii=False))
+
+    # ── frozen comprehensive judge (base model / older accepted adapter) ──
+    # The judge is NEVER the current training policy: it is the base model,
+    # optionally with an OLDER accepted adapter (accepted checkpoints from the
+    # eval gate). Its reward weight stays zero until scripts/calibrate_model_judge.py
+    # confirms per-dimension agreement with executable anchors.
+    judge_model = None
+    judge_weights: dict[str, float] = {}
+    if args.model_judge_enabled:
+        judge_path = args.judge_model_path or args.model_name
+        judge_model = AutoModelForCausalLM.from_pretrained(
+            judge_path,
+            trust_remote_code=True,
+            low_cpu_mem_usage=True,
+            torch_dtype="auto",
+        )
+        if args.judge_adapter_path:
+            judge_model = PeftModel.from_pretrained(
+                judge_model, str(args.judge_adapter_path), is_trainable=False
+            )
+        judge_model.to(args.judge_device)
+        judge_model.eval()
+        if args.judge_calibration:
+            cal_path = Path(args.judge_calibration)
+            if cal_path.is_file():
+                calibration = json.loads(cal_path.read_text(encoding="utf-8"))
+                judge_weights = {
+                    str(dim): float(weight)
+                    for dim, weight in (calibration.get("enabled_dims") or {}).items()
+                    if float(weight) > 0.0
+                }
+        if rank == 0:
+            print(
+                json.dumps(
+                    {
+                        "stage": "comprehensive_judge_loaded",
+                        "judge_model_path": judge_path,
+                        "judge_adapter_path": args.judge_adapter_path,
+                        "judge_device": str(args.judge_device),
+                        "judge_weights": judge_weights,
+                    },
+                    ensure_ascii=False,
+                )
+            )
     text_forward_preflight = run_text_forward_preflight(
         model,
         preflight_batch,
@@ -1504,6 +1740,7 @@ def main() -> int:
         generation_tokens = int(old_token_counts.sum().item())
 
         # Score each solution with verifier-aware shaped rewards + optional self-evaluation.
+        judge_enabled = bool(args.model_judge_enabled and judge_model is not None)
         evaluations = [
             evaluate_candidate(
                 c,
@@ -1512,8 +1749,12 @@ def main() -> int:
                 args,
                 research_methods=research_methods,
                 model=active_model if args.self_evaluation_enabled else None,
-                backend=text_preprocessor if args.self_evaluation_enabled else None,
-                device=device if args.self_evaluation_enabled else None,
+                backend=text_preprocessor
+                if (args.self_evaluation_enabled or judge_enabled)
+                else None,
+                device=device if (args.self_evaluation_enabled or judge_enabled) else None,
+                judge_model=judge_model if judge_enabled else None,
+                judge_weights=judge_weights if judge_enabled else None,
             )
             for c in codes
         ]
@@ -1555,6 +1796,18 @@ def main() -> int:
             brevity_rewards,
         )
         task_state = curriculum.record(task["task_id"], float(mean_reward))
+
+        # Aggregate frozen-judge dimension scores across the group for metrics.
+        model_dim_means: dict[str, float] = {}
+        if judge_enabled:
+            for dim in MODEL_JUDGE_DIMENSIONS:
+                values = [
+                    float(entry["model_dim_scores"][dim])
+                    for entry in evaluations
+                    if isinstance(entry.get("model_dim_scores", {}).get(dim), int | float)
+                ]
+                if values:
+                    model_dim_means[dim] = sum(values) / len(values)
 
         # ── FV-GSPO: probe the group and route it (frontier router) ──
         pass_rate = float(pass_rewards.mean().item())
@@ -1609,6 +1862,8 @@ def main() -> int:
             "repair_queued": repair_queued,
             "all_fail": all_fail,
             "frontier_fraction": frontier_fraction,
+            "model_dim_scores": model_dim_means or None,
+            "model_judge_enabled": judge_enabled or None,
         }
 
         # ── Route the group ──
@@ -1981,6 +2236,11 @@ def main() -> int:
                     "repair_converted_jsonl": args.repair_converted_jsonl,
                     "coverage_json": args.coverage_json,
                     "stop_on_severe_breaker": args.stop_on_severe_breaker,
+                    "model_judge_enabled": bool(args.model_judge_enabled),
+                    "judge_model_path": args.judge_model_path,
+                    "judge_adapter_path": args.judge_adapter_path,
+                    "judge_device": str(args.judge_device),
+                    "judge_weights": judge_weights,
                     "research_methods": summarize_methods(research_methods),
                     "curriculum_state": curriculum.state,
                     "frontier_router_state": router.state,

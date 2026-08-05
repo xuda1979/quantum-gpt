@@ -14,6 +14,69 @@ from typing import Any
 
 import torch
 
+# ---------------------------------------------------------------------------
+# Comprehensive model-verifier score (frozen judge)
+#
+# The user requirement: the base model (and later, older accepted adapters)
+# act as a frozen evaluator giving per-dimension scores on samples. Executable
+# tests stay authoritative (P dominates); model dimensions are calibrated
+# against executable anchors and start at zero reward weight.
+# ---------------------------------------------------------------------------
+
+MODEL_JUDGE_DIMENSIONS = (
+    "correctness",
+    "runnability",
+    "result_correctness",
+    "efficiency",
+    "quality",
+)
+MAX_MODEL_JUDGE_WEIGHT = 0.05
+MODEL_JUDGE_CALIBRATION_AUC = 0.85
+MODEL_JUDGE_CALIBRATION_RHO = 0.6
+MODEL_JUDGE_CALIBRATION_MIN_N = 200
+
+
+def blend_comprehensive_reward(
+    *,
+    pass_reward: float,
+    shaped_reward: float,
+    model_dim_scores: Mapping[str, float],
+    dim_weights: Mapping[str, float],
+    truncation_penalty: float = 0.0,
+) -> float:
+    """P-dominant blend of executable and frozen-judge signals.
+
+    R = P + (1 - P) * [ (1 - W) * S + W * mean(w_d * M_d) ] - T
+
+    - P (full test pass) always dominates: failing candidates can never outrank
+      passing ones, and judge mass is subtracted from the shaped term, never
+      from P.
+    - W = min(sum(dim_weights), MAX_MODEL_JUDGE_WEIGHT); with all weights zero
+      (the default until calibration passes) R reduces to P + (1-P)*S.
+    - Model dimension scores are clamped to [0, 1].
+    """
+    bounded_pass = min(1.0, max(0.0, float(pass_reward)))
+    bounded_shaped = min(1.0, max(0.0, float(shaped_reward)))
+    weights = {
+        dim: min(MAX_MODEL_JUDGE_WEIGHT, max(0.0, float(dim_weights.get(dim, 0.0))))
+        for dim in MODEL_JUDGE_DIMENSIONS
+    }
+    total_w = min(sum(weights.values()), MAX_MODEL_JUDGE_WEIGHT)
+    model_term = 0.0
+    if total_w > 0.0:
+        mass = sum(weights.values())
+        model_term = sum(
+            (weights[dim] / mass) * min(1.0, max(0.0, float(model_dim_scores.get(dim, 0.0) or 0.0)))
+            for dim in MODEL_JUDGE_DIMENSIONS
+        )
+    penalty = min(1.0, max(0.0, float(truncation_penalty)))
+    reward = (
+        bounded_pass
+        + (1.0 - bounded_pass) * ((1.0 - total_w) * bounded_shaped + total_w * model_term)
+        - penalty
+    )
+    return min(1.0, max(0.0, reward))
+
 
 def _build_grpo_metric_record(
     *,
@@ -137,6 +200,8 @@ def build_grpo_step_record(
     all_fail: bool | None = None,
     frontier_fraction: float | None = None,
     breaker_trips: list[dict[str, Any]] | None = None,
+    model_dim_scores: dict[str, float] | None = None,
+    model_judge_enabled: bool | None = None,
 ) -> dict[str, float | int | bool | str]:
     record: dict[str, float | int | bool | str] = {
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),
@@ -200,6 +265,10 @@ def build_grpo_step_record(
         record["frontier_fraction"] = frontier_fraction
     if breaker_trips:
         record["breaker_trips"] = list(breaker_trips)
+    if model_dim_scores:
+        record["model_dim_scores"] = dict(model_dim_scores)
+    if model_judge_enabled is not None:
+        record["model_judge_enabled"] = bool(model_judge_enabled)
     return record
 
 
