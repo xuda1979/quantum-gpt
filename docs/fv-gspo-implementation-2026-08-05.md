@@ -389,7 +389,27 @@ Primary efficiency metric: Δheld-out pass@1 per generated NPU-token-hour.
 
 ---
 
-## 16. Research Alignment (verified 2026-08-05)
+## 16. External Review Response (2026-08-05)
+
+An external review of FV-GSPO produced 12 findings and a recommended
+"FV-QCode v2" loop. Verdict accepted: the implementation is ready for a
+small plumbing/numerical-validation probe, not yet a 500-step capability
+run. Immediate fixes landed (commits `fcc4aaa`, `474ce8b`):
+
+| Review finding | Resolution |
+|---|---|
+| #1 GSPO clipping mathematically inactive in the synchronous one-step implementation (pre-update ratio ≡ 1) | **Trust region (Design B)**: take the update, measure post-update ratio/clip-fraction/KL on the same rollouts, reject (restore params + optimizer state) or halve LR on violation. `sequence_ratio_stats()`; metrics `ratio_after_update`, `clip_fraction_after_update`, `seq_kl_after`, `old_policy_age`, `optimizer_substeps_per_rollout`. Design A (multi-group minibatch substeps with active clipping) deferred to the batching work |
+| #1b Sampling-policy consistency (temp 0.8/top_p 0.95 generation vs raw-model ratios) | Defaults now `temperature=1.0, top_p=1.0` (trainer + launcher); transformed-behavior ratios documented as a future refinement |
+| #2 FP16/BF16 would quantize the 3e-4/4e-4 boundaries away | Ratio/clip/KL path is FP32 (log-probs already `.float()`); synthetic boundary test at the exact log-ratios proves distinguishability; NPU-path test documented for launch |
+| #3 Dr.GRPO description (LOO = (G/(G-1))·(R_i − R̄) scale 8/7) | Documented in §5 note; length-neutral GSPO (LUSPO-style) kept as an ablation |
+| #5 Comprehensive linear reward contradicts executable-authoritative | **Tiered hierarchical reward** (`--reward-mode tiered`, recommended): `R = (1−P)·min(0.95, Q_progress) + P·(1 + α·Q_eff + γ·Q_qual)` — hard tier separation, learnable failures, passer differentiation; comprehensive retained for ablation G |
+| #10 Candidates written into task_dir (could read tests.py/reference) | Candidates now execute from an isolated temp dir; container-level isolation remains a deployment requirement |
+
+**Deferred (tracked):** #3 length-neutral GSPO ablation; #4 posterior Beta router with hysteresis + learning-progress score; #8 `invalid_or_noisy` quarantine activation (launch blocker for quantum tasks per review); #6 typed quantum-semantic verifiers (state/process fidelity, distribution distance) replacing the generic verifier fraction; #7 parameterized family-split curriculum (>13 tasks); #9 repair-lane hardening (minimal patches, AST dedup, conversion-latency breaker); #11 multi-group batching (8–32 groups, minibatch substeps — also enables Design A clipping), adaptive mixture, skill-graph neighbors; #12 pre-training entropy baselines, synchronous eval gates with rollback + anchor resets, 3-seed runs.
+
+**Ablation sequence (review):** A base+retrieval+repair → B repair SFT only → C router+sequence RLOO no clipping → D posterior router → E GSPO with active minibatch clipping → F length-neutral GSPO → G tiered vs comprehensive reward → H typed semantic verifier → I multi-framework/version curriculum → J adaptive KL + anchor reset. Each stage: same token budget, ≥3 seeds, metric = Δheld-out pass@1 per generated NPU-token-hour + semantic/version fidelity.
+
+## 17. Research Alignment (verified 2026-08-05)
 
 Every component maps to its cited paper; the two deliberate divergences are documented:
 
@@ -403,7 +423,7 @@ Every component maps to its cited paper; the two deliberate divergences are docu
 | Sequence-level (not token-level) loss aggregation | GSPO (sequence ratios stabilize MoE expert routing) | Deliberate divergence from DAPO's token-level aggregation, kept as a documented ablation (`--loss-mode grpo` is the legacy baseline; token-level aggregation is a future ablation) |
 | KL control + anchor resets | ProRL (prolonged RL benefits from KL control and periodic reference reset) | Adaptive KL controller; anchor resets deferred to the cluster-side eval gate |
 
-## 17. Change Log
+## 18. Change Log
 
 **2026-08-05 — full implementation of FV-GSPO** (commits `95d8088` → `7dec163`, branch `codex/asi2-qwen36-distillation-lora`):
 
