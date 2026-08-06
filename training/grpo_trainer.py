@@ -5,7 +5,7 @@ Samples N solutions per prompt, scores them with test harnesses,
 and updates the policy using relative advantage within each group.
 
 Usage:
-    torchrun --nproc_per_node=2 training/grpo_trainer.py \
+    torchrun --nproc_per_node=8 training/grpo_trainer.py \
         --model-name models/Qwen2.5-1.5B-Instruct \
         --tasks-dir evals/tasks \
         --output-dir outputs/grpo-v1 \
@@ -81,6 +81,9 @@ from training.qwen_sft_peft import (  # noqa: E402
     resolve_lora_target_modules,
 )
 from training.research_plugins import load_research_methods, summarize_methods  # noqa: E402
+from training.teacher_free_repair import (  # noqa: E402
+    teacher_free_self_repair,
+)
 from training.text_preprocessor_backend import (  # noqa: E402
     build_supervised_text_example,
     pad_supervised_text_batch,
@@ -293,6 +296,14 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--mix-targeted", type=float, default=0.5)
     p.add_argument("--mix-neighbor", type=float, default=0.25)
     p.add_argument("--mix-replay", type=float, default=0.25)
+    p.add_argument(
+        "--adaptive-mixture",
+        action="store_true",
+        default=False,
+        help="Adapt mixture masses to router state (review 2026-08-05 #11): "
+        "targeted mass rises with frontier yield (0.25-0.75), replay mass "
+        "shrinks when mastered tasks repeatedly produce flat groups.",
+    )
     p.add_argument("--neighbor-window", type=int, default=10)
     p.add_argument(
         "--repair-queue-path",
@@ -459,6 +470,18 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--reward-judge-mass", type=float, default=0.25)
     p.add_argument("--tiered-alpha", type=float, default=0.10)
     p.add_argument("--tiered-gamma", type=float, default=0.10)
+    # ── teacher-free self-repair rollout (Teacher-Free FV-GSPO plan §3/§8) ──
+    # Failed candidates + real harness error logs feed a new rollout round using
+    # the policy model itself (no reference/teacher model). 0 disables.
+    p.add_argument(
+        "--self-repair-rounds",
+        type=int,
+        default=0,
+        help="Teacher-free self-repair rounds per failed candidate (plan §8: use "
+        "2). 0 disables. When >0, a failing code is re-rolled by the policy with "
+        "its exact harness errors appended and accepted only if it passes the "
+        "hidden tests, else the original failed sample is retained for GRPO.",
+    )
     # ── checkpoint interval (periodic adapter save to disk) ──
     p.add_argument(
         "--checkpoint-interval-seconds",
@@ -975,6 +998,101 @@ def evaluate_candidate(
                 judge_mass=args.reward_judge_mass,
             )
     return reward
+
+
+def _run_harness_for_code(
+    test_harness,
+    code: str,
+) -> dict[str, Any]:
+    """Run a candidate code string against the hidden-test harness in isolation.
+
+    Mirrors the isolation mechanics of ``evaluate_candidate`` (review 2026-08-05
+    #10): the candidate is written into a throwaway temp dir, never into the
+    task directory that also holds tests.py / the reference solution. Returns a
+    ``{passed: bool, details: list[str]}`` result dict for teacher-free
+    self-repair verification.
+    """
+    with tempfile.TemporaryDirectory(prefix="tf_repair_candidate_") as candidate_dir:
+        candidate_path = Path(candidate_dir) / "candidate.py"
+        candidate_path.write_text(code, encoding="utf-8")
+        try:
+            result = test_harness.run_tests(str(candidate_path))
+            if not isinstance(result, dict):
+                result = {
+                    "passed": False,
+                    "details": [f"Unexpected harness return type: {type(result).__name__}"],
+                }
+        except Exception as exc:  # noqa: BLE001 - a repair op must not kill the step
+            result = {
+                "passed": False,
+                "details": [f"{type(exc).__name__}: {exc}"],
+            }
+    passed = bool(result.get("passed"))
+    details = [str(d) for d in (result.get("details") or [])] if isinstance(result, dict) else []
+    return {"passed": passed, "details": details}
+
+
+def _self_repair_failing_candidate(
+    *,
+    model,
+    text_preprocessor,
+    device: Any,
+    test_harness,
+    task: dict,
+    code: str,
+    task_prompt: str,
+    result: dict[str, Any],
+    args,
+    max_rounds: int,
+    temperature: float | None = None,
+) -> dict[str, Any]:
+    """Teacher-free self-repair rollout for a single failing candidate.
+
+    Implements the plan's 无教师自修复 (no teacher model): the failing code plus
+    its real harness error logs are fed back to the *policy model itself* to
+    produce a repair, re-scored against the hidden tests, up to ``max_rounds``
+    rounds (plan §8 recommends 2). Only an independently-passing repair replaces
+    the original; otherwise the failed sample is retained so the group's GRPO
+    relative-advantage stays well-defined on the behavior samples.
+
+    Returns the module's result dict (see teacher_free_repair.teacher_free_self_repair).
+    """
+    backend = text_preprocessor
+
+    def _repair(prompt_text: str) -> str:
+        text = render_generation_prompt(backend.render_backend, prompt_text)
+        inputs = move_batch_to_device(backend.text_backend(text, return_tensors="pt"), device)
+        effective_temp = temperature if temperature is not None else args.temperature
+        with torch.no_grad():
+            outputs = model.generate(
+                **inputs,
+                max_new_tokens=args.max_new_tokens,
+                temperature=effective_temp,
+                top_p=args.top_p,
+                do_sample=True,
+            )
+        gen_ids = outputs.sequences[0, inputs["input_ids"].shape[1] :]
+        response = backend.text_backend.decode(gen_ids, skip_special_tokens=True)
+        return extract_code(response)
+
+    meta = task.get("meta", {})
+    interface_lines = task.get("required_interface") or (
+        summarize_candidate_interface(task["task_dir"] / meta["candidate_file"])
+        if meta.get("candidate_file")
+        else []
+    )
+    behavior_hints = task.get("behavior_hints") or extract_behavior_hints(task["tests_py"])
+
+    return teacher_free_self_repair(
+        task_prompt=task_prompt,
+        failing_code=code,
+        correctness=result,
+        repair=_repair,
+        verify=lambda c: _run_harness_for_code(test_harness, c),
+        max_rounds=max_rounds,
+        interface_lines=interface_lines or None,
+        behavior_hints=behavior_hints or None,
+    )
 
 
 def render_generation_prompt(render_backend: Any, prompt: str) -> str:
@@ -1858,6 +1976,7 @@ def main() -> int:
             mix_replay=args.mix_replay,
             recent_frontier=recent_frontier,
             neighbor_window=args.neighbor_window,
+            adaptive=args.adaptive_mixture,
         )
         for index, task in enumerate(tasks):
             if weights[index] <= 0.0:
@@ -1916,8 +2035,16 @@ def main() -> int:
 
         # Score each solution with verifier-aware shaped rewards + optional self-evaluation.
         judge_enabled = bool(args.model_judge_enabled and judge_model is not None)
-        evaluations = [
-            evaluate_candidate(
+        evaluations = []
+        self_repair_summary: dict[str, Any] = {
+            "enabled": int(args.self_repair_rounds > 0),
+            "max_rounds": args.self_repair_rounds,
+            "candidates_repaired": 0,
+            "repairs_passed": 0,
+            "total_repair_rounds": 0,
+        }
+        for c in codes:
+            entry = evaluate_candidate(
                 c,
                 test_harness,
                 task,
@@ -1935,8 +2062,63 @@ def main() -> int:
                 ),
                 step=step,
             )
-            for c in codes
-        ]
+            # Teacher-free self-repair (plan §8): a failing candidate is re-rolled
+            # by the policy itself with its exact harness errors appended, up to
+            # `--self-repair-rounds` rounds. Only an independently-passing repair
+            # replaces the original behavior sample, so the GRPO relative
+            # advantage stays well-defined on the policy's own outputs.
+            if args.self_repair_rounds > 0 and float(entry.get("pass_reward", 0.0)) <= 0.0:
+                repair_ctx = _self_repair_failing_candidate(
+                    model=active_model,
+                    text_preprocessor=text_preprocessor,
+                    device=device,
+                    test_harness=test_harness,
+                    task=task,
+                    code=c,
+                    task_prompt=prompt,
+                    result={
+                        "passed": bool(entry.get("pass_reward", 0.0) > 0.0),
+                        "details": entry.get("details", []),
+                    },
+                    args=args,
+                    max_rounds=args.self_repair_rounds,
+                    temperature=effective_temperature,
+                )
+                self_repair_summary["total_repair_rounds"] += len(repair_ctx.get("attempted", []))
+                if repair_ctx.get("passed"):
+                    # Accept the passing repair: suffuse its rewards into the entry.
+                    repaired_code = repair_ctx["code"]
+                    repaired_entry = evaluate_candidate(
+                        repaired_code,
+                        test_harness,
+                        task,
+                        args,
+                        research_methods=research_methods,
+                        model=active_model if args.self_evaluation_enabled else None,
+                        backend=text_preprocessor
+                        if (args.self_evaluation_enabled or judge_enabled)
+                        else None,
+                        device=device if (args.self_evaluation_enabled or judge_enabled) else None,
+                        judge_model=judge_model if judge_enabled else None,
+                        judge_weights=judge_weights if judge_enabled else None,
+                        judge_diagnostics_path=None,
+                        step=step,
+                    )
+                    self_repair_summary["repairs_passed"] += 1
+                    # Reuse the original code for logprob/consistency tracking but
+                    # adopt the repair's (higher) executable rewards so the policy
+                    # gets credit for the improvement.
+                    entry["pass_reward"] = repaired_entry.get("pass_reward", entry["pass_reward"])
+                    entry["total_reward"] = repaired_entry.get(
+                        "total_reward", entry["total_reward"]
+                    )
+                    entry["self_repair_passed"] = True
+                    entry["self_repair_round"] = repair_ctx.get("best_round", 0)
+                else:
+                    entry["self_repair_passed"] = False
+                    entry["self_repair_best_round"] = repair_ctx.get("best_round", 0)
+                self_repair_summary["candidates_repaired"] += 1
+            evaluations.append(entry)
         # Incorporate self-eval reward into total
         for entry in evaluations:
             entry["total_reward"] = entry.get("total_reward", entry.get("reward", 0.0))
@@ -2053,6 +2235,7 @@ def main() -> int:
             "posterior_upper": probe.get("posterior_upper"),
             "flaky": bool(probe.get("flaky")),
             "group_size": effective_g,
+            "teacher_free_self_repair": self_repair_summary,
         }
 
         # ── Route the group ──
