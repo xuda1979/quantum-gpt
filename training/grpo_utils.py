@@ -6,7 +6,7 @@ import math
 import re
 import sys
 from collections import Counter
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -865,6 +865,132 @@ def leave_one_out_advantages(rewards: torch.Tensor) -> torch.Tensor:
     return rewards - other_mean
 
 
+# ---------------------------------------------------------------------------
+# Teacher-Free FV-GSPO helpers (Teacher-Free-FV-GSPO-Final-Plan-ZH.docx)
+#
+# These three helpers are the `training/grpo_utils.py` deliverables listed in
+# the plan's code-change checklist (table 30): tiered_teacher_free_reward,
+# cluster_adjusted_advantages and teacher_free_route. They intentionally
+# implement the *intent* of the plan — a teacher-free (no reference/teacher
+# model) pass-dominant closed loop — while keeping behaviours numerically safe
+# and testable. See the review notes in docs/grpo-teacher-free-review-2026-08-08.md
+# for the reasoning behind the (small) deviations from the literal plan text.
+# ---------------------------------------------------------------------------
+
+
+def tiered_teacher_free_reward(
+    *,
+    passed_flags: Sequence[bool],
+    syntax_scores: Sequence[float],
+    interface_scores: Sequence[float],
+    semantic_scores: Sequence[float],
+    import_scores: Sequence[float],
+    efficiency_scores: Sequence[float] | None = None,
+    diversity_scores: Sequence[float] | None = None,
+    judge_scores: Sequence[float] | None = None,
+    judge_calibrated: bool = False,
+) -> list[float]:
+    """Pass-dominant (tiered) per-candidate reward for teacher-free FV-GSPO.
+
+    Implements the plan's §4.3 / table 16 "pass-dominant 分层奖励" with the hard
+    invariant that *every* passing candidate outranks *every* failing candidate:
+
+        pass   : R_i = 1.00 + 0.03*E_i + 0.02*D_i     (>= 1.00)
+        failed : R_i = min(0.95, 0.10*S_i + 0.10*I_i + 0.65*V_i + 0.10*H_i + 0.05*J_i)
+
+    The judge (J) is given zero weight until it is calibrated; when uncalibrated
+    the semantic-progress weight is raised to 0.70 exactly as the plan requires
+    so the all-failed case still carries a learnable partial-progress signal.
+
+    E and D only ever differentiate candidates that already fully pass; a failing
+    candidate can never receive more than 0.95, which is strictly below the 1.00
+    floor of any passing candidate.
+    """
+    n = len(passed_flags)
+    eff_semantic_w = 0.70 if not judge_calibrated else 0.65
+    eff_judge_w = 0.00 if not judge_calibrated else 0.05
+    rewards: list[float] = []
+    for i in range(n):
+        if passed_flags[i]:
+            eff = float(efficiency_scores[i]) if efficiency_scores else 0.0
+            div = float(diversity_scores[i]) if diversity_scores else 0.0
+            rewards.append(1.00 + 0.03 * _clamp01(eff) + 0.02 * _clamp01(div))
+        else:
+            s = _clamp01(float(syntax_scores[i]))
+            it = _clamp01(float(interface_scores[i]))
+            v = _clamp01(float(semantic_scores[i]))
+            h = _clamp01(float(import_scores[i]))
+            j = _clamp01(float(judge_scores[i])) if (judge_scores and judge_calibrated) else 0.0
+            raw = 0.10 * s + 0.10 * it + eff_semantic_w * v + 0.10 * h + eff_judge_w * j
+            rewards.append(min(0.95, raw))
+    return rewards
+
+
+def cluster_adjusted_advantages(
+    advantages: Sequence[float],
+    cluster_ids: Sequence[Any],
+) -> list[float]:
+    """Divide per-candidate LOO advantages by their structural cluster size.
+
+    Plan §6 / table 22: each candidate's advantage is scaled by the reciprocal of
+    the size of its structure cluster (AST + circuit signature) so that repeated /
+    near-duplicate code in the same cluster is down-weighted and diversity is
+    protected. The LOO advantages themselves must be computed first (see
+    `leave_one_out_advantages`); this helper only applies the cluster penalty.
+
+    `advantages` and `cluster_ids` must have equal length and be positionally
+    aligned (index i = candidate i). Cluster sizes are counted within the given
+    batch of `cluster_ids`.
+    """
+    if len(advantages) != len(cluster_ids):
+        raise ValueError("advantages and cluster_ids must be aligned (same length)")
+    if not advantages:
+        return []
+    sizes: dict[Any, int] = Counter(cluster_ids)
+    out: list[float] = []
+    for adv, cid in zip(advantages, cluster_ids, strict=True):
+        size = max(1, int(sizes.get(cid, 1)))
+        out.append(float(adv) / float(size))
+    return out
+
+
+def teacher_free_route(
+    *,
+    pass_count: int,
+    group_size: int,
+    reward_range: float,
+    max_semantic_progress: float,
+    consecutive_mastered: int = 0,
+    unstable: bool = False,
+) -> str:
+    """Select the teacher-free route for a task group (plan §5.1 / table 18).
+
+    Routing rules (all failing candidates share ... ; only the group-level
+    summary statistics are required here):
+
+      frontier_rl       : some (1 .. G-1) candidates fully pass -> all go to LOO/GSPO.
+      partial_repair_rl : none pass but there is meaningful progress
+                          (reward_range>=0.10 OR max(V)>=0.30) -> shaped-RL all.
+      mastered_replay   : two consecutive 8/8 groups -> skip (kept in replay pool).
+      self_repair       : none pass AND reward_range<0.10 AND max(V)<0.30 -> no RL
+                          update; emit an execution-feedback repair prompt instead.
+      quarantine        : unstable execution / backend errors -> isolate, no train.
+    """
+    if unstable:
+        return "quarantine"
+    if consecutive_mastered >= 2 and pass_count == group_size:
+        return "mastered_replay"
+    if pass_count >= 1:
+        return "frontier_rl"
+    if reward_range >= 0.10 or max_semantic_progress >= 0.30:
+        return "partial_repair_rl"
+    return "self_repair"
+
+
+def _clamp01(x: float) -> float:
+    return min(1.0, max(0.0, float(x)))
+
+
 def stable_gspo_loss(
     log_probs: torch.Tensor,
     old_log_probs: torch.Tensor,
@@ -1323,6 +1449,16 @@ class FrontierRouter:
         learnable = [s for s in probed if s["route"] in RL_ROUTES]
         return len(learnable) / len(probed)
 
+    def flat_mastered_share(self) -> float:
+        """Share of probed tasks currently routed mastered_replay
+        (review #11: reduce replay mass when mastered tasks repeatedly produce
+        flat groups)."""
+        probed = [s for s in self.state.values() if float(s["probes"]) > 0.0]
+        if not probed:
+            return 0.0
+        mastered = [s for s in probed if s["route"] == MASTERED_REPLAY]
+        return len(mastered) / len(probed)
+
 
 def build_mixture_weights(
     router: FrontierRouter,
@@ -1334,8 +1470,15 @@ def build_mixture_weights(
     mix_replay: float = 0.25,
     recent_frontier: list[str] | None = None,
     neighbor_window: int = 10,
+    adaptive: bool = False,
 ) -> list[float]:
     """Sample weights that mix 50% targeted, 25% neighboring variants, 25% replay.
+
+    With ``adaptive=True`` (review 2026-08-05 #11) the masses respond to router
+    state: targeted mass rises with frontier yield (range 0.25-0.75), replay
+    mass shrinks when mastered tasks repeatedly produce flat groups, and the
+    mixture is renormalized. The fixed 50/25/25 prior is the starting point;
+    adaptation never empties a pool.
 
     - targeted pool: frontier_rl / partial_repair_rl routes plus never-probed tasks
       (probing is the top priority, so fresh tasks are always explorable);
@@ -1386,9 +1529,26 @@ def build_mixture_weights(
         for index, per in _uniform(indices, mass).items():
             weights_map[index] = weights_map.get(index, 0.0) + per
 
-    _accumulate(mix_targeted, targeted)
-    _accumulate(mix_neighbor, neighbor)
-    _accumulate(mix_replay, replay)
+    effective_targeted = float(mix_targeted)
+    effective_neighbor = float(mix_neighbor)
+    effective_replay = float(mix_replay)
+    if adaptive:
+        # Frontier yield up -> more targeted (range 0.25..0.75).
+        frontier = router.frontier_fraction()
+        effective_targeted = 0.25 + 0.5 * frontier
+        # Flat mastered groups -> less replay (floor at 0.05).
+        effective_replay = max(0.05, float(mix_replay) * (1.0 - router.flat_mastered_share()))
+        # Keep the neighbor share relative to the (shrunken) replay share.
+        remaining = 1.0 - effective_targeted - effective_replay
+        effective_neighbor = max(0.05, remaining)
+        scale = 1.0 / (effective_targeted + effective_neighbor + effective_replay)
+        effective_targeted *= scale
+        effective_neighbor *= scale
+        effective_replay *= scale
+
+    _accumulate(effective_targeted, targeted)
+    _accumulate(effective_neighbor, neighbor)
+    _accumulate(effective_replay, replay)
     total = sum(weights_map.values())
     if total <= 0.0:
         per = 1.0 / len(tasks)
