@@ -1,0 +1,112 @@
+{
+    "name": "qwen36_35b_a3b_teacher_free_fv_gspo_asi3",
+    "environment": "ASI3",
+    "remote_root": "/root/work/quantum-gpt",
+    "model_name": "models/Qwen3.6-35B-A3B",
+    "benchmark_file": "evals/benchmarks/quantum_grpo_training_v1.txt",
+    "algorithm": "fv_gspo",
+    "phase": "rl_teacher_free_fv_gspo_v1",
+    "description": "Teacher-Free Frontier-Verifier GSPO (FV-GSPO) for Qwen3.6-35B-A3B on ASI3. Teacher-free self-repair rollout (real error logs feed policy-only re-rolls up to 2 rounds), pass-dominant hierarchical reward (any pass > any fail; judge weight 0 until calibrated, then 0.05), cluster-adjusted LOO advantages, K=4 groups/update, 2 optimizer epochs, frozen policy_old exact behavior logprob, and automatic checkpoint gate (accept/reject/rotate/rollback). judge always lags the accepted anchor by one version.",
+    "training": {
+        "group_size": 8,
+        "grpo_steps": 500,
+        "lr": 2e-06,
+        "kl_coeff": 0.005,
+        "temperature": 0.8,
+        "adaptive_temp_step": 0.15,
+        "adaptive_temp_max": 2.0,
+        "top_p": 0.95,
+        "max_new_tokens": 1024,
+        "max_seq_length": 2048,
+        "reward_pass_weight": 1.0,
+        "reward_syntax_weight": 0.1,
+        "reward_interface_weight": 0.1,
+        "reward_verifier_weight": 0.7,
+        "reward_brevity_weight": 0.0,
+        "reward_import_hygiene_weight": 0.1,
+        "reward_self_eval_weight": 0.0,
+        "reward_detail_budget_cap": 1024,
+        "lora_rank": 32,
+        "lora_alpha": 64,
+        "target_modules": [
+            "q_proj",
+            "v_proj",
+            "o_proj",
+            "gate_proj",
+            "up_proj",
+            "down_proj"
+        ],
+        "freeze_param_regex": [
+            ".*\\.(mlp\\.gate|router)\\..*"
+        ],
+        "checkpoint_interval_seconds": 7200,
+        "domain_filter": [
+            "quantum"
+        ],
+        "min_reward_std": 0.05,
+        "curriculum_ema_decay": 0.9,
+        "curriculum_min_weight": 0.05
+    },
+    "fv_gspo": {
+        "loss_mode": "gspo",
+        "gspo_clip_low": 0.0003,
+        "gspo_clip_high": 0.0004,
+        "numerical_log_ratio_clip": 8.0,
+        "advantage_mode": "loo",
+        "loo_advantage_scale": "none",
+        "frontier_threshold": 0.1,
+        "mastered_threshold": 0.95,
+        "mix_targeted": 0.5,
+        "mix_neighbor": 0.25,
+        "mix_replay": 0.25,
+        "neighbor_window": 10,
+        "repair_queue_path": "outputs/grpo-27b-selfeval-<run>/repair_queue.jsonl",
+        "stop_on_severe_breaker": true,
+        "circuit_breaker_window": 10,
+        "self_evaluation": {
+            "enabled": false,
+            "judge_calibrated": false,
+            "judge_max_weight_calibrated": 0.05,
+            "note": "frozen judge contributes 0 reward until AUC>=0.85 calibration; V weight 0.70 while off"
+        },
+        "held_out": {
+            "training_pool": "evals/benchmarks/quantum_grpo_training_v1.txt",
+            "eval_pools": [
+                "evals/benchmarks/quantum_generalization_holdout_v1.txt",
+                "evals/benchmarks/quantum_generalization_holdout_v2_hard.txt",
+                "evals/benchmarks/quantum_generalization_holdout_v3_multi_framework.txt"
+            ],
+            "note": "held-out eval tasks are strictly outside training: never prompts, targets, tests, or paraphrases"
+        },
+        "teacher_free": {
+            "enabled": true,
+            "self_repair_rounds": 2,
+            "self_repair_group_size": 8,
+            "route_teacher_free": true,
+            "pass_dominant_reward": true,
+            "cluster_adjusted_advantages": true,
+            "k_groups_per_update": 4,
+            "optimizer_epochs": 2,
+            "checkpoint_gate": true,
+            "judge_version_lag": 1,
+            "note": "teacher-free: policy itself; no reference/teacher model; real error logs drive re-rolls"
+        }
+    },
+    "checkpoint_sync": {
+        "nas_root": "/root/work/filestorage/grpo_checkpoints/qwen36_35b_teacher_free",
+        "interval_seconds": 7200,
+        "retain_latest": 5
+    },
+    "preflight_gates": [
+        "local tests pass",
+        "ASI3 login verified",
+        "ASI3 task-submission preflight passes",
+        "remote root exists",
+        "repo code synced to remote root",
+        "model path exists on ASI3",
+        "torch, torch_npu, transformers, peft, and accelerate import or the run is blocked",
+        "benchmark file exists on ASI3",
+        "NAS checkpoint root writable",
+        "short probe shows healthy frontier yield before a long run"
+    ]
+}
