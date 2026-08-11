@@ -142,6 +142,7 @@ if [[ "$SUBMIT" == "1" ]]; then
     --resource-group "$RESOURCE_GROUP"
     --instance-count 1
     --accelerator-cards "$NPU_COUNT"
+    --cpu-cores "$CPU_CORES"
     --memory-gb "$MEMORY_GB"
     --remote-root "$REMOTE_ROOT"
     --launcher-script "$ROOT_DIR/scripts/submit_asi2_grpo_27b_selfeval_task.sh"
