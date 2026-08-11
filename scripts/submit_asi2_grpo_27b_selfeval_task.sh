@@ -40,7 +40,7 @@ RUN_REWARD_MODE="${ASI2_GRPO_REWARD_MODE:-p_dominant}"
 DRY_RUN="1"
 SUBMIT="0"
 
-for arg in "${@}"; do
+for arg in "$@"; do
   case "$arg" in
     --submit) SUBMIT="1" ;;
     --dry-run) DRY_RUN="1" ;;
@@ -101,9 +101,25 @@ REMOTEEOF
 
 # ---- Build launch spec via Python ----
 python3 << PYEOF
-import json, shlex, sys
+import base64, json, shlex, sys
 
 remote_script = open("/tmp/asi2_grpo_27b_selfeval_remote.sh").read()
+
+# Single-line python bootstrap (proven format, Jun 2026 qwen36-ai-sft1): the
+# platform executes codeContents as ONE entry; multi-line codeContents (one
+# entry per script line) fails at boot with 00:00:00.
+payload_b64 = base64.b64encode(remote_script.encode("utf-8")).decode("ascii")
+execution_command = (
+    "python3 -c "
+    + shlex.quote(
+        "b=__import__('base64');"
+        "p=__import__('pathlib').Path('/tmp/asi2_grpo_27b_selfeval_full.sh');"
+        f"p.write_bytes(b.b64decode('{payload_b64}'));"
+        "p.chmod(0o700);"
+        "s=__import__('subprocess');"
+        "raise SystemExit(s.run(['bash',str(p)]).returncode)"
+    )
+)
 
 launch_spec = {
     "env_name": "$ENV_NAME",
@@ -118,8 +134,8 @@ launch_spec = {
     "nas_checkpoint_root": "$NAS_CHECKPOINT_ROOT",
     "checkpoint_interval_hours": 2,
     "remote_script_body": remote_script,
-    "remote_command": remote_script,
-    "execution_command": remote_script,
+    "remote_command": execution_command,
+    "execution_command": execution_command,
     "description": "FV-GSPO training for Qwen3.6-27B quantum coding: frontier-router GRPO on learnable mixed-outcome groups, leave-one-out advantages, GSPO sequence clipping (3e-4/4e-4), all-fail tasks routed to repair queue, 50/25/25 targeted/neighbor/replay mix, circuit breakers. Executable tests authoritative (self-judge weight 0).",
     "embed_patches": False,
 }
