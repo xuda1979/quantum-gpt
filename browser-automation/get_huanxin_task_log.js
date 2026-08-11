@@ -36,6 +36,17 @@ async function main() {
   const context = launch.context;
   let page = context.pages()[0] || (await context.newPage());
   page.setDefaultTimeout(30000);
+  const networkEvents = [];
+  page.on('response', async (response) => {
+    const request = response.request();
+    const url = response.url();
+    if (!/\/web\//.test(url) || !['POST', 'PUT', 'PATCH', 'DELETE'].includes(request.method())) {
+      return;
+    }
+    let responsePreview = '';
+    try { responsePreview = (await response.text()).slice(0, 4000); } catch (error) { responsePreview = '<<unavailable>>'; }
+    networkEvents.push({ method: request.method(), url, status: response.status(), requestPreview: String(request.postData() || '').slice(0, 2000), responsePreview });
+  });
 
   try {
     console.log("Navigating to target URL:", TARGET_URL);
@@ -110,17 +121,28 @@ async function main() {
       await btn.click({ timeout: 15000 });
       await page.waitForTimeout(5000);
     } else {
-      // Let's try clicking the "失败" text itself or the task name again
-      const failedTag = row.locator('span').filter({ hasText: '失败' }).first();
-      console.log("Clicking the failed tag...");
-      await failedTag.click({ timeout: 10000 }).catch(() => {});
-      await page.waitForTimeout(5000);
+      // Click the task name cell first (opens the detail modal)
+      const nameCell = row.locator('span.ellipsis-text.hover.isModal').first();
+      const nameVisible = await nameCell.isVisible().catch(() => false);
+      if (nameVisible) {
+        console.log("Clicking task name cell (detail modal)...");
+        await nameCell.click({ timeout: 10000 });
+        await page.waitForTimeout(6000);
+      } else {
+        // Fallback: click the "失败" tag
+        const failedTag = row.locator('span').filter({ hasText: '失败' }).first();
+        console.log("Clicking the failed tag...");
+        await failedTag.click({ timeout: 10000 }).catch(() => {});
+        await page.waitForTimeout(5000);
+      }
     }
 
     console.log("Checking if a task log or details modal/drawer/page has been loaded...");
     const popupText = await page.locator('body').innerText().catch(() => '');
     console.log("Page layout preview after clicks (first 6000 chars):");
     console.log(popupText.slice(0, 6000));
+    console.log("Page layout preview after clicks (LAST 6000 chars):");
+    console.log(popupText.slice(-6000));
 
     // If there is any network request captured for logs, print them
     console.log("Captured network transactions during clicks:");

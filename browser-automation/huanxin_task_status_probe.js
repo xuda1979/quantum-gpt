@@ -7,8 +7,8 @@ const {
   TRAIN_DEV_URL,
   bridgePageViaSafariSso,
   classifyUrl,
-  isOnTargetAppRoute,
 } = require('./huanxin_repair_profile_via_safari_sso');
+const { isOnTargetAppRoute } = require('./huanxin_submit_task_run');
 
 const BASE_URL = TRAIN_DEV_URL.split('#')[0];
 const DEFAULT_ASI1_URL =
