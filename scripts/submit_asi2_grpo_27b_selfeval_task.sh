@@ -32,6 +32,7 @@ RUN_STEPS="${ASI2_GRPO_STEPS:-500}"
 RUN_LR="${ASI2_GRPO_LR:-2e-6}"
 RUN_KL_COEFF="${ASI2_GRPO_KL_COEFF:-0.005}"
 RUN_CHECKPOINT_SECONDS="${ASI2_GRPO_CHECKPOINT_SECONDS:-7200}"
+RUN_NPU_COUNT="${ASI2_GRPO_NPU_COUNT:-8}"
 RUN_LOSS_MODE="${ASI2_GRPO_LOSS_MODE:-gspo}"
 RUN_GSPO_CLIP_LOW="${ASI2_GRPO_GSPO_CLIP_LOW:-0.0003}"
 RUN_GSPO_CLIP_HIGH="${ASI2_GRPO_GSPO_CLIP_HIGH:-0.0004}"
@@ -55,9 +56,13 @@ done
 cat > /tmp/asi2_grpo_27b_selfeval_remote.sh << REMOTEEOF
 #!/usr/bin/env bash
 set -euo pipefail
-echo "__ASI2_GRPO_27B_SELFEVAL_START__"
 export TZ=Asia/Shanghai
-date
+
+# ---- bootstrap logging to shared NAS (readable via the dev-env daemon) ----
+mkdir -p /root/work/software/quantum-gpt/logs/grpo_27b_selfeval
+BOOTSTRAP_LOG="/root/work/software/quantum-gpt/logs/grpo_27b_selfeval/bootstrap_\$(date +%Y%m%dT%H%M%S).log"
+exec >> "\$BOOTSTRAP_LOG" 2>&1
+echo "__ASI2_GRPO_27B_SELFEVAL_START__ \$(date)"
 
 # Verify model exists
 if [[ ! -d "/root/work/filestorage/Qwen3.6-27B" ]]; then
@@ -82,20 +87,49 @@ export GRPO_STEPS="$RUN_STEPS"
 export LR="$RUN_LR"
 export KL_COEFF="$RUN_KL_COEFF"
 export CHECKPOINT_INTERVAL_SECONDS="$RUN_CHECKPOINT_SECONDS"
+export NUM_NPU="$RUN_NPU_COUNT"
 export LOSS_MODE="$RUN_LOSS_MODE"
 export GSPO_CLIP_LOW="$RUN_GSPO_CLIP_LOW"
 export GSPO_CLIP_HIGH="$RUN_GSPO_CLIP_HIGH"
 export REWARD_MODE="$RUN_REWARD_MODE"
 
-# Launch FV-GSPO training
+# ---- install training deps ----
+# Task-run containers boot from the bare image: peft/accelerate are NOT
+# preinstalled (dev env has them, task containers do not).
+echo "Installing training deps..."
+# fast path: network install if the task container has internet
+pip install --no-cache-dir -q peft accelerate 2>&1 | tail -3 || true
+if ! python3 -c "import peft, accelerate" 2>/dev/null; then
+  echo "network install failed; using offline wheelhouse..."
+  python3 -m pip install --no-cache-dir --no-input --no-index --find-links /root/work/software/quantum-gpt/tools/wheels peft==0.19.1 accelerate==1.13.0 2>&1 | tail -6 || true
+fi
+python3 -c "import peft, accelerate, torch, transformers; print('PYDEPS_OK peft', peft.__version__, 'accelerate', accelerate.__version__, 'transformers', transformers.__version__)" || { echo "PYDEPS_FAIL"; pip list 2>/dev/null | grep -iE 'peft|accelerate|transformers|torch|sentencepiece' || true; exit 1; }
+
+# Launch FV-GSPO training (launcher backgrounds torchrun via nohup)
 bash scripts/asi2_launch_grpo_27b_selfeval.sh launch
 
-# Wait for training to complete (poll log)
-LOG_FILE="/root/work/software/quantum-gpt/logs/grpo_27b_selfeval/grpo_train_*.log"
-echo "Training launched. Monitoring..."
-sleep 30
+# ---- keep-alive ----
+# The platform tears the task environment down when the main command exits,
+# which would kill the backgrounded trainer (p7 ran 63s then died with the env).
+# Stay alive until the trainer process is gone.
+echo "Training launched. Keeping container alive while the trainer runs..."
+PID_FILE="/root/work/software/quantum-gpt/logs/grpo_27b_selfeval/grpo_27b_selfeval.pid"
+while [[ -f "\$PID_FILE" ]]; do
+  TID="\$(cat "\$PID_FILE" 2>/dev/null || true)"
+  if [[ -z "\$TID" ]] || ! kill -0 "\$TID" 2>/dev/null; then
+    echo "trainer pid \$TID not alive; re-checking in 30s..."
+    sleep 30
+    TID="\$(cat "\$PID_FILE" 2>/dev/null || true)"
+    if [[ -z "\$TID" ]] || ! kill -0 "\$TID" 2>/dev/null; then
+      echo "TRAINER_EXITED"
+      break
+    fi
+  fi
+  sleep 60
+done
+echo "CONTAINER_KEEPALIVE_END"
 
-# Show initial status
+# Show final status
 bash scripts/asi2_launch_grpo_27b_selfeval.sh status
 REMOTEEOF
 
