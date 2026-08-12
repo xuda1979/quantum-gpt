@@ -37,6 +37,8 @@ RUN_LOSS_MODE="${ASI2_GRPO_LOSS_MODE:-gspo}"
 RUN_GSPO_CLIP_LOW="${ASI2_GRPO_GSPO_CLIP_LOW:-0.0003}"
 RUN_GSPO_CLIP_HIGH="${ASI2_GRPO_GSPO_CLIP_HIGH:-0.0004}"
 RUN_REWARD_MODE="${ASI2_GRPO_REWARD_MODE:-p_dominant}"
+RUN_MAX_NEW_TOKENS="${ASI2_GRPO_MAX_NEW_TOKENS:-1024}"
+RUN_MAX_SEQ_LENGTH="${ASI2_GRPO_MAX_SEQ_LENGTH:-2048}"
 
 DRY_RUN="1"
 SUBMIT="0"
@@ -92,6 +94,11 @@ export LOSS_MODE="$RUN_LOSS_MODE"
 export GSPO_CLIP_LOW="$RUN_GSPO_CLIP_LOW"
 export GSPO_CLIP_HIGH="$RUN_GSPO_CLIP_HIGH"
 export REWARD_MODE="$RUN_REWARD_MODE"
+export MAX_NEW_TOKENS="$RUN_MAX_NEW_TOKENS"
+export MAX_SEQ_LENGTH="$RUN_MAX_SEQ_LENGTH"
+
+# Ascend memory fragmentation guard (HEARTBEAT lesson: NPU OOM without it)
+export PYTORCH_NPU_ALLOC_CONF=max_split_size_mb:256
 
 # ---- install training deps ----
 # Task-run containers boot from the bare image: peft/accelerate are NOT
