@@ -99,6 +99,8 @@ export MAX_SEQ_LENGTH="$RUN_MAX_SEQ_LENGTH"
 
 # Ascend memory fragmentation guard (HEARTBEAT lesson: NPU OOM without it)
 export PYTORCH_NPU_ALLOC_CONF=max_split_size_mb:256
+export NPU_DEVICE_MAP="balanced-layers"
+export NPU_MAX_MEMORY_GIB=54
 
 # ---- install training deps ----
 # Task-run containers boot from the bare image: peft/accelerate are NOT

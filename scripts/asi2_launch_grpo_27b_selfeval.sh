@@ -55,7 +55,7 @@ CHECKPOINT_INTERVAL_SECONDS="${CHECKPOINT_INTERVAL_SECONDS:-7200}"
 MAX_NEW_TOKENS="${MAX_NEW_TOKENS:-1024}"
 MAX_SEQ_LENGTH="${MAX_SEQ_LENGTH:-2048}"
 DEVICE="${DEVICE:-npu}"
-NUM_NPU="${NUM_NPU:-4}"
+NUM_NPU="${NUM_NPU:-8}"
 BENCHMARK_FILE="${BENCHMARK_FILE:-evals/benchmarks/quantum_grpo_training_v1.txt}"
 
 # ---- FV-GSPO: frontier router + mixture + GSPO clipping + breakers ----
@@ -295,9 +295,21 @@ disown "$(cat "$CHECKPOINT_PID_FILE")" 2>/dev/null || true
 log "checkpoint sync daemon launched pid=$(cat "$CHECKPOINT_PID_FILE")"
 
 # ---- GRPO trainer ----
-log "launching GRPO trainer on $NUM_NPU NPUs..."
+if [[ "$NPU_DEVICE_MAP" == "balanced-layers" ]]; then
+  log "launching GRPO trainer as SINGLE process with balanced-layers NPU sharding..."
+  RUN_CMD=(
+    env MASTER_ADDR=127.0.0.1 MASTER_PORT=29500 WORLD_SIZE=1 RANK=0 LOCAL_RANK=0
+    python3 training/grpo_trainer.py
+    --npu-device-map balanced-layers
+    --npu-max-memory-gib "$NPU_MAX_MEMORY_GIB"
+  )
+  NUM_NPU=1
+else
+  log "launching GRPO trainer on $NUM_NPU NPUs (torchrun DDP)..."
+  RUN_CMD=(torchrun --nproc_per_node="$NUM_NPU" training/grpo_trainer.py)
+fi
 
-nohup torchrun --nproc_per_node="$NUM_NPU" training/grpo_trainer.py \
+nohup "${RUN_CMD[@]}" \
   --model-name "$MODEL_PATH" \
   --output-dir "$OUT" \
   --overwrite-output-dir \

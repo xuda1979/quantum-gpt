@@ -74,7 +74,9 @@ from training.model_family_preflight import trainer_backend_preflight_block  # n
 from training.quantum_verifiers import score_from_typed_verifier  # noqa: E402
 from training.qwen_sft_peft import (  # noqa: E402
     TextPreprocessorBackend,
+    _visible_npu_indices,
     apply_selective_training_controls,
+    build_balanced_npu_layer_device_map,
     collect_trainable_parameters,
     load_text_preprocessor_backend,
     probe_model_runtime_compat,
@@ -143,6 +145,18 @@ def parse_args() -> argparse.Namespace:
     )
     p.add_argument("--max-new-tokens", type=int, default=2048)
     p.add_argument("--max-seq-length", type=int, default=4096)
+    p.add_argument(
+        "--npu-device-map",
+        choices=["auto", "balanced-layers"],
+        default="auto",
+        help="Shard model layers across the rank's visible NPUs (single-process launch); required for 27B+ on 60GB 910B cards.",
+    )
+    p.add_argument(
+        "--npu-max-memory-gib",
+        type=int,
+        default=54,
+        help="Per-NPU max_memory GiB with --npu-device-map balanced-layers.",
+    )
     p.add_argument("--log-steps", type=int, default=5)
     p.add_argument("--lora-rank", type=int, default=8)
     p.add_argument("--lora-alpha", type=int, default=16)
@@ -1757,12 +1771,33 @@ def main() -> int:
         add_mm_token_type_ids=_needs_mm_token_type_ids,
     )
 
-    model = AutoModelForCausalLM.from_pretrained(
-        args.model_name,
-        trust_remote_code=True,
-        low_cpu_mem_usage=True,
-        torch_dtype="auto",
-    )
+    model_config = AutoConfig.from_pretrained(args.model_name, trust_remote_code=True)
+    model_kwargs: dict[str, Any] = {
+        "trust_remote_code": True,
+        "low_cpu_mem_usage": True,
+        "torch_dtype": "auto",
+    }
+    npu_device_map: dict[str, str] | None = None
+    if args.npu_device_map == "balanced-layers":
+        visible_npus = _visible_npu_indices()
+        npu_device_map = build_balanced_npu_layer_device_map(model_config, visible_npus)
+        model_kwargs["device_map"] = npu_device_map
+        model_kwargs["max_memory"] = {
+            f"npu:{idx}": f"{args.npu_max_memory_gib}GiB" for idx in range(len(visible_npus))
+        }
+        if rank == 0:
+            print(
+                json.dumps(
+                    {
+                        "stage": "npu_device_map",
+                        "visible_npus": visible_npus,
+                        "layers": len(npu_device_map),
+                        "max_memory_gib": args.npu_max_memory_gib,
+                    },
+                    ensure_ascii=False,
+                )
+            )
+    model = AutoModelForCausalLM.from_pretrained(args.model_name, **model_kwargs)
     if rank == 0:
         print(
             json.dumps(
@@ -1808,9 +1843,19 @@ def main() -> int:
                 ensure_ascii=False,
             )
         )
-    model.to(device)
-    if rank == 0:
-        print(json.dumps({"stage": "model_on_device", "device": str(device)}, ensure_ascii=False))
+    if npu_device_map is None:
+        model.to(device)
+        if rank == 0:
+            print(
+                json.dumps({"stage": "model_on_device", "device": str(device)}, ensure_ascii=False)
+            )
+    elif rank == 0:
+        print(
+            json.dumps(
+                {"stage": "model_sharded_on_npus", "map_size": len(npu_device_map)},
+                ensure_ascii=False,
+            )
+        )
 
     # ── frozen comprehensive judge (base model / older accepted adapter) ──
     # The judge is NEVER the current training policy: it is the base model,
