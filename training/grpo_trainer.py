@@ -1615,7 +1615,9 @@ def main() -> int:
     allowed_domains = set(args.domain_filter) if args.domain_filter else None
 
     # DDP setup
-    distributed = "RANK" in os.environ
+    # With --npu-device-map balanced-layers the model spans multiple NPUs and
+    # must NOT be DDP-wrapped; treat it as a non-distributed single process.
+    distributed = "RANK" in os.environ and args.npu_device_map != "balanced-layers"
     local_rank = int(os.environ.get("LOCAL_RANK", 0))
     rank = int(os.environ.get("RANK", 0))
 
@@ -1918,7 +1920,7 @@ def main() -> int:
             )
         )
 
-    if distributed:
+    if distributed and npu_device_map is None:
         model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[local_rank])
         if rank == 0:
             print(json.dumps({"stage": "ddp_wrapped"}, ensure_ascii=False))
