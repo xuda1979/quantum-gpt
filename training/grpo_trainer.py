@@ -2142,6 +2142,9 @@ def main() -> int:
                 consistent_old_log_probs.append(old_log_prob.detach())
                 consistent_old_token_counts.append(old_token_count.detach())
                 consistent_entropies.append(entropy.detach())
+                # Release the allocator cache between per-completion forwards:
+                # long sequential forward runs are the ASI2 27B stall trigger.
+                _release_device_cache(torch)
         old_log_probs = torch.stack(consistent_old_log_probs)
         old_token_counts = torch.stack(consistent_old_token_counts)
         entropy_values = [float(value.item()) for value in consistent_entropies]
@@ -2509,6 +2512,10 @@ def main() -> int:
                 args.logit_clip,
                 add_mm_token_type_ids=_needs_mm_token_type_ids,
             )
+            # Release the allocator cache between per-completion forwards:
+            # p16 hung right here (group-8 train-logprob, 8 grad-enabled
+            # forwards with full-vocab logits) after 41 min of silence.
+            _release_device_cache(torch)
             if token_count.item() == 0:
                 continue
             current_log_probs.append(current_log_prob / token_count.clamp_min(1))
