@@ -1085,6 +1085,80 @@ def stable_token_log_probs(
     return flat_selected.reshape(safe_targets.shape)
 
 
+def chunked_log_probs_and_entropy(
+    logits: torch.Tensor,
+    target_ids: torch.Tensor,
+    logit_clip: float,
+    chunk_size: int = 8192,
+    return_entropy: bool = False,
+):
+    """Memory-bounded equivalent of stable_token_log_probs() (+ per-position entropy).
+
+    For a 27B model the vocab axis is 248320: stable_token_log_probs materializes
+    full-vocab fp32 logits + log_softmax output (multiple GB at seq 1024) on the
+    single NPU that holds the lm_head — the observed stall/OOM zone in the ASI2
+    8-NPU sharded runs. This walks the vocab in chunks with a two-pass
+    per-position max / logsumexp, so peak extra memory is ~chunk_size × seq fp32
+    and the result is numerically identical (same nan_to_num + clamp, exact
+    two-pass logsumexp).
+
+    `logits` has shape [1, S, V] and `target_ids` shape [1, S], aligned position
+    for position (the caller performs any shift, exactly as with
+    stable_token_log_probs). When return_entropy is True also returns
+    per-position entropy -Σ p log p at those positions.
+    """
+    x = logits
+    targets = target_ids.long()
+    if x.shape[-2] != targets.shape[-1]:
+        raise ValueError("target_ids must align position-for-position with logits")
+    vocab_size = x.shape[-1]
+
+    def _clamped_chunk(start: int) -> torch.Tensor:
+        return torch.nan_to_num(
+            x[:, :, start : start + chunk_size].float(),
+            nan=0.0,
+            posinf=logit_clip,
+            neginf=-logit_clip,
+        ).clamp(-logit_clip, logit_clip)
+
+    # Pass 1: per-position max over clamped chunk values.
+    per_pos_max = None
+    for start in range(0, vocab_size, chunk_size):
+        chunk_max = _clamped_chunk(start).amax(dim=-1)
+        per_pos_max = chunk_max if per_pos_max is None else torch.maximum(per_pos_max, chunk_max)
+
+    # Pass 2: logsumexp + target gathers per chunk.
+    sum_exp = torch.zeros_like(per_pos_max)
+    gathered = per_pos_max.new_full(targets.shape, float("nan"))
+    for start in range(0, vocab_size, chunk_size):
+        chunk = _clamped_chunk(start)
+        sum_exp = sum_exp + (chunk - per_pos_max.unsqueeze(-1)).exp().sum(dim=-1)
+        sel = (targets >= start) & (targets < start + chunk_size)
+        if bool(sel.any()):
+            # gather validates every index, so clamp both ends; masked_scatter
+            # only takes the in-chunk positions.
+            idx = (targets - start).clamp(min=0, max=chunk_size - 1).unsqueeze(-1)
+            vals = chunk.gather(2, idx).squeeze(-1)
+            gathered = gathered.masked_scatter(sel, vals[sel])
+
+    log_z = per_pos_max + sum_exp.log()
+    token_log_probs = gathered - log_z
+    if not return_entropy:
+        return token_log_probs
+
+    # Pass 3 (entropy): H = -(p · log p) per position with p = exp(x - max)/Z.
+    # Every term has the same sign, so the chunked sum is cancellation-free.
+    neg_entropy = torch.zeros_like(per_pos_max)
+    log_z_shifted = sum_exp.log()
+    for start in range(0, vocab_size, chunk_size):
+        chunk = _clamped_chunk(start)
+        shifted = chunk - per_pos_max.unsqueeze(-1)
+        p = shifted.exp() / sum_exp.unsqueeze(-1)
+        log_p = shifted - log_z_shifted.unsqueeze(-1)
+        neg_entropy = neg_entropy + (p * log_p).sum(dim=-1)
+    return token_log_probs, -neg_entropy
+
+
 def reward_signal_stats(
     rewards: torch.Tensor,
     pass_rewards: torch.Tensor,

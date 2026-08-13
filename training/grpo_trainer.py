@@ -56,7 +56,7 @@ from training.grpo_utils import (  # noqa: E402
     build_judge_diagnostics_record,
     build_mixture_weights,
     build_reward_breakdown,
-    completion_entropy,
+    chunked_log_probs_and_entropy,
     count_repair_conversions,
     estimate_detail_budget,
     extract_behavior_hints_from_test_source,
@@ -66,7 +66,6 @@ from training.grpo_utils import (  # noqa: E402
     sequence_ratio_stats,
     stable_grpo_loss,
     stable_gspo_loss_metrics,
-    stable_token_log_probs,
     summarize_python_interface,
 )
 from training.model_backend import run_text_forward_preflight  # noqa: E402
@@ -1133,6 +1132,22 @@ def move_batch_to_device(batch: dict[str, torch.Tensor], device: Any) -> dict[st
     return {name: tensor.to(device) for name, tensor in batch.items()}
 
 
+def _release_device_cache(torch_module: Any) -> None:
+    """Release NPU/CUDA allocator cache between phases.
+
+    Long sharded 27B runs fragment device memory across rollouts; freeing the
+    allocator cache between phases keeps peak allocation low. Safe no-op on
+    backends without an empty_cache API.
+    """
+    for backend_name in ("npu", "cuda", "mps"):
+        backend = getattr(torch_module, backend_name, None)
+        if backend is not None and hasattr(backend, "empty_cache"):
+            try:
+                backend.empty_cache()
+            except Exception:
+                pass
+
+
 def generate_group(
     model,
     backend: TextPreprocessorBackend,
@@ -1207,7 +1222,6 @@ def compute_completion_log_prob(
     outputs = model(**full_inputs)
     logits = outputs.logits[:, :-1, :]
     target_ids = full_inputs["input_ids"][:, 1:]
-    token_log_probs = stable_token_log_probs(logits, target_ids, logit_clip)
 
     completion_mask = torch.zeros_like(target_ids, dtype=torch.bool)
     completion_start = max(prompt_len - 1, 0)
@@ -1217,14 +1231,23 @@ def compute_completion_log_prob(
         completion_mask &= attention_mask[:, 1:].bool()
     token_count = completion_mask.sum()
     if token_count.item() == 0:
-        zero = token_log_probs.new_tensor(0.0)
+        zero = logits.new_tensor(0.0)
         if return_entropy:
             return zero, token_count, zero
         return zero, token_count
-    seq_log_prob = token_log_probs.masked_select(completion_mask).sum()
+    # Chunked-vocab pass: full-vocab fp32 logits/softmax spike multiple GB on the
+    # lm_head NPU of the sharded 27B (the ASI2 stall zone) — chunked avoids it.
+    result = chunked_log_probs_and_entropy(
+        logits, target_ids, logit_clip, return_entropy=return_entropy
+    )
     if return_entropy:
-        entropy = completion_entropy(logits, completion_mask)
+        token_log_probs, entropy_per_pos = result
+        seq_log_prob = token_log_probs.masked_select(completion_mask).sum()
+        masked_entropy = entropy_per_pos.masked_select(completion_mask)
+        entropy = masked_entropy.mean() if masked_entropy.numel() else logits.new_tensor(0.0)
         return seq_log_prob, token_count, entropy
+    token_log_probs = result
+    seq_log_prob = token_log_probs.masked_select(completion_mask).sum()
     return seq_log_prob, token_count
 
 
@@ -1604,6 +1627,14 @@ def emit_step_record(
 
 
 def main() -> int:
+    # The trainer's stdout is redirected to the run log; block buffering would
+    # swallow every phase marker if the container is killed mid-stall. Line-buffer
+    # so each stage print lands immediately (NPU-hang diagnostics).
+    for _stream in (sys.stdout, sys.stderr):
+        try:
+            _stream.reconfigure(line_buffering=True)
+        except Exception:
+            pass
     args = parse_args()
     research_methods = load_research_methods(args.research_methods)
     output_dir = Path(args.output_dir)
@@ -2046,6 +2077,20 @@ def main() -> int:
         active_model.eval()
         effective_temperature = adaptive_temp.current_temp()
         effective_g = router.recommended_group_size(task["task_id"])
+        if rank == 0:
+            print(
+                json.dumps(
+                    {
+                        "stage": "step_begin",
+                        "step": step,
+                        "task": task["task_id"],
+                        "temperature": effective_temperature,
+                        "group_size": effective_g,
+                    },
+                    ensure_ascii=False,
+                ),
+                flush=True,
+            )
         codes, prompt_text = generate_group(
             active_model,
             text_preprocessor,
@@ -2054,6 +2099,20 @@ def main() -> int:
             temperature=effective_temperature,
             count=effective_g,
         )
+        if rank == 0:
+            print(
+                json.dumps(
+                    {
+                        "stage": "generation_done",
+                        "step": step,
+                        "n_codes": len(codes),
+                        "max_code_chars": max((len(code) for code in codes), default=0),
+                    },
+                    ensure_ascii=False,
+                ),
+                flush=True,
+            )
+        _release_device_cache(torch)
 
         consistent_old_log_probs = []
         consistent_old_token_counts = []
@@ -2079,6 +2138,20 @@ def main() -> int:
         entropy_values = [float(value.item()) for value in consistent_entropies]
         entropy_mean = float(sum(entropy_values) / len(entropy_values)) if entropy_values else None
         generation_tokens = int(old_token_counts.sum().item())
+        if rank == 0:
+            print(
+                json.dumps(
+                    {
+                        "stage": "logprob_done",
+                        "step": step,
+                        "generation_tokens": generation_tokens,
+                        "entropy_mean": entropy_mean,
+                    },
+                    ensure_ascii=False,
+                ),
+                flush=True,
+            )
+        _release_device_cache(torch)
 
         # Score each solution with verifier-aware shaped rewards + optional self-evaluation.
         judge_enabled = bool(args.model_judge_enabled and judge_model is not None)
@@ -2170,6 +2243,19 @@ def main() -> int:
         for entry in evaluations:
             entry["total_reward"] = entry.get("total_reward", entry.get("reward", 0.0))
             entry["total_reward"] = entry["total_reward"] + entry.get("self_eval_reward", 0.0)
+        if rank == 0:
+            print(
+                json.dumps(
+                    {
+                        "stage": "eval_done",
+                        "step": step,
+                        "n_candidates": len(evaluations),
+                    },
+                    ensure_ascii=False,
+                ),
+                flush=True,
+            )
+        _release_device_cache(torch)
 
         rewards = torch.tensor(
             [float(entry["total_reward"]) for entry in evaluations], device=device
@@ -2421,6 +2507,19 @@ def main() -> int:
             filtered_advantages.append(advantages[idx])
             filtered_token_counts.append(old_token_counts[idx].float())
 
+        if rank == 0:
+            print(
+                json.dumps(
+                    {
+                        "stage": "train_logprob_done",
+                        "step": step,
+                        "n_current": len(current_log_probs),
+                    },
+                    ensure_ascii=False,
+                ),
+                flush=True,
+            )
+        _release_device_cache(torch)
         if not current_log_probs:
             adaptive_temp.record_skip("empty_completion_mask")
             trips = observe_and_evaluate_breakers(
@@ -2542,6 +2641,19 @@ def main() -> int:
         optimizer.zero_grad()
         total_loss.backward()
         torch.nn.utils.clip_grad_norm_(trainable_param_tensors, 1.0)
+        if rank == 0:
+            print(
+                json.dumps(
+                    {
+                        "stage": "backward_done",
+                        "step": step,
+                        "loss": float(total_loss.detach().item()),
+                    },
+                    ensure_ascii=False,
+                ),
+                flush=True,
+            )
+        _release_device_cache(torch)
 
         # ── trust region (review 2026-08-05, Design B) ──
         # The pre-update ratio is 1 by construction in the synchronous
