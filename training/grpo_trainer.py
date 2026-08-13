@@ -2794,21 +2794,23 @@ def main() -> int:
                 record["dr_psi_current_step"] = dr_variance_info.get("dr_psi_current_step")
         if maybe_stop_for_breaker(breaker, args, rank, trips):
             break
-
-            # ── Periodic checkpoint: save adapter every checkpoint_interval_seconds ──
-            if args.checkpoint_interval_seconds > 0 and rank == 0:
-                now = time.time()
-                if now - _last_checkpoint_time >= args.checkpoint_interval_seconds:
-                    _last_checkpoint_time = now
-                    ckpt_dir = output_dir / f"step_{step:06d}_adapter"
-                    save_model = model.module if distributed else model
-                    save_model.save_pretrained(ckpt_dir)
-                    text_preprocessor.save_backend.save_pretrained(ckpt_dir)
-                    # Also update the main adapter dir (for sync daemon)
-                    main_adapter = output_dir / "adapter"
-                    save_model.save_pretrained(main_adapter)
-                    text_preprocessor.save_backend.save_pretrained(main_adapter)
-                    print(f"[checkpoint] saved adapter at step {step} to {ckpt_dir}")
+        # ── Periodic checkpoint: save adapter every checkpoint_interval_seconds ──
+        # MUST be a sibling of the breaker-return (not nested under it, which
+        # made this unreachable during normal training — the reason NO adapter
+        # was ever written to disk despite steps completing).
+        if args.checkpoint_interval_seconds > 0 and rank == 0:
+            now = time.time()
+            if now - _last_checkpoint_time >= args.checkpoint_interval_seconds:
+                _last_checkpoint_time = now
+                ckpt_dir = output_dir / f"step_{step:06d}_adapter"
+                save_model = model.module if distributed else model
+                save_model.save_pretrained(ckpt_dir)
+                text_preprocessor.save_backend.save_pretrained(ckpt_dir)
+                # Also update the main adapter dir (for sync daemon)
+                main_adapter = output_dir / "adapter"
+                save_model.save_pretrained(main_adapter)
+                text_preprocessor.save_backend.save_pretrained(main_adapter)
+                print(f"[checkpoint] saved adapter at step {step} to {ckpt_dir}")
 
     # Save final
     if rank == 0:
