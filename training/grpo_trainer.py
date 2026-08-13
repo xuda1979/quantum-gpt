@@ -119,6 +119,12 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--output-dir", default="outputs/grpo-v1")
     p.add_argument("--device", default="cpu")
     p.add_argument("--group-size", type=int, default=8, help="Solutions per prompt")
+    p.add_argument(
+        "--max-adaptive-group",
+        type=int,
+        default=8,
+        help="Cap on the posterior router's recommended group size (16 was the ASI2 stall trigger).",
+    )
     p.add_argument("--grpo-steps", type=int, default=100)
     p.add_argument("--lr", type=float, default=1e-5)
     p.add_argument("--kl-coeff", type=float, default=0.05, help="KL penalty coefficient")
@@ -1189,6 +1195,9 @@ def generate_group(
         gen_ids = outputs.sequences[0, inputs["input_ids"].shape[1] :]
         response = backend.text_backend.decode(gen_ids, skip_special_tokens=True)
         codes.append(extract_code(response))
+        # Long rollout groups fragment NPU memory across sequential generations;
+        # free the allocator cache between rollouts (p15: group-16 rollout hang).
+        _release_device_cache(torch)
 
     return codes, text
 
@@ -2076,7 +2085,7 @@ def main() -> int:
         active_model = model.module if distributed else model
         active_model.eval()
         effective_temperature = adaptive_temp.current_temp()
-        effective_g = router.recommended_group_size(task["task_id"])
+        effective_g = min(router.recommended_group_size(task["task_id"]), args.max_adaptive_group)
         if rank == 0:
             print(
                 json.dumps(
