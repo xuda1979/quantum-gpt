@@ -44,6 +44,7 @@ CHECKPOINT_PID_FILE="$LOGDIR/grpo_27b_checkpoint_sync.pid"
 
 # ---- training hyperparams ----
 GROUP_SIZE="${GROUP_SIZE:-8}"
+MAX_ADAPTIVE_GROUP="${MAX_ADAPTIVE_GROUP:-8}"
 GRPO_STEPS="${GRPO_STEPS:-500}"
 LR="${LR:-2e-6}"                       # FV-GSPO: 1e-6..3e-6 LoRA; legacy 1e-5 is aggressive
 KL_COEFF="${KL_COEFF:-0.005}"          # FV-GSPO initial KL beta (design table)
@@ -315,6 +316,7 @@ nohup "${RUN_CMD[@]}" \
   --overwrite-output-dir \
   --device "$DEVICE" \
   --group-size "$GROUP_SIZE" \
+  --max-adaptive-group "$MAX_ADAPTIVE_GROUP" \
   --grpo-steps "$GRPO_STEPS" \
   --lr "$LR" \
   --kl-coeff "$KL_COEFF" \
