@@ -1,0 +1,441 @@
+[
+  {
+    "adapter_dir": "/root/work/software/quantum-gpt/outputs/grpo-27b-selfeval-20260814T030926/adapter",
+    "config": {
+      "circuit_breaker_window": 10,
+      "group_size": null,
+      "grpo_steps": 500,
+      "gspo_clip_high": 0.0004,
+      "gspo_clip_low": 0.0003,
+      "inner_epochs": null,
+      "kl_coeff": 0.005,
+      "loss_mode": "gspo",
+      "lr": 2e-06,
+      "max_adaptive_group": null,
+      "repair_converted_jsonl": null
+    },
+    "eval": {},
+    "has_adapter": true,
+    "metrics": {
+      "breaker_trips": [],
+      "clip_high_mean": 0.0,
+      "entropy_last": null,
+      "final_loss": 0.0,
+      "first_ts": "2026-08-14T03:24:54",
+      "last_pass_rate": 0.0,
+      "last_ts": "2026-08-14T03:29:00",
+      "max_pass_rate": 0.0,
+      "mean_reward_first": 0.3417,
+      "mean_reward_last": 0.1667,
+      "seq_kl_last": 0.0,
+      "steps": 2
+    },
+    "note": "2-step smoke, pre-inner-epochs zero-gradient.",
+    "output_dir": "/root/work/software/quantum-gpt/outputs/grpo-27b-selfeval-20260814T030926",
+    "recorded_utc": "2026-08-19T11:54:12.353011+00:00",
+    "round": "grpo-27b-selfeval-20260814T030926",
+    "run_dirs": [
+      "/root/work/software/quantum-gpt/outputs/grpo-27b-selfeval-20260814T030926"
+    ],
+    "verdict": "ABANDONED (smoke, 2 steps)"
+  },
+  {
+    "adapter_dir": "/root/work/software/quantum-gpt/outputs/grpo-27b-selfeval-20260814T040805/adapter",
+    "config": {
+      "circuit_breaker_window": 10,
+      "group_size": null,
+      "grpo_steps": 500,
+      "gspo_clip_high": 0.0004,
+      "gspo_clip_low": 0.0003,
+      "inner_epochs": null,
+      "kl_coeff": 0.005,
+      "loss_mode": "gspo",
+      "lr": 2e-06,
+      "max_adaptive_group": null,
+      "repair_converted_jsonl": null
+    },
+    "eval": {
+      "adapter": {
+        "heldout_loss": 1.964016,
+        "overall": 4.177,
+        "pass_at_1": "10/12"
+      },
+      "base": {
+        "heldout_loss": 1.964016,
+        "overall": 4.177,
+        "pass_at_1": "10/12"
+      },
+      "eval_source": "reeval_rl_latest_base_vs_adapter.json"
+    },
+    "has_adapter": true,
+    "metrics": {
+      "breaker_trips": [],
+      "clip_high_mean": 0.0,
+      "entropy_last": null,
+      "final_loss": -0.0,
+      "first_ts": "2026-08-14T04:24:08",
+      "last_pass_rate": 0.0,
+      "last_ts": "2026-08-14T09:38:27",
+      "max_pass_rate": 0.75,
+      "mean_reward_first": 0.5917,
+      "mean_reward_last": 0.0889,
+      "seq_kl_last": 0.0,
+      "steps": 24
+    },
+    "note": "Pre-inner-epochs: loss==0, ratio==1 \u2192 zero-gradient. eval 08-16 confirmed adapter==base (bit-identical). Root-cause of degeneracy.",
+    "output_dir": "/root/work/software/quantum-gpt/outputs/grpo-27b-selfeval-20260814T040805",
+    "recorded_utc": "2026-08-19T11:54:12.353142+00:00",
+    "round": "grpo-27b-selfeval-20260814T040805",
+    "run_dirs": [
+      "/root/work/software/quantum-gpt/outputs/grpo-27b-selfeval-20260814T040805"
+    ],
+    "verdict": "NO_OP (adapter==base)"
+  },
+  {
+    "adapter_dir": "/root/work/software/quantum-gpt/outputs/grpo-27b-selfeval-20260817T034526/adapter",
+    "config": {
+      "circuit_breaker_window": 10,
+      "group_size": null,
+      "grpo_steps": 500,
+      "gspo_clip_high": 0.0004,
+      "gspo_clip_low": 0.0003,
+      "inner_epochs": 2,
+      "kl_coeff": 0.005,
+      "loss_mode": "gspo",
+      "lr": 2e-06,
+      "max_adaptive_group": null,
+      "repair_converted_jsonl": null
+    },
+    "eval": {},
+    "has_adapter": true,
+    "metrics": {
+      "breaker_trips": [],
+      "clip_high_mean": 0.375,
+      "entropy_last": null,
+      "final_loss": 0.000113,
+      "first_ts": "2026-08-17T03:58:11",
+      "last_pass_rate": 0.0,
+      "last_ts": "2026-08-17T04:05:02",
+      "max_pass_rate": 0.0,
+      "mean_reward_first": 0.35,
+      "mean_reward_last": 0.1667,
+      "seq_kl_last": -0.0021,
+      "steps": 2
+    },
+    "note": "inner_epochs fix validated: nonzero loss 1.13e-4, seq_kl -2.1e-3 (was 0). Gradient un-stuck.",
+    "output_dir": "/root/work/software/quantum-gpt/outputs/grpo-27b-selfeval-20260817T034526",
+    "recorded_utc": "2026-08-19T11:54:12.353146+00:00",
+    "round": "grpo-27b-selfeval-20260817T034526",
+    "run_dirs": [
+      "/root/work/software/quantum-gpt/outputs/grpo-27b-selfeval-20260817T034526"
+    ],
+    "verdict": "VALIDATION (inner-epochs fix)"
+  },
+  {
+    "adapter_dir": "/root/work/software/quantum-gpt/outputs/grpo-27b-selfeval-20260817T060007/adapter",
+    "config": {
+      "circuit_breaker_window": 10,
+      "group_size": null,
+      "grpo_steps": 500,
+      "gspo_clip_high": 0.0004,
+      "gspo_clip_low": 0.0003,
+      "inner_epochs": 2,
+      "kl_coeff": 0.005,
+      "loss_mode": "gspo",
+      "lr": 2e-06,
+      "max_adaptive_group": null,
+      "repair_converted_jsonl": null
+    },
+    "eval": {},
+    "has_adapter": true,
+    "metrics": {
+      "breaker_trips": [],
+      "clip_high_mean": 0.125,
+      "entropy_last": null,
+      "final_loss": -9e-06,
+      "first_ts": "2026-08-17T06:13:38",
+      "last_pass_rate": 0.0,
+      "last_ts": "2026-08-17T06:21:11",
+      "max_pass_rate": 0.0,
+      "mean_reward_first": 0.3667,
+      "mean_reward_last": 0.1333,
+      "seq_kl_last": 0.0027,
+      "steps": 2
+    },
+    "note": "short smoke, keep-alive check.",
+    "output_dir": "/root/work/software/quantum-gpt/outputs/grpo-27b-selfeval-20260817T060007",
+    "recorded_utc": "2026-08-19T11:54:12.353148+00:00",
+    "round": "grpo-27b-selfeval-20260817T060007",
+    "run_dirs": [
+      "/root/work/software/quantum-gpt/outputs/grpo-27b-selfeval-20260817T060007"
+    ],
+    "verdict": "SMOKE (2 steps)"
+  },
+  {
+    "adapter_dir": "/root/work/software/quantum-gpt/outputs/grpo-27b-selfeval-20260817T070400/adapter",
+    "config": {
+      "circuit_breaker_window": 10,
+      "group_size": null,
+      "grpo_steps": 500,
+      "gspo_clip_high": 0.0004,
+      "gspo_clip_low": 0.0003,
+      "inner_epochs": 2,
+      "kl_coeff": 0.005,
+      "loss_mode": "gspo",
+      "lr": 2e-06,
+      "max_adaptive_group": null,
+      "repair_converted_jsonl": null
+    },
+    "eval": {},
+    "has_adapter": true,
+    "metrics": {
+      "breaker_trips": [],
+      "clip_high_mean": 0.75,
+      "entropy_last": null,
+      "final_loss": 6.7e-05,
+      "first_ts": "2026-08-17T07:14:18",
+      "last_pass_rate": 0.0,
+      "last_ts": "2026-08-17T07:14:18",
+      "max_pass_rate": 0.0,
+      "mean_reward_first": 0.1833,
+      "mean_reward_last": 0.1833,
+      "seq_kl_last": -0.0019,
+      "steps": 1
+    },
+    "note": "1-step keep-alive; clip_high 0.75 signals policy pinned at GSPO clip ceiling.",
+    "output_dir": "/root/work/software/quantum-gpt/outputs/grpo-27b-selfeval-20260817T070400",
+    "recorded_utc": "2026-08-19T11:54:12.353150+00:00",
+    "round": "grpo-27b-selfeval-20260817T070400",
+    "run_dirs": [
+      "/root/work/software/quantum-gpt/outputs/grpo-27b-selfeval-20260817T070400"
+    ],
+    "verdict": "SMOKE (1 step)"
+  },
+  {
+    "adapter_dir": "/root/work/software/quantum-gpt/outputs/grpo-27b-selfeval-20260817T082400/adapter",
+    "config": {
+      "circuit_breaker_window": 10,
+      "group_size": null,
+      "grpo_steps": 500,
+      "gspo_clip_high": 0.0004,
+      "gspo_clip_low": 0.0003,
+      "inner_epochs": 2,
+      "kl_coeff": 0.005,
+      "loss_mode": "gspo",
+      "lr": 2e-06,
+      "max_adaptive_group": null,
+      "repair_converted_jsonl": null
+    },
+    "eval": {},
+    "has_adapter": true,
+    "metrics": {
+      "breaker_trips": [],
+      "clip_high_mean": 0.667,
+      "entropy_last": null,
+      "final_loss": 0.000189,
+      "first_ts": "2026-08-17T08:33:49",
+      "last_pass_rate": 0.0,
+      "last_ts": "2026-08-17T08:49:07",
+      "max_pass_rate": 0.0,
+      "mean_reward_first": 0.1417,
+      "mean_reward_last": 0.1333,
+      "seq_kl_last": -0.0065,
+      "steps": 3
+    },
+    "note": "short smoke; high clip_high fraction again.",
+    "output_dir": "/root/work/software/quantum-gpt/outputs/grpo-27b-selfeval-20260817T082400",
+    "recorded_utc": "2026-08-19T11:54:12.353151+00:00",
+    "round": "grpo-27b-selfeval-20260817T082400",
+    "run_dirs": [
+      "/root/work/software/quantum-gpt/outputs/grpo-27b-selfeval-20260817T082400"
+    ],
+    "verdict": "SMOKE (3 steps)"
+  },
+  {
+    "adapter_dir": "/root/work/software/quantum-gpt/outputs/grpo-27b-selfeval-20260817T092127/adapter",
+    "config": {
+      "circuit_breaker_window": 10,
+      "group_size": null,
+      "grpo_steps": 500,
+      "gspo_clip_high": 0.0004,
+      "gspo_clip_low": 0.0003,
+      "inner_epochs": 2,
+      "kl_coeff": 0.005,
+      "loss_mode": "gspo",
+      "lr": 2e-06,
+      "max_adaptive_group": null,
+      "repair_converted_jsonl": null
+    },
+    "eval": {
+      "adapter": {
+        "heldout_loss": 1.964015,
+        "overall": 4.177,
+        "pass_at_1": "10/12"
+      },
+      "base": {
+        "heldout_loss": 1.964015,
+        "overall": 4.177,
+        "pass_at_1": "10/12"
+      },
+      "eval_source": "reeval_rl_fixed_checkpoint.json"
+    },
+    "has_adapter": true,
+    "metrics": {
+      "breaker_trips": [],
+      "clip_high_mean": 0.237,
+      "entropy_last": null,
+      "final_loss": 0.000218,
+      "first_ts": "2026-08-17T09:31:29",
+      "last_pass_rate": 0.0,
+      "last_ts": "2026-08-17T14:35:39",
+      "max_pass_rate": 0.0,
+      "mean_reward_first": 0.1417,
+      "mean_reward_last": 0.1167,
+      "seq_kl_last": 0.0053,
+      "steps": 40
+    },
+    "note": "40-step run after inner-epochs fix. loss nonzero but tiny, adapter still ==base per eval 08-17. GSPO clips 3e-4/4e-4 too tight to move policy.",
+    "output_dir": "/root/work/software/quantum-gpt/outputs/grpo-27b-selfeval-20260817T092127",
+    "recorded_utc": "2026-08-19T11:54:12.353153+00:00",
+    "round": "grpo-27b-selfeval-20260817T092127",
+    "run_dirs": [
+      "/root/work/software/quantum-gpt/outputs/grpo-27b-selfeval-20260817T092127"
+    ],
+    "verdict": "NO_OP (adapter==base)"
+  },
+  {
+    "adapter_dir": "/root/work/software/quantum-gpt/outputs/grpo-27b-selfeval-20260817T154250/adapter",
+    "config": {
+      "circuit_breaker_window": 10,
+      "group_size": null,
+      "grpo_steps": 500,
+      "gspo_clip_high": 0.0004,
+      "gspo_clip_low": 0.0003,
+      "inner_epochs": 2,
+      "kl_coeff": 0.005,
+      "loss_mode": "gspo",
+      "lr": 2e-06,
+      "max_adaptive_group": null,
+      "repair_converted_jsonl": null
+    },
+    "eval": {},
+    "has_adapter": true,
+    "metrics": {
+      "breaker_trips": [],
+      "clip_high_mean": 0.487,
+      "entropy_last": null,
+      "final_loss": 0.000142,
+      "first_ts": "2026-08-17T15:52:59",
+      "last_pass_rate": 0.0,
+      "last_ts": "2026-08-17T18:25:03",
+      "max_pass_rate": 0.0,
+      "mean_reward_first": 0.1833,
+      "mean_reward_last": 0.1667,
+      "seq_kl_last": 0.001,
+      "steps": 20
+    },
+    "note": "no eval ran; tiny loss, clip_high ~0.49. Adapter exists but unevaluated.",
+    "output_dir": "/root/work/software/quantum-gpt/outputs/grpo-27b-selfeval-20260817T154250",
+    "recorded_utc": "2026-08-19T11:54:12.353155+00:00",
+    "round": "grpo-27b-selfeval-20260817T154250",
+    "run_dirs": [
+      "/root/work/software/quantum-gpt/outputs/grpo-27b-selfeval-20260817T154250"
+    ],
+    "verdict": "RUN (20 steps, no eval)"
+  },
+  {
+    "adapter_dir": "/root/work/software/quantum-gpt/outputs/grpo-27b-selfeval-20260818T071033/adapter",
+    "config": {
+      "circuit_breaker_window": 10,
+      "group_size": null,
+      "grpo_steps": 500,
+      "gspo_clip_high": 0.0004,
+      "gspo_clip_low": 0.0003,
+      "inner_epochs": 2,
+      "kl_coeff": 0.005,
+      "loss_mode": "gspo",
+      "lr": 2e-06,
+      "max_adaptive_group": null,
+      "repair_converted_jsonl": null
+    },
+    "eval": {},
+    "has_adapter": true,
+    "metrics": {
+      "breaker_trips": [],
+      "clip_high_mean": 0.0,
+      "entropy_last": null,
+      "final_loss": null,
+      "first_ts": "2026-08-18T07:19:13",
+      "last_pass_rate": 0.0,
+      "last_ts": "2026-08-18T07:25:28",
+      "max_pass_rate": 0.0,
+      "mean_reward_first": 0.1,
+      "mean_reward_last": 0.2,
+      "seq_kl_last": null,
+      "steps": 2
+    },
+    "note": "short keep-alive; no actionable metrics.",
+    "output_dir": "/root/work/software/quantum-gpt/outputs/grpo-27b-selfeval-20260818T071033",
+    "recorded_utc": "2026-08-19T11:54:12.353158+00:00",
+    "round": "grpo-27b-selfeval-20260818T071033",
+    "run_dirs": [
+      "/root/work/software/quantum-gpt/outputs/grpo-27b-selfeval-20260818T071033"
+    ],
+    "verdict": "SMOKE (2 steps)"
+  },
+  {
+    "adapter_dir": "/root/work/software/quantum-gpt/outputs/grpo-27b-selfeval-20260818T072721/adapter",
+    "config": {
+      "circuit_breaker_window": 10,
+      "group_size": null,
+      "grpo_steps": 500,
+      "gspo_clip_high": 0.0004,
+      "gspo_clip_low": 0.0003,
+      "inner_epochs": 2,
+      "kl_coeff": 0.005,
+      "loss_mode": "gspo",
+      "lr": 2e-06,
+      "max_adaptive_group": null,
+      "repair_converted_jsonl": null
+    },
+    "eval": {
+      "adapter": {
+        "heldout_loss": 1.96351,
+        "overall": 4.177,
+        "pass_at_1": "10/12"
+      },
+      "base": {
+        "heldout_loss": 1.964016,
+        "overall": 4.177,
+        "pass_at_1": "10/12"
+      },
+      "eval_source": "reeval_latest_20260818T072721.json"
+    },
+    "has_adapter": true,
+    "metrics": {
+      "breaker_trips": [
+        "all_fail_without_repair"
+      ],
+      "clip_high_mean": 0.188,
+      "entropy_last": null,
+      "final_loss": 6.3e-05,
+      "first_ts": "2026-08-18T07:35:58",
+      "last_pass_rate": 0.0,
+      "last_ts": "2026-08-18T12:49:13",
+      "max_pass_rate": 0.25,
+      "mean_reward_first": 0.1,
+      "mean_reward_last": 0.1431,
+      "seq_kl_last": -0.0071,
+      "steps": 40
+    },
+    "note": "Latest run. Halted step40 by all_fail_without_repair breaker (repair not wired: run_config repair_converted_jsonl=None). eval 08-19: adapter==base. Tiny loss 6.3e-5.",
+    "output_dir": "/root/work/software/quantum-gpt/outputs/grpo-27b-selfeval-20260818T072721",
+    "recorded_utc": "2026-08-19T11:54:12.353160+00:00",
+    "round": "grpo-27b-selfeval-20260818T072721",
+    "run_dirs": [
+      "/root/work/software/quantum-gpt/outputs/grpo-27b-selfeval-20260818T072721"
+    ],
+    "verdict": "NO_OP (adapter==base)"
+  }
+]
+
