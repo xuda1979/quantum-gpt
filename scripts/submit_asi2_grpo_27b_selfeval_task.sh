@@ -29,13 +29,15 @@ NAS_CHECKPOINT_ROOT="/root/work/filestorage/grpo_checkpoints/qwen36_27b_selfeval
 # FV-GSPO run parameters (overridable for short frontier-yield probes)
 # Short probe: ASI2_GRPO_STEPS=24 ASI2_GRPO_CHECKPOINT_SECONDS=3600
 RUN_STEPS="${ASI2_GRPO_STEPS:-500}"
-RUN_LR="${ASI2_GRPO_LR:-2e-6}"
-RUN_KL_COEFF="${ASI2_GRPO_KL_COEFF:-0.005}"
+# 2026-08-20 recalibration (commit b1d8cb7): 2e-6 + 3e-4/4e-4 pins the policy
+# (adapter==base in every eval). These MUST match asi2_launch_grpo_27b_selfeval.sh.
+RUN_LR="${ASI2_GRPO_LR:-2e-5}"
+RUN_KL_COEFF="${ASI2_GRPO_KL_COEFF:-0.01}"
 RUN_CHECKPOINT_SECONDS="${ASI2_GRPO_CHECKPOINT_SECONDS:-7200}"
 RUN_NPU_COUNT="${ASI2_GRPO_NPU_COUNT:-8}"
 RUN_LOSS_MODE="${ASI2_GRPO_LOSS_MODE:-gspo}"
-RUN_GSPO_CLIP_LOW="${ASI2_GRPO_GSPO_CLIP_LOW:-0.0003}"
-RUN_GSPO_CLIP_HIGH="${ASI2_GRPO_GSPO_CLIP_HIGH:-0.0004}"
+RUN_GSPO_CLIP_LOW="${ASI2_GRPO_GSPO_CLIP_LOW:-0.1}"
+RUN_GSPO_CLIP_HIGH="${ASI2_GRPO_GSPO_CLIP_HIGH:-0.2}"
 RUN_REWARD_MODE="${ASI2_GRPO_REWARD_MODE:-p_dominant}"
 RUN_MAX_NEW_TOKENS="${ASI2_GRPO_MAX_NEW_TOKENS:-1024}"
 RUN_MAX_SEQ_LENGTH="${ASI2_GRPO_MAX_SEQ_LENGTH:-2048}"
@@ -184,7 +186,7 @@ launch_spec = {
     "remote_script_body": remote_script,
     "remote_command": execution_command,
     "execution_command": execution_command,
-    "description": "FV-GSPO training for Qwen3.6-27B quantum coding: frontier-router GRPO on learnable mixed-outcome groups, leave-one-out advantages, GSPO sequence clipping (3e-4/4e-4), all-fail tasks routed to repair queue, 50/25/25 targeted/neighbor/replay mix, circuit breakers. Executable tests authoritative (self-judge weight 0).",
+    "description": "FV-GSPO training for Qwen3.6-27B quantum coding: frontier-router GRPO on learnable mixed-outcome groups, leave-one-out advantages, GSPO sequence clipping (0.1/0.2), teacher-free self-repair (2 rounds), repair-sidecar conversions, 50/25/25 targeted/neighbor/replay mix, circuit breakers. Executable tests authoritative (self-judge weight 0).",
     "embed_patches": False,
 }
 
