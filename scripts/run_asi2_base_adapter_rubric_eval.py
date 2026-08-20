@@ -9,6 +9,7 @@ import gc
 import importlib.util
 import json
 import math
+import os
 import re
 import sys
 import time
@@ -60,6 +61,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--device", default="npu")
     parser.add_argument("--max-new-tokens", type=int, default=384)
     parser.add_argument("--limit", type=int, default=0)
+    parser.add_argument(
+        "--hide-reference",
+        action="store_true",
+        help="omit the task's own reference solution from the eval prompt "
+        "(same as EVAL_HIDE_REFERENCE=1; default embeds it for historical comparability)",
+    )
     return parser.parse_args()
 
 
@@ -125,15 +132,18 @@ def render_prompt(backend: Any, prompt: str) -> str:
     return "\n\n".join(f"{m['role'].upper()}: {m['content']}" for m in messages)
 
 
-def build_prompt(task_dir: Path, meta: dict[str, Any]) -> str:
+def build_prompt(task_dir: Path, meta: dict[str, Any], hide_reference: bool = False) -> str:
+    # EVAL_HIDE_REFERENCE=1 (or --hide-reference via the caller) drops the
+    # reference block; default OFF keeps historical comparability (design B).
+    hide_ref = hide_reference or os.environ.get("EVAL_HIDE_REFERENCE", "0") == "1"
     tests = (task_dir / meta.get("test_file", "tests.py")).read_text(encoding="utf-8")
     candidate_name = meta.get("candidate_file", "candidate.py")
-    existing = (
+    reference = (
         (task_dir / candidate_name).read_text(encoding="utf-8")
         if (task_dir / candidate_name).exists()
         else ""
     )
-    return (
+    prompt = (
         f"Task: {meta['name']}\n"
         f"Domain: {meta['domain']}\n"
         f"Category: {meta['category']}\n\n"
@@ -142,11 +152,19 @@ def build_prompt(task_dir: Path, meta: dict[str, Any]) -> str:
         "```python\n"
         f"{tests[:8000]}\n"
         "```\n\n"
-        "Existing/reference API shape, if useful:\n"
-        "```python\n"
-        f"{existing[:3000]}\n"
-        "```\n"
     )
+    if not hide_ref:
+        # candidate_file is the task's own verified reference solution; embedding it
+        # makes the eval a reconstruct-from-reference test (leak, design B).
+        # EVAL_HIDE_REFERENCE=1 / --hide-reference removes it. Default OFF keeps
+        # historical base 10/12 pass@1 and rubric 4.177 comparable.
+        prompt += (
+            "Existing/reference API shape, if useful:\n"
+            "```python\n"
+            f"{reference[:3000]}\n"
+            "```\n"
+        )
+    return prompt
 
 
 def sanitize_code(text: str) -> str:
@@ -212,7 +230,7 @@ def static_scores(code: str, passed: bool) -> dict[str, float]:
     has_defs = bool(
         tree
         and any(
-            isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
+            isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef)
             for node in ast.walk(tree)
         )
     )
@@ -221,9 +239,9 @@ def static_scores(code: str, passed: bool) -> dict[str, float]:
     nested_loops = 0
     if tree:
         for node in ast.walk(tree):
-            if isinstance(node, (ast.For, ast.While)):
+            if isinstance(node, ast.For | ast.While):
                 nested_loops += sum(
-                    isinstance(child, (ast.For, ast.While))
+                    isinstance(child, ast.For | ast.While)
                     for child in ast.walk(node)
                     if child is not node
                 )
@@ -306,11 +324,12 @@ def run_model(
     backend: Any,
     tasks: list[tuple[Path, dict[str, Any]]],
     args: argparse.Namespace,
+    hide_reference: bool = False,
 ) -> list[dict[str, Any]]:
     records = []
     for index, (task_json, meta) in enumerate(tasks, 1):
         task_dir = task_json.parent
-        prompt = build_prompt(task_dir, meta)
+        prompt = build_prompt(task_dir, meta, hide_reference=hide_reference)
         print(
             json.dumps(
                 {"stage": "generate", "model": model_name, "index": index, "task": meta["id"]}
@@ -333,6 +352,7 @@ def run_model(
                 "details": test_result["details"],
                 "scores": scores,
                 "output_chars": len(code),
+                "reference_hidden": hide_reference,
             }
         )
     return records
@@ -340,6 +360,7 @@ def run_model(
 
 def main() -> int:
     args = parse_args()
+    hide_reference = bool(args.hide_reference or os.environ.get("EVAL_HIDE_REFERENCE", "0") == "1")
     started = time.time()
     args.output.parent.mkdir(parents=True, exist_ok=True)
     selected = TASK_IDS[: args.limit] if args.limit else TASK_IDS
@@ -359,7 +380,7 @@ def main() -> int:
 
     print(json.dumps({"stage": "load_base"}), flush=True)
     base = load_model(args.base_model, args.device)
-    base_records = run_model("base", base, backend, tasks, args)
+    base_records = run_model("base", base, backend, tasks, args, hide_reference)
     base_eval_loss = eval_loss(base, backend, eval_file, args.device)
     del base
     gc.collect()
@@ -370,7 +391,7 @@ def main() -> int:
     adapter_base = load_model(args.base_model, args.device)
     adapter = PeftModel.from_pretrained(adapter_base, str(args.adapter))
     adapter.eval()
-    adapter_records = run_model("adapter", adapter, backend, tasks, args)
+    adapter_records = run_model("adapter", adapter, backend, tasks, args, hide_reference)
     adapter_eval_loss = eval_loss(adapter, backend, eval_file, args.device)
 
     records = base_records + adapter_records
@@ -378,6 +399,7 @@ def main() -> int:
         "created_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "base_model": str(args.base_model),
         "adapter": str(args.adapter),
+        "reference_hidden": hide_reference,
         "task_ids": [meta["id"] for _, meta in tasks],
         "heldout_sft_eval": {"base": base_eval_loss, "adapter": adapter_eval_loss},
         "summary": summarize(records),

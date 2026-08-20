@@ -19,8 +19,11 @@
 #      duplicate submit) — exit 0: nothing to do.
 #   3. Submit a fresh task: unique timestamped ASI2_GRPO_TASK_NAME
 #      (asi2-grpo-27b-selfeval-<ts>), ASI2_GRPO_STEPS=500 (full run),
-#      ASI2_GRPO_CHECKPOINT_SECONDS=3600. Success = the submit tool's JSON
-#      output carries "ok": true. On failure print the output tail, exit 1.
+#      ASI2_GRPO_CHECKPOINT_SECONDS=3600. NOTE (design §C.3.3, 2026-08-20):
+#      1800s is the recommendation for future runs — 3600s risks zero checkpoints
+#      per 1-3h reaper cycle at ~25-70 min/step (launch default is 1800s).
+#      Success = the submit tool's JSON output carries "ok": true. On failure
+#      print the output tail, exit 1.
 #   4. Verify the launch on the box: poll every 60s up to VERIFY_WAIT_SECONDS
 #      (default 1200). Tail the newest grpo_train_*.log and watch
 #      grpo_step_metrics.jsonl growth in the newest outputs/grpo-27b-selfeval-*
@@ -90,8 +93,9 @@ Stages:
   1. Deploy changed files via /tmp/asi2_deploy_daemon.py (sha256-verified);
      skips if the state file already marks deploy done.
   2. Remote launcher status: exit 0 if trainer RUNNING or fresh activity.
-  3. Submit unique timestamped task (GRPO_STEPS=500, CHECKPOINT_SECONDS=3600);
-     success marker = '"ok": true' in submit output.
+  3. Submit unique timestamped task (GRPO_STEPS=500, CHECKPOINT_SECONDS=3600;
+     design §C.3.3 recommends 1800s for future runs); success marker =
+     '"ok": true' in submit output.
   4. Verify launch: poll newest grpo_train_*.log + grpo_step_metrics.jsonl
      growth (gated to this launch via a marker file); exit 0 on first step
      record or a real loss.
@@ -283,8 +287,8 @@ print(d.get("output") or d.get("error") or "")
 # Stage 3: submit the relaunch
 # ---------------------------------------------------------------------------
 stage3_submit() {
-  local task_name="asi2-grpo-27b-selfeval-$(date +%Y%m%dT%H%M%S)"
-  log "Stage 3: submitting relaunch as ${task_name} (GRPO_STEPS=500 full run, CHECKPOINT_SECONDS=3600)..."
+  local task_name="asi2-grpo-27b-$(date +%m%dT%H%M%S)"
+  log "Stage 3: submitting relaunch as ${task_name} (GRPO_STEPS=500 full run, CHECKPOINT_SECONDS=3600; design §C.3.3 recommends 1800s for future runs)..."
   local out_file="/tmp/asi2_submit_${task_name}.out"
   local rc
   set +e
@@ -482,7 +486,7 @@ dry_run_plan() {
     log "[DRY-RUN]          then mark {\"deployed\": true} in ${STATE_FILE}"
   fi
   log "[DRY-RUN] Stage 2: run remote 'bash scripts/asi2_launch_grpo_27b_selfeval.sh status'; exit 0 if RUNNING or <30-min activity"
-  local task_name="asi2-grpo-27b-selfeval-$(date +%Y%m%dT%H%M%S)"
+  local task_name="asi2-grpo-27b-$(date +%m%dT%H%M%S)"
   log "[DRY-RUN] Stage 3: (cd ${ROOT_DIR} && ASI2_GRPO_TASK_NAME=${task_name} ASI2_GRPO_STEPS=500 ASI2_GRPO_CHECKPOINT_SECONDS=3600 bash scripts/submit_asi2_grpo_27b_selfeval_task.sh --submit)"
   log "[DRY-RUN]          success = submit output contains '\"ok\": true'; then touch verify marker on box and record task in state"
   log "[DRY-RUN] Stage 4: poll every 60s up to ${VERIFY_WAIT_SECONDS}s: tail newest grpo_train_*.log + count grpo_step_metrics.jsonl lines (gated to this launch); exit 0 on first step record or real loss"

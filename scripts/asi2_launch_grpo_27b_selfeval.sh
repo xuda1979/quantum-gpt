@@ -54,6 +54,9 @@ SELF_REPAIR_ROUNDS="${SELF_REPAIR_ROUNDS:-2}"   # teacher-free self-repair round
                                                 # candidate (plan §8: use 2); 0 disables.
                                                 # Wired 2026-08-20: default 0 meant the only
                                                 # positive-signal mechanism never ran.
+                                                # reports/asi2_next_iteration_design_20260820.md
+                                                # §C.3.1: trim to 1 (:-1) if step time exceeds
+                                                # ~40 min (reaper window is 1-3h).
 REPAIR_POLL_SECONDS="${REPAIR_POLL_SECONDS:-600}"
 
 # ---- training hyperparams ----
@@ -70,7 +73,11 @@ TEMPERATURE="${TEMPERATURE:-1.0}"      # 1.0 for sampling-policy consistency (re
 TOP_P="${TOP_P:-1.0}"                  # 1.0 likewise; diversity comes from sampling
 LORA_RANK="${LORA_RANK:-16}"
 LORA_ALPHA="${LORA_ALPHA:-32}"
-CHECKPOINT_INTERVAL_SECONDS="${CHECKPOINT_INTERVAL_SECONDS:-7200}"
+# 1800s since 2026-08-20 (design reports/asi2_next_iteration_design_20260820.md
+# §C.3.3): the platform reaper kills 8-card runs after ~1-3h regardless of code;
+# a 2h first checkpoint is borderline, 30 min guarantees >=1 checkpoint per
+# reaper cycle at ~25-70 min/step. Env override preserved.
+CHECKPOINT_INTERVAL_SECONDS="${CHECKPOINT_INTERVAL_SECONDS:-1800}"
 MAX_NEW_TOKENS="${MAX_NEW_TOKENS:-1024}"
 MAX_SEQ_LENGTH="${MAX_SEQ_LENGTH:-2048}"
 DEVICE="${DEVICE:-npu}"
@@ -261,11 +268,11 @@ log "Advantage:      $ADVANTAGE_MODE leave-one-out (no per-task std norm)"
 log "Mix:            $MIX_TARGETED targeted / $MIX_NEIGHBOR neighbor / $MIX_REPLAY replay"
 log "Self-judge:     disabled (zero reward weight until executable-label calibration)"
 log "Benchmark:      $BENCHMARK_FILE (training-only; held-out tasks excluded)"
-log "Checkpoint interval: ${CHECKPOINT_INTERVAL_SECONDS}s (= every 2h)"
+log "Checkpoint interval: ${CHECKPOINT_INTERVAL_SECONDS}s (= every $((CHECKPOINT_INTERVAL_SECONDS / 60)) min)"
 log "Curriculum EMA decay: $CURRICULUM_EMA_DECAY"
 log "============================================================"
 
-# ---- checkpoint sync daemon (saves adapters to NAS every 2h) ----
+# ---- checkpoint sync daemon (saves adapters to NAS on CHECKPOINT_INTERVAL_SECONDS) ----
 CHECKPOINT_SYNC_SCRIPT="$OUT/checkpoint_sync_daemon.sh"
 cat > "$CHECKPOINT_SYNC_SCRIPT" << 'DAEMONEOF'
 #!/usr/bin/env bash
@@ -274,7 +281,7 @@ cat > "$CHECKPOINT_SYNC_SCRIPT" << 'DAEMONEOF'
 set -euo pipefail
 OUT="${1:?need output dir}"
 NAS_ROOT="${2:?need NAS root}"
-INTERVAL="${3:-7200}"
+INTERVAL="${3:-1800}"
 LOGFILE="${4:-/dev/null}"
 
 logd() { printf '[%s] checkpoint-daemon: %s\n' "$(date '+%Y-%m-%dT%H:%M:%S%z')" "$*" | tee -a "$LOGFILE"; }
