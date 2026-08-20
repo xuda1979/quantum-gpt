@@ -476,7 +476,20 @@ async function ensureEnvironmentOpened(page, args) {
   await page.waitForTimeout(3000);
 
   const row = page.locator('tr', { hasText: envName }).first();
-  await row.waitFor({ state: 'visible', timeout: 60000 });
+  try {
+    await row.waitFor({ state: 'visible', timeout: 60000 });
+  } catch (rowErr) {
+    if (process.env.HUANXIN_SUBMIT_DEBUG === '1') {
+      const dump = await page.evaluate(() => ({
+        url: location.href.slice(0, 140),
+        trCount: document.querySelectorAll('tr').length,
+        body: document.body.innerText.slice(0, 300),
+        kcStore: localStorage.getItem('encryptionStore') ? 'present' : 'absent',
+      })).catch(() => ({}));
+      console.error('HUANXIN_SUBMIT_DEBUG row-timeout dump:', JSON.stringify(dump));
+    }
+    throw rowErr;
+  }
   const openButton = row.getByRole('button', { name: '打开' }).first();
   const startButton = row.getByRole('button', { name: '运行' }).first();
 
@@ -533,8 +546,17 @@ async function ensureEnvironmentOpened(page, args) {
 }
 
 async function ensureAppSurface(page, args) {
-  await page.goto(args.url, { waitUntil: 'domcontentloaded', timeout: 180000 });
-  await page.waitForTimeout(3000);
+  const targetBase = String(args.url || '').split('#')[0];
+  const currentUrl = String(await page.url());
+  const alreadyOnApp = Boolean(
+    targetBase &&
+      currentUrl.startsWith(targetBase) &&
+      !String(currentUrl).includes('openid-connect/auth')
+  );
+  if (!alreadyOnApp) {
+    await page.goto(args.url, { waitUntil: 'domcontentloaded', timeout: 180000 });
+    await page.waitForTimeout(3000);
+  }
 
   let bridge = null;
   if (classifyUrl(page.url()) === 'login_required') {
@@ -1631,9 +1653,30 @@ async function main() {
   const args = parseArgs(process.argv.slice(2));
   const launchSpec = deriveLaunchSpec(args);
   const resourceConfig = resolveResourceConfig(args, launchSpec);
-  const { profileDir, isolated, sourceDir, autoIsolated, baseProfileLocked } = ensureProfileDir();
-  const launch = await launchPersistentContext(profileDir);
-  const context = launch.context;
+  let context;
+  let launch = null;
+  let profileDir = '';
+  let isolated = false;
+  let sourceDir = '';
+  let autoIsolated = false;
+  let baseProfileLocked = false;
+  if (process.env.HUANXIN_CDP_ENDPOINT) {
+    // Drive an already-authenticated browser (e.g. the daemon's on port 9224)
+    // instead of launching a fresh one — the SPA never honors stored tokens on
+    // fresh init, so a pre-authenticated browser avoids the whole SSO dance.
+    const { chromium } = require('playwright');
+    const cdpBrowser = await chromium.connectOverCDP(process.env.HUANXIN_CDP_ENDPOINT);
+    context = cdpBrowser.contexts()[0] || (await cdpBrowser.newContext());
+  } else {
+    const profile = ensureProfileDir();
+    profileDir = profile.profileDir;
+    isolated = profile.isolated;
+    sourceDir = profile.sourceDir;
+    autoIsolated = profile.autoIsolated;
+    baseProfileLocked = profile.baseProfileLocked;
+    launch = await launchPersistentContext(profileDir);
+    context = launch.context;
+  }
   let page = context.pages()[0] || (await context.newPage());
   page.setDefaultTimeout(30000);
 
@@ -1692,8 +1735,8 @@ async function main() {
       const result = {
         ok: true,
         submit: args.submit,
-        browserMode: launch.browserMode,
-        launchFallbackUsed: launch.fallbackUsed,
+        browserMode: launch ? launch.browserMode : 'cdp',
+        launchFallbackUsed: launch ? launch.fallbackUsed : false,
         bridge,
         taskName: args.taskName,
         imageName: args.imageName,
@@ -1702,7 +1745,7 @@ async function main() {
         priority: args.priority,
         resourceConfig,
         usedProfile: {
-          profileDir,
+          profileDir: profileDir || 'cdp',
           isolated,
           sourceDir,
           autoIsolated,
@@ -1851,8 +1894,8 @@ async function main() {
     const result = {
       ok: !args.submit || (submitResult.submitted && !submitResult.blockedReason),
       submit: args.submit,
-      browserMode: launch.browserMode,
-      launchFallbackUsed: launch.fallbackUsed,
+      browserMode: launch ? launch.browserMode : 'cdp',
+      launchFallbackUsed: launch ? launch.fallbackUsed : false,
       bridge,
       taskName: args.taskName,
       imageName: args.imageName,
@@ -1861,7 +1904,7 @@ async function main() {
       priority: args.priority,
       resourceConfig,
       usedProfile: {
-        profileDir,
+        profileDir: profileDir || 'cdp',
         isolated,
         sourceDir,
         autoIsolated,
@@ -1890,7 +1933,9 @@ async function main() {
 
     console.log(JSON.stringify(redactSensitive(result), null, 2));
   } finally {
-    await context.close().catch(() => {});
+    if (!process.env.HUANXIN_CDP_ENDPOINT) {
+      await context.close().catch(() => {});
+    }
   }
 }
 
