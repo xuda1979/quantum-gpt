@@ -11,7 +11,9 @@
 #   - frontier router: probe each group, train only learnable frontier groups
 #   - all-fail groups -> execution-verified repair queue (repair SFT/DPO stage)
 #   - leave-one-out advantages (Dr.GRPO), no per-task std normalization
-#   - GSPO sequence-level clipping (calibrated 3e-4/4e-4, NOT DAPO's 0.2/0.28)
+#   - GSPO sequence-level clipping (0.1/0.2 — recalibrated 2026-08-20: 3e-4/4e-4
+#     pinned the policy (clip_high_fraction 0.5-0.75, inert adapter); the design
+#     doc's 1e-3 top-of-sweep was still below observed drift at LR 2e-5)
 #   - 50% targeted / 25% neighboring variants / 25% replay sampling
 #   - executable tests authoritative; self-judge reward weight = 0
 #   - circuit breakers: non-finite, clip fraction, entropy collapse,
@@ -41,13 +43,29 @@ LOGDIR="${LOGDIR:-$NAS_ROOT/logs/grpo_27b_selfeval}"
 TRAIN_LOG="$LOGDIR/grpo_train_${RUN_ID}.log"
 PID_FILE="$LOGDIR/grpo_27b_selfeval.pid"
 CHECKPOINT_PID_FILE="$LOGDIR/grpo_27b_checkpoint_sync.pid"
+REPAIR_PID_FILE="$LOGDIR/grpo_27b_repair_sidecar.pid"
+# Repair conversion feed consumed by the all_fail_without_repair circuit breaker.
+# The FV-GSPO repair stage (scripts/fv_gspo_repair_stage.py) writes this file; if it
+# is never wired, count_repair_conversions() always returns 0 and any all-fail run
+# (common on hard tasks) trips the breaker and halts. Must point at the repair stage
+# output so conversions actually unblock the breaker.
+REPAIR_CONVERTED_JSONL="${REPAIR_CONVERTED_JSONL:-$OUT/repair_stage/repair_converted.jsonl}"
+SELF_REPAIR_ROUNDS="${SELF_REPAIR_ROUNDS:-2}"   # teacher-free self-repair rounds per failed
+                                                # candidate (plan §8: use 2); 0 disables.
+                                                # Wired 2026-08-20: default 0 meant the only
+                                                # positive-signal mechanism never ran.
+REPAIR_POLL_SECONDS="${REPAIR_POLL_SECONDS:-600}"
 
 # ---- training hyperparams ----
 GROUP_SIZE="${GROUP_SIZE:-8}"
 MAX_ADAPTIVE_GROUP="${MAX_ADAPTIVE_GROUP:-8}"
 GRPO_STEPS="${GRPO_STEPS:-500}"
-LR="${LR:-2e-6}"                       # FV-GSPO: 1e-6..3e-6 LoRA; legacy 1e-5 is aggressive
-KL_COEFF="${KL_COEFF:-0.005}"          # FV-GSPO initial KL beta (design table)
+LR="${LR:-2e-5}"                       # FV-GSPO recalibrated 2026-08-20: 2e-6 gave ~1e-4 total
+                                       # policy drift over 40 steps -> inert adapter (adapter==base
+                                       # in every eval). 2e-5 with clip 0.1/0.2 is the standard
+                                       # LoRA-RL range for 27B.
+KL_COEFF="${KL_COEFF:-0.01}"           # FV-GSPO initial KL beta (raised 2026-08-20: more policy
+                                       # movement per step needs a slightly stronger anchor)
 TEMPERATURE="${TEMPERATURE:-1.0}"      # 1.0 for sampling-policy consistency (review 2026-08-05)
 TOP_P="${TOP_P:-1.0}"                  # 1.0 likewise; diversity comes from sampling
 LORA_RANK="${LORA_RANK:-16}"
@@ -61,8 +79,8 @@ BENCHMARK_FILE="${BENCHMARK_FILE:-evals/benchmarks/quantum_grpo_training_v1.txt}
 
 # ---- FV-GSPO: frontier router + mixture + GSPO clipping + breakers ----
 LOSS_MODE="${LOSS_MODE:-gspo}"
-GSPO_CLIP_LOW="${GSPO_CLIP_LOW:-0.0003}"
-GSPO_CLIP_HIGH="${GSPO_CLIP_HIGH:-0.0004}"
+GSPO_CLIP_LOW="${GSPO_CLIP_LOW:-0.1}"
+GSPO_CLIP_HIGH="${GSPO_CLIP_HIGH:-0.2}"
 ADVANTAGE_MODE="${ADVANTAGE_MODE:-loo}"
 FRONTIER_THRESHOLD="${FRONTIER_THRESHOLD:-0.10}"
 MASTERED_THRESHOLD="${MASTERED_THRESHOLD:-0.95}"
@@ -127,8 +145,8 @@ fi
 
 # ---- stop subcommand ----
 if [[ "${1:-}" == "stop" ]]; then
-  log "stopping GRPO training and checkpoint sync..."
-  for pf in "$PID_FILE" "$CHECKPOINT_PID_FILE"; do
+  log "stopping GRPO training, checkpoint sync, and repair sidecar..."
+  for pf in "$PID_FILE" "$CHECKPOINT_PID_FILE" "$REPAIR_PID_FILE"; do
     if [[ -f "$pf" ]]; then
       pid="$(cat "$pf" 2>/dev/null || true)"
       if [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null; then
@@ -139,7 +157,7 @@ if [[ "${1:-}" == "stop" ]]; then
     fi
   done
   sleep 3
-  for pf in "$PID_FILE" "$CHECKPOINT_PID_FILE"; do
+  for pf in "$PID_FILE" "$CHECKPOINT_PID_FILE" "$REPAIR_PID_FILE"; do
     if [[ -f "$pf" ]]; then
       pid="$(cat "$pf" 2>/dev/null || true)"
       if [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null; then
@@ -174,6 +192,16 @@ if [[ "${1:-}" == "status" ]]; then
     fi
   else
     log "Checkpoint sync: NOT RUNNING"
+  fi
+  if [[ -f "$REPAIR_PID_FILE" ]]; then
+    pid="$(cat "$REPAIR_PID_FILE")"
+    if kill -0 "$pid" 2>/dev/null; then
+      log "Repair sidecar: RUNNING pid=$pid"
+    else
+      log "Repair sidecar: STOPPED (pid file stale)"
+    fi
+  else
+    log "Repair sidecar: NOT RUNNING"
   fi
   log "NAS checkpoint root: $NAS_CHECKPOINT_ROOT"
   if [[ -d "$NAS_CHECKPOINT_ROOT" ]]; then
@@ -353,6 +381,8 @@ nohup "${RUN_CMD[@]}" \
   --mix-replay "$MIX_REPLAY" \
   --neighbor-window "$NEIGHBOR_WINDOW" \
   --repair-queue-path "$OUT/repair_queue.jsonl" \
+  --repair-converted-jsonl "$REPAIR_CONVERTED_JSONL" \
+  --self-repair-rounds "$SELF_REPAIR_ROUNDS" \
   --circuit-breaker-window "$CIRCUIT_BREAKER_WINDOW" \
   --reward-mode "$REWARD_MODE" \
   --reward-pass-mass "$REWARD_PASS_MASS" \
@@ -365,10 +395,21 @@ PID=$!
 echo "$PID" > "$PID_FILE"
 disown "$PID" 2>/dev/null || true
 
+# ---- repair sidecar (CPU-only) ----
+# Converts the trainer's repair_queue.jsonl into verified SFT/DPO positives and
+# keeps repair_converted.jsonl flowing so the all_fail_without_repair breaker
+# never false-trips (diagnosed 2026-08-19: stage never ran in-loop).
+nohup bash "$NAS_ROOT/scripts/fv_gspo_repair_sidecar.sh" "$OUT" \
+  >> "$LOGDIR/repair_sidecar_${RUN_ID}.log" 2>&1 &
+echo "$!" > "$REPAIR_PID_FILE"
+disown "$(cat "$REPAIR_PID_FILE")" 2>/dev/null || true
+log "repair sidecar launched pid=$(cat "$REPAIR_PID_FILE") (poll ${REPAIR_POLL_SECONDS}s)"
+
 log "============================================================"
 log "__ASI2_GRPO_27B_SELFEVAL_LAUNCHED__"
 log "Trainer PID: $PID"
 log "Checkpoint daemon PID: $(cat "$CHECKPOINT_PID_FILE")"
+log "Repair sidecar PID: $(cat "$REPAIR_PID_FILE")"
 log "Train log: $TRAIN_LOG"
 log "Output dir: $OUT"
 log "NAS checkpoints: $NAS_CHECKPOINT_ROOT"
