@@ -136,7 +136,11 @@ if os.path.exists(path):
         data = json.load(open(path, encoding="utf-8"))
     except Exception:
         data = {}
-    status = (data.get(ts) or {}).get("status", "")
+    if not isinstance(data, dict):
+        data = {}
+    entry = data.get(ts)
+    if isinstance(entry, dict):
+        status = entry.get("status", "")
 print(status)
 PYEOF
 }
@@ -156,6 +160,8 @@ if os.path.exists(path):
     try:
         data = json.load(open(path, encoding="utf-8"))
     except Exception:
+        data = {}
+    if not isinstance(data, dict):
         data = {}
 entry = {
     "status": status,
