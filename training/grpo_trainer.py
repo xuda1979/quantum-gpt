@@ -361,6 +361,16 @@ def parse_args() -> argparse.Namespace:
         help="Steps per evaluation window for circuit breakers; a breaker trips only "
         "after persisting across two windows.",
     )
+    p.add_argument(
+        "--circuit-breaker-clip-fraction-limit",
+        type=float,
+        default=0.50,
+        help="Clip-fraction breaker threshold (mean clip_total_fraction over a window). "
+        "Recalibrated 2026-08-20: 0.50 trips whenever per-sequence ratios reach the "
+        "GSPO clip edge (the normal saturated-PPO regime at LR 2e-5), halting the run "
+        "after ~20 steps. The launch sets 0.90 so the breaker only catches real "
+        "learning collapse, not routine clipping.",
+    )
     # ── adaptive KL controller (design §4: capability preservation) ──
     p.add_argument(
         "--adaptive-kl",
@@ -2002,7 +2012,10 @@ def main() -> int:
                 router.load_coverage_map(json.loads(coverage_path.read_text(encoding="utf-8")))
             except json.JSONDecodeError as exc:
                 raise SystemExit(f"Invalid --coverage-json {coverage_path}: {exc}")
-    breaker = CircuitBreakerState(window_size=args.circuit_breaker_window)
+    breaker = CircuitBreakerState(
+        window_size=args.circuit_breaker_window,
+        clip_fraction_limit=args.circuit_breaker_clip_fraction_limit,
+    )
     running_mad = RunningMAD()
     kl_state = (
         AdaptiveKLState(

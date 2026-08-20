@@ -64,6 +64,10 @@
     "repair_queue_path": "outputs/grpo-27b-selfeval-<run>/repair_queue.jsonl",
     "stop_on_severe_breaker": true,
     "circuit_breaker_window": 10,
+    "circuit_breaker_clip_fraction_limit": 0.9,
+    "trust_region_on_violation": "scale_lr",
+    "trust_region_max_seq_kl": 0.25,
+    "trust_region_max_clip_fraction": 0.9,
     "self_evaluation": {
       "enabled": false,
       "note": "current-adapter self-judgment starts with zero reward weight; enable only after executable-label calibration (cap 0.05, subtracted from shaped terms, never from pass reward)"

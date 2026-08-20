@@ -89,6 +89,17 @@ MIX_NEIGHBOR="${MIX_NEIGHBOR:-0.25}"
 MIX_REPLAY="${MIX_REPLAY:-0.25}"
 NEIGHBOR_WINDOW="${NEIGHBOR_WINDOW:-10}"
 CIRCUIT_BREAKER_WINDOW="${CIRCUIT_BREAKER_WINDOW:-10}"
+# 2026-08-20 recalibration (risk analysis reports/asi2_relaunch_risk_analysis_20260820.md):
+# the default trust region (reject at seq_kl>0.05 OR clip_fraction>0.50) silently
+# REVERTS every update once per-sequence ratios reach the clip edge at LR 2e-5 —
+# a fresh adapter==base no-op vector. scale_lr keeps updates (halving LR on
+# violation); ceilings 0.25/0.90 only guard real collapse. The clip-fraction
+# circuit breaker gets the same 0.90 ceiling (0.50 trips the normal saturated-PPO
+# regime after ~20 steps).
+TRUST_REGION_ON_VIOLATION="${TRUST_REGION_ON_VIOLATION:-scale_lr}"
+TRUST_REGION_MAX_SEQ_KL="${TRUST_REGION_MAX_SEQ_KL:-0.25}"
+TRUST_REGION_MAX_CLIP_FRACTION="${TRUST_REGION_MAX_CLIP_FRACTION:-0.90}"
+CIRCUIT_BREAKER_CLIP_FRACTION_LIMIT="${CIRCUIT_BREAKER_CLIP_FRACTION_LIMIT:-0.90}"
 REWARD_MODE="${REWARD_MODE:-p_dominant}"   # comprehensive: R = w_P*P + w_S*S + w_J*J
 REWARD_PASS_MASS="${REWARD_PASS_MASS:-0.40}"
 REWARD_SHAPED_MASS="${REWARD_SHAPED_MASS:-0.35}"
@@ -384,6 +395,10 @@ nohup "${RUN_CMD[@]}" \
   --repair-converted-jsonl "$REPAIR_CONVERTED_JSONL" \
   --self-repair-rounds "$SELF_REPAIR_ROUNDS" \
   --circuit-breaker-window "$CIRCUIT_BREAKER_WINDOW" \
+  --circuit-breaker-clip-fraction-limit "$CIRCUIT_BREAKER_CLIP_FRACTION_LIMIT" \
+  --trust-region-on-violation "$TRUST_REGION_ON_VIOLATION" \
+  --trust-region-max-seq-kl "$TRUST_REGION_MAX_SEQ_KL" \
+  --trust-region-max-clip-fraction "$TRUST_REGION_MAX_CLIP_FRACTION" \
   --reward-mode "$REWARD_MODE" \
   --reward-pass-mass "$REWARD_PASS_MASS" \
   --reward-shaped-mass "$REWARD_SHAPED_MASS" \
