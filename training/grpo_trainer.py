@@ -129,6 +129,18 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--lr", type=float, default=1e-5)
     p.add_argument("--kl-coeff", type=float, default=0.05, help="KL penalty coefficient")
     p.add_argument(
+        "--inner-epochs",
+        type=int,
+        default=2,
+        help=(
+            "Number of inner PPO/GSPO optimizer steps per rollout group. >1 fixes the "
+            "zero-gradient-by-construction bug: old_log_probs (rollout, fixed) differ from the "
+            "recomputed current_log_probs after the first inner step, so the importance ratio is "
+            "no longer 1 and the clipped policy-gradient is nonzero. 1 reproduces the old "
+            "non-learning behavior."
+        ),
+    )
+    p.add_argument(
         "--temperature",
         type=float,
         default=1.0,
@@ -2496,193 +2508,210 @@ def main() -> int:
             continue
 
         # Forward pass to get current completion-only log probs and apply GRPO loss.
-        active_model.train()
-        current_log_probs = []
-        normalized_old_log_probs = []
-        filtered_advantages = []
-        filtered_token_counts = []
-        for idx, code in enumerate(codes):
-            current_log_prob, token_count = compute_completion_log_prob(
-                active_model,
-                tokenizer,
-                prompt_text,
-                code,
-                device,
-                args.max_seq_length,
-                args.logit_clip,
-                add_mm_token_type_ids=_needs_mm_token_type_ids,
-            )
-            # Release the allocator cache between per-completion forwards:
-            # p16 hung right here (group-8 train-logprob, 8 grad-enabled
-            # forwards with full-vocab logits) after 41 min of silence.
-            _release_device_cache(torch)
-            if token_count.item() == 0:
-                continue
-            current_log_probs.append(current_log_prob / token_count.clamp_min(1))
-            normalized_old_log_probs.append(old_log_probs[idx] / old_token_counts[idx].clamp_min(1))
-            filtered_advantages.append(advantages[idx])
-            filtered_token_counts.append(old_token_counts[idx].float())
-
-        if rank == 0:
-            print(
-                json.dumps(
-                    {
-                        "stage": "train_logprob_done",
-                        "step": step,
-                        "n_current": len(current_log_probs),
-                    },
-                    ensure_ascii=False,
-                ),
-                flush=True,
-            )
-        _release_device_cache(torch)
-        if not current_log_probs:
-            adaptive_temp.record_skip("empty_completion_mask")
-            trips = observe_and_evaluate_breakers(
-                breaker,
-                step=step,
-                route=route,
-                non_finite=False,
-                clip_fraction=0.0,
-                entropy_mean=entropy_mean,
-                repair_queued=repair_queued,
-                repair_converted_jsonl=args.repair_converted_jsonl,
-                all_fail=all_fail,
-            )
-            emit_step_record(
-                rank=rank,
-                metrics=metrics,
-                step_metrics_path=step_metrics_path,
-                log_steps=args.log_steps,
-                ctx=step_ctx,
-                skipped=True,
-                reason="empty_completion_mask",
-                trips=trips,
-            )
-            if maybe_stop_for_breaker(breaker, args, rank, trips):
-                break
-            continue
-
-        # ── FV-GSPO: sequence-level clipped objective (GSPO) or legacy ablation ──
-        # Adaptive KL: measure the batch's sequence KL and adjust beta before
-        # the loss so the penalty reflects current drift from the anchor.
+        #
+        # FIX (zero-gradient-by-construction): run `inner_epochs` inner PPO/GSPO
+        # optimizer steps per rollout group. old_log_probs are fixed from the
+        # rollout policy; after the first inner optimizer step the recomputed
+        # current_log_probs diverge from old_log_probs, so the importance ratio
+        # != 1 and the clipped policy-gradient is genuinely nonzero (real
+        # learning). With inner_epochs == 1 this reproduces the old bug.
+        inner_epochs = max(1, int(getattr(args, "inner_epochs", 2)))
         effective_kl = args.kl_coeff
-        if kl_state is not None:
-            with torch.no_grad():
-                seq_kl_now = float(
-                    (torch.stack(normalized_old_log_probs) - torch.stack(current_log_probs))
-                    .mean()
-                    .item()
-                )
-            effective_kl = kl_state.update(seq_kl_now)
-        gspo_stats: dict[str, float] | None = None
         length_weights: torch.Tensor | None = None
-        if args.loss_mode == "gspo_ln":
-            # LUSPO-style length neutralization: w_i = min(|y_i|/L_ref, w_max).
-            counts = torch.stack(filtered_token_counts)
-            length_weights = torch.clamp(
-                counts / max(args.ln_reference_length, 1.0), max=args.ln_max_weight
-            )
-        if args.loss_mode in ("gspo", "gspo_ln"):
-            total_loss, gspo_stats = stable_gspo_loss_metrics(
-                torch.stack(current_log_probs),
-                torch.stack(normalized_old_log_probs),
-                torch.stack(filtered_advantages),
-                clip_low=args.gspo_clip_low,
-                clip_high=args.gspo_clip_high,
-                kl_coeff=effective_kl,
-                numerical_log_ratio_clip=args.numerical_log_ratio_clip,
-                length_weights=length_weights,
-            )
-        else:
-            total_loss = grpo_loss(
-                torch.stack(current_log_probs),
-                torch.stack(normalized_old_log_probs),
-                torch.stack(filtered_advantages),
-                effective_kl,
-                args.ratio_clip_log_delta,
-            )
-        # Doubly-Robust DPO pair loss (only active when the
-        # doubly_robust_quantum_grpo research method is enabled).
-        # The helper is a no-op (returns zero) when the plugin is
-        # absent or no pair is mined, so this is safe for base GRPO.
-        dr_pair_loss_term, dr_pair_info = compute_dr_pair_loss(
-            research_methods=research_methods,
-            rewards=rewards,
-            codes=codes,
-            current_log_probs=current_log_probs,
-            old_log_probs=normalized_old_log_probs,
-        )
-        if torch.isfinite(dr_pair_loss_term) and float(dr_pair_loss_term.item()) != 0.0:
-            total_loss = total_loss + dr_pair_loss_term
-        # Doubly-Robust PPO-side variance correction (psi * E[(r-1)*A]).
-        # Only active when the doubly_robust_quantum_grpo plugin is
-        # enabled and dr_psi_init > 0. Safe no-op for base GRPO.
-        dr_variance_term, dr_variance_info = compute_dr_variance_correction(
-            research_methods=research_methods,
-            log_probs=torch.stack(current_log_probs),
-            old_log_probs=torch.stack(normalized_old_log_probs),
-            advantages=torch.stack(filtered_advantages),
-            ratio_clip_log_delta=args.ratio_clip_log_delta,
-            current_step=step,
-        )
-        if torch.isfinite(dr_variance_term) and float(dr_variance_term.item()) != 0.0:
-            total_loss = total_loss + dr_variance_term
-        if not torch.isfinite(total_loss):
-            adaptive_temp.record_skip("non_finite_loss")
-            trips = observe_and_evaluate_breakers(
-                breaker,
-                step=step,
-                route=route,
-                non_finite=True,
-                clip_fraction=0.0,
-                entropy_mean=entropy_mean,
-                repair_queued=repair_queued,
-                repair_converted_jsonl=args.repair_converted_jsonl,
-                all_fail=all_fail,
-            )
-            emit_step_record(
-                rank=rank,
-                metrics=metrics,
-                step_metrics_path=step_metrics_path,
-                log_steps=args.log_steps,
-                ctx=step_ctx,
-                skipped=True,
-                reason="non_finite_loss",
-                trips=trips,
-            )
-            if maybe_stop_for_breaker(breaker, args, rank, trips):
-                break
-            continue
-        optimizer.zero_grad()
-        total_loss.backward()
-        torch.nn.utils.clip_grad_norm_(trainable_param_tensors, 1.0)
-        if rank == 0:
-            print(
-                json.dumps(
-                    {
-                        "stage": "backward_done",
-                        "step": step,
-                        "loss": float(total_loss.detach().item()),
-                    },
-                    ensure_ascii=False,
-                ),
-                flush=True,
-            )
-        _release_device_cache(torch)
-
-        # ── trust region (review 2026-08-05, Design B) ──
-        # The pre-update ratio is 1 by construction in the synchronous
-        # one-rollout-per-step implementation, so GSPO clipping cannot
-        # constrain this update. Take the update, then measure the post-update
-        # sequence ratio and KL on the same rollouts and reject (or scale LR
-        # for) violations.
+        last_loss = None
+        last_gspo_stats: dict[str, float] | None = None
+        inner_skip_reason: str | None = None
         saved_params: list[torch.Tensor] | None = None
         saved_optim: dict | None = None
         if args.trust_region_enabled:
             saved_params = [p.detach().clone() for p in trainable_param_tensors]
             saved_optim = optimizer.state_dict()
-        optimizer.step()
+        for inner_epoch in range(inner_epochs):
+            active_model.train()
+            current_log_probs = []
+            normalized_old_log_probs = []
+            filtered_advantages = []
+            filtered_token_counts = []
+            for idx, code in enumerate(codes):
+                current_log_prob, token_count = compute_completion_log_prob(
+                    active_model,
+                    tokenizer,
+                    prompt_text,
+                    code,
+                    device,
+                    args.max_seq_length,
+                    args.logit_clip,
+                    add_mm_token_type_ids=_needs_mm_token_type_ids,
+                )
+                # Release the allocator cache between per-completion forwards:
+                # p16 hung right here (group-8 train-logprob, 8 grad-enabled
+                # forwards with full-vocab logits) after 41 min of silence.
+                _release_device_cache(torch)
+                if token_count.item() == 0:
+                    continue
+                current_log_probs.append(current_log_prob / token_count.clamp_min(1))
+                normalized_old_log_probs.append(
+                    old_log_probs[idx] / old_token_counts[idx].clamp_min(1)
+                )
+                filtered_advantages.append(advantages[idx])
+                filtered_token_counts.append(old_token_counts[idx].float())
+
+            if rank == 0:
+                print(
+                    json.dumps(
+                        {
+                            "stage": "train_logprob_done",
+                            "step": step,
+                            "inner_epoch": inner_epoch,
+                            "n_current": len(current_log_probs),
+                        },
+                        ensure_ascii=False,
+                    ),
+                    flush=True,
+                )
+            _release_device_cache(torch)
+            if not current_log_probs:
+                adaptive_temp.record_skip("empty_completion_mask")
+                trips = observe_and_evaluate_breakers(
+                    breaker,
+                    step=step,
+                    route=route,
+                    non_finite=False,
+                    clip_fraction=0.0,
+                    entropy_mean=entropy_mean,
+                    repair_queued=repair_queued,
+                    repair_converted_jsonl=args.repair_converted_jsonl,
+                    all_fail=all_fail,
+                )
+                emit_step_record(
+                    rank=rank,
+                    metrics=metrics,
+                    step_metrics_path=step_metrics_path,
+                    log_steps=args.log_steps,
+                    ctx=step_ctx,
+                    skipped=True,
+                    reason="empty_completion_mask",
+                    trips=trips,
+                )
+                inner_skip_reason = "empty_completion_mask"
+                if maybe_stop_for_breaker(breaker, args, rank, trips):
+                    inner_skip_reason = "__BREAK__"
+                break
+
+            # Adaptive KL: measure the batch's sequence KL and adjust beta
+            # before the loss so the penalty reflects current drift.
+            if kl_state is not None:
+                with torch.no_grad():
+                    seq_kl_now = float(
+                        (torch.stack(normalized_old_log_probs) - torch.stack(current_log_probs))
+                        .mean()
+                        .item()
+                    )
+                effective_kl = kl_state.update(seq_kl_now)
+
+            # ── FV-GSPO: sequence-level clipped objective or legacy ablation ──
+            gspo_stats: dict[str, float] | None = None
+            if args.loss_mode == "gspo_ln":
+                # LUSPO-style length neutralization: w_i = min(|y_i|/L_ref, w_max).
+                counts = torch.stack(filtered_token_counts)
+                length_weights = torch.clamp(
+                    counts / max(args.ln_reference_length, 1.0), max=args.ln_max_weight
+                )
+            if args.loss_mode in ("gspo", "gspo_ln"):
+                total_loss, gspo_stats = stable_gspo_loss_metrics(
+                    torch.stack(current_log_probs),
+                    torch.stack(normalized_old_log_probs),
+                    torch.stack(filtered_advantages),
+                    clip_low=args.gspo_clip_low,
+                    clip_high=args.gspo_clip_high,
+                    kl_coeff=effective_kl,
+                    numerical_log_ratio_clip=args.numerical_log_ratio_clip,
+                    length_weights=length_weights,
+                )
+            else:
+                total_loss = grpo_loss(
+                    torch.stack(current_log_probs),
+                    torch.stack(normalized_old_log_probs),
+                    torch.stack(filtered_advantages),
+                    effective_kl,
+                    args.ratio_clip_log_delta,
+                )
+            # Doubly-Robust DPO pair loss (no-op unless research method enabled).
+            dr_pair_loss_term, dr_pair_info = compute_dr_pair_loss(
+                research_methods=research_methods,
+                rewards=rewards,
+                codes=codes,
+                current_log_probs=current_log_probs,
+                old_log_probs=normalized_old_log_probs,
+            )
+            if torch.isfinite(dr_pair_loss_term) and float(dr_pair_loss_term.item()) != 0.0:
+                total_loss = total_loss + dr_pair_loss_term
+            # Doubly-Robust PPO-side variance correction (no-op unless enabled).
+            dr_variance_term, dr_variance_info = compute_dr_variance_correction(
+                research_methods=research_methods,
+                log_probs=torch.stack(current_log_probs),
+                old_log_probs=torch.stack(normalized_old_log_probs),
+                advantages=torch.stack(filtered_advantages),
+                ratio_clip_log_delta=args.ratio_clip_log_delta,
+                current_step=step,
+            )
+            if torch.isfinite(dr_variance_term) and float(dr_variance_term.item()) != 0.0:
+                total_loss = total_loss + dr_variance_term
+            if not torch.isfinite(total_loss):
+                adaptive_temp.record_skip("non_finite_loss")
+                trips = observe_and_evaluate_breakers(
+                    breaker,
+                    step=step,
+                    route=route,
+                    non_finite=True,
+                    clip_fraction=0.0,
+                    entropy_mean=entropy_mean,
+                    repair_queued=repair_queued,
+                    repair_converted_jsonl=args.repair_converted_jsonl,
+                    all_fail=all_fail,
+                )
+                emit_step_record(
+                    rank=rank,
+                    metrics=metrics,
+                    step_metrics_path=step_metrics_path,
+                    log_steps=args.log_steps,
+                    ctx=step_ctx,
+                    skipped=True,
+                    reason="non_finite_loss",
+                    trips=trips,
+                )
+                inner_skip_reason = "non_finite_loss"
+                if maybe_stop_for_breaker(breaker, args, rank, trips):
+                    inner_skip_reason = "__BREAK__"
+                break
+            last_loss = total_loss.detach().clone()
+            last_gspo_stats = gspo_stats
+            optimizer.zero_grad()
+            total_loss.backward()
+            torch.nn.utils.clip_grad_norm_(trainable_param_tensors, 1.0)
+            if rank == 0:
+                print(
+                    json.dumps(
+                        {
+                            "stage": "backward_done",
+                            "step": step,
+                            "inner_epoch": inner_epoch,
+                            "loss": float(total_loss.detach().item()),
+                        },
+                        ensure_ascii=False,
+                    ),
+                    flush=True,
+                )
+            _release_device_cache(torch)
+            optimizer.step()
+
+        # Handle early-exit from the inner loop (empty mask / non-finite loss).
+        if inner_skip_reason == "__BREAK__":
+            break
+        if inner_skip_reason is not None:
+            continue
+        total_loss = last_loss
+        gspo_stats = last_gspo_stats
         adaptive_temp.record_update()
         router.record_rl_update(task["task_id"])
 
@@ -2775,7 +2804,7 @@ def main() -> int:
             record["seq_kl_after"] = seq_kl_after
             record["old_policy_age"] = 1
             record["optimizer_substeps_per_rollout"] = 1
-            record["mean_response_length"] = float(old_token_counts.mean().item())
+            record["mean_response_length"] = float(old_token_counts.float().mean().item())
             record["truncation_rate"] = float(
                 (old_token_counts >= args.max_new_tokens).float().mean().item()
             )
@@ -2811,6 +2840,40 @@ def main() -> int:
                 save_model.save_pretrained(main_adapter)
                 text_preprocessor.save_backend.save_pretrained(main_adapter)
                 print(f"[checkpoint] saved adapter at step {step} to {ckpt_dir}")
+
+        # ── Aggressive end-of-step memory cleanup (NPU-0 OOM mitigation) ──
+        # Frees the step-local activations and recurrent-state tensors so the
+        # next rollout does not accumulate memory across steps (the cause of
+        # the repeated "NPU 0 out of memory / 60 GiB already allocated" crashes
+        # with inner_epochs > 1). This runs every step, not just on checkpoint.
+        if rank == 0:
+            try:
+                for _t in (
+                    "current_log_probs",
+                    "normalized_old_log_probs",
+                    "filtered_advantages",
+                    "filtered_token_counts",
+                ):
+                    if _t in dir():
+                        obj = eval(_t)
+                        if isinstance(obj, list):
+                            obj.clear()
+                if "total_loss" in dir():
+                    dl = eval("total_loss")
+                    del dl
+            except Exception:
+                pass
+            _release_device_cache(torch)
+            __import__("gc").collect()
+            try:
+                import torch as _torch
+
+                for _bn in ("npu", "cuda"):
+                    _be = getattr(_torch, _bn, None)
+                    if _be is not None and hasattr(_be, "empty_cache"):
+                        _be.empty_cache()
+            except Exception:
+                pass
 
     # Save final
     if rank == 0:

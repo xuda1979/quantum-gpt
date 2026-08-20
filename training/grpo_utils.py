@@ -1879,9 +1879,13 @@ def build_judge_diagnostics_record(
     }
 
 
-def count_repair_conversions(path: Path | None) -> int:
+def count_repair_conversions(path: Path | None | str) -> int:
     """Number of verified conversion records written by the repair stage."""
-    if path is None or not path.exists():
+    if path is None:
+        return 0
+    if isinstance(path, str):
+        path = Path(path)
+    if not path.exists():
         return 0
     count = 0
     for line in path.read_text(encoding="utf-8").splitlines():
