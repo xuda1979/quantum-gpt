@@ -16,8 +16,17 @@ def _close(a, b, tol=1e-9):
     return abs(a - b) < tol
 
 
+_REQUIRED_FUNCTIONS = ("shor_encode", "apply_x_error", "shor_decode")
+
+
 def run_tests(candidate_path: str) -> dict:
     module = _load(candidate_path)
+    missing = [name for name in _REQUIRED_FUNCTIONS if not callable(getattr(module, name, None))]
+    if missing:
+        return {
+            "passed": False,
+            "details": [f"candidate missing required function(s): {', '.join(missing)}"],
+        }
     failures = []
 
     # --- encode ---

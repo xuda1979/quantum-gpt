@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import ast
 import importlib.util
+import json
 import textwrap
 from pathlib import Path
 
@@ -32,6 +33,25 @@ REPAIR_TASK_IDS = [
     "trotterized_hamiltonian_evolution",
     "quantum_channel_depolarizing",
 ]
+
+# Functions the scorer cannot work without; a candidate missing one is broken
+# and must score a clean assertion failure (base-model candidates omitted
+# exactly these: purity / apply_x_error / trotter_evolve).
+REQUIRED_FUNCTIONS = {
+    "density_matrix_partial_trace": [
+        "density_from_state",
+        "tensor_product",
+        "partial_trace",
+        "purity",
+    ],
+    "quantum_error_correction_shor_9qubit": ["shor_encode", "apply_x_error", "shor_decode"],
+    "trotterized_hamiltonian_evolution": ["pauli_matrix", "matrix_exp_hermitian", "trotter_evolve"],
+    "quantum_channel_depolarizing": [
+        "depolarizing_channel",
+        "amplitude_damping_channel",
+        "channel_fidelity",
+    ],
+}
 
 
 def _load_test_module(task_id: str):
@@ -66,6 +86,20 @@ def _write_none_stub(candidate_path: Path, tmpdir: Path) -> Path:
     return stub
 
 
+def _write_missing_function_candidate(candidate_path: Path, omit: str, tmpdir: Path) -> Path:
+    """Broken candidate: exposes every public function except ``omit``.
+
+    Matches the real failure mode of the cached base-model candidates, which
+    omit required functions entirely (e.g. ``purity``, ``apply_x_error``,
+    ``trotter_evolve``).
+    """
+    names = [n for n in _public_function_names(candidate_path) if n != omit]
+    body = "\n".join(f"def {name}(*args, **kwargs):\n    return None\n" for name in names)
+    stub = tmpdir / "broken_candidate_missing_fn.py"
+    stub.write_text(textwrap.dedent(body))
+    return stub
+
+
 @pytest.mark.parametrize("task_id", REPAIR_TASK_IDS)
 def test_reference_solution_passes_without_traceback(task_id: str):
     module = _load_test_module(task_id)
@@ -87,13 +121,29 @@ def test_none_returning_candidate_scores_clean_fail(task_id: str, tmp_path: Path
 def test_harness_classifies_none_candidate_as_assertion(task_id: str, tmp_path: Path):
     """Through the real harness path (run_eval.run_task) the None-returning
     candidate must be a clean assertion failure -- never a runner_exception."""
-    import json
-
     from evals.runner.run_eval import run_task
 
     task_json = TASKS / task_id / "task.json"
     task_id_in_manifest = json.loads(task_json.read_text())["id"]
     stub = _write_none_stub(TASKS / task_id / "candidate.py", tmp_path)
+    result = run_task(task_json, {task_id_in_manifest: stub})
+    assert result["passed"] is False
+    assert (
+        result["error_type"] is None
+    ), f"expected clean fail, got runner exception: {result['details'][:3]}"
+    assert result["failure_category"] == "assertion"
+
+
+@pytest.mark.parametrize("task_id", REPAIR_TASK_IDS)
+def test_missing_function_candidate_scores_clean_fail(task_id: str, tmp_path: Path):
+    """A candidate omitting a required function (the real base-model failure
+    mode) must score a clean assertion failure, never a runner_exception."""
+    from evals.runner.run_eval import run_task
+
+    task_json = TASKS / task_id / "task.json"
+    task_id_in_manifest = json.loads(task_json.read_text())["id"]
+    omit = REQUIRED_FUNCTIONS[task_id][0]
+    stub = _write_missing_function_candidate(TASKS / task_id / "candidate.py", omit, tmp_path)
     result = run_task(task_json, {task_id_in_manifest: stub})
     assert result["passed"] is False
     assert (

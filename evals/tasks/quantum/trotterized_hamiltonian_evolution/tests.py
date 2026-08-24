@@ -32,8 +32,17 @@ def _close_mat(a, b, tol=1e-6):
     return True
 
 
+_REQUIRED_FUNCTIONS = ("pauli_matrix", "matrix_exp_hermitian", "trotter_evolve")
+
+
 def run_tests(candidate_path: str) -> dict:
     module = _load(candidate_path)
+    missing = [name for name in _REQUIRED_FUNCTIONS if not callable(getattr(module, name, None))]
+    if missing:
+        return {
+            "passed": False,
+            "details": [f"candidate missing required function(s): {', '.join(missing)}"],
+        }
     failures = []
 
     # --- pauli_matrix ---

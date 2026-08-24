@@ -29,8 +29,17 @@ def _mat_close(a, b, tol=1e-6):
     return True
 
 
+_REQUIRED_FUNCTIONS = ("depolarizing_channel", "amplitude_damping_channel", "channel_fidelity")
+
+
 def run_tests(candidate_path: str) -> dict:
     module = _load(candidate_path)
+    missing = [name for name in _REQUIRED_FUNCTIONS if not callable(getattr(module, name, None))]
+    if missing:
+        return {
+            "passed": False,
+            "details": [f"candidate missing required function(s): {', '.join(missing)}"],
+        }
     failures = []
 
     # --- depolarizing_channel ---
