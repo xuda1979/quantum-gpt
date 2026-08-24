@@ -1,5 +1,4 @@
 import importlib.util
-import math
 
 
 def _load(candidate_path: str):
@@ -11,16 +10,20 @@ def _load(candidate_path: str):
 
 
 def _close(a, b, tol=1e-9):
+    if a is None or b is None:  # candidate returned None: clean fail, no traceback
+        return False
     return abs(a - b) < tol
 
 
 def _mat_close(a, b, tol=1e-6):
+    if a is None or b is None:  # candidate returned None: clean fail, no traceback
+        return False
     if len(a) != len(b):
         return False
-    for ra, rb in zip(a, b):
+    for ra, rb in zip(a, b, strict=False):
         if len(ra) != len(rb):
             return False
-        for x, y in zip(ra, rb):
+        for x, y in zip(ra, rb, strict=False):
             if abs(x - y) > tol:
                 return False
     return True
@@ -77,7 +80,9 @@ def run_tests(candidate_path: str) -> dict:
     out_ad_half = module.amplitude_damping_channel(rho_1, 0.5)
     expected_ad_half = [[0.5, 0.0], [0.0, 0.5]]
     if not _mat_close(out_ad_half, expected_ad_half, tol=1e-6):
-        failures.append(f"amplitude_damping(|1><1|, gamma=0.5) = {out_ad_half}, expected {expected_ad_half}")
+        failures.append(
+            f"amplitude_damping(|1><1|, gamma=0.5) = {out_ad_half}, expected {expected_ad_half}"
+        )
 
     # --- channel_fidelity ---
     # F(rho, sigma) = (Tr(sqrt(sqrt(rho) sigma sqrt(rho))))^2
@@ -99,9 +104,12 @@ def run_tests(candidate_path: str) -> dict:
 
     # Trace preservation check
     out_check = module.depolarizing_channel(rho_plus, 0.3)
-    tr = out_check[0][0] + out_check[1][1]
-    if not _close(tr, 1.0, tol=1e-6):
-        failures.append(f"depolarizing trace = {tr}, expected 1.0")
+    if out_check is None:
+        failures.append("depolarizing_channel(|+><+|, p=0.3) returned None")
+    else:
+        tr = out_check[0][0] + out_check[1][1]
+        if not _close(tr, 1.0, tol=1e-6):
+            failures.append(f"depolarizing trace = {tr}, expected 1.0")
 
     return {
         "passed": not failures,

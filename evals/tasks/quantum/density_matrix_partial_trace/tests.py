@@ -11,15 +11,23 @@ def _load(candidate_path: str):
 
 
 def _mat_close(a, b, tol=1e-9):
+    if a is None or b is None:  # candidate returned None: clean fail, no traceback
+        return False
     if len(a) != len(b):
         return False
-    for row_a, row_b in zip(a, b):
+    for row_a, row_b in zip(a, b, strict=False):
         if len(row_a) != len(row_b):
             return False
-        for x, y in zip(row_a, row_b):
+        for x, y in zip(row_a, row_b, strict=False):
             if abs(x - y) > tol:
                 return False
     return True
+
+
+def _num_close(a, b, tol=1e-9):
+    if a is None or b is None:  # candidate returned None: clean fail, no traceback
+        return False
+    return abs(a - b) < tol
 
 
 def run_tests(candidate_path: str) -> dict:
@@ -82,7 +90,9 @@ def run_tests(candidate_path: str) -> dict:
     pt_bell = module.partial_trace(rho_bell, 2, 2, trace_out="B")
     expected_mixed = [[0.5, 0.0], [0.0, 0.5]]
     if not _mat_close(pt_bell, expected_mixed):
-        failures.append(f"partial_trace(Bell, B) -> {pt_bell}, expected maximally mixed {expected_mixed}")
+        failures.append(
+            f"partial_trace(Bell, B) -> {pt_bell}, expected maximally mixed {expected_mixed}"
+        )
 
     # Symmetry: tracing out A should also give maximally mixed
     pt_bell_a = module.partial_trace(rho_bell, 2, 2, trace_out="A")
@@ -92,24 +102,25 @@ def run_tests(candidate_path: str) -> dict:
     # --- purity ---
     # Pure state purity = 1, maximally mixed 2x2 purity = 0.5
     p_pure = module.purity(rho0)
-    if not math.isclose(p_pure, 1.0, abs_tol=1e-9):
+    if not _num_close(p_pure, 1.0):
         failures.append(f"purity(|0><0|) = {p_pure}, expected 1.0")
 
     p_mixed = module.purity(expected_mixed)
-    if not math.isclose(p_mixed, 0.5, abs_tol=1e-9):
+    if not _num_close(p_mixed, 0.5):
         failures.append(f"purity(I/2) = {p_mixed}, expected 0.5")
 
     # Bell state is pure
     p_bell = module.purity(rho_bell)
-    if not math.isclose(p_bell, 1.0, abs_tol=1e-9):
+    if not _num_close(p_bell, 1.0):
         failures.append(f"purity(Bell state) = {p_bell}, expected 1.0")
 
     # Partial trace of Bell is mixed with purity 0.5
     p_reduced = module.purity(pt_bell)
-    if not math.isclose(p_reduced, 0.5, abs_tol=1e-9):
+    if not _num_close(p_reduced, 0.5):
         failures.append(f"purity(reduced Bell) = {p_reduced}, expected 0.5")
 
     return {
         "passed": not failures,
-        "details": failures or ["Density matrix and partial trace operations correct for all test cases"],
+        "details": failures
+        or ["Density matrix and partial trace operations correct for all test cases"],
     }
