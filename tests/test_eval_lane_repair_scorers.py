@@ -32,11 +32,12 @@ REPAIR_TASK_IDS = [
     "quantum_error_correction_shor_9qubit",
     "trotterized_hamiltonian_evolution",
     "quantum_channel_depolarizing",
+    "cirq_qaoa_line",
 ]
 
 # Functions the scorer cannot work without; a candidate missing one is broken
 # and must score a clean assertion failure (base-model candidates omitted
-# exactly these: purity / apply_x_error / trotter_evolve).
+# exactly these: purity / apply_x_error / trotter_evolve / best_maxcut_value).
 REQUIRED_FUNCTIONS = {
     "density_matrix_partial_trace": [
         "density_from_state",
@@ -50,6 +51,13 @@ REQUIRED_FUNCTIONS = {
         "depolarizing_channel",
         "amplitude_damping_channel",
         "channel_fidelity",
+    ],
+    "cirq_qaoa_line": [
+        "maxcut_line_edges",
+        "best_maxcut_value",
+        "maxcut_value",
+        "qaoa_line_circuit",
+        "measure_bitstrings",
     ],
 }
 

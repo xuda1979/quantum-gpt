@@ -9,12 +9,27 @@ def _load(path: str):
     return mod
 
 
+_REQUIRED_FUNCTIONS = (
+    "maxcut_line_edges",
+    "best_maxcut_value",
+    "maxcut_value",
+    "qaoa_line_circuit",
+    "measure_bitstrings",
+)
+
+
 def run_tests(candidate_path: str) -> dict:
     failures: list[str] = []
     try:
         mod = _load(candidate_path)
     except Exception as e:  # noqa: BLE001
         return {"passed": False, "details": [f"import failed: {e}"]}
+    missing = [name for name in _REQUIRED_FUNCTIONS if not callable(getattr(mod, name, None))]
+    if missing:
+        return {
+            "passed": False,
+            "details": [f"candidate missing required function(s): {', '.join(missing)}"],
+        }
 
     edges = mod.maxcut_line_edges()
     if edges != [(0, 1), (1, 2), (2, 3)]:
