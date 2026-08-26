@@ -14,6 +14,8 @@ from typing import Any
 
 import torch
 
+from training.compat import strict_zip
+
 # ---------------------------------------------------------------------------
 # Comprehensive model-verifier score (frozen judge)
 #
@@ -36,6 +38,31 @@ MODEL_JUDGE_CALIBRATION_RHO = 0.6
 MODEL_JUDGE_CALIBRATION_MIN_N = 200
 
 
+def judge_composite_score(
+    model_dim_scores: Mapping[str, float],
+    dim_weights: Mapping[str, float],
+) -> float:
+    """The judge's weighted composite J used by ``blend_comprehensive_reward``.
+
+    2026-08-26 (r16 judge wave): single source of truth for the model term —
+    the same clamp + renormalization the blend applies. The per-candidate
+    record stores this exact value (``judge_reward``) so the reward verifier
+    can recompute the 3-way blend without duplicating the formula.
+    """
+    weights = {
+        dim: min(MAX_MODEL_JUDGE_WEIGHT, max(0.0, float(dim_weights.get(dim, 0.0))))
+        for dim in MODEL_JUDGE_DIMENSIONS
+    }
+    weight_sum = sum(weights.values())
+    if weight_sum <= 0.0:
+        return 0.0
+    return sum(
+        (weights[dim] / weight_sum)
+        * min(1.0, max(0.0, float(model_dim_scores.get(dim, 0.0) or 0.0)))
+        for dim in MODEL_JUDGE_DIMENSIONS
+    )
+
+
 def blend_comprehensive_reward(
     *,
     pass_reward: float,
@@ -44,9 +71,9 @@ def blend_comprehensive_reward(
     dim_weights: Mapping[str, float],
     truncation_penalty: float = 0.0,
     mode: str = "p_dominant",
-    pass_mass: float = 0.40,
-    shaped_mass: float = 0.35,
-    judge_mass: float = 0.25,
+    pass_mass: float = 0.50,
+    shaped_mass: float = 0.40,
+    judge_mass: float = 0.10,
 ) -> float:
     """Blend executable and frozen-judge signals into one reward.
 
@@ -63,14 +90,16 @@ def blend_comprehensive_reward(
 
         R = w_P * P + w_S * S + w_J * J - T,   w_P + w_S + w_J = 1
 
-        with defaults w_P=0.40, w_S=0.35, w_J=0.25. J is the frozen judge's
-        composite (relative weights over the calibrated dimensions). The judge
-        mass is active only when at least one dimension passed calibration;
-        until then the masses are renormalized over P and S. A failing
-        candidate CAN outrank a passing one when its shaped/judge scores are
-        high enough — that is the point of the comprehensive mode; the judge is
-        evidence-anchored and calibration-gated so it does not contradict
-        executable evidence.
+        with recommended masses (research memo 2026-08-26, r17)
+        w_P=0.50, w_S=0.40, w_J=0.10. J is the frozen judge's composite
+        (relative weights over the calibrated dimensions). The judge mass is
+        active ONLY when at least one dimension passed calibration (an
+        ACTIVE UNCALIBRATED judge injects ~0.5±noise into the advantages);
+        until then the masses are renormalized over P and S and the judge
+        contributes exactly 0. A failing candidate CAN outrank a passing one
+        when its shaped/judge scores are high enough — that is the point of
+        the comprehensive mode; the judge is evidence-anchored and
+        calibration-gated so it does not contradict executable evidence.
 
     ``mode="tiered"`` (review 2026-08-05 #5 — recommended): a constrained
     hierarchy that keeps execution authoritative while the reward is rich:
@@ -88,18 +117,13 @@ def blend_comprehensive_reward(
     """
     bounded_pass = min(1.0, max(0.0, float(pass_reward)))
     bounded_shaped = min(1.0, max(0.0, float(shaped_reward)))
-    weights = {
-        dim: min(MAX_MODEL_JUDGE_WEIGHT, max(0.0, float(dim_weights.get(dim, 0.0))))
+    # 2026-08-26 (r16): the model term is computed by the shared helper so the
+    # recorded per-candidate judge_reward is EXACTLY the blend's term.
+    weight_sum = sum(
+        min(MAX_MODEL_JUDGE_WEIGHT, max(0.0, float(dim_weights.get(dim, 0.0))))
         for dim in MODEL_JUDGE_DIMENSIONS
-    }
-    weight_sum = sum(weights.values())
-    model_term = 0.0
-    if weight_sum > 0.0:
-        model_term = sum(
-            (weights[dim] / weight_sum)
-            * min(1.0, max(0.0, float(model_dim_scores.get(dim, 0.0) or 0.0)))
-            for dim in MODEL_JUDGE_DIMENSIONS
-        )
+    )
+    model_term = judge_composite_score(model_dim_scores, dim_weights)
     penalty = min(1.0, max(0.0, float(truncation_penalty)))
     if mode == "tiered":
         q_progress = min(0.95, max(0.0, bounded_shaped - penalty))
@@ -230,6 +254,7 @@ def build_grpo_step_record(
     domain: str,
     mean_reward: float,
     signal_stats: dict[str, float],
+    mean_shaped_reward: float | None = None,
     pass_rate: float | None,
     syntax_rate: float | None,
     interface_rate: float | None,
@@ -237,6 +262,11 @@ def build_grpo_step_record(
     task_prob: float,
     task_state: dict[str, float],
     advantage_scale: float | None = None,
+    loo_advantage_rms: float | None = None,
+    loo_advantage_mean_abs: float | None = None,
+    update_signal_magnitude: float | None = None,
+    update_signal_kind: str | None = None,
+    update_signal_threshold: float | None = None,
     skipped: bool = False,
     reason: str | None = None,
     loss: float | None = None,
@@ -250,6 +280,11 @@ def build_grpo_step_record(
     entropy_mean: float | None = None,
     generation_tokens: int | None = None,
     repair_queued: bool | None = None,
+    # Guardian alarm 8 (2026-08-26): per-step flag recorded from the
+    # sidecar-liveness guard (training/sidecar_liveness.py). False/None when
+    # the repair sidecar is dead or unprovable — ops must see this in
+    # grpo_step_metrics.jsonl instead of a silent queue starvation.
+    sidecar_alive: bool | None = None,
     all_fail: bool | None = None,
     frontier_fraction: float | None = None,
     breaker_trips: list[dict[str, Any]] | None = None,
@@ -259,6 +294,67 @@ def build_grpo_step_record(
     posterior_upper: float | None = None,
     flaky: bool | None = None,
     group_size: int | None = None,
+    # 2026-08-26 (r10, greedy-augmented rollouts): how many of the group's
+    # candidates were generated at temperature 0 (greedy argmax) and graded
+    # through the same harness/reward path.
+    greedy_count: int | None = None,
+    # Derived step-record fields. These MUST be passed here (before the record
+    # is appended) — the trainer used to mutate the returned record after
+    # emit_step_record() had already written the JSONL, silently dropping them
+    # from grpo_step_metrics.jsonl (2026-08-22 audit #1/#2).
+    mean_response_length: float | None = None,
+    truncation_rate: float | None = None,
+    eos_termination_rate: float | None = None,
+    # 2026-08-26 (r10, router lane): True when the EOS-collapse rescue alarm
+    # fired on this step (3rd consecutive step with entropy < 0.05 and ~1-token
+    # completions). The behavior temperature was escalated immediately —
+    # before repair-routing — as the run-6 killer's rescue path.
+    degenerate_policy_alarm: bool | None = None,
+    # 2026-08-26 (r10, rollout lane): the 3-way stop-reason breakdown.
+    # fence_termination_rate = share of completions that closed a code
+    # fence; cap_run_with_fence_opener_rate = share of TRUNCATED completions
+    # whose raw text still contains a fence opener (the fence-stop-regression
+    # class — the stop regex missed a fence the extraction still sees).
+    fence_termination_rate: float | None = None,
+    cap_run_with_fence_opener_rate: float | None = None,
+    completion_token_lengths: list[int] | None = None,
+    raw_response_chars: list[int] | None = None,
+    extracted_code_chars: list[int] | None = None,
+    generation_token_budget: int | None = None,
+    trust_region_violated: bool | None = None,
+    lr: float | None = None,
+    trust_region_violation_count: int | None = None,
+    ratio_after_update: float | None = None,
+    clip_fraction_after_update: float | None = None,
+    seq_kl_after: float | None = None,
+    old_policy_age: int | None = None,
+    optimizer_substeps_per_rollout: int | None = None,
+    gradient_norms: list[float] | None = None,
+    inner_early_stop_reason: str | None = None,
+    sapo_per_candidate_stats: list[dict[str, float]] | None = None,
+    kl_beta: float | None = None,
+    dr_pair_mined: bool | None = None,
+    dr_pair_reward_gap: float | None = None,
+    dr_pair_loss_value: float | None = None,
+    dr_pair_loss_weight: float | None = None,
+    dr_variance_correction_value: float | None = None,
+    dr_psi: float | None = None,
+    dr_psi_init: float | None = None,
+    dr_psi_warmup_steps: int | None = None,
+    dr_psi_current_step: int | None = None,
+    # ── training-log instrumentation (2026-08-25, user requirement) ──
+    # Every step record must document every training loss value, the loss
+    # reduction, the reward scores of ALL rollout samples, and the zero-change
+    # gate status. Field-name stability is part of the contract: the math
+    # auditor (reports/sapo-training-math-audit-2026-08-24.md) recomputes the
+    # blend/loss identity from these exact keys.
+    rollout_rewards: list[dict[str, Any]] | None = None,
+    loss_reduction: str | None = None,
+    per_candidate_losses: list[dict[str, Any]] | None = None,
+    loss_breakdown: dict[str, Any] | None = None,
+    lora_b_max_delta: float | None = None,
+    zero_change_alarm: bool | None = None,
+    zero_change_recommend_stop: bool | None = None,
 ) -> dict[str, float | int | bool | str]:
     record: dict[str, float | int | bool | str] = {
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),
@@ -274,6 +370,8 @@ def build_grpo_step_record(
     }
     if pass_rate is not None:
         record["pass_rate"] = pass_rate
+    if mean_shaped_reward is not None:
+        record["mean_shaped_reward"] = float(mean_shaped_reward)
     if syntax_rate is not None:
         record["syntax_rate"] = syntax_rate
     if interface_rate is not None:
@@ -290,6 +388,16 @@ def build_grpo_step_record(
         record["verifier_std"] = float(signal_stats["verifier_std"])
     if advantage_scale is not None:
         record["advantage_scale"] = advantage_scale
+    if loo_advantage_rms is not None:
+        record["loo_advantage_rms"] = float(loo_advantage_rms)
+    if loo_advantage_mean_abs is not None:
+        record["loo_advantage_mean_abs"] = float(loo_advantage_mean_abs)
+    if update_signal_magnitude is not None:
+        record["update_signal_magnitude"] = float(update_signal_magnitude)
+    if update_signal_kind is not None:
+        record["update_signal_kind"] = str(update_signal_kind)
+    if update_signal_threshold is not None:
+        record["update_signal_threshold"] = float(update_signal_threshold)
     if skipped:
         record["skipped"] = True
         if reason is not None:
@@ -316,6 +424,8 @@ def build_grpo_step_record(
         record["generation_tokens"] = generation_tokens
     if repair_queued is not None:
         record["repair_queued"] = repair_queued
+    if sidecar_alive is not None:
+        record["sidecar_alive"] = bool(sidecar_alive)
     if all_fail is not None:
         record["all_fail"] = all_fail
     if frontier_fraction is not None:
@@ -334,6 +444,84 @@ def build_grpo_step_record(
         record["flaky"] = bool(flaky)
     if group_size is not None:
         record["group_size"] = int(group_size)
+    if greedy_count is not None:
+        record["greedy_count"] = int(greedy_count)
+    if mean_response_length is not None:
+        record["mean_response_length"] = float(mean_response_length)
+    if truncation_rate is not None:
+        record["truncation_rate"] = float(truncation_rate)
+    if eos_termination_rate is not None:
+        record["eos_termination_rate"] = float(eos_termination_rate)
+    if degenerate_policy_alarm is not None:
+        record["degenerate_policy_alarm"] = bool(degenerate_policy_alarm)
+    if fence_termination_rate is not None:
+        record["fence_termination_rate"] = float(fence_termination_rate)
+    if cap_run_with_fence_opener_rate is not None:
+        record["cap_run_with_fence_opener_rate"] = float(cap_run_with_fence_opener_rate)
+    if completion_token_lengths is not None:
+        record["completion_token_lengths"] = [int(value) for value in completion_token_lengths]
+    if raw_response_chars is not None:
+        record["raw_response_chars"] = [int(value) for value in raw_response_chars]
+    if extracted_code_chars is not None:
+        record["extracted_code_chars"] = [int(value) for value in extracted_code_chars]
+    if generation_token_budget is not None:
+        record["generation_token_budget"] = int(generation_token_budget)
+    if trust_region_violated is not None:
+        record["trust_region_violated"] = bool(trust_region_violated)
+    if lr is not None:
+        record["lr"] = float(lr)
+    if trust_region_violation_count is not None:
+        record["trust_region_violation_count"] = int(trust_region_violation_count)
+    if ratio_after_update is not None:
+        record["ratio_after_update"] = float(ratio_after_update)
+    if clip_fraction_after_update is not None:
+        record["clip_fraction_after_update"] = float(clip_fraction_after_update)
+    if seq_kl_after is not None:
+        record["seq_kl_after"] = float(seq_kl_after)
+    if old_policy_age is not None:
+        record["old_policy_age"] = int(old_policy_age)
+    if optimizer_substeps_per_rollout is not None:
+        record["optimizer_substeps_per_rollout"] = int(optimizer_substeps_per_rollout)
+    if gradient_norms is not None:
+        record["gradient_norms"] = [float(value) for value in gradient_norms]
+    if inner_early_stop_reason is not None:
+        record["inner_early_stop_reason"] = str(inner_early_stop_reason)
+    if sapo_per_candidate_stats:
+        record["sapo_per_candidate_stats"] = [dict(s) for s in sapo_per_candidate_stats]
+    if kl_beta is not None:
+        record["kl_beta"] = float(kl_beta)
+    if dr_pair_mined is not None:
+        record["dr_pair_mined"] = bool(dr_pair_mined)
+    if dr_pair_reward_gap is not None:
+        record["dr_pair_reward_gap"] = float(dr_pair_reward_gap)
+    if dr_pair_loss_value is not None:
+        record["dr_pair_loss_value"] = float(dr_pair_loss_value)
+    if dr_pair_loss_weight is not None:
+        record["dr_pair_loss_weight"] = float(dr_pair_loss_weight)
+    if dr_variance_correction_value is not None:
+        record["dr_variance_correction_value"] = float(dr_variance_correction_value)
+    if dr_psi is not None:
+        record["dr_psi"] = float(dr_psi)
+    if dr_psi_init is not None:
+        record["dr_psi_init"] = float(dr_psi_init)
+    if dr_psi_warmup_steps is not None:
+        record["dr_psi_warmup_steps"] = int(dr_psi_warmup_steps)
+    if dr_psi_current_step is not None:
+        record["dr_psi_current_step"] = int(dr_psi_current_step)
+    if rollout_rewards is not None:
+        record["rollout_rewards"] = [dict(value) for value in rollout_rewards]
+    if loss_reduction is not None:
+        record["loss_reduction"] = str(loss_reduction)
+    if per_candidate_losses is not None:
+        record["per_candidate_losses"] = [dict(value) for value in per_candidate_losses]
+    if loss_breakdown is not None:
+        record["loss_breakdown"] = dict(loss_breakdown)
+    if lora_b_max_delta is not None:
+        record["lora_b_max_delta"] = float(lora_b_max_delta)
+    if zero_change_alarm is not None:
+        record["zero_change_alarm"] = bool(zero_change_alarm)
+    if zero_change_recommend_stop is not None:
+        record["zero_change_recommend_stop"] = bool(zero_change_recommend_stop)
     return record
 
 
@@ -386,6 +574,11 @@ def summarize_python_interface(source: str) -> list[str]:
             if node.args.kwonlyargs:
                 if node.args.vararg is None:
                     args.append("*")
+                # plain zip: kwonlyargs and kw_defaults are equal-length BY
+                # CONSTRUCTION (the AST spec pairs each kw-only arg with a
+                # default slot, None when absent); the strict-zip keyword is
+                # py3.10-only even as False and the canonical venv is py3.9
+                # (2026-08-26 Deploy Integrity register gate).
                 for kwarg, default in zip(
                     node.args.kwonlyargs, node.args.kw_defaults, strict=False
                 ):
@@ -523,6 +716,9 @@ def _safe_details(result: dict | None) -> list[str]:
 
 def _has_runtime_failure(details: list[str]) -> bool:
     runtime_markers = (
+        "SyntaxError:",
+        "IndentationError:",
+        "TabError:",
         "AttributeError:",
         "ImportError:",
         "ModuleNotFoundError:",
@@ -531,6 +727,320 @@ def _has_runtime_failure(details: list[str]) -> bool:
         "unsupported operand type",
     )
     return any(any(marker in detail for marker in runtime_markers) for detail in details)
+
+
+# ---------------------------------------------------------------------------
+# Continuous reward shaping from harness detail numerics
+#
+# Root cause of the GSPO/SAPO deadlock: with pass rate ~ 0 the binary
+# ``pass_reward`` is 0.0 for every candidate in the group, so the group-
+# relative advantages are all equal -> NO policy gradient (and the FV-GSPO
+# router sees signal_std ~ 0 and ships all-fail groups to the repair lane
+# instead of RL). The harness ``details`` list carries continuous numeric
+# evidence of how close a failing candidate actually got
+# (``counts: P(00)=0.4931 P(11)=0.5069``, ``vqe: energy=-1.48250
+# need<=-1.50000``, ``xeb: fidelity=0.8765 need>=0.9000``,
+# ``hhl: max abs error=0.0521 need<=0.0500``, ...). We turn that evidence
+# into partial credit so the policy always receives a monotone signal:
+#
+#   shaped_reward = 1.0 if passed else min(0.9, 0.5 + 0.5 * progress)
+#
+# ``progress`` in [0, 1] is the best per-line closeness (max across lines):
+#   - probability-like values (P(..), fidelity, fraction, success, echo,
+#     overlap, survival, amplitude, generic [0,1] magnitudes) with a
+#     ``need>=`` / ``v < T`` higher-better threshold T: progress = v / T
+#     (v just below T is a near miss -> progress -> 1);
+#   - the same without a threshold: progress = the value itself; two or more
+#     P(..) values on one line (concentration checks) use their sum;
+#   - error-like values (error/err/epc/...) with a ``need<=`` / ``v > T``
+#     lower-better threshold T: progress = T / v; without a threshold:
+#     progress = exp(-v / 0.1);
+#   - energy-like values (energy/E0/E) with a lower-better threshold X:
+#     progress = exp(-max(0, v - X) / max(0.1, 0.25*|X|)) — an energy just
+#     above X is a near miss; with a printed target (exact/true/theory/
+#     expected/ideal/analytic): progress = exp(-|v - T| / scale);
+#   - anything parseable but unclassified: floor 0.1 (tiny credit);
+#   - no numeric evidence at all, or a runtime failure (traceback/crash):
+#     0.0 — a crash is never a near miss.
+# The 0.9 cap keeps any failing candidate strictly below a passing one.
+# Documented decision: robustness > precision; the exact formula matters
+# less than NON-ZERO, monotone signal for near-misses.
+# ---------------------------------------------------------------------------
+
+_NUM_RE = r"[-+]?(?:\d+\.\d+|\d+|\.\d+)(?:[eE][-+]?\d+)?"
+
+# key=value  (lazy key so "P(00)=0.49" -> key "P(00", "max abs error=0.05" -> key)
+_DETAIL_KV_RE = re.compile(r"([A-Za-z_|<>][^=\n]{0,24}?)=\s*(" + _NUM_RE + r")")
+# whitespace form: "energy -1.4825", "P(0) 0.60", "theory 0.75", "exact -2.0209"
+_DETAIL_WS_RE = re.compile(
+    r"((?:P\([^)]*\)|energy|fidelity|error|phase|amplitude|probability|"
+    r"overlap|theory|exact|expected|ideal|true|analytic|tol|threshold|vs|E0|value))"
+    r"\s*[:=]?\s*(" + _NUM_RE + r")",
+    re.IGNORECASE,
+)
+# comparator form on FAIL lines: "fidelity 0.8765 < 0.9000", "error 0.0521 > 0.0500",
+# and the equality-miss form "optimize_circuit lost gates: 3 != 5" where the
+# pass condition wanted the two sides equal (2026-08-24 audit: the targeted10
+# harnesses report "!= 5" failures; treating the RHS as a lower-better
+# threshold would be wrong).
+_DETAIL_CMP_RE = re.compile(r"(" + _NUM_RE + r")\s*(>=|<=|>|<|!=)\s*(" + _NUM_RE + r")")
+# explicit threshold markers: "need>=0.85", "need<=-1.50000", "need >= 0.6000"
+_DETAIL_NEED_RE = re.compile(r"need\s*(>=|<=|>|<)\s*(" + _NUM_RE + r")", re.IGNORECASE)
+# arrow form on FAIL lines — the targeted10 harnesses report numeric near-misses
+# as "phase_estimation(0.25, 3) -> 3, expected 2" and "-> cost 1, expected 2"
+# (the observed value follows the arrow, optionally behind a unit word).  The
+# value is only scored when the line also carries a pass target/threshold, so a
+# bare arrow number ("-> [0, 0]") never invents signal.
+_DETAIL_ARROW_RE = re.compile(r"->\s*(?:(?:[A-Za-z_][A-Za-z0-9_]*)\s+)?(" + _NUM_RE + r")")
+# qrng normalization: "range=[0,10)"
+_DETAIL_RANGE_RE = re.compile(r"range=\[0,(\d+)\]")
+
+# keys whose numeric value is a count/auxiliary, never progress evidence
+# (they still score when a threshold on the same line makes them meaningful)
+_DETAIL_SKIP_KEYS = frozenset(
+    {
+        "total",
+        "n",
+        "shots",
+        "len",
+        "counts",
+        "support",
+        "spread",
+        "best",
+        "opt",
+        "nodes",
+        "edges",
+        "levels",
+        "ints",
+        "range",
+        "decay",
+    }
+)
+
+_PROGRESS_FLOOR = 0.1
+_PROGRESS_CAP = 0.9
+
+
+def _clamp01(value: float) -> float:
+    return max(0.0, min(1.0, value))
+
+
+def _progress_for_pair(
+    key: str,
+    value: float,
+    *,
+    higher_better: float | None,
+    lower_better: float | None,
+    target: float | None,
+    tolerance: float | None = None,
+) -> float:
+    """Closeness of one observed (key, value) pair to its pass condition."""
+    k = key.lower()
+    # ── threshold-anchored rules (strongest evidence) ──
+    if higher_better is not None and higher_better > 0.0:
+        return _clamp01(value / higher_better)
+    if lower_better is not None:
+        if lower_better > 0.0:
+            return _clamp01(lower_better / value) if value > 0.0 else 0.0
+        # energy-style threshold (negative): excess above X is the miss
+        scale = max(0.1, 0.25 * max(abs(lower_better), abs(value)))
+        excess = max(0.0, value - lower_better)
+        return math.exp(-excess / scale)
+    if target is not None:
+        if k in _DETAIL_SKIP_KEYS and "p(" not in k:
+            return 0.0
+        scale = max(0.05, 0.25 * max(abs(target), abs(value)))
+        excess = max(0.0, abs(value - target) - (tolerance or 0.0))
+        return math.exp(-excess / scale)
+    if k in _DETAIL_SKIP_KEYS:
+        return 0.0
+    # ── magnitude rules ──
+    if "p(" in k or k in (
+        "fidelity",
+        "fraction",
+        "success",
+        "echo",
+        "overlap",
+        "survival",
+        "amplitude",
+        "est",
+        "extrapolated",
+        "mean",
+        "max p",
+        "probability",
+    ):
+        if 0.0 <= value <= 1.0:
+            return value
+        return 0.0
+    if "err" in k or "error" in k or "trotter" in k or k == "epc":
+        return math.exp(-abs(value) / 0.1)
+    if k in ("energy", "e0", "e", "hubbard", "value"):
+        return _PROGRESS_FLOOR
+    # generic bounded magnitude (zexp <Z...Z>=0.75, printed probs)
+    if 0.0 <= value <= 1.0:
+        return value
+    return 0.0
+
+
+def _detail_progress(line: str) -> float:
+    """Continuous closeness of ONE detail line to its pass threshold."""
+    pairs: list[tuple[str, float]] = []
+    for match in _DETAIL_KV_RE.finditer(line):
+        key = match.group(1)
+        # "P(00)>=0.3000" parses as key "P(00>" + "=0.3000": the value is a
+        # THRESHOLD, not a measurement. Drop comparator-suffixed keys unless
+        # the ">" is the closer of a "<...>" observable ("<Z...Z>=0.75");
+        # "<"-suffixed keys ("need<") are always threshold text.  "!"-suffixed
+        # keys are the LEFT side of "!=" ("lost gates: 3 !" = 5): the value is
+        # the EXPECTED quantity, not the observation — crediting it would give
+        # full near-miss credit to a failing candidate (2026-08-24 audit).
+        if key.endswith("<") or key.endswith("!") or (key.endswith(">") and "<" not in key):
+            continue
+        pairs.append((key, float(match.group(2))))
+    for match in _DETAIL_WS_RE.finditer(line):
+        pairs.append((match.group(1), float(match.group(2))))
+    # the KV and WS regexes both match "P(00)=0.25" — dedupe so the
+    # concentration sum rule does not double-count
+    pairs = list(dict.fromkeys(pairs))
+
+    thresholds: list[tuple[str, float]] = []  # ("higher"|"lower", value)
+    cmp_values: list[tuple[float, str, float]] = []  # (observed, op, rhs) for
+    # the comparator-only form ("support 4 < 5", "success rate 0.74 < 0.95")
+    for match in _DETAIL_CMP_RE.finditer(line):
+        value = float(match.group(1))
+        threshold = float(match.group(3))
+        op = match.group(2)
+        cmp_values.append((value, op, threshold))
+        # on a FAILED line "v < T" means the pass wanted v >= T (higher better)
+        if op in ("<", "<="):
+            thresholds.append(("higher", threshold))
+        elif op in (">", ">="):
+            thresholds.append(("lower", threshold))
+        # "!=" is an equality miss: pass wanted value == rhs. The rhs becomes
+        # the target for the equality-distance rule below, NOT a threshold.
+    for match in _DETAIL_NEED_RE.finditer(line):
+        threshold = float(match.group(2))
+        thresholds.append(("higher" if match.group(1).startswith(">") else "lower", threshold))
+
+    higher = None
+    lower = None
+    for direction, threshold in thresholds:
+        if direction == "higher":
+            higher = max(higher or threshold, threshold)
+        else:
+            lower = min(lower or threshold, threshold)
+
+    target_keys = {"exact", "true", "theory", "expected", "ideal", "analytic", "threshold", "vs"}
+    targets: list[float] = []
+    tolerance: float | None = None
+    for key, value in pairs:
+        k = key.lower()
+        if k == "tol":
+            tolerance = value
+        elif k in target_keys:
+            targets.append(value)
+    target = max(targets) if targets else None
+
+    # concentration checks: two or more DISTINCT P(..) values on one line use
+    # their sum (keys may carry "counts: " prefixes -> canonicalize on the
+    # bare "P(...)" token so the same measurement is never counted twice)
+    p_by_name: dict[str, float] = {}
+    for k, v in pairs:
+        name = re.search(r"P\([^)]*\)", k)
+        if name and 0.0 <= v <= 1.0:
+            p_by_name[name.group(0)] = v
+    if len(p_by_name) >= 2:
+        sum_progress = _clamp01(sum(p_by_name.values()))
+        if sum_progress >= 0.5:
+            return sum_progress
+
+    best = 0.0
+    for key, value in pairs:
+        if key.lower() in target_keys or key.lower() == "tol":
+            continue
+        # qrng mean normalization against the printed range
+        if key.lower() == "mean":
+            range_match = _DETAIL_RANGE_RE.search(line)
+            if range_match:
+                value = value / max(1.0, float(range_match.group(1)))
+            else:
+                continue
+        best = max(
+            best,
+            _progress_for_pair(
+                key,
+                value,
+                higher_better=higher,
+                lower_better=lower,
+                target=target,
+                tolerance=tolerance,
+            ),
+        )
+    # comparator-only lines ("support 4 < 5", "success rate 0.74 < 0.95")
+    # carry the observed value only inside the comparator itself
+    for value, op, threshold in cmp_values:
+        if op in ("<", "<="):
+            best = max(
+                best,
+                _progress_for_pair(
+                    "cmp", value, higher_better=higher, lower_better=None, target=None
+                ),
+            )
+        elif op in (">", ">="):
+            best = max(
+                best,
+                _progress_for_pair(
+                    "cmp", value, higher_better=None, lower_better=lower, target=None
+                ),
+            )
+        else:  # "!=" equality miss: closeness of the observation to the rhs
+            best = max(
+                best,
+                _progress_for_pair(
+                    "cmp", value, higher_better=None, lower_better=None, target=threshold
+                ),
+            )
+    # Arrow form ("phase_estimation(0.25, 3) -> 3, expected 2"): the observed
+    # value after "->" is only scored when the line also states a pass
+    # target/threshold; a bare arrow number or list is not closeness evidence.
+    if target is not None or higher is not None or lower is not None:
+        for match in _DETAIL_ARROW_RE.finditer(line):
+            value = float(match.group(1))
+            best = max(
+                best,
+                _progress_for_pair(
+                    "arrow",
+                    value,
+                    higher_better=higher,
+                    lower_better=lower,
+                    target=target,
+                    tolerance=tolerance,
+                ),
+            )
+    return best
+
+
+def shaped_reward_from_details(passed: bool, details: list[str]) -> float:
+    """Continuous partial credit from the harness detail strings.
+
+    passed -> 1.0. Otherwise -> min(0.9, 0.5 + 0.5 * progress) where
+    ``progress`` is the best per-line numeric closeness to the pass
+    threshold; 0.0 when no numeric evidence exists or the candidate crashed.
+    """
+    if passed:
+        return 1.0
+    if _has_runtime_failure(details):
+        return 0.0  # a crash is never a near miss
+    progress = 0.0
+    for detail in details or []:
+        if not isinstance(detail, str):
+            detail = str(detail)
+        if not detail.strip():
+            continue
+        progress = max(progress, _detail_progress(detail))
+    if progress <= 0.0:
+        return 0.0
+    return min(_PROGRESS_CAP, 0.5 + 0.5 * progress)
 
 
 def brevity_reward(code: str, target_lines: int = 40) -> float:
@@ -667,7 +1177,12 @@ def build_reward_breakdown(
     )
     if not passed and _has_runtime_failure(details):
         verifier_reward = 0.0
+    # Binary pass stays in the metrics (pass_rate); the REWARD the policy sees
+    # is the continuous ``shaped_reward`` (1.0 on pass, partial credit on
+    # near-misses) — with pass rate ~ 0 the binary gives the group NO
+    # advantage variation, hence no gradient (the GSPO/SAPO failure mode).
     pass_reward = 1.0 if passed else 0.0
+    shaped_reward = shaped_reward_from_details(passed, details)
     syntax_reward = 1.0 if syntax_ok else 0.0
     brevity_score = brevity_reward(code, target_lines=brevity_target_lines) if syntax_ok else 0.0
     import_hygiene = (
@@ -688,8 +1203,10 @@ def build_reward_breakdown(
         + brevity_weight
         + import_hygiene_weight
     )
+    # The weighted sum uses the continuous shaped credit in place of the
+    # binary pass_reward (pass_reward stays in the dict purely for metrics).
     total_reward = (
-        pass_weight * pass_reward
+        pass_weight * shaped_reward
         + syntax_weight * syntax_reward
         + interface_weight * interface_reward
         + verifier_weight * verifier_reward
@@ -700,6 +1217,7 @@ def build_reward_breakdown(
     return {
         "passed": passed,
         "pass_reward": pass_reward,
+        "shaped_reward": shaped_reward,
         "syntax_reward": syntax_reward,
         "interface_reward": interface_reward,
         "verifier_reward": verifier_reward,
@@ -942,13 +1460,13 @@ def cluster_adjusted_advantages(
     aligned (index i = candidate i). Cluster sizes are counted within the given
     batch of `cluster_ids`.
     """
-    if len(advantages) != len(cluster_ids):
-        raise ValueError("advantages and cluster_ids must be aligned (same length)")
     if not advantages:
         return []
     sizes: dict[Any, int] = Counter(cluster_ids)
     out: list[float] = []
-    for adv, cid in zip(advantages, cluster_ids, strict=True):
+    # strict pairing: a length mismatch is a caller bug and must raise (see
+    # training.compat.strict_zip — one home for the py3.9-safe strict zip).
+    for adv, cid in strict_zip(advantages, cluster_ids):
         size = max(1, int(sizes.get(cid, 1)))
         out.append(float(adv) / float(size))
     return out
@@ -1020,7 +1538,11 @@ def stable_gspo_loss(
         sequence_ratio * safe_advantages,
         clipped_ratio * safe_advantages,
     )
-    approximate_kl = (safe_old_log_probs - safe_log_probs).mean()
+    approximate_kl = old_sampled_kl(
+        safe_log_probs,
+        safe_old_log_probs,
+        numerical_log_ratio_clip=numerical_log_ratio_clip,
+    )
     total = -surrogate.mean() + kl_coeff * approximate_kl
     if not torch.isfinite(total):
         return log_probs.new_tensor(float("nan"))
@@ -1051,13 +1573,10 @@ def stable_grpo_loss(
     ratio = torch.exp(log_ratio)
     pg_loss = -(ratio * safe_advantages).mean()
 
-    kl = (
-        (safe_old_log_probs - safe_log_probs)
-        .clamp(
-            -ratio_clip_log_delta,
-            ratio_clip_log_delta,
-        )
-        .mean()
+    kl = old_sampled_kl(
+        safe_log_probs,
+        safe_old_log_probs,
+        numerical_log_ratio_clip=ratio_clip_log_delta,
     )
     total = pg_loss + kl_coeff * kl
     if not torch.isfinite(total):
@@ -1085,12 +1604,167 @@ def stable_token_log_probs(
     return flat_selected.reshape(safe_targets.shape)
 
 
+def resolve_entropy_pos_cap(
+    prompt_len: int, entropy_token_cap: int | None, seq_len: int
+) -> int | None:
+    """Absolute logits-position bound for the entropy branch.
+
+    2026-08-26 (run-8 OOM root cause): ``entropy_token_cap`` counts COMPLETION
+    tokens after the prompt (the completion starts at target position
+    ``prompt_len - 1``); this maps it to an absolute position cap. ``None`` or
+    ``<= 0`` keeps the full sequence (legacy behavior); a cap larger than the
+    sequence is clamped to the sequence (identical to uncapped).
+    """
+    if entropy_token_cap is None or int(entropy_token_cap) <= 0:
+        return None
+    cap = max(int(prompt_len) - 1, 0) + int(entropy_token_cap)
+    return min(cap, max(int(seq_len), 0))
+
+
+class _ChunkedRecomputeBackward(torch.autograd.Function):
+    """Autograd wrapper with a chunk-streaming backward for the chunked-vocab
+    log-prob/entropy pass (2026-08-26 run-9 backward-OOM root cause).
+
+    The PLAIN autograd path retains per-chunk fp32 tensors (clamp/exp/
+    gather saves at [1,S,8192]) in the graph over the FULL sequence until
+    loss.backward() — measured ~10.9 GiB per candidate at the 27B contract
+    (43.6 GiB for a 4-candidate train pass; the run-9 58.72/60.96 GiB
+    backward crash). The forward here saves only the [1,S] intermediates
+    (per-position max, logsumexp, neg-entropy, targets) plus the logits view
+    (shared storage — no copy); the backward re-derives p = exp((x/T -
+    max))/Z chunk-by-chunk and accumulates the exact softmax gradients
+    incrementally — peak O(S x chunk) instead of O(S x V). Forward outputs
+    are bit-identical to the plain path (same math, same order).
+    """
+
+    @staticmethod
+    def forward(  # type: ignore[override]
+        ctx,
+        logits: torch.Tensor,
+        target_ids: torch.Tensor,
+        logit_clip: float,
+        chunk_size: int,
+        policy_temperature: float,
+        entropy_pos_cap: int | None,
+        return_entropy: bool,
+    ):
+        vocab_size = logits.shape[-1]
+
+        def _clamped_chunk(start: int, pos_cap: int | None = None) -> torch.Tensor:
+            chunk = logits[:, :, start : start + chunk_size]
+            if pos_cap is not None:
+                chunk = chunk[:, :pos_cap, :]
+            return torch.nan_to_num(
+                chunk.float(),
+                nan=0.0,
+                posinf=logit_clip,
+                neginf=-logit_clip,
+            ).clamp(-logit_clip, logit_clip) / float(policy_temperature)
+
+        per_pos_max = None
+        for start in range(0, vocab_size, chunk_size):
+            chunk_max = _clamped_chunk(start).amax(dim=-1)
+            per_pos_max = (
+                chunk_max if per_pos_max is None else torch.maximum(per_pos_max, chunk_max)
+            )
+        sum_exp = torch.zeros_like(per_pos_max)
+        gathered = per_pos_max.new_full(target_ids.shape, float("nan"))
+        for start in range(0, vocab_size, chunk_size):
+            chunk = _clamped_chunk(start)
+            sum_exp = sum_exp + (chunk - per_pos_max.unsqueeze(-1)).exp().sum(dim=-1)
+            sel = (target_ids >= start) & (target_ids < start + chunk_size)
+            if bool(sel.any()):
+                idx = (target_ids - start).clamp(min=0, max=chunk_size - 1).unsqueeze(-1)
+                vals = chunk.gather(2, idx).squeeze(-1)
+                gathered = gathered.masked_scatter(sel, vals[sel])
+        log_z = per_pos_max + sum_exp.log()
+        token_log_probs = gathered - log_z
+        neg_entropy = None
+        if return_entropy:
+            neg_entropy = torch.zeros_like(per_pos_max)
+            log_z_shifted = sum_exp.log()
+            pos_cap = entropy_pos_cap if entropy_pos_cap is not None else per_pos_max.shape[1]
+            pm = per_pos_max[:, :pos_cap]
+            se = sum_exp[:, :pos_cap]
+            lz = log_z_shifted[:, :pos_cap]
+            for start in range(0, vocab_size, chunk_size):
+                chunk = _clamped_chunk(start, pos_cap=pos_cap)
+                shifted = chunk - pm.unsqueeze(-1)
+                p = shifted.exp() / se.unsqueeze(-1)
+                log_p = shifted - lz.unsqueeze(-1)
+                neg_entropy[:, :pos_cap] = neg_entropy[:, :pos_cap] + (p * log_p).sum(dim=-1)
+
+        ctx.logit_clip = float(logit_clip)
+        ctx.chunk_size = int(chunk_size)
+        ctx.policy_temperature = float(policy_temperature)
+        ctx.entropy_pos_cap = entropy_pos_cap
+        ctx.save_for_backward(logits, target_ids, per_pos_max, sum_exp, neg_entropy)
+        if return_entropy:
+            return token_log_probs, -neg_entropy
+        return token_log_probs
+
+    @staticmethod
+    def backward(ctx, *grad_outputs):  # type: ignore[override]
+        logits, target_ids, per_pos_max, sum_exp, neg_entropy = ctx.saved_tensors
+        clip = ctx.logit_clip
+        cs = ctx.chunk_size
+        temp = ctx.policy_temperature
+        vocab_size = logits.shape[-1]
+        grad_tokens = grad_outputs[0]
+        grad_entropy = grad_outputs[1] if len(grad_outputs) > 1 else None
+
+        # p = exp((x_clamped/T - max)) / Z — recomputed per chunk; gradients:
+        #   token-lp term:  d lps_i/dx_v = (delta_{v,t} - p_v) / T
+        #   entropy term:   d H_i/dx_v  = -(1/T) p_v (log p_v + H_i)
+        log_z_shifted = sum_exp.log()
+        E = -neg_entropy if neg_entropy is not None else None
+        if grad_entropy is not None and E is not None and ctx.entropy_pos_cap is not None:
+            # The entropy output beyond the cap is a CONSTANT zero (the plain
+            # path's CopySlices base) — the incoming gradient there must not
+            # propagate (the sum's gradient reaches every position, including
+            # the constant zeros).
+            ge = grad_entropy.clone()
+            ge[:, int(ctx.entropy_pos_cap) :] = 0.0
+            grad_entropy = ge
+        grad_x = torch.zeros(logits.shape, dtype=torch.float32, device=logits.device)
+        for start in range(0, vocab_size, cs):
+            raw = logits[:, :, start : start + cs]
+            rawf = raw.float()
+            safe = (
+                torch.nan_to_num(rawf, nan=0.0, posinf=clip, neginf=-clip).clamp(-clip, clip) / temp
+            )
+            shifted = safe - per_pos_max.unsqueeze(-1)
+            p = shifted.exp() / sum_exp.unsqueeze(-1)
+            # nan/inf replaced and out-of-clip positions carry no gradient
+            # through nan_to_num/clamp (matches the plain autograd path).
+            mask = torch.isfinite(rawf) & (rawf >= -clip) & (rawf <= clip)
+            onehot = torch.zeros_like(p)
+            sel = (target_ids >= start) & (target_ids < start + cs)
+            if bool(sel.any()):
+                # Per-position one-hot at the target column. scatter_ is
+                # exact even when two positions share a column; the clamped
+                # out-of-chunk indices are masked off afterwards.
+                idx = (target_ids - start).clamp(min=0, max=cs - 1).unsqueeze(-1)
+                onehot.scatter_(2, idx, torch.ones_like(onehot[:, :, :1]))
+                onehot *= sel.unsqueeze(-1).float()
+            chunk_grad = grad_tokens.unsqueeze(-1) * (onehot - p) / temp
+            if grad_entropy is not None and E is not None:
+                chunk_grad = chunk_grad + (
+                    grad_entropy.unsqueeze(-1) * (-(1.0 / temp)) * p * (p.log() + E.unsqueeze(-1))
+                )
+            grad_x[:, :, start : start + cs] += chunk_grad * mask
+        return grad_x, None, None, None, None, None, None
+
+
 def chunked_log_probs_and_entropy(
     logits: torch.Tensor,
     target_ids: torch.Tensor,
     logit_clip: float,
     chunk_size: int = 8192,
     return_entropy: bool = False,
+    policy_temperature: float = 1.0,
+    entropy_pos_cap: int | None = None,
+    recompute_backward: bool = False,
 ):
     """Memory-bounded equivalent of stable_token_log_probs() (+ per-position entropy).
 
@@ -1106,20 +1780,50 @@ def chunked_log_probs_and_entropy(
     for position (the caller performs any shift, exactly as with
     stable_token_log_probs). When return_entropy is True also returns
     per-position entropy -Σ p log p at those positions.
+
+    2026-08-26 (run-9 backward-OOM root cause): ``recompute_backward=True``
+    routes through ``_ChunkedRecomputeBackward`` — the forward is the same
+    math (outputs bit-identical), but the backward streams chunk-by-chunk
+    instead of retaining the per-chunk fp32 tensors in the graph (measured
+    ~10.9 GiB/candidate retained at the 27B contract; the run-9 58.72 GiB
+    backward crash). Trainer default ON via --chunked-recompute-backward.
     """
+    if not math.isfinite(policy_temperature) or policy_temperature <= 0.0:
+        raise ValueError("policy_temperature must be finite and > 0")
+    if recompute_backward:
+        return _ChunkedRecomputeBackward.apply(
+            logits,
+            target_ids.long(),
+            logit_clip,
+            chunk_size,
+            policy_temperature,
+            entropy_pos_cap,
+            return_entropy,
+        )
     x = logits
     targets = target_ids.long()
     if x.shape[-2] != targets.shape[-1]:
         raise ValueError("target_ids must align position-for-position with logits")
     vocab_size = x.shape[-1]
 
-    def _clamped_chunk(start: int) -> torch.Tensor:
-        return torch.nan_to_num(
-            x[:, :, start : start + chunk_size].float(),
+    def _clamped_chunk(start: int, pos_cap: int | None = None) -> torch.Tensor:
+        chunk = x[:, :, start : start + chunk_size]
+        # 2026-08-26 (run-8 OOM root cause): the entropy branch only needs the
+        # first ``pos_cap`` positions — slice BEFORE the fp32 materialization
+        # so the nan_to_num/clamp saved tensors (retained in the autograd
+        # graph until backward) are [1,pos_cap,8192], not [1,S,8192].
+        if pos_cap is not None:
+            chunk = chunk[:, :pos_cap, :]
+        safe = torch.nan_to_num(
+            chunk.float(),
             nan=0.0,
             posinf=logit_clip,
             neginf=-logit_clip,
         ).clamp(-logit_clip, logit_clip)
+        # model.generate samples from softmax(logits / temperature).  Rollout
+        # log-probabilities must use that same behavior distribution or any
+        # adaptive temperature escalation corrupts the SAPO importance ratio.
+        return safe / float(policy_temperature)
 
     # Pass 1: per-position max over clamped chunk values.
     per_pos_max = None
@@ -1150,12 +1854,24 @@ def chunked_log_probs_and_entropy(
     # Every term has the same sign, so the chunked sum is cancellation-free.
     neg_entropy = torch.zeros_like(per_pos_max)
     log_z_shifted = sum_exp.log()
+    # 2026-08-26 (run-8 OOM root cause): the entropy branch's per-chunk fp32
+    # tensors (clamp/exp/p/log_p at [1,S,8192]) are retained in the autograd
+    # graph over the FULL sequence — ~37 GiB for a 4-candidate 27B train pass
+    # at S=1700 (measured), the run-8 59.8 GiB NPU-0 peak. ``entropy_pos_cap``
+    # bounds the branch to the first N positions (a floor needs a rough mean,
+    # not the full sequence); the log_z / log-prob path is untouched (lps
+    # bit-identical). Positions beyond the cap stay 0 in the returned tensor;
+    # the capped caller masks them out.
+    pos_cap = entropy_pos_cap if entropy_pos_cap is not None else per_pos_max.shape[1]
+    pm = per_pos_max[:, :pos_cap]
+    se = sum_exp[:, :pos_cap]
+    lz = log_z_shifted[:, :pos_cap]
     for start in range(0, vocab_size, chunk_size):
-        chunk = _clamped_chunk(start)
-        shifted = chunk - per_pos_max.unsqueeze(-1)
-        p = shifted.exp() / sum_exp.unsqueeze(-1)
-        log_p = shifted - log_z_shifted.unsqueeze(-1)
-        neg_entropy = neg_entropy + (p * log_p).sum(dim=-1)
+        chunk = _clamped_chunk(start, pos_cap=pos_cap)
+        shifted = chunk - pm.unsqueeze(-1)
+        p = shifted.exp() / se.unsqueeze(-1)
+        log_p = shifted - lz.unsqueeze(-1)
+        neg_entropy[:, :pos_cap] = neg_entropy[:, :pos_cap] + (p * log_p).sum(dim=-1)
     return token_log_probs, -neg_entropy
 
 
@@ -1187,6 +1903,40 @@ def reward_signal_stats(
     if brevity_rewards is not None:
         result["brevity_std"] = brevity_std
     return result
+
+
+def policy_update_signal_magnitude(
+    *,
+    advantage_mode: str,
+    signal_stats: Mapping[str, float],
+    loo_advantage_rms: float | None,
+) -> tuple[float, str]:
+    """Select the signal magnitude used by the flat-group update gate.
+
+    Raw component standard deviations are not on the scale of their weighted
+    contribution to total reward. Canonical LOO mode therefore gates on the
+    RMS of the final clipped advantages that actually enter SAPO. The
+    ``group_std`` ablation retains its historical max-component statistic.
+    """
+    if advantage_mode == "loo":
+        magnitude = 0.0 if loo_advantage_rms is None else float(loo_advantage_rms)
+        return max(0.0, magnitude), "loo_advantage_rms"
+    return max(0.0, float(signal_stats.get("signal_std", 0.0))), "reward_signal_std"
+
+
+def should_queue_flat_all_fail(
+    *, all_fail: bool, route: str, update_signal_magnitude: float, threshold: float
+) -> bool:
+    """Return whether an RL-routed group has no usable policy gradient.
+
+    Router component dispersion can be nonzero even when the final reward and
+    LOO advantages are flat (for example an inactive brevity component). Such
+    a group must enter the repair lane immediately instead of being discarded
+    as a generic low-signal skip and sampled again later.
+    """
+    return (
+        bool(all_fail) and route in RL_ROUTES and float(update_signal_magnitude) < float(threshold)
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -1264,11 +2014,16 @@ class AdaptiveTemperatureState:
     def record_skip(self, reason: str) -> None:
         """Update state after a skipped GRPO step.
 
-        Only increments the escalation counter for *low_reward_signal* skips.
-        Other skip reasons (empty mask, non-finite loss) do not indicate a
-        temperature-diversity problem and should not escalate sampling.
+        Only increments the escalation counter for sampling-diversity
+        failures: ``low_reward_signal`` (flat RL groups) and
+        ``degenerate_policy`` (2026-08-26 r10 — the EOS-collapse rescue
+        alarm: a collapsed policy emitting ~1-token completions at near-zero
+        entropy escalates the same ladder so the NEXT group samples more
+        diversely). Other skip reasons (empty mask, non-finite loss,
+        repair-routing) do not indicate a temperature-diversity problem and
+        should not escalate sampling.
         """
-        if reason == self._LOW_SIGNAL_REASON:
+        if reason in (self._LOW_SIGNAL_REASON, DEGENERATE_POLICY_REASON):
             self.consecutive_low_signal_skips += 1
 
     def record_update(self) -> None:
@@ -1308,6 +2063,13 @@ PARTIAL_REPAIR_RL = "partial_repair_rl"
 INVALID_OR_NOISY = "invalid_or_noisy"
 
 RL_ROUTES = frozenset({FRONTIER_RL, PARTIAL_REPAIR_RL})
+
+# 2026-08-26 (r10, run-6 killer): skip reason for the EOS-collapse rescue
+# alarm. A collapsed policy (entropy < 0.05 AND ~1-token completions for 3
+# consecutive steps) escalates the SAME ladder as low_reward_signal — the
+# ladder is the only rescue path, and repair-routing alone never escalates
+# (run-6: 16 consecutive repair skips, temp stuck at 1.15, no_trainable_tasks).
+DEGENERATE_POLICY_REASON = "degenerate_policy"
 
 
 @dataclass
@@ -1473,6 +2235,14 @@ class FrontierRouter:
         current = self.get_state(task_id)
         current["rl_updates"] = float(current["rl_updates"]) + 1.0
 
+    def mark_repair(self, task_id: str) -> None:
+        """Quarantine a proven flat all-fail task from further RL sampling."""
+        self.get_state(task_id)["route"] = REPAIR_SFT
+
+    def mark_invalid(self, task_id: str) -> None:
+        """Quarantine an unstable/invalid task from further RL sampling."""
+        self.get_state(task_id)["route"] = INVALID_OR_NOISY
+
     def learnability(self, task_id: str) -> float:
         current = self.get_state(task_id)
         if float(current["probes"]) == 0.0:
@@ -1484,6 +2254,10 @@ class FrontierRouter:
 
     def route_of(self, task_id: str) -> str:
         current = self.get_state(task_id)
+        # Explicit quarantine decisions are authoritative even when applied
+        # before a statistical probe (for example by an external validator).
+        if current["route"] in {REPAIR_SFT, INVALID_OR_NOISY}:
+            return str(current["route"])
         if float(current["probes"]) == 0.0:
             return ""
         return str(current["route"])
@@ -1513,6 +2287,8 @@ class FrontierRouter:
         route = self.route_of(task_id)
         if route == MASTERED_REPLAY:
             weight *= self.mastered_replay_scale
+        elif route in {REPAIR_SFT, INVALID_OR_NOISY}:
+            return self.min_weight
         return max(self.min_weight, weight)
 
     def frontier_fraction(self) -> float:
@@ -1532,6 +2308,62 @@ class FrontierRouter:
             return 0.0
         mastered = [s for s in probed if s["route"] == MASTERED_REPLAY]
         return len(mastered) / len(probed)
+
+
+def restore_router_from_record(
+    router: FrontierRouter,
+    tasks: Sequence[Mapping[str, Any]],
+    record: Mapping[str, Any],
+    *,
+    default_group_size: int,
+) -> tuple[str, bool]:
+    """Restore one persisted router observation without changing its meaning.
+
+    Historical records sometimes stored ``task_dir.name`` instead of the
+    canonical metadata id. Resolve both forms, replay only the policy reward's
+    dispersion (not inactive component variance), preserve the recorded group
+    size, and restore sticky repair/invalid quarantine after the posterior
+    update.
+    """
+    recorded = str(record.get("task", ""))
+    aliases: dict[str, str] = {}
+    for task in tasks:
+        task_id = str(task.get("task_id", ""))
+        if not task_id:
+            continue
+        aliases[task_id] = task_id
+        task_dir = task.get("task_dir")
+        if task_dir is not None:
+            aliases[Path(task_dir).name] = task_id
+    task_id = aliases.get(recorded, recorded)
+    probed = False
+    pass_rate = record.get("pass_rate")
+    if task_id and pass_rate is not None:
+        try:
+            reward_std = float(record.get("reward_std", 0.0) or 0.0)
+        except (TypeError, ValueError):
+            reward_std = 0.0
+        if not math.isfinite(reward_std):
+            reward_std = 0.0
+        try:
+            group_size = int(record.get("group_size", default_group_size))
+        except (TypeError, ValueError):
+            group_size = int(default_group_size)
+        router.probe_record(
+            task_id,
+            int(record.get("step", 0)),
+            float(pass_rate),
+            max(0.0, reward_std),
+            group_size=max(1, group_size),
+        )
+        probed = True
+
+    recorded_route = str(record.get("route", ""))
+    if task_id and recorded_route == REPAIR_SFT:
+        router.mark_repair(task_id)
+    elif task_id and recorded_route == INVALID_OR_NOISY:
+        router.mark_invalid(task_id)
+    return task_id, probed
 
 
 def build_mixture_weights(
@@ -1567,6 +2399,7 @@ def build_mixture_weights(
         return []
     targeted: list[int] = []
     replay: list[int] = []
+    quarantined: list[int] = []
     neighbor_categories: set[str] = set()
     recent = list((recent_frontier or [])[-neighbor_window:])
     by_id = {task["task_id"]: task for task in tasks}
@@ -1580,27 +2413,42 @@ def build_mixture_weights(
         route = router.route_of(task["task_id"])
         if route == MASTERED_REPLAY:
             replay.append(index)
+        elif route in {REPAIR_SFT, INVALID_OR_NOISY}:
+            quarantined.append(index)
         else:
             targeted.append(index)
     neighbor = [
         index
-        for index in range(len(tasks))
+        for index in targeted
         if index not in replay
         and str(tasks[index].get("meta", {}).get("category", "")).strip() in neighbor_categories
     ]
     if not neighbor:
         neighbor = list(targeted)
 
-    def _uniform(indices: list[int], mass: float) -> dict[int, float]:
+    total_probes = int(sum(float(state.get("probes", 0.0)) for state in router.state.values()))
+
+    def _within_pool(indices: list[int], mass: float) -> dict[int, float]:
         if not indices:
             return {}
-        per = mass / len(indices)
-        return {index: per for index in indices}
+        raw = {
+            index: router.weight(
+                tasks[index]["task_id"],
+                step=step,
+                total_probes=total_probes,
+            )
+            for index in indices
+        }
+        raw_total = sum(raw.values())
+        if raw_total <= 0.0:
+            per = mass / len(indices)
+            return {index: per for index in indices}
+        return {index: mass * value / raw_total for index, value in raw.items()}
 
     weights_map: dict[int, float] = {}
 
     def _accumulate(mass: float, indices: list[int]) -> None:
-        for index, per in _uniform(indices, mass).items():
+        for index, per in _within_pool(indices, mass).items():
             weights_map[index] = weights_map.get(index, 0.0) + per
 
     effective_targeted = float(mix_targeted)
@@ -1625,8 +2473,11 @@ def build_mixture_weights(
     _accumulate(effective_replay, replay)
     total = sum(weights_map.values())
     if total <= 0.0:
-        per = 1.0 / len(tasks)
-        return [per] * len(tasks)
+        # Every task is quarantined/repair-only. Returning uniform weights here
+        # silently resurrects those tasks and burns another rollout group on
+        # data that the router already proved unusable for RL. The trainer
+        # treats an all-zero vector as an explicit no-trainable-task stop.
+        return [0.0] * len(tasks)
     return [weights_map.get(index, 0.0) / total for index in range(len(tasks))]
 
 
@@ -1665,6 +2516,11 @@ def sequence_ratio_stats(
     safe_old = old_log_probs[finite_mask].float()
     log_ratio = (safe_current - safe_old).clamp(-numerical_log_ratio_clip, numerical_log_ratio_clip)
     ratio = torch.exp(log_ratio)
+    # The responses were sampled from ``old``.  Schulman's non-negative k3
+    # estimator for KL(old || current) therefore uses r=current/old:
+    # E_old[(r - 1) - log(r)].  The former signed mean(old-current) could be
+    # negative and let large probability increases evade the trust region.
+    seq_kl = (torch.expm1(log_ratio) - log_ratio).clamp_min(0.0).mean()
     n = float(ratio.numel())
     return {
         "ratio_before_update": float(ratio.mean().item()),
@@ -1673,8 +2529,31 @@ def sequence_ratio_stats(
         "clip_fraction_after_update": float(
             ((ratio < 1.0 - clip_low) | (ratio > 1.0 + clip_high)).sum().item() / n
         ),
-        "seq_kl_after": float((safe_old - safe_current).mean().item()),
+        "seq_kl_after": float(seq_kl.item()),
     }
+
+
+def old_sampled_kl(
+    log_probs: torch.Tensor,
+    old_log_probs: torch.Tensor,
+    *,
+    numerical_log_ratio_clip: float = 8.0,
+) -> torch.Tensor:
+    """Non-negative k3 estimate of ``KL(old || current)`` on old samples.
+
+    If ``x ~ old`` and ``r(x) = current(x) / old(x)``, Schulman's k3
+    estimator is ``(r - 1) - log(r)``.  Keeping the direction explicit here
+    prevents accidental reuse of the reference-policy formula used by
+    frameworks that instead sample from the *current* policy.
+    """
+    finite_mask = torch.isfinite(log_probs) & torch.isfinite(old_log_probs)
+    if not finite_mask.any():
+        return log_probs.new_tensor(float("nan"))
+    log_ratio = (log_probs[finite_mask].float() - old_log_probs[finite_mask].float()).clamp(
+        -numerical_log_ratio_clip,
+        numerical_log_ratio_clip,
+    )
+    return (torch.expm1(log_ratio) - log_ratio).clamp_min(0.0).mean()
 
 
 def stable_gspo_loss_metrics(
@@ -1741,7 +2620,11 @@ def stable_gspo_loss_metrics(
         safe_weights = length_weights[finite_mask].float().clamp_min(0.0)
         surrogate = surrogate * safe_weights
         length_weight_mean = float(safe_weights.mean().item())
-    approximate_kl = (safe_old_log_probs - safe_log_probs).mean()
+    approximate_kl = old_sampled_kl(
+        safe_log_probs,
+        safe_old_log_probs,
+        numerical_log_ratio_clip=numerical_log_ratio_clip,
+    )
     total = -surrogate.mean() + kl_coeff * approximate_kl
     if not torch.isfinite(total):
         return nan_loss, empty_stats
@@ -1758,6 +2641,136 @@ def stable_gspo_loss_metrics(
         ),
         "seq_kl": float(approximate_kl.item()),
         "length_weight_mean": length_weight_mean,
+    }
+    return total, stats
+
+
+def sapo_loss_metrics(
+    token_log_probs: list[torch.Tensor],
+    old_token_log_probs: list[torch.Tensor],
+    advantages: torch.Tensor,
+    *,
+    tau_pos: float,
+    tau_neg: float,
+    kl_coeff: float,
+    numerical_log_ratio_clip: float,
+) -> tuple[torch.Tensor, dict[str, float]]:
+    """SAPO — Soft Adaptive Policy Optimization (Qwen team, arXiv:2511.20347).
+
+    Replaces GSPO's hard sequence clip with a SMOOTH sigmoid gate g(r) on the
+    per-token importance ratio, applied to ALL tokens of each sample:
+
+        r_{i,t}      = exp(cur_lp_{i,t} - old_lp_{i,t})          (token-level)
+        g(r)         = (4 / tau) * sigmoid(tau * (r - 1))         (smooth decay)
+        tau          = tau_pos if A_i > 0 else tau_neg            (asymmetric)
+        L            = -mean_{i,t} [ g(r_{i,t}) * A_i ]
+                       + kl * mean[(r_{i,t} - 1) - log(r_{i,t})]
+
+    - No hard clip: the gate continuously attenuates the gradient as the ratio
+      drifts (larger tau -> faster decay), keeping a smooth trust region.
+      Recommended tau_pos=1.0, tau_neg=1.05 (faster decay for negative-reward
+      tokens stabilizes training).
+    - SAPO/GRPO aggregation: average tokens within each completion, then
+      average completions.  This is deliberately *not* BNPO's global token
+      mean: otherwise long completions receive more policy-gradient weight.
+    - A_i is the group/LOO advantage, constant across tokens of a sample.
+
+    Args are per-token log-prob lists (one tensor per completion) and the
+    per-completion advantages. Returns ``(loss, stats)`` with stats mirroring
+    the GSPO record keys (seq_kl, ratio_mean, clip_high_fraction as the
+    fraction of tokens whose ratio exceeds the tau-decay knee).
+
+    Training-log instrumentation (2026-08-25): stats additionally carries the
+    batch's own ``loss`` value and mean ``advantage`` (plus the existing
+    ``n_tokens``), so the trainer's per-candidate records are self-contained
+    and the math auditor can recompute the aggregate loss identity
+    (``loss_i == -sapo_gate_mean_i * A_i + kl_coeff * seq_kl_i`` per candidate)
+    from the persisted JSONL. The trainer calls this function with exactly one
+    completion per call, so ``loss``/``advantage`` equal the per-candidate
+    values there; for multi-completion calls they are the batch means.
+    """
+    nan_loss = torch.tensor(float("nan"), dtype=torch.float32)
+    empty_stats = {
+        "ratio_mean": 0.0,
+        "ratio_median": 0.0,
+        "clip_low_fraction": 0.0,
+        "clip_high_fraction": 0.0,
+        "clip_total_fraction": 0.0,
+        "seq_kl": 0.0,
+        "length_weight_mean": 0.0,
+        "sapo_gate_mean": 0.0,
+        # Finite token count backing the stats above; lets the trainer
+        # token-weight per-candidate stats into a batch-level aggregate
+        # (2026-08-22 audit #3) instead of keeping only the last candidate.
+        "n_tokens": 0.0,
+        # 2026-08-25 instrumentation: the candidate's own loss and advantage.
+        "loss": 0.0,
+        "advantage": 0.0,
+    }
+    if not token_log_probs or len(token_log_probs) != len(old_token_log_probs):
+        return nan_loss, empty_stats
+    if len(token_log_probs) != int(advantages.numel()):
+        return nan_loss, empty_stats
+
+    sample_losses: list[torch.Tensor] = []
+    sample_kls: list[torch.Tensor] = []
+    all_ratio: list[torch.Tensor] = []
+    all_gate: list[torch.Tensor] = []
+    for i, (cur, old) in enumerate(zip(token_log_probs, old_token_log_probs, strict=False)):
+        if cur is None or old is None or cur.numel() == 0 or old.numel() == 0:
+            continue
+        n = min(cur.numel(), old.numel())
+        cur_t = cur[:n].float()
+        old_t = old[:n].float().detach()
+        advantage = advantages[i].float().detach()
+        finite_mask = torch.isfinite(cur_t) & torch.isfinite(old_t) & torch.isfinite(advantage)
+        if not finite_mask.any():
+            continue
+        cur_t = cur_t[finite_mask]
+        old_t = old_t[finite_mask]
+        log_ratio = (cur_t - old_t).clamp(-numerical_log_ratio_clip, numerical_log_ratio_clip)
+        ratio = torch.exp(log_ratio)
+        tau_value = tau_pos if float(advantage.item()) > 0.0 else tau_neg
+        tau = torch.tensor(tau_value, dtype=cur_t.dtype, device=cur_t.device)
+        gate = (4.0 / tau) * torch.sigmoid(tau * (ratio - 1.0))
+        sample_losses.append((-gate * advantage).mean())
+
+        # These tokens were sampled from the rollout/old policy.  For
+        # KL(old || current), k3 uses r=current/old, not its reciprocal:
+        # (r - 1) - log(r).  The reciprocal direction is appropriate only
+        # when the expectation is over current-policy samples.
+        sample_kls.append((torch.expm1(log_ratio) - log_ratio).clamp_min(0.0).mean())
+        all_ratio.append(ratio.detach())
+        all_gate.append(gate.detach())
+
+    if not sample_losses:
+        return nan_loss, empty_stats
+
+    approximate_kl = torch.stack(sample_kls).mean()
+    total = torch.stack(sample_losses).mean() + kl_coeff * approximate_kl
+    if not torch.isfinite(total):
+        return nan_loss, empty_stats
+
+    ratio = torch.cat(all_ratio)
+    gate = torch.cat(all_gate)
+    n = float(ratio.numel())
+    knee_pos = 1.0 + 1.0 / max(float(tau_pos), 1e-6)
+    knee_neg = 1.0 - 1.0 / max(float(tau_neg), 1e-6)
+    stats = {
+        "ratio_mean": float(ratio.mean().item()),
+        "ratio_median": float(ratio.median().item()),
+        "clip_low_fraction": float((ratio < knee_neg).sum().item() / n),
+        "clip_high_fraction": float((ratio > knee_pos).sum().item() / n),
+        "clip_total_fraction": float(((ratio < knee_neg) | (ratio > knee_pos)).sum().item() / n),
+        "seq_kl": float(approximate_kl.item()),
+        "length_weight_mean": 0.0,
+        "sapo_gate_mean": float(gate.mean().item()),
+        "n_tokens": n,
+        # 2026-08-25 instrumentation: the value actually returned (equals the
+        # per-candidate loss in the trainer's one-candidate-per-call path) and
+        # the mean advantage of the batch.
+        "loss": float(total.item()),
+        "advantage": float(advantages.float().mean().item()),
     }
     return total, stats
 
@@ -1802,12 +2815,22 @@ class RunningMAD:
         values_np = values.detach().float()
         mean = float(values_np.mean().item())
         mad = float((values_np - mean).abs().mean().item())
+        if mad <= 0.0:
+            # Flat group: no dispersion evidence (all LOO advantages ~0). Do
+            # NOT move the running scale — the old fallback (1.0) pulled the
+            # EMA toward 1.0 with weight (1-decay) per flat group, turning
+            # shared_mad into a no-op in flat-heavy runs (2026-08-24: run
+            # sapo-27b-ai-20260824T075223 kept adv_scale ~0.97-0.99 across
+            # 10 steps while true signal-group MAD was ~0.3 -> the intended
+            # ~3x advantage amplification never engaged). Flat batches also
+            # carry no evidence for the first-batch initialization.
+            return self._mad
         if self._count == 0:
             self._mean = mean
-            self._mad = mad if mad > 0.0 else 1.0
+            self._mad = mad
         else:
             self._mean = self.decay * self._mean + (1.0 - self.decay) * mean
-            self._mad = self.decay * self._mad + (1.0 - self.decay) * (mad if mad > 0.0 else 1.0)
+            self._mad = self.decay * self._mad + (1.0 - self.decay) * mad
         self._count += count
         return self._mad
 
