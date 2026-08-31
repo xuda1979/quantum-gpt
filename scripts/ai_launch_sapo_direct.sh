@@ -37,5 +37,16 @@ export ASI3_SAPO_MIN_GROUP_SIZE="${AI_SAPO_MIN_GROUP_SIZE:-${ASI3_SAPO_MIN_GROUP
 export ASI3_SAPO_RESUME_FROM="${AI_SAPO_RESUME_FROM:-${ASI3_SAPO_RESUME_FROM:-}}"
 export ASI3_SAPO_STEPS="${AI_SAPO_STEPS:-${ASI3_SAPO_STEPS:-100}}"
 export ASI3_SAPO_LAUNCHER="${AI_SAPO_ENGINE_LAUNCHER:-${ASI3_SAPO_LAUNCHER:-$AI_ROOT/scripts/asi2_launch_grpo_27b_selfeval.sh}}"
+# 2026-09-01 (fixer lane): launchplan section 3b aliases — these five knobs
+# were NOT aliased and the section 3b AI_SAPO_* pins were SILENTLY DROPPED
+# (the asi3 launcher only reads ASI3_SAPO_*). In particular the v9
+# BENCHMARK_FILE pin never reached the launch: the next launch would have
+# trained on v8_holdout_adjacent. Defaults mirror the asi3 launcher so the
+# alias chain is a pure pass-through when unset.
+export ASI3_SAPO_LR="${AI_SAPO_LR:-${ASI3_SAPO_LR:-5e-5}}"
+export ASI3_SAPO_BENCHMARK_FILE="${AI_SAPO_BENCHMARK_FILE:-${ASI3_SAPO_BENCHMARK_FILE:-evals/benchmarks/quantum_grpo_training_v8_holdout_adjacent.txt}}"
+export ASI3_SAPO_GREEDY_ROLLOUT_FRACTION="${AI_SAPO_GREEDY_ROLLOUT_FRACTION:-${ASI3_SAPO_GREEDY_ROLLOUT_FRACTION:-0.4}}"
+export ASI3_SAPO_ENTROPY_FLOOR_WEIGHT="${AI_SAPO_ENTROPY_FLOOR_WEIGHT:-${ASI3_SAPO_ENTROPY_FLOOR_WEIGHT:-0.01}}"
+export ASI3_SAPO_JUDGE_DP4_MAX_TOKENS="${AI_SAPO_JUDGE_DP4_MAX_TOKENS:-${ASI3_SAPO_JUDGE_DP4_MAX_TOKENS:-4096}}"
 
 exec bash "$ROOT_DIR/scripts/asi3_launch_grpo_direct.sh" "$@"

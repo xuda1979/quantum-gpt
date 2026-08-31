@@ -662,3 +662,23 @@ def test_launch_contract_pins_entropy_floor_weight_and_greedy_fraction() -> None
     plan = (ROOT / ".sapo-loop" / "launchplan.md").read_text(encoding="utf-8")
     assert "AI_SAPO_GREEDY_ROLLOUT_FRACTION=0.4" in plan
     assert "AI_SAPO_ENTROPY_FLOOR_WEIGHT=0.01" in plan
+
+
+def test_ai_wrapper_aliases_every_launchplan_env_knob() -> None:
+    """2026-09-01 (fixer lane): the launchplan section 3b launch command uses
+    AI_SAPO_* names — the wrapper must alias EACH of them to ASI3_SAPO_* or
+    the knob is SILENTLY DROPPED (the asi3 launcher only reads ASI3_SAPO_*).
+    Found live: AI_SAPO_BENCHMARK_FILE was NOT aliased — the v9 benchmark pin
+    would have been dropped and the next launch would have trained on
+    v8_holdout_adjacent instead. This test parses section 3b itself, so a
+    future knob added to the command is enforced automatically.
+    """
+    wrapper = AI_LAUNCHER.read_text(encoding="utf-8")
+    plan = (ROOT / ".sapo-loop" / "launchplan.md").read_text(encoding="utf-8")
+    cmd_block = plan.split("### 3b. Launch command", 1)[1].split("```", 2)[1]
+    ai_knobs = sorted(set(re.findall(r"AI_SAPO_([A-Z0-9_]+)=", cmd_block)))
+    missing = [k for k in ai_knobs if f"AI_SAPO_{k}" not in wrapper]
+    assert not missing, (
+        f"wrapper does not alias launchplan section 3b knobs: {missing} "
+        "(silent drop = wrong benchmark/hyperparams at launch)"
+    )
