@@ -18,8 +18,8 @@ import argparse
 import importlib
 import json
 import platform
-from pathlib import Path
 import sys
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -37,7 +37,6 @@ from training.model_backend import (
 )
 from training.model_family_preflight import trainer_backend_preflight_block
 from training.text_preprocessor_backend import (
-    TextPreprocessorBackend,
     build_supervised_text_example,
     load_text_preprocessor_backend,
     pad_supervised_text_batch,
@@ -50,6 +49,7 @@ REQUIRED_MODULES = [
     "datasets",
     "peft",
 ]
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -175,7 +175,13 @@ def main() -> int:
 
     try:
         import torch
-        from transformers import AutoConfig, AutoModelForCausalLM, AutoProcessor, AutoTokenizer, PreTrainedTokenizerFast
+        from transformers import (
+            AutoConfig,
+            AutoModelForCausalLM,
+            AutoProcessor,
+            AutoTokenizer,
+            PreTrainedTokenizerFast,
+        )
     except Exception as exc:
         summary["stage"] = "runtime_imports"
         summary["status"] = "error"
@@ -206,7 +212,9 @@ def main() -> int:
         ):
             summary["stage"] = "runtime_compat"
             summary["status"] = "error"
-            summary["error_type"] = str(runtime_summary.get("runtime_autoconfig_error_type") or "RuntimeError")
+            summary["error_type"] = str(
+                runtime_summary.get("runtime_autoconfig_error_type") or "RuntimeError"
+            )
             summary["error"] = build_runtime_upgrade_message(args.model_name, summary)
             print(json.dumps(summary, indent=2, ensure_ascii=False))
             return 1
@@ -253,7 +261,9 @@ def main() -> int:
             args.max_length,
             train_on_completions_only=True,
         )
-        preflight_batch = pad_supervised_text_batch([preflight_example], text_preprocessor.text_backend, torch)
+        preflight_batch = pad_supervised_text_batch(
+            [preflight_example], text_preprocessor.text_backend, torch
+        )
         summary["text_batch_preflight"] = {
             "example_id": preflight_example.get("example_id"),
             "input_token_count": len(preflight_example["input_ids"]),

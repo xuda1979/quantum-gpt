@@ -61,6 +61,7 @@ from training.qwen_sft_peft import (
     DEFAULT_LORA_TARGET_MODULES,
     apply_native_lora,
     persist_adapter,
+    resolve_gradient_checkpointing_reentrant,
 )
 from training.text_preprocessor_backend import (
     TextPreprocessorBackend,
@@ -646,7 +647,21 @@ def main() -> int:
     )
 
     if args.gradient_checkpointing:
+        # NPU + accelerate device_map reentrant-checkpointing fix.
+        # See ``resolve_gradient_checkpointing_reentrant`` in qwen_sft_peft.py
+        # for the full rationale.
+        _use_reentrant: Any = resolve_gradient_checkpointing_reentrant(
+            args.device, "device_map" in model_kwargs
+        )
+        _gc_kwargs: dict[str, Any] = {}
+        if _use_reentrant is not None:
+            _gc_kwargs["gradient_checkpointing_kwargs"] = {
+                "use_reentrant": _use_reentrant,
+            }
         try:
+            model.gradient_checkpointing_enable(**_gc_kwargs)
+        except TypeError:
+            # Older transformers without gradient_checkpointing_kwargs support.
             model.gradient_checkpointing_enable()
         except Exception as exc:
             print(

@@ -15,20 +15,22 @@ def _patch_huggingface_hub_strict() -> None:
         sys.modules["huggingface_hub.dataclasses"] = hub_dataclasses
 
     if not hasattr(hub_dataclasses, "strict"):
-        hub_dataclasses.strict = lambda *args, **kwargs: (lambda fn: fn)
+        hub_dataclasses.strict = lambda *args, **kwargs: lambda fn: fn
     if not hasattr(hub_dataclasses, "validate_typed_dict"):
-        hub_dataclasses.validate_typed_dict = (
-            lambda cls=None, **kwargs: cls if cls is not None else (lambda inner: inner)
+        hub_dataclasses.validate_typed_dict = lambda cls=None, **kwargs: (
+            cls if cls is not None else (lambda inner: inner)
         )
     if not hasattr(hub_dataclasses, "_create_type_validator"):
-        hub_dataclasses._create_type_validator = lambda field: (lambda value: None)
+        hub_dataclasses._create_type_validator = lambda field: lambda value: None
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Apply runtime overlay compatibility shims, then execute a target script."
     )
-    parser.add_argument("--script", required=True, help="Path to the target Python script to execute.")
+    parser.add_argument(
+        "--script", required=True, help="Path to the target Python script to execute."
+    )
     parser.add_argument(
         "script_args",
         nargs=argparse.REMAINDER,

@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from pathlib import Path
 import shutil
 import subprocess
-from typing import Any, Iterable
-
+from collections.abc import Iterable
+from pathlib import Path
+from typing import Any
 
 DEFAULT_MIN_VERSION = (3, 10)
 DEFAULT_PYTHON_BASENAMES = (
@@ -137,7 +137,11 @@ def resolve_python_interpreter(
     brew_binary = next((path for path in candidate_brew_binaries() if path.exists()), None)
     install_command = None
     bootstrap_script = WORKSPACE_ROOT / "scripts" / "bootstrap_local_python311_from_cache.sh"
-    python_cache_matches = list((Path.home() / "Library" / "Caches" / "Homebrew" / "downloads").glob("*--Python-3.11.15.tgz"))
+    python_cache_matches = list(
+        (Path.home() / "Library" / "Caches" / "Homebrew" / "downloads").glob(
+            "*--Python-3.11.15.tgz"
+        )
+    )
     local_openssl_candidates = [
         Path.home() / "homebrew" / "opt" / "openssl",
         Path.home() / "homebrew" / "opt" / "openssl@3",
@@ -147,10 +151,16 @@ def resolve_python_interpreter(
         Path("/usr/local/opt/openssl@3"),
     ]
     local_openssl_available = any(
-        (candidate / "include" / "openssl" / "ssl.h").exists() and (candidate / "lib" / "libssl.dylib").exists()
+        (candidate / "include" / "openssl" / "ssl.h").exists()
+        and (candidate / "lib" / "libssl.dylib").exists()
         for candidate in local_openssl_candidates
     )
-    if selected is None and bootstrap_script.exists() and python_cache_matches and local_openssl_available:
+    if (
+        selected is None
+        and bootstrap_script.exists()
+        and python_cache_matches
+        and local_openssl_available
+    ):
         install_command = f"bash {bootstrap_script.relative_to(WORKSPACE_ROOT)}"
     elif selected is None and brew_binary is not None:
         install_command = f"{brew_binary} install python@3.11"

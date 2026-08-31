@@ -440,6 +440,17 @@ def parse_args() -> argparse.Namespace:
         default=56,
         help="Per-NPU max_memory GiB used with --npu-device-map balanced-layers.",
     )
+    parser.add_argument(
+        "--npu-cpu-offload-fraction",
+        type=float,
+        default=0.0,
+        help=(
+            "With --npu-device-map balanced-layers: fraction of transformer "
+            "layers to place on CPU (accelerate dispatch hooks move them to "
+            "NPU on-demand). Use ~0.25 for a 70 GiB model on a single 62 GiB "
+            "Ascend910B2. 0 disables CPU offload."
+        ),
+    )
     parser.add_argument("--max-length", type=int, default=2048)
     parser.add_argument("--per-device-batch-size", type=int, default=1)
     parser.add_argument("--gradient-accumulation-steps", type=int, default=8)
@@ -530,7 +541,52 @@ def parse_args() -> argparse.Namespace:
 def _visible_npu_indices() -> list[int]:
     raw = os.environ.get("ASCEND_RT_VISIBLE_DEVICES") or os.environ.get("ASCEND_VISIBLE_DEVICES")
     if not raw:
-        return [0]
+        # Audit #4: returning [0] here silently collapsed every unset-env run
+        # to a single NPU (7/8 cards idle) with no log line. Query the real
+        # device count and WARN loudly instead.
+        count = 0
+        try:
+            import torch
+
+            if hasattr(torch, "npu") and torch.npu.is_available():
+                count = int(torch.npu.device_count())
+        except Exception:
+            count = 0
+        if count <= 0:
+            # npu-smi fallback: each device row starts "| <NPU-id> <chip-id> |".
+            try:
+                import subprocess
+
+                out = subprocess.run(
+                    ["npu-smi", "info"],
+                    capture_output=True,
+                    text=True,
+                    timeout=15,
+                ).stdout
+                rows = [
+                    line
+                    for line in out.splitlines()
+                    if re.match(r"^\s*\|\s*\d+\s+\|\s*\d+\s+\|", line)
+                ]
+                count = max(0, len(rows))
+            except Exception:
+                count = 0
+        indices = list(range(count)) if count > 0 else [0]
+        print(
+            json.dumps(
+                {
+                    "stage": "visible_npu_fallback",
+                    "count": count,
+                    "indices": indices,
+                    "note": (
+                        "ASCEND_RT_VISIBLE_DEVICES/ASCEND_VISIBLE_DEVICES unset — "
+                        "queried device count instead of silently using 1 NPU"
+                    ),
+                }
+            ),
+            flush=True,
+        )
+        return indices
     indices: list[int] = []
     for item in raw.split(","):
         item = item.strip()
@@ -551,7 +607,11 @@ def _config_get(config: Any, key: str) -> Any:
     return None
 
 
-def build_balanced_npu_layer_device_map(config: Any, visible_npus: list[int]) -> dict[str, str]:
+def build_balanced_npu_layer_device_map(
+    config: Any,
+    visible_npus: list[int],
+    cpu_offload_fraction: float = 0.0,
+) -> dict[str, str]:
     text_config = _config_get(config, "text_config") or _config_get(config, "llm_config") or config
     num_layers = _config_get(text_config, "num_hidden_layers") or _config_get(
         text_config, "num_layers"
@@ -560,8 +620,7 @@ def build_balanced_npu_layer_device_map(config: Any, visible_npus: list[int]) ->
         raise SystemExit(
             "Cannot build balanced NPU device map: config does not expose num_hidden_layers."
         )
-    # NOTE: torch.device(int) is always interpreted as a CUDA device index by PyTorch's
-    # core semantics, regardless of which accelerator backends are registered. Passing
+    # NOTE: torch.device(int) is always interpreted as a CUDA device index by PyTorch'sassing
     # bare ints here (as this function used to) breaks NPU-only pods with
     # "AssertionError: Torch not compiled with CUDA enabled" once the device_map dict
     # values reach torch.device() construction inside transformers' weight-materialization
@@ -569,7 +628,15 @@ def build_balanced_npu_layer_device_map(config: Any, visible_npus: list[int]) ->
     # to the DDP device_map branch above.
     indices = list(range(len(visible_npus)))
     devices = [f"npu:{i}" for i in indices]
-    last_device = devices[-1]
+    # When ``cpu_offload_fraction`` > 0 (e.g. a 70 GiB model on a single
+    # 62 GiB NPU), append ``"cpu"`` to the device rotation so the LAST
+    # ``cpu_offload_fraction`` of transformer layers is materialised on
+    # CPU and brought to the NPU on-demand by accelerate's dispatch hooks.
+    # The LM head and final norm stay on the last NPU so logits/loss never
+    # round-trip through CPU.
+    if cpu_offload_fraction > 0.0:
+        devices.append("cpu")
+    last_device = devices[-1] if cpu_offload_fraction <= 0.0 else devices[-2]
     device_map: dict[str, str] = {
         "model.embed_tokens": devices[0],
         "model.norm": last_device,
@@ -580,28 +647,89 @@ def build_balanced_npu_layer_device_map(config: Any, visible_npus: list[int]) ->
         "lm_head": last_device,
         # Multimodal checkpoints (e.g. Qwen3.5-MoE W8A8) ship a vision tower that
         # text-only SFT never runs, but accelerate's check_device_map still
-        # requires every parameter to be placed. Pin the vision/audio towers and
-        # projectors to device 0 so loading does not fail with
-        # "device_map provided does not give any device for model.visual.*".
-        "model.visual": devices[0],
-        "visual": devices[0],
-        "model.vision_tower": devices[0],
-        "model.audio_tower": devices[0],
-        "model.multi_modal_projector": devices[0],
+        # requires every parameter to be placed. When CPU offloading is active,
+        # pin the vision/audio towers and projectors to ``cpu`` (they are never
+        # executed for text-only SFT, so keeping them off the NPU frees HBM for
+        # the transformer layers we actually train). Otherwise pin to device 0.
+        "model.visual": "cpu" if cpu_offload_fraction > 0.0 else devices[0],
+        "visual": "cpu" if cpu_offload_fraction > 0.0 else devices[0],
+        "model.vision_tower": "cpu" if cpu_offload_fraction > 0.0 else devices[0],
+        "model.audio_tower": "cpu" if cpu_offload_fraction > 0.0 else devices[0],
+        "model.multi_modal_projector": "cpu" if cpu_offload_fraction > 0.0 else devices[0],
     }
+    npu_layer_count = int(num_layers)
+    if cpu_offload_fraction > 0.0:
+        cpu_layers = max(1, round(int(num_layers) * float(cpu_offload_fraction)))
+        npu_layer_count = max(1, int(num_layers) - cpu_layers)
+
+    # Preserve the measured four-card Qwen3.6-27B balance (device 0 also owns
+    # embeddings and device 3 owns the final norm/head).  All other device
+    # counts use a real N-way contiguous split.  The previous unconditional
+    # four-element boundary list silently left NPUs 4-6 empty in an eight-card
+    # ASI3 launch.
+    four_card_bounds = [13, 31, 49, 64]
     for layer_idx in range(int(num_layers)):
-        device_map[f"model.layers.{layer_idx}"] = devices[
-            layer_idx * len(devices) // int(num_layers)
-        ]
-        device_map[f"model.language_model.layers.{layer_idx}"] = devices[
-            layer_idx * len(devices) // int(num_layers)
-        ]
+        if layer_idx >= npu_layer_count:
+            layer_device = "cpu"
+        elif len(indices) == 4 and int(num_layers) == 64 and npu_layer_count == int(num_layers):
+            device_idx = next(i for i, bound in enumerate(four_card_bounds) if layer_idx < bound)
+            layer_device = devices[device_idx]
+        else:
+            device_idx = min(
+                len(indices) - 1,
+                (layer_idx * len(indices)) // max(npu_layer_count, 1),
+            )
+            layer_device = devices[device_idx]
+        device_map[f"model.layers.{layer_idx}"] = layer_device
+        device_map[f"model.language_model.layers.{layer_idx}"] = layer_device
     return device_map
 
 
 def checkpoint_has_quantization_config(config: Any) -> bool:
     quantization_config = _config_get(config, "quantization_config")
     return bool(quantization_config)
+
+
+def resolve_gradient_checkpointing_reentrant(
+    device: str,
+    has_device_map: bool,
+    env: dict[str, str] | None = None,
+) -> bool | None:
+    """Decide whether ``gradient_checkpointing_enable`` should pass
+    ``use_reentrant=True`` / ``False`` / ``None`` (transformers default).
+
+    On Ascend NPU, when the model is loaded with a non-trivial ``device_map``
+    (e.g. ``balanced-layers``) AND ``low_cpu_mem_usage=True``, accelerate
+    installs per-parameter pre/post-forward dispatch hooks that move tensors
+    between the ``meta`` device (used during ``init_empty_weights``) and the
+    real NPU device. The default ``use_reentrant=True`` checkpointing path
+    stores ``SavedVariable`` tensors *without* going through those hooks, so
+    during backward the matmul (``MmBackward0``) receives a gradient on
+    ``npu:0`` while its saved input is still on ``meta`` — raising::
+
+        RuntimeError: Function MmBackward0 returned an invalid gradient
+        at index 1 - expected device meta but got npu:0
+
+    The fix is to force ``use_reentrant=False`` on NPU whenever a device_map
+    is in play. The DDP path (``device_map={"": "npu:{rank}"}``) does not
+    strictly need this — every param lives on exactly one device — but we
+    still default it on for consistency unless overridden.
+
+    Override via env var ``QWEN_SFT_GRADIENT_CHECKPOINTING_REENTRANT``:
+
+    * ``"1"`` -> force ``use_reentrant=True``
+    * ``"0"`` -> force ``use_reentrant=False``
+    * unset  -> auto: non-reentrant on NPU + device_map, else ``None``
+    """
+    env = env if env is not None else os.environ
+    _reentrant_env = env.get("QWEN_SFT_GRADIENT_CHECKPOINTING_REENTRANT", "").strip()
+    if _reentrant_env == "1":
+        return True
+    if _reentrant_env == "0":
+        return False
+    if device == "npu" and has_device_map:
+        return False
+    return None
 
 
 def maybe_force_compressed_tensors_decompression(config: Any) -> bool:
@@ -1340,7 +1468,9 @@ def main() -> int:
         elif args.npu_device_map == "balanced-layers":
             visible_npus = _visible_npu_indices()
             model_kwargs["device_map"] = build_balanced_npu_layer_device_map(
-                model_config, visible_npus
+                model_config,
+                visible_npus,
+                cpu_offload_fraction=getattr(args, "npu_cpu_offload_fraction", 0.0) or 0.0,
             )
             # max_memory keys must match the device_map's device identifiers
             # ("npu:N" strings), not bare ints (which torch.device() would treat as CUDA).
@@ -1481,13 +1611,36 @@ def main() -> int:
             model.config.use_cache = False
         if hasattr(model, "enable_input_require_grads"):
             model.enable_input_require_grads()
+        _use_reentrant: Any = resolve_gradient_checkpointing_reentrant(
+            args.device, "device_map" in model_kwargs
+        )
         if hasattr(model, "gradient_checkpointing_enable"):
-            model.gradient_checkpointing_enable()
+            # NPU + accelerate device_map reentrant-checkpointing fix.
+            # See ``resolve_gradient_checkpointing_reentrant`` for the full
+            # rationale. ``_use_reentrant`` is ``False`` on NPU + device_map
+            # to avoid "MmBackward0 returned an invalid gradient - expected
+            # device meta but got npu:0".
+            _gc_kwargs: dict[str, Any] = {}
+            if _use_reentrant is not None:
+                _gc_kwargs["gradient_checkpointing_kwargs"] = {
+                    "use_reentrant": _use_reentrant,
+                }
+            try:
+                model.gradient_checkpointing_enable(**_gc_kwargs)
+            except TypeError:
+                # Older transformers versions may not accept
+                # ``gradient_checkpointing_kwargs`` — fall back to the bare
+                # call so the run still proceeds (the reentrant fix is a
+                # no-op on those versions anyway because they default to
+                # reentrant=True with no kwarg surface).
+                model.gradient_checkpointing_enable()
         print(
             json.dumps(
                 {
                     "stage": "gradient_checkpointing_enabled",
                     "use_cache": getattr(getattr(model, "config", None), "use_cache", None),
+                    "use_reentrant": _use_reentrant,
+                    "has_device_map": "device_map" in model_kwargs,
                 },
                 ensure_ascii=False,
             ),
@@ -1567,7 +1720,12 @@ def main() -> int:
         flush=True,
     )
     if distributed:
-        model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[local_rank])
+        model = torch.nn.parallel.DistributedDataParallel(
+            model,
+            device_ids=[local_rank],
+            find_unused_parameters=True,
+            gradient_as_bucket_view=True,
+        )
         print(json.dumps({"stage": "ddp_wrapped"}, ensure_ascii=False), flush=True)
     model.train()
     print(json.dumps({"stage": "train_mode"}, ensure_ascii=False), flush=True)

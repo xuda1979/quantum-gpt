@@ -1819,10 +1819,14 @@ def _parse_self_eval_score(text: str) -> float:
                 raw = float(score_match.group(1))
             else:
                 return 0.5  # neutral default
-    except (json.JSONDecodeError, ValueError, KeyError, RecursionError):
+    except (json.JSONDecodeError, ValueError, KeyError, TypeError, RecursionError):
         # 2026-09-01 (adversarial-judge lane): RecursionError is NOT a
         # ValueError subclass — pathological nesting must fail closed to the
-        # neutral default, never crash.
+        # neutral default, never crash. 2026-09-01 (PROPERTY-FUZZ lane RED): a
+        # judge emitting {"score": null|{}|[]|...} raised TypeError from
+        # float(None) — TypeError is ALSO not a ValueError subclass and
+        # escaped this guard, crashing the training loop on a malformed
+        # score. Fail closed to the neutral default like every other class.
         return 0.5
 
     # Normalize: clamp to [0, 10], then divide to [0, 1]

@@ -15,12 +15,10 @@ import argparse
 import json
 import os
 import platform
-import sys
 import urllib.error
 import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
-
 
 DEFAULT_HF_ENDPOINT = "https://huggingface.co"
 
@@ -37,7 +35,9 @@ def resolve_model_info_url(model_id: str, endpoint: str | None = None) -> str:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--model-id", required=True, help="Model id to audit, e.g. Qwen/Qwen2.5-1.5B-Instruct")
+    parser.add_argument(
+        "--model-id", required=True, help="Model id to audit, e.g. Qwen/Qwen2.5-1.5B-Instruct"
+    )
     parser.add_argument(
         "--expected-family-substring",
         default="qwen",

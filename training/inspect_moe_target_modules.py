@@ -15,7 +15,6 @@ import re
 from collections import Counter
 from typing import Any
 
-
 DEFAULT_KEYWORDS = ["router", "gate", "expert", "moe"]
 
 
@@ -30,7 +29,10 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--max-hits", type=int, default=200)
     parser.add_argument("--out", help="Optional JSON output path.")
-    parser.add_argument("--manifest-out", help="Optional JSON output path for a full-name router/expert target manifest.")
+    parser.add_argument(
+        "--manifest-out",
+        help="Optional JSON output path for a full-name router/expert target manifest.",
+    )
     parser.add_argument(
         "--first-pass-expert-budget",
         type=int,
@@ -188,7 +190,9 @@ def main() -> int:
         "suffix_histogram_top20": suffix_counter.most_common(20),
         "expert_index_histogram_top20": expert_index_counter.most_common(20),
         "suggested_router_suffixes": [
-            name for name, _count in suffix_counter.most_common() if any(key in name.lower() for key in ("router", "gate"))
+            name
+            for name, _count in suffix_counter.most_common()
+            if any(key in name.lower() for key in ("router", "gate"))
         ][:10],
         "suggested_expert_suffixes": [
             name for name, _count in suffix_counter.most_common() if "expert" in name.lower()

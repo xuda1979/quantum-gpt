@@ -76,7 +76,11 @@ def install_httpx_stub(stub_root: Path) -> None:
 def main() -> int:
     args = parse_args()
     runtime_src = (ROOT / args.runtime_src).resolve()
-    model_name = str((ROOT / args.model_name).resolve()) if not Path(args.model_name).is_absolute() else args.model_name
+    model_name = (
+        str((ROOT / args.model_name).resolve())
+        if not Path(args.model_name).is_absolute()
+        else args.model_name
+    )
 
     summary: dict[str, object] = {
         "model_name": model_name,
@@ -113,10 +117,10 @@ def main() -> int:
             if not hasattr(hub, "is_offline_mode"):
                 hub.is_offline_mode = lambda: False
             if not hasattr(hub_dataclasses, "validate_typed_dict"):
-                hub_dataclasses.validate_typed_dict = (
-                    lambda cls=None, **kwargs: cls if cls is not None else (lambda inner: inner)
+                hub_dataclasses.validate_typed_dict = lambda cls=None, **kwargs: (
+                    cls if cls is not None else (lambda inner: inner)
                 )
-            hub_dataclasses._create_type_validator = lambda field: (lambda value: None)
+            hub_dataclasses._create_type_validator = lambda field: lambda value: None
 
             from transformers import AutoConfig, AutoTokenizer, PreTrainedTokenizerFast
 
@@ -125,7 +129,9 @@ def main() -> int:
             class DummyAutoProcessor:
                 @classmethod
                 def from_pretrained(cls, *args, **kwargs):
-                    raise RuntimeError("processor intentionally skipped for tokenizer fallback probe")
+                    raise RuntimeError(
+                        "processor intentionally skipped for tokenizer fallback probe"
+                    )
 
             config = AutoConfig.from_pretrained(model_name, trust_remote_code=True)
             backend = load_text_preprocessor_backend(

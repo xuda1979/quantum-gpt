@@ -84,7 +84,9 @@ def collect_weight_files(root: Path) -> list[str]:
     for pattern in ("*.safetensors", "*.bin"):
         for path in sorted(root.glob(pattern)):
             found.append(path.name)
-    index_files = find_present(root, ["model.safetensors.index.json", "pytorch_model.bin.index.json"])
+    index_files = find_present(
+        root, ["model.safetensors.index.json", "pytorch_model.bin.index.json"]
+    )
     for name in index_files:
         if name not in found:
             found.append(name)
@@ -132,7 +134,9 @@ def metadata_family_hit(
         return True
     if isinstance(config_model_type, str) and expected in config_model_type.lower():
         return True
-    if isinstance(config_architectures, list) and any(expected in str(item).lower() for item in config_architectures):
+    if isinstance(config_architectures, list) and any(
+        expected in str(item).lower() for item in config_architectures
+    ):
         return True
     return False
 
@@ -147,11 +151,15 @@ def main() -> int:
     }
 
     if not root.exists():
-        summary.update({"status": "error", "stage": "path_check", "error": "snapshot directory does not exist"})
+        summary.update(
+            {"status": "error", "stage": "path_check", "error": "snapshot directory does not exist"}
+        )
         print(json.dumps(summary, indent=2, ensure_ascii=False))
         return 1
     if not root.is_dir():
-        summary.update({"status": "error", "stage": "path_check", "error": "snapshot path is not a directory"})
+        summary.update(
+            {"status": "error", "stage": "path_check", "error": "snapshot path is not a directory"}
+        )
         print(json.dumps(summary, indent=2, ensure_ascii=False))
         return 1
 
@@ -169,7 +177,13 @@ def main() -> int:
     preprocessor_config = load_json(root / "preprocessor_config.json")
 
     candidate_strings: list[str] = [str(root)]
-    for payload in (config, tokenizer_config, generation_config, processor_config, preprocessor_config):
+    for payload in (
+        config,
+        tokenizer_config,
+        generation_config,
+        processor_config,
+        preprocessor_config,
+    ):
         if isinstance(payload, dict):
             for key in ("_name_or_path", "model_type", "architectures", "tokenizer_class"):
                 value = payload.get(key)
@@ -178,7 +192,9 @@ def main() -> int:
                 elif isinstance(value, list):
                     candidate_strings.extend(str(item) for item in value)
 
-    expected_hit = any(args.expected_substring.lower() in text.lower() for text in candidate_strings)
+    expected_hit = any(
+        args.expected_substring.lower() in text.lower() for text in candidate_strings
+    )
     config_model_type = config.get("model_type") if isinstance(config, dict) else None
     config_architectures = config.get("architectures") if isinstance(config, dict) else None
     family_metadata_hit = metadata_family_hit(
@@ -220,8 +236,12 @@ def main() -> int:
         )
     if summary["requires_processor_artifacts"]:
         if not present_processor:
-            missing_reasons.append("missing processor/preprocessor config files for conditional-generation snapshot")
-        if not present_chat_template and not (isinstance(tokenizer_config, dict) and tokenizer_config.get("chat_template")):
+            missing_reasons.append(
+                "missing processor/preprocessor config files for conditional-generation snapshot"
+            )
+        if not present_chat_template and not (
+            isinstance(tokenizer_config, dict) and tokenizer_config.get("chat_template")
+        ):
             missing_reasons.append("missing chat template for conditional-generation snapshot")
     if not expected_hit:
         missing_reasons.append("expected model substring not found in path/config metadata")

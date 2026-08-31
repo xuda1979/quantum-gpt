@@ -11,6 +11,7 @@ Solution: Fully dequantize the model to bf16 before training starts.
 This module loads the model and ensures all weights (including MoE experts) are decompressed.
 """
 
+from __future__ import annotations
 
 import torch
 from transformers import AutoConfig, AutoModelForCausalLM

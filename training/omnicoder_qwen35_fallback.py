@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 
 
 def extract_omnicoder_text_config(model_config: Mapping[str, Any]) -> dict[str, Any]:
@@ -70,7 +71,7 @@ def convert_omnicoder_text_state_dict_to_qwen3_next(
         if not key.startswith(text_prefix):
             continue
 
-        stripped = f"model.{key[len(text_prefix):]}"
+        stripped = f"model.{key[len(text_prefix) :]}"
         if linear_prefix not in stripped:
             converted[stripped] = value
             continue
@@ -97,7 +98,9 @@ def convert_omnicoder_text_state_dict_to_qwen3_next(
             raise KeyError(
                 f"Missing OmniCoder linear-attention projection parts for {prefix}: {missing_keys}"
             )
-        converted[f"{prefix}in_proj_qkvz.weight"] = torch_module.cat([parts["qkv"], parts["z"]], dim=0)
+        converted[f"{prefix}in_proj_qkvz.weight"] = torch_module.cat(
+            [parts["qkv"], parts["z"]], dim=0
+        )
         converted[f"{prefix}in_proj_ba.weight"] = torch_module.cat([parts["b"], parts["a"]], dim=0)
 
     return converted
