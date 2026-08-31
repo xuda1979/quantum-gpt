@@ -643,7 +643,18 @@ def run_audit(
     holdout_names, holdout_prompt_text, holdout_constants = _load_holdout_public_text(
         holdout_ids, tasks_dir
     )
-    prompts = reconstruct_prompts(tasks_dir, manifest_ids, allowed_domains=None)
+    try:
+        prompts = reconstruct_prompts(tasks_dir, manifest_ids, allowed_domains=None)
+    except (ValueError, OSError):
+        # 2026-09-01 (fixer lane, CLI RED): discover_tasks raises ValueError
+        # ("refusing to start with a silently shrunk training set") when a
+        # manifest id has no task dir — the trainer's hard-fail, but for the
+        # AUDIT a missing dir is a REPORTABLE condition, not a crash: the
+        # overlap violation collected above must reach stdout/JSON, and a
+        # crash silently swallowed it (empty CLI output). Fall back to the
+        # empty prompt set so the task_not_found violation below reports the
+        # missing ids instead.
+        prompts = {}
     missing = [tid for tid in manifest_ids if tid not in prompts]
     if missing:
         v.append(Violation("task_not_found", f"manifest tasks missing from tasks dir: {missing}"))
