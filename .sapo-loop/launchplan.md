@@ -1,6 +1,6 @@
 # LAUNCHPLAN — NEXT SAPO LAUNCH (RUN-14 expected) — deploy-integrity + launch-preparer lane
 Prepared: 2026-08-31 22:15 CST · Channel: DOWN (deploy NOT performed; this is the pre-launch gate artifact)
-Bundles: r21 `tmp/sapo-relaunch-r21.tgz` (sha 05e6698e…) RE-AUDITED → **r22** `tmp/sapo-relaunch-r22.tgz` REBUILT + VERIFIED (final: 247 members, sha `c7f9f658…`).
+Bundles: r21 `tmp/sapo-relaunch-r21.tgz` (sha 05e6698e…) RE-AUDITED → **r22** `tmp/sapo-relaunch-r22.tgz` REBUILT + VERIFIED (FINAL v4: 349 members, sha `b5e0adbc…`).
 
 ---
 
@@ -22,22 +22,22 @@ Verdict: r21 was internally consistent at build time, BUT it is NOT launch-ready
 3. **F3 — tree drift after r21 build (19:29).** Post-19:29 launch-path changes: v9 manifest + builder (19:38), capability-sentinel rule contract + test (22:03), vLLM Lane-A client/tests/server/lifecycle (17:22–22:07), trainer updates (ImportError guard 22:06, entropy-floor-weight 0.01→0.03 default, min-group-size flag), launcher-readiness test v9 pin, gate_alias_normalization tests, `evals/benchmarks/` etc.
 4. **browser-automation/huanxin_browser_launch.js (resolver-pin, 21:45) — checked, NOT added.** Browser automation has never been in the bundle lineage (r20/r21 contain zero `browser-automation/` members); it is Mac-side tooling for the Huanxin console, not box-side code. The two bundled scripts that mention it (`submit_asi2_grpo_27b_selfeval_task.sh`, dry-run spec in `asi2_launch_grpo_27b_selfeval.sh`) are only used by the browser-submit path, which is not used for the AI/ASI3 direct launch (STATUS #173: "ASI3/AI direct path only"). Resolver-pin lives in the Mac-side launch flow. **Decision: do not bundle.**
 
-### 1c. r22 build + verification (FINAL: 247 members)
+### 1c. r22 build + verification (FINAL v4 2026-09-01: 349 members — see deploywatch.md FINAL v4)
 - Member list: canonical lineage (`tmp/r18_members.txt` superset + holdout task dirs = 235 members, the concurrent build) **merged with 12 launch-critical files** = **247 members + embedded MANIFEST.sha256.json**. The 235-member build alone was NOT launch-ready: it lacked `quantum_rl_questions_v2.jsonl` (launcher source-lineage hard-fail for v9) and the launcher `required_files` set.
 - Delta list vs r21 (55): v9 manifest + 12× v9 task dirs (36 files, exactly the manifest's task set; WIP dir `quantum_rl_v2_teleport_rz_ry` excluded), frozen-holdout task dirs (braket_bell_state, circuit_depth_optimization, cirq_qaoa_line, qiskit_stabilizer_5qubit_code, trotterized_hamiltonian_evolution — the box eval loop's 18-task holdout needs them box-side).
 - Merged additions (12): `quantum_rl_questions_v2.jsonl` (repo-root member → `$NAS_ROOT/` box-side), `scripts/build_grpo_v9_manifest.py`, capability-sentinel rules + test, `vllm_lifecycle.py` + test, launcher `required_files` set (4 promotion holdouts + `sapo_ensure_repair_sidecar.sh` + `sidecar_liveness.py`). (vLLM client + test + server launcher were already in the 235 lineage.)
 
 | check | result |
 |---|---|
-| tree == `tmp/sapo-relaunch-r22.sha256` (247 members) | **PASS** — 0 missing, 0 mismatch |
-| embedded `MANIFEST.sha256.json` vs tgz (247 members) | **PASS** — 0 missing, 0 mismatch |
+| tree == `tmp/sapo-relaunch-r22.sha256` (349 members, FINAL v4) | **PASS** — 0 missing, 0 mismatch |
+| embedded `MANIFEST.sha256.json` vs tgz (349 members) | **PASS** — 0 missing, 0 mismatch |
 | outer/inner key sets identical | **PASS** |
-| **tgz sha256 (FINAL)** | **`c7f9f658a8428014ec1407e9d7951d19ed2b16343fa4dc5f290577e219ca0272`** |
+| **tgz sha256 (FINAL)** | **b5e0adbc8a3e505dd1338846369270ef22c515f7cc93ac0a7446670c7d6295e1** |
 | launcher manifest-gate simulation vs bundle (as the box runs it, root=extracted bundle) | **PASS** — imports [], exec-verified true, semantic=0, source sha match, task_contract `97809aef…` MATCH, contamination clean vs all 5 holdouts, all required_files present |
 | v9 contract hash recomputed on tree | **PASS** — header `97809aeff45c…` == computed |
 | py_compile of bundled trainer + tests | **PASS** |
 
-**INTEGRITY VERDICT: r22 (247 members, sha `c7f9f658…`) is the launch bundle. Do not launch with r21.**
+**INTEGRITY VERDICT: r22 (349 members, sha `b5e0adbc…`) is the launch bundle. Do not launch with r21.**
 
 > NOTE (concurrent-lane coordination): the tree was live-edited during this audit (trainer + vLLM Lane A + sentinel rules landed 22:03–22:11). The final r22 freeze (22:15) captured the current tree; if any launch-path file is edited after this freeze, rebuild r22 by re-running `python3 tmp/build_r22_bundle.py` (it reads the current tree; lineage = current `tmp/sapo-relaunch-r22.sha256` + the 12-file merge list) and re-verify before deploy.
 
@@ -103,7 +103,7 @@ bash scripts/ai_launch_sapo_direct.sh launch
 (ASI3_SAPO_* names work identically; AI_SAPO_* is the canonical wrapper alias. `step_000NNN_adapter` = output of the §3a find command.)
 
 Pre-launch deploy steps (when channel opens — DO NOT launch before):
-1. Upload `tmp/sapo-relaunch-r22.tgz` (sha `c7f9f658a8428014ec1407e9d7951d19ed2b16343fa4dc5f290577e219ca0272`) to the S3 bundle key; sync via `scripts/asi3_secure_sync_sapo.py --bundle-key … --bundle-sha256 c7f9f658…` (rclone + sha256sum -c + tar -xzf into $NAS_ROOT).
+1. Upload `tmp/sapo-relaunch-r22.tgz` (sha b5e0adbc8a3e505dd1338846369270ef22c515f7cc93ac0a7446670c7d6295e1) to the S3 bundle key; sync via `scripts/asi3_secure_sync_sapo.py --bundle-key … --bundle-sha256 c7f9f658…` (rclone + sha256sum -c + tar -xzf into $NAS_ROOT).
 2. On-box spot-check critical shas vs `tmp/sapo-relaunch-r22.sha256` (at minimum: training/grpo_trainer.py, training/generation.py, scripts/asi2_loop_eval.sh, evals/benchmarks/quantum_grpo_training_v9_rl_questions_v2.txt, quantum_rl_questions_v2.jsonl).
 3. Confirm the box has `qiskit`/`cirq`/`pennylane`/`stim`/`scipy` (v9 `required_import_roots` is empty, but task runtime must exist — box already has them per audit).
 4. Confirm the trainer is NOT already running (`pgrep -f 'training/[g]rpo_trainer.py'` empty; no stale `$LOGDIR/grpo_27b_selfeval.pid`).
@@ -137,5 +137,5 @@ Pre-launch deploy steps (when channel opens — DO NOT launch before):
 - NOTHING deployed (channel down; bundle staged locally, no S3 upload performed).
 - `training/grpo_trainer.py`, `scripts/asi3_launch_grpo_direct.sh`, `scripts/ai_launch_sapo_direct.sh` NOT modified.
 - Build artifact: `tmp/build_r22_bundle.py` (member lineage = r21 sha256 list + deltas; embeds MANIFEST; writes `tmp/sapo-relaunch-r22.sha256`).
-- SHA references: r22 tgz `c7f9f658a8428014ec1407e9d7951d19ed2b16343fa4dc5f290577e219ca0272` · per-file `tmp/sapo-relaunch-r22.sha256` (247 members) · r21 tgz `05e6698e…` (superseded).
+- SHA references: r22 tgz b5e0adbc8a3e505dd1338846369270ef22c515f7cc93ac0a7446670c7d6295e1 · per-file `tmp/sapo-relaunch-r22.sha256` (247 members) · r21 tgz `05e6698e…` (superseded).
 - Rebuild tool: `tmp/build_r22_bundle.py` (lineage = current r22 sha256 + 12-file merge list; embeds MANIFEST; writes `tmp/sapo-relaunch-r22.sha256`).
