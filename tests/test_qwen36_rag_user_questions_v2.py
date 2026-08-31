@@ -4,7 +4,6 @@ import json
 import re
 from pathlib import Path
 
-
 BENCHMARK = Path("evals/benchmarks/qwen36_27b_user_rag_questions_v2.json")
 
 
@@ -43,7 +42,14 @@ def test_qwen36_rag_user_questions_v2_is_large_and_judgeable() -> None:
 
     assert coding_count >= 100
     assert exact_coding_count >= 35
-    assert {"install", "sdk_api", "algorithm", "repair", "quantum_coding_task", "quantum_coding_exact"} <= categories
+    assert {
+        "install",
+        "sdk_api",
+        "algorithm",
+        "repair",
+        "quantum_coding_task",
+        "quantum_coding_exact",
+    } <= categories
     assert len(expected_sources) >= 25
 
 
@@ -55,13 +61,13 @@ def test_qwen36_rag_user_questions_v2_has_specific_quantum_coding_examples() -> 
         "task_phase_estimation_measurement": ["round(eigenvalue_phase * n_states)", "% n_states"],
         "task_qaoa_maxcut_cost": ["bitstring[u] != bitstring[v]", "cost += 1"],
         "task_grover_diffusion": ["mean = sum(state) / n", "2 * mean - a"],
-        "task_partial_trace_b": ["trace_out == \"B\"", "rho[i * dim_b + k][j * dim_b + k]"],
+        "task_partial_trace_b": ['trace_out == "B"', "rho[i * dim_b + k][j * dim_b + k]"],
         "task_shor_decode_phase": ["amp_000", "amp_111"],
         "task_teleportation_corrections": ["m0 controls the X", "m1 controls the Z"],
         "concrete_qaoa_triangle_costs": ["'010'", "2"],
         "concrete_grover_diffusion_exact": ["[0.0, 0.0, 0.0, 1.0]"],
         "concrete_partial_trace_bell_b": ["maximally mixed", "[[0.5, 0.0], [0.0, 0.5]]"],
-        "concrete_teleportation_all_bits": ["(1, 0): [\"X\"]", "ValueError"],
+        "concrete_teleportation_all_bits": ['(1, 0): ["X"]', "ValueError"],
     }
     for id_, expected_terms in required.items():
         assert id_ in by_id

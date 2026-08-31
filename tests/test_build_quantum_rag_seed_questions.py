@@ -9,18 +9,21 @@ import pytest
 
 from scripts import build_quantum_rag_seed_questions as builder
 
-
 ROOT = Path(__file__).resolve().parents[1]
 
 
 def load_jsonl(path: Path) -> list[dict]:
-    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    return [
+        json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()
+    ]
 
 
 def test_build_records_from_quantum_docs_have_seed_contract() -> None:
     records = builder.build_records()
 
-    source_docs = sorted(path for path in builder.DEFAULT_DOCS_DIR.glob("*.md") if path.name != "README.md")
+    source_docs = sorted(
+        path for path in builder.DEFAULT_DOCS_DIR.glob("*.md") if path.name != "README.md"
+    )
     assert len(records) == len(source_docs)
     assert len({record["example_id"] for record in records}) == len(records)
     assert {record["format"] for record in records} == {"chat-sft-v1"}
@@ -41,7 +44,11 @@ def test_build_records_from_quantum_docs_have_seed_contract() -> None:
 
     for record in records:
         metadata = record["metadata"]
-        assert [message["role"] for message in record["messages"]] == ["system", "user", "assistant"]
+        assert [message["role"] for message in record["messages"]] == [
+            "system",
+            "user",
+            "assistant",
+        ]
         assert metadata["source"] == "docs_quantum_libraries"
         assert metadata["source_path"].startswith("docs/quantum_libraries/")
         assert metadata["source_doc_sha256"]
@@ -78,4 +85,6 @@ def test_cli_writes_seed_questions_and_manifest(tmp_path: Path) -> None:
 
 def test_reject_holdout_or_eval_source_paths() -> None:
     with pytest.raises(ValueError, match="holdout/eval"):
-        builder.reject_holdout_path(ROOT / "evals" / "benchmarks" / "quantum_generalization_holdout_v1.txt")
+        builder.reject_holdout_path(
+            ROOT / "evals" / "benchmarks" / "quantum_generalization_holdout_v1.txt"
+        )

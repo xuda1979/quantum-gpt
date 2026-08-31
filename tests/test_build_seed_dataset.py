@@ -4,7 +4,6 @@ import importlib.util
 import json
 from pathlib import Path
 
-
 SCRIPT_PATH = Path(__file__).resolve().parents[1] / "data" / "seed" / "build_seed_dataset.py"
 SPEC = importlib.util.spec_from_file_location("build_seed_dataset", SCRIPT_PATH)
 assert SPEC is not None and SPEC.loader is not None
@@ -28,7 +27,9 @@ def test_build_example_defaults_missing_test_file_to_tests_py(tmp_path: Path) ->
         + "\n"
     )
     (task_dir / "candidate.py").write_text("def solve() -> int:\n    return 1\n")
-    (task_dir / "tests.py").write_text("def run_tests(candidate_path: str) -> dict:\n    return {'passed': True, 'details': ['ok']}\n")
+    (task_dir / "tests.py").write_text(
+        "def run_tests(candidate_path: str) -> dict:\n    return {'passed': True, 'details': ['ok']}\n"
+    )
 
     example = build_seed_dataset.build_example(
         {

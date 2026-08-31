@@ -72,7 +72,11 @@ def test_new_plugins_expose_run_config_and_reward_fields() -> None:
         result={"passed": False},
         task={
             "difficulty": "hard",
-            "behavior_hints": ["Preserve the interface", "Handle edge cases", "Return a stable value"],
+            "behavior_hints": [
+                "Preserve the interface",
+                "Handle edge cases",
+                "Return a stable value",
+            ],
             "required_interface": ["solve(x)"],
             "detail_budget": 4,
         },
@@ -98,9 +102,24 @@ def test_behavior_anchor_plugin_adds_anchor_reward_and_spread() -> None:
         "required_interface": ["bit_flip_code(initial_state, error_qubit)"],
     }
     baseline_rewards = [
-        {"total_reward": 0.28, "syntax_reward": 1.0, "interface_reward": 0.6, "verifier_reward": 0.2},
-        {"total_reward": 0.28, "syntax_reward": 1.0, "interface_reward": 0.6, "verifier_reward": 0.2},
-        {"total_reward": 0.28, "syntax_reward": 1.0, "interface_reward": 0.6, "verifier_reward": 0.2},
+        {
+            "total_reward": 0.28,
+            "syntax_reward": 1.0,
+            "interface_reward": 0.6,
+            "verifier_reward": 0.2,
+        },
+        {
+            "total_reward": 0.28,
+            "syntax_reward": 1.0,
+            "interface_reward": 0.6,
+            "verifier_reward": 0.2,
+        },
+        {
+            "total_reward": 0.28,
+            "syntax_reward": 1.0,
+            "interface_reward": 0.6,
+            "verifier_reward": 0.2,
+        },
     ]
     codes = [
         "def bit_flip_code(initial_state, error_qubit):\n    syndrome_bits = [1, 0]\n    corrected_state = initial_state\n    return {'syndrome': syndrome_bits, 'corrected_state': corrected_state}\n",
@@ -108,8 +127,10 @@ def test_behavior_anchor_plugin_adds_anchor_reward_and_spread() -> None:
         "def bit_flip_code(initial_state, error_qubit):\n    return {'value': initial_state}\n",
     ]
     adjusted = [
-        method.adjust_reward_breakdown(dict(reward), code=code, result={"passed": False}, task=task, stage="grpo")
-        for reward, code in zip(baseline_rewards, codes)
+        method.adjust_reward_breakdown(
+            dict(reward), code=code, result={"passed": False}, task=task, stage="grpo"
+        )
+        for reward, code in zip(baseline_rewards, codes, strict=False)
     ]
 
     anchor_rewards = [float(item["behavior_anchor_reward"]) for item in adjusted]

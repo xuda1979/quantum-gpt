@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
 import torch
 
 from training.grpo_utils import (
@@ -26,6 +27,8 @@ from training.grpo_utils import (
     build_mixture_weights,
     completion_entropy,
     count_repair_conversions,
+    restore_router_from_record,
+    should_queue_flat_all_fail,
     stable_gspo_loss,
     stable_gspo_loss_metrics,
 )
@@ -61,6 +64,66 @@ def test_router_probe_routes_all_fail_with_signal_to_partial_rl() -> None:
     router = FrontierRouter()
     probe = router.probe_record("t3", step=1, pass_rate=0.0, shaped_signal_std=0.2)
     assert probe["route"] == PARTIAL_REPAIR_RL
+
+
+def test_flat_final_reward_overrides_fresh_posterior_to_repair() -> None:
+    router = FrontierRouter()
+    probe = router.probe_record("flat", step=1, pass_rate=0.0, shaped_signal_std=0.2)
+    assert probe["route"] in {FRONTIER_RL, PARTIAL_REPAIR_RL}
+    assert should_queue_flat_all_fail(
+        all_fail=True,
+        route=str(probe["route"]),
+        update_signal_magnitude=0.0,
+        threshold=0.05,
+    )
+    router.mark_repair("flat")
+    assert router.route_of("flat") == REPAIR_SFT
+
+
+def test_repair_tasks_receive_zero_mixture_probability_when_other_work_exists() -> None:
+    router = FrontierRouter()
+    tasks = [_task("repair"), _task("fresh")]
+    router.probe_record("repair", step=1, pass_rate=0.0, shaped_signal_std=0.0)
+    router.mark_repair("repair")
+    weights = build_mixture_weights(router, tasks, step=2)
+    assert weights[0] == 0.0
+    assert weights[1] == 1.0
+
+
+def test_all_quarantined_tasks_do_not_fall_back_to_uniform_sampling() -> None:
+    router = FrontierRouter()
+    tasks = [_task("repair_a"), _task("repair_b")]
+    for task in tasks:
+        router.mark_repair(task["task_id"])
+    assert build_mixture_weights(router, tasks, step=2) == [0.0, 0.0]
+
+
+def test_resume_restores_canonical_task_id_group_size_and_sticky_quarantine() -> None:
+    router = FrontierRouter()
+    tasks = [
+        {
+            "task_id": "quantum_circuit_depth_optimization",
+            "task_dir": Path("/tmp/circuit_depth_optimization"),
+        }
+    ]
+    task_id, probed = restore_router_from_record(
+        router,
+        tasks,
+        {
+            "task": "circuit_depth_optimization",
+            "step": 2,
+            "pass_rate": 0.0,
+            "reward_std": 0.0,
+            "verifier_std": 0.8,
+            "group_size": 4,
+            "route": REPAIR_SFT,
+        },
+        default_group_size=4,
+    )
+    assert probed
+    assert task_id == "quantum_circuit_depth_optimization"
+    assert router.posterior(task_id).samples == 4
+    assert router.route_of(task_id) == REPAIR_SFT
 
 
 def test_router_single_all_pass_probe_does_not_master() -> None:
@@ -195,6 +258,21 @@ def test_mixture_weights_fall_back_to_targeted_without_neighbors() -> None:
     assert all(w > 0.0 for w in weights)
 
 
+def test_mixture_weights_use_router_priority_within_each_pool() -> None:
+    router = FrontierRouter()
+    tasks = [_task("priority_a", category="c1"), _task("priority_b", category="c1")]
+    router.probe_record("priority_a", step=1, pass_rate=0.5, shaped_signal_std=0.2)
+    router.probe_record("priority_b", step=1, pass_rate=0.5, shaped_signal_std=0.2)
+    router.set_coverage_need("priority_a", 5.0)
+
+    weights = build_mixture_weights(router, tasks, step=2, recent_frontier=[])
+
+    # Both targeted and neighbor-fallback pools contain the same two tasks, so
+    # their total mass is unchanged while router.weight determines the split.
+    assert abs(sum(weights) - 1.0) < 1e-9
+    assert weights[0] > 4.0 * weights[1]
+
+
 def test_gspo_loss_metrics_match_plain_loss_and_report_clip_fractions() -> None:
     torch.manual_seed(0)
     log_probs = torch.randn(8)
@@ -268,6 +346,44 @@ def test_running_mad_shared_scale_converges() -> None:
     assert mad.scale > 0.0
     # Advantages of magnitude ~1 give MAD ~1 (approx), not reweighted per group.
     assert 0.1 < mad.scale < 5.0
+
+
+def test_running_mad_flat_group_does_not_contaminate_scale() -> None:
+    """2026-08-24 escalation analysis: flat all-fail groups (LOO advantages
+    all ~0 -> MAD 0) previously fell back to 1.0 and pushed the running scale
+    toward 1.0 with weight (1-decay) per flat group. In run
+    sapo-27b-ai-20260824T075223 (base-init, shared_mad) the scale stayed
+    0.97-0.99 across 10 steps — a NO-OP, not the intended ~3x amplification
+    (real groups have MAD ~0.3). A flat group carries no dispersion evidence
+    and must not move the scale.
+    """
+    mad = RunningMAD()
+    mad.update(torch.tensor([0.0, 0.0, 0.0, 0.0]))  # flat first batch
+    assert mad.scale == pytest.approx(1.0)
+    # Real signal group: MAD of [1, -1, 0.5, -0.5] = 0.75.
+    mad.update(torch.tensor([1.0, -1.0, 0.5, -0.5]))
+    assert mad.scale == pytest.approx(0.75, abs=1e-6)
+    # A second flat group must NOT pull the scale back toward 1.0 — a pure
+    # skip leaves the running scale untouched (no new dispersion evidence).
+    mad.update(torch.tensor([0.0, 0.0, 0.0, 0.0]))
+    assert mad.scale == pytest.approx(0.75, abs=1e-6)
+    # A second signal group decays toward its MAD rather than the 1.0 fallback.
+    mad.update(torch.tensor([1.0, -1.0, 0.5, -0.5]))
+    assert mad.scale < 0.76
+    assert mad.scale > 0.74
+
+
+def test_running_mad_signal_after_flat_first_batch_uses_first_signal_mad() -> None:
+    """First call sets the scale from the first batch; when that batch is flat
+    (no evidence), the first NON-flat batch must set the scale instead of the
+    1.0 init lingering."""
+    mad = RunningMAD()
+    mad.update(torch.tensor([0.0, 0.0, 0.0, 0.0]))
+    mad.update(torch.tensor([0.5, -0.3, 0.1, -0.2]))
+    # MAD of the second batch = mean |x - mean|, mean=-0.0? compute: values
+    # [0.5,-0.3,0.1,-0.2], mean 0.025, abs devs [0.475,0.325,0.075,0.225],
+    # MAD = 0.275.
+    assert mad.scale == pytest.approx(0.275, abs=1e-6)
 
 
 def test_repair_queue_dedupes_same_code_for_same_task(tmp_path: Path) -> None:

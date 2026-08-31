@@ -94,9 +94,7 @@ def _make_install_tree(tmp_path: Path, *, include_model: bool = True) -> tuple[P
 def test_parse_env_file_handles_shell_quoting(tmp_path: Path) -> None:
     env_file = tmp_path / ".env"
     env_file.write_text(
-        'QWEN36_RAG_ROOT="/tmp/path with spaces"\n'
-        'EMPTY=""\n'
-        "BROKEN_LINE\n",
+        'QWEN36_RAG_ROOT="/tmp/path with spaces"\nEMPTY=""\nBROKEN_LINE\n',
         encoding="utf-8",
     )
     env, errors = parse_env_file(env_file)

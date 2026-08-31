@@ -13,6 +13,7 @@ verdict with details -- never a traceback -- for both the reference solution
 and a broken (None-returning) candidate, and the harness must classify the
 broken candidate as a clean assertion failure (never ``runner_exception``).
 """
+# ruff: noqa: UP038  # (X | Y) isinstance is py3.10-only; py3.9 .venv gate (precedent: training/grpo_trainer.py)
 
 from __future__ import annotations
 
@@ -76,7 +77,7 @@ def _public_function_names(candidate_path: Path) -> list[str]:
     return [
         node.name
         for node in tree.body
-        if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef)
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
         and not node.name.startswith("_")
     ]
 

@@ -58,7 +58,9 @@ def test_extract_omnicoder_text_config_maps_expected_fields() -> None:
 def test_convert_omnicoder_text_state_dict_to_qwen3_next_merges_linear_projections() -> None:
     state_dict = {
         "lm_head.weight": torch.arange(6, dtype=torch.float32).reshape(3, 2),
-        "model.language_model.embed_tokens.weight": torch.arange(8, dtype=torch.float32).reshape(4, 2),
+        "model.language_model.embed_tokens.weight": torch.arange(8, dtype=torch.float32).reshape(
+            4, 2
+        ),
         "model.language_model.layers.0.linear_attn.in_proj_qkv.weight": torch.full((2, 2), 1.0),
         "model.language_model.layers.0.linear_attn.in_proj_z.weight": torch.full((3, 2), 2.0),
         "model.language_model.layers.0.linear_attn.in_proj_b.weight": torch.full((4, 2), 3.0),

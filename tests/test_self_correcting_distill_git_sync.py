@@ -14,11 +14,8 @@ network: we point ROOT at a temp repo and verify that:
 from __future__ import annotations
 
 import json
-import os
-import shutil
 import subprocess
 import sys
-import tempfile
 from pathlib import Path
 
 import pytest
@@ -69,8 +66,14 @@ def test_git_sync_commits_output_files(tmp_path, monkeypatch):
     assert res["pushed"] is False
     assert res["commit_sha"]
     # Verify the commit landed.
-    log = subprocess.run(["git", "log", "--oneline"], cwd=str(repo), capture_output=True, text=True, check=True)
-    assert "distill:periodic" in log.stdout or "distill_bot" in log.stdout or res["commit_sha"][:7] in log.stdout
+    log = subprocess.run(
+        ["git", "log", "--oneline"], cwd=str(repo), capture_output=True, text=True, check=True
+    )
+    assert (
+        "distill:periodic" in log.stdout
+        or "distill_bot" in log.stdout
+        or res["commit_sha"][:7] in log.stdout
+    )
 
 
 def test_git_sync_nothing_staged(tmp_path, monkeypatch):
@@ -100,15 +103,21 @@ def test_load_config_parses_git_sync(tmp_path, monkeypatch):
     repo = _init_temp_repo(tmp_path)
     monkeypatch.setattr(scd, "ROOT", repo)
     cfg_path = repo / "cfg.json"
-    cfg_path.write_text(json.dumps({
-        "student_model": {"serving": {"api_base": "http://x", "api_key_env": "K", "model": "m"}},
-        "teacher_model": {"model": "t", "api_base_env": "T", "api_key_env": "TK"},
-        "dataset_spec": {"target_question_count": 10},
-        "pipeline": {},
-        "sample_format": {"user_template": "Q:{question}\nC:{student_code}"},
-        "output_dir": "data/generated/x",
-        "git_sync": {"enabled": True, "interval": 50, "push": False},
-    }))
+    cfg_path.write_text(
+        json.dumps(
+            {
+                "student_model": {
+                    "serving": {"api_base": "http://x", "api_key_env": "K", "model": "m"}
+                },
+                "teacher_model": {"model": "t", "api_base_env": "T", "api_key_env": "TK"},
+                "dataset_spec": {"target_question_count": 10},
+                "pipeline": {},
+                "sample_format": {"user_template": "Q:{question}\nC:{student_code}"},
+                "output_dir": "data/generated/x",
+                "git_sync": {"enabled": True, "interval": 50, "push": False},
+            }
+        )
+    )
     cfg = scd.load_config(cfg_path)
     assert cfg.git_sync.enabled is True
     assert cfg.git_sync.interval == 50

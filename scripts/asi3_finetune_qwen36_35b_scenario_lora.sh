@@ -90,6 +90,20 @@ echo "__DECOMPRESS_OK__ $DECOMPRESSED_MODEL_PATH"
 # ---- launch -----------------------------------------------------------------
 export PYTORCH_NPU_ALLOC_CONF=max_split_size_mb:256
 export TOKENIZERS_PARALLELISM=false
+# NPU fix: eager attention avoids the failing flash-attention backward op
+# (aclnnFlashAttentionScoreGrad) on Ascend — matches the ASI1 27B launcher.
+export QWEN_SFT_ATTN_IMPL=eager
+# NPU fix: chunked cross-entropy avoids materializing the full [B,seq,vocab]
+# logits tensor (OOM at loss computation for the 35B MoE vocab).
+export QWEN_SFT_CHUNKED_LOSS=1
+export QWEN_SFT_LOSS_CHUNK=512
+# NPU fix: force non-reentrant gradient checkpointing. With balanced-layers
+# device_map + low_cpu_mem_usage=True on Ascend, the default reentrant path
+# raises "Function MmBackward0 returned an invalid gradient at index 1 -
+# expected device meta but got npu:0" because SavedVariable tensors bypass
+# accelerate's meta->npu dispatch hooks. See qwen_sft_peft.py for details.
+export QWEN_SFT_GRADIENT_CHECKPOINTING_REENTRANT=0
+export PYTHONUNBUFFERED=1
 
 echo "__ASI3_BEFORE_TRAIN__ visible_npus=${ASCEND_RT_VISIBLE_DEVICES:-<all>}"
 python3 training/qwen_sft_peft.py \

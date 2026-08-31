@@ -15,13 +15,17 @@ from training.turboquant import (
 
 
 def _sample_states(batch: int = 2, seq: int = 3, dim: int = 8) -> tuple[torch.Tensor, torch.Tensor]:
-    key = torch.arange(batch * 2 * seq * dim, dtype=torch.float32).reshape(batch, 2, seq, dim) / 31.0
+    key = (
+        torch.arange(batch * 2 * seq * dim, dtype=torch.float32).reshape(batch, 2, seq, dim) / 31.0
+    )
     value = torch.flip(key, dims=(-1,)) * 0.5
     return key, value
 
 
 def test_cache_builders_expose_expected_aliases() -> None:
-    config = build_turboquant_config(nbits=4, residual_length=2, rotation="none", compute_dtype="float32")
+    config = build_turboquant_config(
+        nbits=4, residual_length=2, rotation="none", compute_dtype="float32"
+    )
     cache = build_turboquant_cache(config=config)
     cache2 = create_turboquant_cache(cache_config=config)
     assert isinstance(config, TurboQuantConfig)

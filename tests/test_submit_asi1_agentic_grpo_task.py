@@ -5,6 +5,8 @@ import shlex
 import subprocess
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts" / "submit_asi1_agentic_grpo_task.sh"
 
@@ -44,7 +46,7 @@ def test_asi1_agentic_grpo_task_only_submits_when_requested() -> None:
 
 
 def test_submit_task_runner_can_disable_auto_codecontents_override() -> None:
-    runner = ROOT / "browser-automation" / "huanxin_submit_task_run.js"
+    ROOT / "browser-automation" / "huanxin_submit_task_run.js"
     script = (
         "const m = require('./browser-automation/huanxin_submit_task_run.js');"
         "const args = process.argv.slice(1);"
@@ -463,6 +465,17 @@ def test_asi1_agentic_grpo_full_native_command_avoids_huanxin_comma_split() -> N
 
 
 def test_asi1_agentic_grpo_task_can_embed_wheelhouse_before_training() -> None:
+    # Env-data gate: the ASI1 submit script embeds a frozen wheel list
+    # (accelerate-1.13.0 / peft-0.19.1, the 2026-08-11 wheelhouse upgrade that
+    # matches box dep-matrix pins) from tools/wheels/. When those exact wheels
+    # are absent locally (ASI1 is deprecated; wheelhouse has moved on), the
+    # embed path cannot run — skip honestly instead of failing on env data.
+    _PINNED_WHEELS = [
+        ROOT / "tools" / "wheels" / "accelerate-1.13.0-py3-none-any.whl",
+        ROOT / "tools" / "wheels" / "peft-0.19.1-py3-none-any.whl",
+    ]
+    if any(not wheel.exists() for wheel in _PINNED_WHEELS):
+        pytest.skip("pinned ASI1 wheels absent from tools/wheels (env data, not code)")
     result = subprocess.run(
         ["bash", str(SCRIPT), "--dry-run", "__launch-spec"],
         cwd=ROOT,
@@ -489,8 +502,8 @@ def test_asi1_agentic_grpo_task_can_embed_wheelhouse_before_training() -> None:
     command = payload["execution_command"]
     assert command.startswith("set -euo pipefail\ncd /root/work/quantum-gpt\n")
     assert "ASI1_EMBEDDED_WHEELHOUSE_GRPO_START" in command
-    assert "accelerate-1.4.0-py3-none-any.whl" in command
-    assert "peft-0.14.0-py3-none-any.whl" in command
+    assert "accelerate-1.13.0-py3-none-any.whl" in command
+    assert "peft-0.19.1-py3-none-any.whl" in command
     assert "python3 scripts/append_text_file.py" in command
     assert "python3 scripts/decode_base64_file.py" in command
     assert "python3 -m zipfile -t" in command

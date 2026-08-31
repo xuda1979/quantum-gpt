@@ -20,7 +20,11 @@ from scripts.run_autonomous_rd_cycle import (
 def test_parse_args_defaults_to_fast_verified_lane(monkeypatch) -> None:
     monkeypatch.setattr(sys, "argv", ["run_autonomous_rd_cycle.py"])
     args = autonomous_rd_cycle.parse_args()
-    assert args.target == "omnicoder9b"
+    # 2026-07-13 sync (223ecb0): the default target moved from omnicoder9b to
+    # qwen36-27b — "Qwen3.6-27B is the user-selected default base model for
+    # all next-round SFT and reinforcement-learning training on Huanxin AI"
+    # (readiness_note in run_autonomous_rd_cycle.py).
+    assert args.target == "qwen36-27b"
 
 
 def test_build_commands_defaults_to_gemma_targets() -> None:

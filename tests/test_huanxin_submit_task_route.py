@@ -25,7 +25,7 @@ def test_submit_task_route_match_requires_hash_name_match() -> None:
 const {
   getHashSearchParam,
   isOnTargetAppRoute,
-} = require('./browser-automation/huanxin_repair_profile_via_safari_sso.js');
+} = require('./browser-automation/huanxin_submit_task_run.js');
 const base = 'https://aihuanxin.cn/kunlun/kl-web?poolId=6&projectId=x#/train-dev/environment/dl-9a5a098accce31c28cf4c6ca23391341';
 const target = `${base}?name=ASI1`;
 const same = `${base}?name=ASI1&state=abc`;
@@ -47,7 +47,7 @@ console.log(JSON.stringify({
 
 def test_submit_task_route_exports_still_delegate_to_shared_matcher() -> None:
     source = r"""
-const repair = require('./browser-automation/huanxin_repair_profile_via_safari_sso.js');
+const repair = require('./browser-automation/huanxin_submit_task_run.js');
 const submit = require('./browser-automation/huanxin_submit_task_run.js');
 const base = 'https://aihuanxin.cn/kunlun/kl-web?poolId=6&projectId=x#/train-dev/environment/dl-9a5a098accce31c28cf4c6ca23391341';
 const target = `${base}?name=ASI1`;
@@ -397,12 +397,29 @@ console.log(JSON.stringify({
     }
 
 
-def test_huanxin_sso_bridge_password_fallback_reports_missing_credentials_without_urls() -> None:
+def test_huanxin_sso_bridge_entry_points_are_banned() -> None:
+    """The Safari SSO bridge is deleted (browser_tabs_banned, 2026-08-04)."""
+    source = r"""
+const bridge = require('./browser-automation/huanxin_repair_profile_via_safari_sso.js');
+const fakePage = { url: () => 'https://example.com/not-the-target-route' };
+Promise.all([
+  bridge.captureSafariCallback('https://aihuanxin.cn/').catch((e) => e.message),
+  bridge.bridgePageViaSafariSso(fakePage).catch((e) => e.message),
+]).then((messages) => console.log(JSON.stringify({
+  captureBanned: messages[0].includes('browser_tabs_banned'),
+  bridgeBanned: messages[1].includes('browser_tabs_banned'),
+})));
+"""
+    payload = _node_eval(source)
+    assert payload == {"captureBanned": True, "bridgeBanned": True}
+
+
+def test_huanxin_sso_bridge_password_fallback_is_banned() -> None:
     source = r"""
 const {
   runPasswordLoginFallback,
 } = require('./browser-automation/huanxin_repair_profile_via_safari_sso.js');
-runPasswordLoginFallback('https://aihuanxin.cn/kunlun/kl-web?poolId=6#/train-dev/environment/dl-x?name=ASI1&state=secret-state&code=secret-code')
+runPasswordLoginFallback('https://aihuanxin.cn/kunlun/kl-web?poolId=6#/train-dev/environment/dl-x?name=ASI1')
   .then((result) => console.log(JSON.stringify(result)))
   .catch((error) => { console.error(error.stack || error.message); process.exit(1); });
 """
@@ -421,4 +438,4 @@ runPasswordLoginFallback('https://aihuanxin.cn/kunlun/kl-web?poolId=6#/train-dev
 
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
-    assert payload == {"attempted": False, "reason": "missing_credentials"}
+    assert payload == {"attempted": False, "reason": "browser_tabs_banned"}

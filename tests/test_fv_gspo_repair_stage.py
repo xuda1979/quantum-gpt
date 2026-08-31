@@ -8,6 +8,7 @@ repair_sft.jsonl / repair_dpo.jsonl in the repository pair schema.
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import subprocess
 import sys
@@ -17,6 +18,14 @@ from training.grpo_utils import count_repair_conversions
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts" / "fv_gspo_repair_stage.py"
+
+
+def _load_stage_module():
+    spec = importlib.util.spec_from_file_location("fv_gspo_repair_stage", SCRIPT)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 def _write(path: Path, content: str) -> None:
@@ -145,6 +154,27 @@ def test_repair_stage_converts_via_reference_and_emits_sft_dpo(tmp_path: Path) -
     ]
     assert len(dpo_records) == 1
     assert dpo_records[0]["rejected"][0]["content"].strip() == "def f():\n    return 0"
+
+
+def test_distill_repair_uses_questions_and_code_instead_of_stub(tmp_path: Path) -> None:
+    module = _load_stage_module()
+    source = tmp_path / "questions_and_code.jsonl"
+    source.write_text(
+        json.dumps({"question": "q1", "code": "print('one')"})
+        + "\n"
+        + json.dumps({"question": "q2", "code": "print('verified two')"})
+        + "\n",
+        encoding="utf-8",
+    )
+    task_dir = tmp_path / "qc-0002"
+    task_dir.mkdir()
+    (task_dir / "solution.py").write_text("# training stub\n", encoding="utf-8")
+    correction = module.load_reference_correction(
+        task_dir,
+        {"id": "qc-0002", "candidate_file": "solution.py"},
+        source,
+    )
+    assert correction == "print('verified two')"
 
 
 def test_repair_stage_rejects_unverified_correction(tmp_path: Path) -> None:

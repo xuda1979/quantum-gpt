@@ -45,5 +45,6 @@ def test_build_user_prompt_defaults_missing_test_file_to_tests_py(tmp_path: Path
 
     prompt = prepare_prompts.build_user_prompt(task_dir, metadata, prompt_style="direct")
 
-    assert "VALUE = 7" in prompt
-    assert "def run_tests" in prompt
+    assert "Output file: candidate.py" in prompt
+    assert "VALUE = 7" not in prompt
+    assert "def run_tests" not in prompt

@@ -5,6 +5,8 @@ import shlex
 import subprocess
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts" / "submit_asi1_embedded_wheelhouse_task.sh"
 
@@ -41,6 +43,17 @@ def test_asi1_embedded_wheelhouse_only_submits_when_requested() -> None:
 
 
 def test_asi1_embedded_wheelhouse_launch_spec_embeds_and_installs_wheels() -> None:
+    # Env-data gate: the ASI1 embed script freezes accelerate-1.13.0 /
+    # peft-0.19.1 from tools/wheels/ (2026-08-11 wheelhouse upgrade, matches
+    # box dep-matrix pins); when those exact wheels are absent (ASI1
+    # deprecated, wheelhouse moved on) the embed path cannot run — skip
+    # honestly.
+    _PINNED_WHEELS = [
+        ROOT / "tools" / "wheels" / "accelerate-1.13.0-py3-none-any.whl",
+        ROOT / "tools" / "wheels" / "peft-0.19.1-py3-none-any.whl",
+    ]
+    if any(not wheel.exists() for wheel in _PINNED_WHEELS):
+        pytest.skip("pinned ASI1 wheels absent from tools/wheels (env data, not code)")
     result = subprocess.run(
         ["bash", str(SCRIPT), "--dry-run", "__launch-spec"],
         cwd=ROOT,
@@ -56,14 +69,14 @@ def test_asi1_embedded_wheelhouse_launch_spec_embeds_and_installs_wheels() -> No
     assert payload["job_name"] == "asi1-embedded-wheelhouse"
     assert "__ASI1_EMBEDDED_WHEELHOUSE_START__" in payload["remote_command"]
     assert "__ASI1_EMBEDDED_WHEELHOUSE_DONE__" in payload["remote_command"]
-    assert "accelerate-1.4.0-py3-none-any.whl" in payload["remote_command"]
-    assert "peft-0.14.0-py3-none-any.whl" in payload["remote_command"]
+    assert "accelerate-1.13.0-py3-none-any.whl" in payload["remote_command"]
+    assert "peft-0.19.1-py3-none-any.whl" in payload["remote_command"]
     assert "python3 scripts/append_text_file.py" in payload["remote_command"]
     assert "python3 scripts/decode_base64_file.py" in payload["remote_command"]
     assert "python3 -m zipfile -t" in payload["remote_command"]
     assert (
         "python3 -m pip install --no-cache-dir --no-input --no-index --find-links "
-        "/tmp/asi1-wheelhouse/tools/wheels accelerate==1.4.0 peft==0.14.0"
+        "/tmp/asi1-wheelhouse/tools/wheels accelerate==1.13.0 peft==0.19.1"
     ) in payload["remote_command"]
     assert "import accelerate; import peft" in payload["remote_command"]
     assert "&&" not in payload["execution_command"]

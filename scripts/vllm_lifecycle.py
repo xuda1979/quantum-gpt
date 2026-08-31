@@ -9,10 +9,17 @@ falls back gracefully so callers can degrade to the existing kill/restart
 path.
 
 API surface used (vLLM >= 0.6 for sleep/wake-up; >= 0.7 for load_lora_adapter):
-  POST /v1/sleep            {"level": 1|2}   level=1 keeps weights in host mem
-  POST /v1/wake_up          {}               reload weights onto NPU
-  POST /v1/load_lora_adapter {"lora_name": str, "lora_local_path": str}
-  GET  /v1/models                            health + capability probe
+  vLLM 0.6-0.9 (legacy):    POST /v1/sleep {"level": 1|2}
+                            POST /v1/wake_up {}
+  vLLM >= 0.10 / V1 engine  POST /sleep?level=1|2   (query param, dev-mode
+  (modern, e.g. 0.16):      endpoint; requires --enable-sleep-mode AND
+                            VLLM_SERVER_DEV_MODE=1 at launch)
+                            POST /wake_up
+  both eras:                POST /v1/load_lora_adapter
+                            {"lora_name": str, "lora_local_path": str}
+                            GET  /v1/models   health + capability probe
+  The helper probes BOTH sleep contracts at runtime and uses whichever the
+  running server exposes (probe reports "sleep_api": "modern"|"legacy").
 
 Usage (from bash orchestrator):
   python3 scripts/vllm_lifecycle.py probe   --base-url http://127.0.0.1:8007 --api-key K
@@ -86,30 +93,61 @@ def _get(sess, base_url, path, timeout):
         return {"raw": r.text}, 0
 
 
+def _resolve_sleep_api(sess, base_url: str, timeout: float):
+    """Detect which sleep/wake contract the running vLLM exposes.
+
+    Returns "modern" (vLLM >= 0.10 / V1 engine: POST /sleep?level=N +
+    /wake_up), "legacy" (vLLM 0.6-0.9: POST /v1/sleep {"level": N} +
+    /v1/wake_up), or None (no sleep support).
+
+    The probe itself may PUT the server to sleep (a real server accepts the
+    level-1 request and sleeps); in that case we wake it back up immediately
+    so callers always leave vLLM ready.
+    """
+    # Modern contract first (the box's vLLM 0.16.0rc2.dev55 era).
+    for api, sleep_path, wake_path in (
+        ("modern", "/sleep?level=1", "/wake_up"),
+        ("legacy", "/v1/sleep", "/v1/wake_up"),
+    ):
+        try:
+            r = sess.post(base_url.rstrip("/") + sleep_path, json={}, timeout=min(timeout, 5.0))
+        except Exception as exc:
+            print(
+                f"[vllm-lifecycle] sleep probe transport error on {sleep_path}: {exc}",
+                file=sys.stderr,
+            )
+            return None, 3
+        # 200 (slept) / 400 / 422 (route exists but wants a proper body/level)
+        # -> supported; 404 -> try the other contract.
+        if r.status_code != 404:
+            if 200 <= r.status_code < 300:
+                # It actually slept: wake it back up so we leave vLLM ready.
+                try:
+                    sess.post(
+                        base_url.rstrip("/") + wake_path,
+                        json={},
+                        timeout=min(timeout, 10.0),
+                    )
+                except Exception as exc:
+                    print(f"[vllm-lifecycle] wake-back-up failed: {exc}", file=sys.stderr)
+                    return None, 3
+            return api, 0
+    return None, 0
+
+
 def cmd_probe(args):
     sess = _client(args.base_url, args.api_key, args.timeout)
     data, rc = _get(sess, args.base_url, "/v1/models", args.timeout)
     if rc != 0:
         return rc
-    caps = {"models": data, "supports_sleep": False, "supports_load_lora": False}
-    # Probe sleep endpoint with a no-op-ish check: we do NOT actually sleep here,
-    # we just check the route exists. Use an empty body HEAD-like POST; vLLM will
-    # reject with 400/422 if the route exists but body is wrong, or 404 if missing.
-    url = args.base_url.rstrip("/") + "/v1/sleep"
+    caps = {"models": data, "supports_sleep": False, "sleep_api": None, "supports_load_lora": False}
+    sleep_api, rc = _resolve_sleep_api(sess, args.base_url, args.timeout)
+    if rc != 0:
+        return rc
+    if sleep_api is not None:
+        caps["supports_sleep"] = True
+        caps["sleep_api"] = sleep_api
     try:
-        r = sess.post(url, json={}, timeout=min(args.timeout, 5.0))
-        # 400/422 means route exists but wants a proper level -> supported
-        # 200 means it actually slept (we will wake it back up below)
-        # 404 means unsupported
-        if r.status_code != 404:
-            caps["supports_sleep"] = True
-            # If it actually slept (200), wake it back up so we leave vLLM ready.
-            if 200 <= r.status_code < 300:
-                sess.post(
-                    args.base_url.rstrip("/") + "/v1/wake_up",
-                    json={},
-                    timeout=min(args.timeout, 10.0),
-                )
         r2 = sess.post(
             args.base_url.rstrip("/") + "/v1/load_lora_adapter",
             json={},
@@ -126,8 +164,18 @@ def cmd_probe(args):
 
 def cmd_sleep(args):
     sess = _client(args.base_url, args.api_key, args.timeout)
-    body = {"level": int(args.level)}
-    data, rc = _post(sess, args.base_url, "/v1/sleep", body, args.timeout)
+    sleep_api, rc = _resolve_sleep_api(sess, args.base_url, args.timeout)
+    if rc != 0:
+        return rc
+    if sleep_api is None:
+        # Unsupported: tell caller to fall back to kill/restart.
+        print("[vllm-lifecycle] sleep unsupported; caller should kill vLLM", file=sys.stderr)
+        return 2
+    if sleep_api == "modern":
+        # vLLM >= 0.10 / V1 engine: level is a QUERY param on /sleep.
+        data, rc = _post(sess, args.base_url, f"/sleep?level={int(args.level)}", {}, args.timeout)
+    else:
+        data, rc = _post(sess, args.base_url, "/v1/sleep", {"level": int(args.level)}, args.timeout)
     if rc == 2:
         # Unsupported: tell caller to fall back to kill/restart.
         print("[vllm-lifecycle] sleep unsupported; caller should kill vLLM", file=sys.stderr)
@@ -142,7 +190,16 @@ def cmd_sleep(args):
 
 def cmd_wake(args):
     sess = _client(args.base_url, args.api_key, args.timeout)
-    data, rc = _post(sess, args.base_url, "/v1/wake_up", {}, max(args.timeout, 120.0))
+    sleep_api, rc = _resolve_sleep_api(sess, args.base_url, args.timeout)
+    if rc != 0:
+        return rc
+    if sleep_api is None:
+        print("[vllm-lifecycle] wake_up unsupported; caller should relaunch vLLM", file=sys.stderr)
+        return 2
+    if sleep_api == "modern":
+        data, rc = _post(sess, args.base_url, "/wake_up", {}, max(args.timeout, 120.0))
+    else:
+        data, rc = _post(sess, args.base_url, "/v1/wake_up", {}, max(args.timeout, 120.0))
     if rc == 2:
         print("[vllm-lifecycle] wake_up unsupported; caller should relaunch vLLM", file=sys.stderr)
         return 2

@@ -37,7 +37,11 @@ def test_prepare_text_documents_writes_message_jsonl(tmp_path: Path) -> None:
         seed=7,
     )
     assert train_path.exists()
-    rows = [json.loads(line) for line in train_path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    rows = [
+        json.loads(line)
+        for line in train_path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
     assert rows
     assert rows[0]["messages"][0]["role"] == "system"
     assert rows[0]["messages"][1]["role"] == "user"

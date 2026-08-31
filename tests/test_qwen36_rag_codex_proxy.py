@@ -8,7 +8,6 @@ from typing import Any
 from quantum_rag.corpus import DocumentChunk
 from quantum_rag.index import QuantumRAGIndex
 
-
 SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "serve_qwen36_rag_codex_proxy.py"
 SPEC = importlib.util.spec_from_file_location("serve_qwen36_rag_codex_proxy", SCRIPT)
 assert SPEC is not None and SPEC.loader is not None
@@ -44,7 +43,10 @@ def test_extracts_user_text_from_responses_messages() -> None:
     payload = {
         "input": [
             {"role": "system", "content": [{"type": "input_text", "text": "system"}]},
-            {"role": "user", "content": [{"type": "input_text", "text": "How do I install Arclight ISQ?"}]},
+            {
+                "role": "user",
+                "content": [{"type": "input_text", "text": "How do I install Arclight ISQ?"}],
+            },
         ]
     }
 
@@ -70,7 +72,9 @@ def test_generate_injects_retrieved_context(monkeypatch: Any, tmp_path: Path) ->
         def __init__(self, **kwargs: Any) -> None:
             captured["client_kwargs"] = kwargs
 
-        def generate(self, messages: list[dict[str, str]], *, max_output_tokens: int, temperature: float) -> str:
+        def generate(
+            self, messages: list[dict[str, str]], *, max_output_tokens: int, temperature: float
+        ) -> str:
             captured["messages"] = messages
             captured["max_output_tokens"] = max_output_tokens
             captured["temperature"] = temperature
@@ -115,7 +119,9 @@ def test_generate_caps_requested_output_tokens(monkeypatch: Any, tmp_path: Path)
         def __init__(self, **kwargs: Any) -> None:
             captured["client_kwargs"] = kwargs
 
-        def generate(self, messages: list[dict[str, str]], *, max_output_tokens: int, temperature: float) -> str:
+        def generate(
+            self, messages: list[dict[str, str]], *, max_output_tokens: int, temperature: float
+        ) -> str:
             captured["max_output_tokens"] = max_output_tokens
             return "OK"
 

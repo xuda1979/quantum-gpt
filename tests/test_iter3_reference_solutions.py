@@ -1,7 +1,7 @@
 """Tests for scripts/iter3_reference_solutions.py.
 
 Verifies:
-- All 7 universal-gap solutions (B1-B5, C1-C2) are present
+- All 16 reference solutions (9 A-series Qiskit + 7 B/C universal-gap) are present
 - Each solution is valid Python (parseable)
 - Each solution has a def main() function
 - Each solution has a if __name__ == "__main__" guard
@@ -20,9 +20,31 @@ sys.path.insert(0, str(ROOT))
 from scripts.iter3_reference_solutions import SOLUTIONS, get_solution
 
 
-def test_all_7_solutions_present():
-    """All 7 universal-gap solutions should be in the registry."""
-    expected = {"B1", "B2", "B3", "B4", "B5", "C1", "C2"}
+def test_all_16_solutions_present():
+    """All 16 reference solutions should be in the registry.
+
+    The 7 universal-gap rows (B1-B5, C1-C2) plus the 9 Qiskit
+    quantum-algorithm family solutions (A1, A2a, A2b, A3a, A3b,
+    A4a, A4b, A5a, A5b) authored 2026-07-13 Session 2.
+    """
+    expected = {
+        "A1",
+        "A2a",
+        "A2b",
+        "A3a",
+        "A3b",
+        "A4a",
+        "A4b",
+        "A5a",
+        "A5b",
+        "B1",
+        "B2",
+        "B3",
+        "B4",
+        "B5",
+        "C1",
+        "C2",
+    }
     assert set(SOLUTIONS.keys()) == expected, f"Expected {expected}, got {set(SOLUTIONS.keys())}"
 
 
@@ -32,7 +54,7 @@ def test_solutions_are_valid_python():
         try:
             ast.parse(code)
         except SyntaxError as e:
-            assert False, f"Solution {row_id} has syntax error: {e}"
+            raise AssertionError(f"Solution {row_id} has syntax error: {e}")
 
 
 def test_solutions_have_main_function():
@@ -76,7 +98,7 @@ def test_solutions_have_print_statements():
 def test_get_solution_returns_none_for_unknown():
     """get_solution should return None for unknown row IDs."""
     assert get_solution("UNKNOWN") is None
-    assert get_solution("A1") is None  # A-series not implemented yet
+    assert get_solution("Z9") is None  # genuinely unknown row ID
 
 
 def test_get_solution_returns_code_for_known():

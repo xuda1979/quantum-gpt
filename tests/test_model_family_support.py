@@ -488,7 +488,11 @@ def test_runtime_upgrade_message_mentions_python_floor_for_gemma4_source_path() 
 
 
 def test_eval_and_serve_entrypoints_use_shared_causal_lm_preflight() -> None:
-    assert "load_causal_lm_with_text_backend_preflight" in inspect.getsource(run_hf_pass1_eval)
+    # 2026-08-25 (test-update wave): run_hf_pass1_eval now routes through the
+    # shared model_backend preflight `ensure_text_backend_preflight` (the
+    # load_causal_lm_with_text_backend_preflight import was removed from the
+    # runner); the legacy helper remains the API of the other two entrypoints.
+    assert "ensure_text_backend_preflight" in inspect.getsource(run_hf_pass1_eval)
     assert "load_causal_lm_with_text_backend_preflight" in inspect.getsource(
         run_base_vs_adapter_eval
     )

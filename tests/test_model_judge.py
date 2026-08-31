@@ -14,6 +14,7 @@ import json
 import subprocess
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import torch
 
@@ -33,7 +34,78 @@ from scripts.calibrate_model_judge import (  # noqa: E402
     compute_spearman_r,
     decide_enabled_dims,
 )
-from training.grpo_trainer import _parse_model_dim_scores  # noqa: E402
+from training.grpo_trainer import (  # noqa: E402
+    _parse_model_dim_scores,
+    compose_policy_training_reward,
+)
+
+
+def _policy_reward_args(**overrides):
+    values = {
+        "reward_pass_weight": 0.45,
+        "reward_syntax_weight": 0.05,
+        "reward_interface_weight": 0.10,
+        "reward_verifier_weight": 0.10,
+        "reward_brevity_weight": 0.0,
+        "reward_import_hygiene_weight": 0.05,
+        "reward_mode": "p_dominant",
+        "reward_pass_mass": 0.40,
+        "reward_shaped_mass": 0.35,
+        "reward_judge_mass": 0.25,
+        "tiered_alpha": 0.03,
+        "tiered_gamma": 0.02,
+    }
+    values.update(overrides)
+    return SimpleNamespace(**values)
+
+
+def test_policy_reward_is_pass_dominant_without_model_judge() -> None:
+    args = _policy_reward_args()
+    failing = compose_policy_training_reward(
+        {
+            "pass_reward": 0.0,
+            "shaped_reward": 0.9,
+            "syntax_reward": 1.0,
+            "interface_reward": 1.0,
+            "verifier_reward": 1.0,
+            "brevity_reward": 1.0,
+            "import_hygiene_reward": 1.0,
+        },
+        args,
+    )
+    passing = compose_policy_training_reward(
+        {
+            "pass_reward": 1.0,
+            "shaped_reward": 1.0,
+            "syntax_reward": 0.0,
+            "interface_reward": 0.0,
+            "verifier_reward": 0.0,
+            "brevity_reward": 0.0,
+            "import_hygiene_reward": 0.0,
+        },
+        args,
+    )
+
+    assert failing < passing
+    assert passing == 1.0
+
+
+def test_policy_reward_recomputes_after_typed_verifier_override() -> None:
+    args = _policy_reward_args()
+    base = {
+        "pass_reward": 0.0,
+        "shaped_reward": 0.2,
+        "syntax_reward": 1.0,
+        "interface_reward": 1.0,
+        "brevity_reward": 0.0,
+        "import_hygiene_reward": 1.0,
+        # Deliberately stale: the policy composer must not reuse it.
+        "total_reward": 0.0,
+    }
+    low = compose_policy_training_reward({**base, "verifier_reward": 0.1}, args)
+    high = compose_policy_training_reward({**base, "verifier_reward": 0.9}, args)
+
+    assert high > low
 
 
 def test_blend_pass_always_outranks_fail() -> None:
@@ -118,6 +190,18 @@ def test_spearman_perfect_and_none() -> None:
     assert abs(compute_spearman_r([1.0, 2.0, 3.0], [0.1, 0.5, 0.9]) - 1.0) < 1e-9
     assert abs(compute_spearman_r([1.0, 2.0, 3.0], [0.9, 0.5, 0.1]) + 1.0) < 1e-9
     assert compute_spearman_r([1.0, 1.0], [0.5, 0.6]) is None  # zero variance
+
+
+def test_calibration_script_is_py39_safe_no_strict_zip() -> None:
+    """Deploy Integrity py3.9 gate (2026-08-25): the calibration script must
+    ship no ``zip(..., strict=...)`` calls and no PEP 604 ``int | float``
+    isinstance unions — both are py3.10-only and the canonical venv is py3.9
+    (a runtime test cannot catch these on py3.14, so the guard is
+    source-level)."""
+    source = CALIBRATION_SCRIPT.read_text(encoding="utf-8")
+    assert "strict=True" not in source
+    assert "int | float" not in source  # 2026-08-26 code-review finding
+    assert "from __future__ import annotations" in source  # r10 depmatrix F2
 
 
 def test_calibration_gates_on_n_and_auc() -> None:
@@ -248,13 +332,19 @@ def test_comprehensive_mode_fail_can_outrank_pass() -> None:
         mode="comprehensive",
     )
     passing = blend_comprehensive_reward(
-        pass_reward=1.0,
+        pass_reward=0.8,
         shaped_reward=0.0,
         model_dim_scores={"correctness": 0.0, "efficiency": 0.0},
         dim_weights={"correctness": 0.025, "efficiency": 0.025},
         mode="comprehensive",
     )
-    # 0.40*1 + 0.35*1 + 0.25*1 = 1.0 vs 0.40*1 + 0 = 0.40
+    # r17 calibration-gate masses (0.50/0.40/0.10): a failing candidate with
+    # max shaped+judge (0.40 + 0.10 = 0.50) outranks a PARTIAL pass (P=0.8 ->
+    # 0.40); a full pass (P=1.0 -> 0.50) can only be TIED, never strictly
+    # outranked (the r16 0.25 judge mass was the last regime where
+    # 0.40*1+0.35*1+0.25*1=1.0 beat 0.40*1=0.40 strictly).
+    assert abs(failing - 0.50) < 1e-9
+    assert abs(passing - 0.40) < 1e-9
     assert failing > passing
 
 
@@ -266,8 +356,8 @@ def test_comprehensive_mode_masses_renormalize_without_judge() -> None:
         dim_weights={},  # nothing calibrated yet -> judge mass 0
         mode="comprehensive",
     )
-    # masses renormalize over P and S: 0.40/(0.40+0.35) = 0.5333
-    assert abs(reward - 0.40 / 0.75) < 1e-9
+    # masses renormalize over P and S (r17: 0.50/0.40/0.10 -> 0.50/0.90)
+    assert abs(reward - 0.50 / 0.90) < 1e-9
 
 
 def test_comprehensive_mode_default_masses() -> None:
@@ -286,7 +376,7 @@ def test_comprehensive_mode_default_masses() -> None:
         dim_weights={"correctness": 0.05},
         mode="comprehensive",
     )
-    assert abs(reward - 0.25) < 1e-9  # judge mass only
+    assert abs(reward - 0.10) < 1e-9  # judge mass only (r17: w_J = 0.10)
 
 
 def test_comprehensive_mode_judge_mass_uses_relative_dim_weights() -> None:
@@ -297,8 +387,8 @@ def test_comprehensive_mode_judge_mass_uses_relative_dim_weights() -> None:
         dim_weights={"correctness": 0.04, "efficiency": 0.01},
         mode="comprehensive",
     )
-    # model term = (0.8*1.0 + 0.2*0.0) = 0.8; judge mass 0.25 -> 0.20
-    assert abs(reward - 0.20) < 1e-9
+    # model term = (0.8*1.0 + 0.2*0.0) = 0.8; judge mass 0.10 -> 0.08 (r17)
+    assert abs(reward - 0.08) < 1e-9
 
 
 def test_p_dominant_still_dominates_when_requested() -> None:

@@ -2301,7 +2301,14 @@ def train_pass_truncation_breakdown(
     total = max(int(n_total), 0)
     return {
         "train_pass_seq_cap": int(seq_cap) if seq_cap else 0,
-        "train_pass_truncation_rate": (round(float(n_truncated) / total, 6) if total > 0 else 0.0),
+        # 2026-08-31 (coverage lane, PASS 16): the documented contract is
+        # "seq_cap 0/None means the cap is disabled and the rate is always 0"
+        # — the rate previously leaked n_truncated/n_total even when the cap
+        # was disabled (latent: main() only passes n_truncated>0 with a cap,
+        # but a direct call reported a dishonest truncation rate).
+        "train_pass_truncation_rate": (
+            round(float(n_truncated) / total, 6) if (total > 0 and seq_cap) else 0.0
+        ),
     }
 
 

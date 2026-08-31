@@ -8,6 +8,8 @@ Verifies the lightweight DVC-replacement stack:
     correctly reports added rows and manifest changes
 """
 
+from __future__ import annotations
+
 import importlib.util
 import json
 import shutil

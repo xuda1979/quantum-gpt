@@ -248,7 +248,10 @@ def test_ensure_relaunches_sigkilled_sidecar_and_is_idempotent() -> None:
         pid1 = int(pidfile.read_text(encoding="utf-8").strip())
         assert pid1 > 0
         time.sleep(2.5)  # let the sidecar pass its first sleep cycle
-        assert os.kill(pid1, 0) == 0 or _pid_exists(pid1)
+        # Use the exception-free probe: os.kill(pid, 0) RAISES on a dead pid
+        # and would mask the failure as ProcessLookupError (2026-09-01 repairq
+        # audit: masked the cross-suite sidecar kills).
+        assert _pid_exists(pid1)
 
         # Idempotent: alive sidecar -> ensure is a no-op, same pid.
         second = _run_ensure(out, logdir)

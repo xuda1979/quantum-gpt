@@ -32,9 +32,14 @@ class _FakeVLLM:
         supports_sleep: bool,
         supports_load_lora: bool,
         served_name: str = "qwen36-27b-rl-distill",
+        sleep_api: str = "legacy",
     ):
+        # sleep_api: "legacy" = vLLM 0.6-0.9 (POST /v1/sleep {"level": N});
+        # "modern" = vLLM >= 0.10 / V1 engine (POST /sleep?level=N + /wake_up,
+        # gated by --enable-sleep-mode + VLLM_SERVER_DEV_MODE=1).
         self.supports_sleep = supports_sleep
         self.supports_load_lora = supports_load_lora
+        self.sleep_api = sleep_api
         self.served_name = served_name
         self.is_sleeping = False
         self.loaded_loras: dict[str, str] = {}
@@ -68,6 +73,12 @@ class _FakeVLLM:
                         data.append({"id": name, "object": "model"})
                     self._send(200, {"object": "list", "data": data})
                     return
+                if path == "/is_sleeping":
+                    if not outer.supports_sleep or outer.sleep_api != "modern":
+                        self._send(404)
+                        return
+                    self._send(200, {"sleeping": outer.is_sleeping})
+                    return
                 self._send(404)
 
             def do_POST(self):  # noqa: N802
@@ -79,14 +90,28 @@ class _FakeVLLM:
                 except Exception:
                     body = {}
                 if path == "/v1/sleep":
-                    if not outer.supports_sleep:
+                    if not outer.supports_sleep or outer.sleep_api != "legacy":
                         self._send(404)
                         return
                     outer.is_sleeping = True
                     self._send(200, {"ok": True})
                     return
                 if path == "/v1/wake_up":
-                    if not outer.supports_sleep:
+                    if not outer.supports_sleep or outer.sleep_api != "legacy":
+                        self._send(404)
+                        return
+                    outer.is_sleeping = False
+                    self._send(200, {"ok": True})
+                    return
+                if path == "/sleep":
+                    if not outer.supports_sleep or outer.sleep_api != "modern":
+                        self._send(404)
+                        return
+                    outer.is_sleeping = True
+                    self._send(200, {"ok": True})
+                    return
+                if path == "/wake_up":
+                    if not outer.supports_sleep or outer.sleep_api != "modern":
                         self._send(404)
                         return
                     outer.is_sleeping = False
@@ -166,6 +191,43 @@ def test_probe_reports_unsupported_when_404(fake_vllm_factory):
     payload = json.loads(r.stdout)
     assert payload["supports_sleep"] is False
     assert payload["supports_load_lora"] is False
+
+
+def test_probe_detects_modern_sleep_api(fake_vllm_factory):
+    """vLLM >= 0.10 / V1 engine (the box's 0.16.0rc2.dev55) exposes sleep/wake
+    at /sleep?level=N + /wake_up (dev-mode endpoints), NOT /v1/sleep. The
+    probe must detect this contract, report sleep_api=modern, and leave the
+    server AWAKE (it woke back up after the probe's level-1 sleep)."""
+    srv = fake_vllm_factory(supports_sleep=True, supports_load_lora=True, sleep_api="modern")
+    r = _run("--base-url", srv.url(), "--api-key", "k", "probe")
+    assert r.returncode == 0, r.stderr
+    payload = json.loads(r.stdout)
+    assert payload["supports_sleep"] is True
+    assert payload["sleep_api"] == "modern"
+    assert srv.is_sleeping is False  # probe woke the server back up
+
+
+def test_sleep_then_wake_roundtrip_modern(fake_vllm_factory):
+    """Modern contract: sleep posts to /sleep?level=N (query param, no JSON
+    body, no /v1 prefix), wake posts to /wake_up; /v1/models 503s while
+    sleeping and recovers after wake."""
+    srv = fake_vllm_factory(supports_sleep=True, supports_load_lora=True, sleep_api="modern")
+    r = _run(
+        "--base-url",
+        srv.url(),
+        "--api-key",
+        "k",
+        "sleep",
+        "--level",
+        "1",
+        "--settle-seconds",
+        "0",
+    )
+    assert r.returncode == 0, r.stderr
+    assert srv.is_sleeping is True
+    r2 = _run("--base-url", srv.url(), "--api-key", "k", "wake", "--timeout", "10")
+    assert r2.returncode == 0, r2.stderr
+    assert srv.is_sleeping is False
 
 
 def test_sleep_then_wake_roundtrip(fake_vllm_factory):

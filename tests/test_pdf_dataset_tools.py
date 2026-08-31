@@ -45,8 +45,12 @@ def test_prepare_datasets_writes_expected_files(tmp_path: Path, monkeypatch) -> 
 
     records = [{"prompt": f"Prompt {index}", "code": f"Code {index}"} for index in range(4)]
 
-    monkeypatch.setattr(prepare_pdf_dataset.pdf_to_sft, "iter_pdf_files", lambda _roots: [dummy_pdf])
-    monkeypatch.setattr(prepare_pdf_dataset, "_collect_records", lambda *args, **kwargs: list(records))
+    monkeypatch.setattr(
+        prepare_pdf_dataset.pdf_to_sft, "iter_pdf_files", lambda _roots: [dummy_pdf]
+    )
+    monkeypatch.setattr(
+        prepare_pdf_dataset, "_collect_records", lambda *args, **kwargs: list(records)
+    )
 
     train_path, valid_path = prepare_pdf_dataset.prepare_datasets(
         pdf_dir,
@@ -59,5 +63,9 @@ def test_prepare_datasets_writes_expected_files(tmp_path: Path, monkeypatch) -> 
     assert valid_path is not None and valid_path.exists()
     all_path = tmp_path / "processed" / "quantum_all.jsonl"
     assert all_path.exists()
-    all_rows = [json.loads(line) for line in all_path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    all_rows = [
+        json.loads(line)
+        for line in all_path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
     assert len(all_rows) == len(records)
