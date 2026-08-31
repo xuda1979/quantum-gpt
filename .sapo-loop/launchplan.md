@@ -32,7 +32,7 @@ Verdict: r21 was internally consistent at build time, BUT it is NOT launch-ready
 | tree == `tmp/sapo-relaunch-r22.sha256` (349 members, FINAL v4) | **PASS** — 0 missing, 0 mismatch |
 | embedded `MANIFEST.sha256.json` vs tgz (349 members) | **PASS** — 0 missing, 0 mismatch |
 | outer/inner key sets identical | **PASS** |
-| **tgz sha256 (FINAL)** | **b5e0adbc8a3e505dd1338846369270ef22c515f7cc93ac0a7446670c7d6295e1** |
+| **tgz sha256 (FINAL)** | **08082e3b6c43b7c053045ab0b19ee99cbb2de444fbb14dd009a28874d388d646** |
 | launcher manifest-gate simulation vs bundle (as the box runs it, root=extracted bundle) | **PASS** — imports [], exec-verified true, semantic=0, source sha match, task_contract `97809aef…` MATCH, contamination clean vs all 5 holdouts, all required_files present |
 | v9 contract hash recomputed on tree | **PASS** — header `97809aeff45c…` == computed |
 | py_compile of bundled trainer + tests | **PASS** |
@@ -103,7 +103,7 @@ bash scripts/ai_launch_sapo_direct.sh launch
 (ASI3_SAPO_* names work identically; AI_SAPO_* is the canonical wrapper alias. `step_000NNN_adapter` = output of the §3a find command.)
 
 Pre-launch deploy steps (when channel opens — DO NOT launch before):
-1. Upload `tmp/sapo-relaunch-r22.tgz` (sha b5e0adbc8a3e505dd1338846369270ef22c515f7cc93ac0a7446670c7d6295e1) to the S3 bundle key; sync via `scripts/asi3_secure_sync_sapo.py --bundle-key … --bundle-sha256 c7f9f658…` (rclone + sha256sum -c + tar -xzf into $NAS_ROOT).
+1. Upload `tmp/sapo-relaunch-r22.tgz` (sha 08082e3b6c43b7c053045ab0b19ee99cbb2de444fbb14dd009a28874d388d646) to the S3 bundle key; sync via `scripts/asi3_secure_sync_sapo.py --bundle-key … --bundle-sha256 c7f9f658…` (rclone + sha256sum -c + tar -xzf into $NAS_ROOT).
 2. On-box spot-check critical shas vs `tmp/sapo-relaunch-r22.sha256` (at minimum: training/grpo_trainer.py, training/generation.py, scripts/asi2_loop_eval.sh, evals/benchmarks/quantum_grpo_training_v9_rl_questions_v2.txt, quantum_rl_questions_v2.jsonl).
 3. Confirm the box has `qiskit`/`cirq`/`pennylane`/`stim`/`scipy` (v9 `required_import_roots` is empty, but task runtime must exist — box already has them per audit).
 4. Confirm the trainer is NOT already running (`pgrep -f 'training/[g]rpo_trainer.py'` empty; no stale `$LOGDIR/grpo_27b_selfeval.pid`).
@@ -137,5 +137,5 @@ Pre-launch deploy steps (when channel opens — DO NOT launch before):
 - NOTHING deployed (channel down; bundle staged locally, no S3 upload performed).
 - `training/grpo_trainer.py`, `scripts/asi3_launch_grpo_direct.sh`, `scripts/ai_launch_sapo_direct.sh` NOT modified.
 - Build artifact: `tmp/build_r22_bundle.py` (member lineage = r21 sha256 list + deltas; embeds MANIFEST; writes `tmp/sapo-relaunch-r22.sha256`).
-- SHA references: r22 tgz b5e0adbc8a3e505dd1338846369270ef22c515f7cc93ac0a7446670c7d6295e1 · per-file `tmp/sapo-relaunch-r22.sha256` (247 members) · r21 tgz `05e6698e…` (superseded).
+- SHA references: r22 tgz 08082e3b6c43b7c053045ab0b19ee99cbb2de444fbb14dd009a28874d388d646 · per-file `tmp/sapo-relaunch-r22.sha256` (247 members) · r21 tgz `05e6698e…` (superseded).
 - Rebuild tool: `tmp/build_r22_bundle.py` (lineage = current r22 sha256 + 12-file merge list; embeds MANIFEST; writes `tmp/sapo-relaunch-r22.sha256`).

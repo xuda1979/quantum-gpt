@@ -2421,7 +2421,7 @@ Audit target: tmp/sapo-relaunch-r21.tgz (sha 05e6698e66e3f22a905ff0864119f9e512b
   vLLM client present) → THEN let the eval loop fire. The box-pull watch pulls trainer state on ready;
   the eval verdict needs the deploy first.
 
-## r22 FINAL v4 (2026-09-01 23:58, fixer lane) — 349 members, sha b5e0adbc8a3e505dd1338846369270ef22c515f7cc93ac0a7446670c7d6295e1
+## r22 FINAL v4 (2026-09-01 23:58, fixer lane) — 349 members, sha 08082e3b6c43b7c053045ab0b19ee99cbb2de444fbb14dd009a28874d388d646
 - REBUILD TRIGGER (did-we-miss audit): the on-disk r22 tgz (22c5a1a4, Aug 31 23:43)
   had 11 members drifted vs the committed tree (wave commits b5d0d12/4c5f70d:
   grpo_trainer TypeError fail-closed, zip-strict py3.9 fixes, launcher chain,
