@@ -22,9 +22,20 @@ def run_tests(candidate_path: str) -> dict:
         if not hasattr(H, "terms"):
             failures.append("h2_hamiltonian() did not return a Hamiltonian-like object")
         else:
-            n_terms = len(H.terms) if hasattr(H.terms, "__len__") else 0
-            if n_terms < 4:
-                failures.append(f"h2_hamiltonian() has too few terms ({n_terms}); expected >=4")
+            # Version-aware: qml.Hamiltonian/LinearCombination expose .terms as
+            # a tuple attribute on old pennylane and as a CALLABLE returning
+            # (coeffs, ops) on 0.38+/0.45+ (2026-08-25: the bare len() form
+            # scored 0 terms on both 0.38.0 and 0.45.1, failing the REFERENCE
+            # itself — a poisoned baseline for every leg).
+            try:
+                terms = H.terms() if callable(H.terms) else H.terms
+            except Exception as e:  # noqa: BLE001
+                failures.append(f"h2_hamiltonian() terms access raised: {e}")
+                terms = None
+            if terms is not None:
+                n_terms = len(terms[0]) if isinstance(terms, tuple) else len(terms)
+                if n_terms < 4:
+                    failures.append(f"h2_hamiltonian() has too few terms ({n_terms}); expected >=4")
     except Exception as e:  # noqa: BLE001
         failures.append(f"h2_hamiltonian() raised: {e}")
 

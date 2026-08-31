@@ -44,23 +44,37 @@ def run_tests(candidate_path: str) -> dict:
     except Exception as e:  # noqa: BLE001
         failures.append(f"ghz_then_qft_statevector() raised: {e}")
 
-    # 4. After QFT on (|000>+|111>)/sqrt(2), all 8 amplitudes should be non-zero
-    #    and equal in magnitude (1/sqrt(8) up to phase). This is the key property:
-    #    QFT spreads the GHZ state uniformly across the computational basis.
+    # 4. After QFT on (|000>+|111>)/sqrt(2), the interference pattern has
+    #    exactly ONE null amplitude — bitstring 100 for this no-final-swap QFT
+    #    convention — i.e. 7 non-zero amplitudes with magnitudes
+    #    {0.5, sqrt(2+sqrt(2))/4, sqrt(2)/4, sqrt(2-sqrt(2))/4} ≈
+    #    {0.5, 0.4619, 0.3536, 0.1913}. This is NOT uniform (2026-08-25: the
+    #    old all-8-uniform expectation was mathematically wrong for this
+    #    convention and failed the task's own reference on qiskit 1.4.x AND
+    #    2.x — poisoned baseline). Simulator float noise may leave the null
+    #    marginally above tol on some versions, hence 7-8 accepted.
     try:
         hist = mod.amplitude_histogram(n, tol=1e-9)
-        if len(hist) != 8:
-            failures.append(f"expected 8 non-zero amplitudes after QFT on GHZ, got {len(hist)}")
+        n_terms = len(hist)
+        if not (7 <= n_terms <= 8):
+            failures.append(f"expected 7-8 non-zero amplitudes after QFT on GHZ, got {n_terms}")
         else:
-            mags = [abs(a) for a in hist.values()]
-            if max(mags) - min(mags) > 1e-6:
+            mags = sorted(abs(a) for a in hist.values())
+            mx, mn = mags[-1], mags[0]
+            if mx > 0.5 + 1e-9:
+                failures.append(f"amplitude exceeds QFT-of-GHZ max 0.5: max={mx:.6f}")
+            if mn < 0.1913 - 1e-6:
+                failures.append(f"unexpected near-zero amplitude: min={mn:.6f}")
+            if mx - mn < 0.25:
                 failures.append(
-                    f"amplitude magnitudes not uniform: max={max(mags):.6f} min={min(mags):.6f}"
+                    f"amplitudes too uniform for QFT-of-GHZ interference: "
+                    f"max={mx:.6f} min={mn:.6f}"
                 )
     except Exception as e:  # noqa: BLE001
         failures.append(f"amplitude_histogram() raised: {e}")
 
     return {
         "passed": not failures,
-        "details": failures or ["Qiskit GHZ + QFT circuit and uniform-amplitude property correct"],
+        "details": failures
+        or ["Qiskit GHZ + QFT circuit and interference-pattern property correct"],
     }

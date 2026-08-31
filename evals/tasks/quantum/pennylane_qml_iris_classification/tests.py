@@ -34,7 +34,11 @@ def run_tests(candidate_path: str) -> dict:
         K = mod.kernel_matrix(X, X)
         if K.shape != (20, 20):
             failures.append(f"kernel_matrix shape = {K.shape}, expected (20, 20)")
-        if not ((K >= 0).all() and (K <= 1).all()):
+        # Tolerance-aware [0,1] bounds: fp64 kernels land at 1.0000000000000004
+        # on pennylane 0.38/0.45 (float noise ~1e-16); a kernel entry far
+        # outside [0,1] still fails (2026-08-25 version-fragility fix —
+        # the exact bounds failed the task's own reference).
+        if not ((K >= -1e-9).all() and (K <= 1 + 1e-9).all()):
             failures.append("kernel_matrix entries must be in [0, 1]")
     except Exception as e:  # noqa: BLE001
         failures.append(f"kernel_matrix() raised: {e}")
