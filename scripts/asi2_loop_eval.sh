@@ -13,7 +13,8 @@
 #   3. Runs a FAST CPU-only adapter-delta precheck on the box (merge the
 #      adapter into the base with peft -> max_abs_diff across weights). If
 #      max_abs_diff == 0 the checkpoint is INERT (the failure mode of every
-#      past checkpoint) -> skip the expensive rubric eval.
+#      past checkpoint); a diff within bf16 rounding ULP is
+#      INERT_AT_PRECISION (audit #6). Both skip the expensive rubric eval.
 #   4. Otherwise launches scripts/run_asi2_base_adapter_rubric_eval.py on the
 #      box via nohup (takes hours, needs NPUs), polls every EVAL_POLL_INTERVAL
 #      seconds up to EVAL_WAIT_SECONDS for the output file to appear, then
@@ -24,8 +25,10 @@
 #   python3 scripts/run_asi2_base_adapter_rubric_eval.py \
 #       --base-model <required> --adapter <required> --output <required> \
 #       [--device npu] [--max-new-tokens 384] [--limit 0]
-#   (--limit 0 = all 12 held-out tasks: 8 quantum + 4 software; writes the
-#   output file atomically, then prints a "done" JSON line.)
+#   (--limit 0 = ALL tasks in EVAL_BENCHMARK — the FROZEN 18-task promotion
+#   holdout by default (2026-09-01 instrument fix; was the 13-task TRAINING
+#   set, which is not a valid beats-base instrument); writes the output file
+#   atomically, then prints a "done" JSON line.)
 #
 # Auth-down handling: if the /exec daemon returns an empty/non-JSON response
 # the helper prints AUTH_DOWN and the script exits 2 so the loop retries later.
@@ -66,6 +69,23 @@ PRECHECK_WAIT_SECONDS="${PRECHECK_WAIT_SECONDS:-3600}"
 PRECHECK_POLL_INTERVAL="${PRECHECK_POLL_INTERVAL:-30}"
 PRECHECK_DEVICE="${PRECHECK_DEVICE:-cpu}"
 EVAL_STATE_FILE="${EVAL_STATE_FILE:-${ROOT_DIR}/reports/.asi2_eval_state.json}"
+# 2026-09-01 (manager, beats-base instrument fix): the rubric eval MUST run on
+# the FROZEN promotion holdout — the loop previously omitted --benchmark and
+# the evaluator defaulted to the 13-task v1 TRAINING set (whose header forbids
+# eval use; only 4/18 overlap with the frozen holdout), so even a genuinely
+# better adapter never showed beats-base through the loop. Default = the
+# frozen 18-task gate; override only for deliberate experiments.
+EVAL_BENCHMARK="${EVAL_BENCHMARK:-${ROOT_DIR}/evals/benchmarks/sapo_promotion_holdout_v1_18.txt}"
+# box-relative benchmark path (the EVAL_CMD runs with cd ${REMOTE_ROOT}):
+# 2026-09-01 (P-7 fix): DERIVE from EVAL_BENCHMARK by stripping the local
+# ROOT_DIR prefix — EVAL_BENCHMARK was dead config (only the hardcoded box
+# path reached the launch). Setting EVAL_BENCHMARK=<custom> now actually
+# changes what the box evaluates. Falls back to the basename if the path
+# is not under ROOT_DIR.
+EVAL_BENCHMARK_BOX="${EVAL_BENCHMARK#${ROOT_DIR}/}"
+if [[ "$EVAL_BENCHMARK_BOX" == "$EVAL_BENCHMARK" ]]; then
+  EVAL_BENCHMARK_BOX="$(basename "$EVAL_BENCHMARK")"
+fi
 
 if [[ "${1:-}" == "--dry-run" || "${DRY_RUN:-0}" == "1" ]]; then
   DRY_RUN=1
@@ -210,7 +230,7 @@ if [[ $DRY_RUN == 1 ]]; then
   say "DRY_RUN — no /exec calls, no state writes. Plan:"
   say ""
   say "Step 1  find newest target on the box:"
-  say "  exec_remote: ls -t ${NAS_CHECKPOINT_ROOT}/ 2>/dev/null | grep '^checkpoint_[0-9T]\\+$' | head -1"
+  say "  exec_remote: ls -t ${NAS_CHECKPOINT_ROOT}/ 2>/dev/null | grep -E '^checkpoint_[0-9T]+(_step[0-9a-z]+)?$' | head -1"
   say "  exec_remote: ls -t ${REMOTE_ROOT}/outputs/ 2>/dev/null | grep '^grpo-27b-selfeval-[0-9T]\\+$' | head -1"
   say "  exec_remote: probe newest run's adapter dir (adapter/ preferred, else newest step_*_adapter)"
   say "  target = newest NAS checkpoint_<ts> (fallback: newest run adapter)"
@@ -227,12 +247,15 @@ if [[ $DRY_RUN == 1 ]]; then
   say "        --output ${REMOTE_ROOT}/outputs/adapter_delta_<ts>.json --device ${PRECHECK_DEVICE}"
   say "  phase 1 (seconds, no model load): all LoRA A/B zero -> max_abs_diff=0"
   say "  phase 2 (CPU merge via PeftModel.merge_and_unload + base) only if phase 1 inconclusive"
-  say "  max_abs_diff == 0  -> INERT <ts>, mark state, exit 0 (no rubric eval)"
+  say "  verdict (audit #6, bf16-ULP aware): max_abs_diff == 0 -> INERT;"
+  say "    0 < diff <= bf16 ULP at weight scale -> INERT_AT_PRECISION;"
+  say "    else ACTIVE — INERT/INERT_AT_PRECISION mark state, exit 0 (no rubric eval)"
   say ""
   say "Step 4  rubric eval on NPUs (hours), only if delta != 0:"
   say "  cd ${REMOTE_ROOT} && nohup python3 scripts/run_asi2_base_adapter_rubric_eval.py \\"
   say "    --base-model '${BASE_MODEL}' --adapter '<target>' \\"
-  say "    --output 'outputs/reeval_latest_<ts>.json' --device npu --max-new-tokens 384 --limit 0 \\"
+  say "    --output 'outputs/reeval_latest_<ts>.json' --benchmark '${EVAL_BENCHMARK_BOX}' \\"
+  say "    --device npu --max-new-tokens 384 --limit 0 \\"
   say "    > /tmp/reeval_<ts>.log 2>&1 & echo \$! > /tmp/reeval_<ts>.pid"
   say "  poll every ${EVAL_POLL_INTERVAL}s up to ${EVAL_WAIT_SECONDS}s for the output file"
   say ""
@@ -245,12 +268,16 @@ fi
 log "asi2_loop_eval start (daemon=${DAEMON_BASE} remote=${REMOTE_ROOT} state=${EVAL_STATE_FILE})"
 
 # ---- step 1a: newest NAS checkpoint ----
-if ! NAS_OUT=$(exec_remote "ls -t ${NAS_CHECKPOINT_ROOT}/ 2>/dev/null | grep '^checkpoint_[0-9T]\\+$' | head -1"); then
+# Snapshot names are checkpoint_<ts> (legacy) or checkpoint_<ts>_step<N>
+# (sync-daemon step-content naming, audit #5) — accept both.
+if ! NAS_OUT=$(exec_remote "ls -t ${NAS_CHECKPOINT_ROOT}/ 2>/dev/null | grep -E '^checkpoint_[0-9T]+(_step[0-9a-z]+)?$' | head -1"); then
   printf '%s\n' "${NAS_OUT:-AUTH_DOWN}"
   exit 2
 fi
-TS=$(printf '%s' "$NAS_OUT" | head -1 | sed 's/^checkpoint_//' | tr -d '[:space:]')
-log "newest NAS checkpoint ts: ${TS:-<none>}"
+NAS_TS=$(printf '%s' "$NAS_OUT" | head -1 | sed -E 's/^checkpoint_([0-9T]+)(_step[0-9a-z]+)?$/\1/' | tr -d '[:space:]')
+NAS_STEP=$(printf '%s' "$NAS_OUT" | head -1 | sed -nE 's/^checkpoint_[0-9T]+_step([0-9]+)$/\1/p')
+TS="$NAS_TS"
+log "newest NAS checkpoint ts: ${TS:-<none>} step: ${NAS_STEP:-<none>}"
 
 # ---- step 1b: newest run output dir + its adapter dir ----
 RUN_TS=""
@@ -346,11 +373,13 @@ the merged weights are bit-identical to base by construction -> max_abs_diff=0.
 Phase 2 (minutes, CPU merge): only when phase 1 is inconclusive -- load the
 base model and PeftModel.from_pretrained(...).merge_and_unload(), then report
 max_abs_diff across all shared tensors (the definitive check used by past
-reports; max_abs_diff == 0 -> inert adapter).
+reports; max_abs_diff == 0 -> inert adapter). Verdicts are bf16-ULP aware
+(audit #6): "active" requires a per-tensor diff above one ULP at that
+weight's scale; smaller nonzero diffs are "inert_at_precision".
 
 Writes a JSON result to --output and prints a compact one-line result.
 """
-import argparse, json, os, sys, time
+import argparse, json, math, os, sys, time
 from pathlib import Path
 
 QG_ROOT = os.environ.get("QG_ROOT", "/root/work/software/quantum-gpt")
@@ -420,18 +449,45 @@ def phase2(base_path, adapter_dir, device):
         model_kwargs={"trust_remote_code": True, "low_cpu_mem_usage": True, "torch_dtype": "auto"},
     ).to(dev)
     base.eval()
-    base_params = {n: p for n, p in base.named_parameters()}
+    # CRITICAL (2026-08-21 review): peft's merge_and_unload() mutates the base
+    # params IN PLACE — holding references made every comparison report
+    # max_abs_diff=0 ("inert") even for a functional adapter (proven: true
+    # delta 0.54 reported 0.0). Clone BEFORE merging.
+    base_params = {n: p.detach().clone() for n, p in base.named_parameters()}
     from peft import PeftModel
     merged = PeftModel.from_pretrained(base, str(adapter_dir)).merge_and_unload()
+    # Audit #6: a nonzero max_abs_diff from bf16 representational noise
+    # (1-2 ULP round-trip) is NOT training progress. Per tensor: bf16 ULP =
+    # 2^floor(log2(|w|)) * 2^-7 (significand has 7 mantissa bits); a tensor
+    # counts as active only if its max |diff| exceeds one ULP at its own
+    # weight scale.
     max_diff = 0.0
+    max_ulp = 0.0
+    max_abs_weight = 0.0
+    any_active = False
     compared = 0
     for name, p in merged.named_parameters():
         if name in base_params:
             compared += 1
-            diff = (p.detach().float() - base_params[name].detach().float()).abs().max().item()
+            p_f = p.detach().float()
+            b_f = base_params[name].detach().float()
+            diff = (p_f - b_f).abs().max().item()
+            max_w = max(p_f.abs().max().item(), b_f.abs().max().item())
+            if max_w > 0.0:
+                ulp = 2.0 ** (math.floor(math.log2(max_w)) - 7)
+                max_ulp = max(max_ulp, ulp)
+                if diff > ulp:
+                    any_active = True
+            max_abs_weight = max(max_abs_weight, max_w)
             if diff > max_diff:
                 max_diff = diff
-    return {"max_abs_diff": float(max_diff), "tensors_compared": compared}
+    return {
+        "max_abs_diff": float(max_diff),
+        "tensors_compared": compared,
+        "max_abs_weight": float(max_abs_weight),
+        "max_ulp": float(max_ulp),
+        "any_active": any_active,
+    }
 
 
 def finish(output, result):
@@ -443,6 +499,7 @@ def finish(output, result):
     print(json.dumps(
         {k: result.get(k) for k in (
             "verdict", "phase", "max_abs_diff", "tensors_compared",
+            "max_abs_weight", "max_ulp", "any_active",
             "max_abs_lora", "max_abs_lora_b", "error")}, default=str))
     return 0
 
@@ -480,7 +537,18 @@ def main():
         result["phase"] = 2
         result.update(phase2(args.base, args.adapter, args.device))
         result["max_abs_diff"] = float(result["max_abs_diff"])
-        result["verdict"] = "inert" if result["max_abs_diff"] == 0.0 else "active"
+        # Audit #6: max_abs_diff > 0 was previously enough for "active", so a
+        # few ULP of bf16 round-trip noise in a dead adapter passed the
+        # precheck and burned hours of NPU rubric eval. Verdicts:
+        #   inert               -> diff == 0
+        #   inert_at_precision  -> 0 < diff <= bf16 ULP at the weight scale
+        #   active              -> at least one tensor changed by > 1 ULP
+        if result["max_abs_diff"] == 0.0:
+            result["verdict"] = "inert"
+        elif result.get("any_active"):
+            result["verdict"] = "active"
+        else:
+            result["verdict"] = "inert_at_precision"
     except Exception as exc:
         result.update(verdict="unknown", error="phase2 merge failed: %s" % str(exc)[:200])
     return finish(args.output, result)
@@ -564,10 +632,14 @@ print(d.get("verdict", "unknown"),
 ') || true
 log "precheck result: verdict=${PRECHECK_VERDICT} max_abs_diff=${PRECHECK_MAX_DIFF} phase=${PRECHECK_PHASE}"
 
-if [[ "$PRECHECK_VERDICT" == "inert" ]]; then
-  say "INERT ${TS} (max_abs_diff=${PRECHECK_MAX_DIFF})"
-  log "adapter delta is zero — skipping the expensive rubric eval"
-  update_state "$TS" "inert" "adapter_delta_zero" "" "$ADAPTER" "$PRECHECK_MAX_DIFF" "{\"precheck_phase\": \"${PRECHECK_PHASE}\"}"
+if [[ "$PRECHECK_VERDICT" == "inert" || "$PRECHECK_VERDICT" == "inert_at_precision" ]]; then
+  if [[ "$PRECHECK_VERDICT" == "inert" ]]; then
+    say "INERT ${TS} (max_abs_diff=${PRECHECK_MAX_DIFF})"
+  else
+    say "INERT_AT_PRECISION ${TS} (max_abs_diff=${PRECHECK_MAX_DIFF} below bf16 ULP)"
+  fi
+  log "adapter delta is zero/below bf16 ULP (verdict=${PRECHECK_VERDICT}) — skipping the expensive rubric eval"
+  update_state "$TS" "inert" "adapter_delta_zero" "" "$ADAPTER" "$PRECHECK_MAX_DIFF" "{\"precheck_phase\": \"${PRECHECK_PHASE}\", \"verdict\": \"${PRECHECK_VERDICT}\"}"
   exit 0
 fi
 if [[ "$PRECHECK_VERDICT" == "unknown" ]]; then
@@ -586,7 +658,7 @@ if [[ "$PIDSTATE" == *RUNNING* && "$PIDSTATE" != *NOT_RUNNING* ]]; then
 fi
 exec_remote "rm -f /tmp/reeval_${TS}.pid /tmp/reeval_${TS}.log" >/dev/null 2>&1 || true
 
-EVAL_CMD="cd ${REMOTE_ROOT}; nohup python3 scripts/run_asi2_base_adapter_rubric_eval.py --base-model '${BASE_MODEL}' --adapter '${ADAPTER}' --output 'outputs/reeval_latest_${TS}.json' --device npu --max-new-tokens 384 --limit 0 > /tmp/reeval_${TS}.log 2>&1 & echo \$! > /tmp/reeval_${TS}.pid; echo EVAL_PID=\$(cat /tmp/reeval_${TS}.pid)"
+EVAL_CMD="cd ${REMOTE_ROOT}; nohup python3 scripts/run_asi2_base_adapter_rubric_eval.py --base-model '${BASE_MODEL}' --adapter '${ADAPTER}' --output 'outputs/reeval_latest_${TS}.json' --benchmark '${EVAL_BENCHMARK_BOX}' --device npu --max-new-tokens 384 --limit 0 > /tmp/reeval_${TS}.log 2>&1 & echo \$! > /tmp/reeval_${TS}.pid; echo EVAL_PID=\$(cat /tmp/reeval_${TS}.pid)"
 log "launching rubric eval: ${EVAL_CMD}"
 LAUNCH_OUT=""
 if ! LAUNCH_OUT=$(exec_remote "$EVAL_CMD"); then

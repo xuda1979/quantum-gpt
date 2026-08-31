@@ -50,6 +50,9 @@ export ASCEND_VISIBLE_DEVICES="0,1,2,3,4,5,6,7"
 export NPU_MAX_MEMORY_GIB="${ASI3_SAPO_NPU_MAX_MEMORY_GIB:-54}"
 export GROUP_SIZE="${ASI3_SAPO_GROUP_SIZE:-4}"
 export MAX_ADAPTIVE_GROUP="${ASI3_SAPO_MAX_ADAPTIVE_GROUP:-4}"
+# 2026-08-27 (r19, user binding): every round rolls out 8 candidates. The router's
+# adaptive-4 recommendation is overridden by a HARD floor. Default 1 = inert.
+export MIN_GROUP_SIZE="${ASI3_SAPO_MIN_GROUP_SIZE:-1}"
 export GRPO_STEPS="${ASI3_SAPO_STEPS:-500}"
 # A group currently takes about 14 minutes, so a 600-second timer writes an
 # immutable ~313 MB checkpoint plus the flat adapter after every group. Thirty
@@ -67,7 +70,14 @@ export SAPO_TAU_NEG="${ASI3_SAPO_TAU_NEG:-1.05}"
 # at s11/s13, ACTIVE bar ~1e-3) — the LR-1e-4 stack's effective movement
 # saturates near the noise boundary. Relaunch stack: LR 2e-4 (2x; kl_after
 # ~2.6e-3/update projected, still ~100x below the 0.25 trust-region ceiling).
-export LR="${ASI3_SAPO_LR:-2e-4}"
+# 2026-09-01 (manager, entropy-blowup fix): RUN-12 at LR 2e-4 caused CAPABILITY
+# EROSION — entropy exploded 0.055 -> 1.59 (28x), 16 trust-region violation
+# windows, uniform rubric losses vs base (STANDUP #227b deep-cause). RUN-13
+# relaunched at LR 5e-5 (4x lower) with the working judge + entropy floor +
+# recalibrated clips (STANDUP #233). The DEFAULT is now the calibrated 5e-5 so
+# ANY relaunch (resurrector/manual) without an explicit override gets the safe
+# stack. Escalate only deliberately via ASI3_SAPO_LR.
+export LR="${ASI3_SAPO_LR:-5e-5}"
 export KL_COEFF="${ASI3_SAPO_KL_COEFF:-0.01}"
 # One update per independent rollout. The previous value of two made 30
 # optimizer updates represent only 15 fresh groups while executable pass yield
@@ -121,9 +131,12 @@ export ADAPTER_INIT="${ASI3_SAPO_ADAPTER_INIT:-}"
 # trainer refuses a state file over fresh weights (silent policy rewind).
 export RESUME_STATE="${ASI3_SAPO_RESUME_STATE:-}"
 # R10 PREVENTIVE WAVE (2026-08-26 debug-lane F-A): the greedy/entropy-floor
-# knobs default in the trainer (0.4 / 1.5 / 0.01) but MUST be passed explicitly
-# so the boot echo + launch_config are truthful. Env overrides allow a future
-# launch to tune them without editing the launcher.
+# knobs default in the trainer (0.4 / 1.5 / 0.03 — entropy-floor-weight was
+# strengthened 0.01 -> 0.03 by research audit T1c 2026-08-27) but MUST be
+# passed explicitly so the boot echo + launch_config are truthful. The pinned
+# 0.01 below remains the RUN-13 config; raise to 0.03 deliberately via
+# ASI3_SAPO_ENTROPY_FLOOR_WEIGHT when the T1c strengthening is wanted.
+# Env overrides allow a future launch to tune them without editing the launcher.
 export GREEDY_ROLLOUT_FRACTION="${ASI3_SAPO_GREEDY_ROLLOUT_FRACTION:-0.4}"
 export ENTROPY_FLOOR="${ASI3_SAPO_ENTROPY_FLOOR:-1.5}"
 export ENTROPY_FLOOR_WEIGHT="${ASI3_SAPO_ENTROPY_FLOOR_WEIGHT:-0.01}"
@@ -167,6 +180,18 @@ export REWARD_MODE="${ASI3_SAPO_REWARD_MODE:-p_dominant}"
 export REWARD_PASS_MASS="${ASI3_SAPO_REWARD_PASS_MASS:-0.50}"
 export REWARD_SHAPED_MASS="${ASI3_SAPO_REWARD_SHAPED_MASS:-0.40}"
 export REWARD_JUDGE_MASS="${ASI3_SAPO_REWARD_JUDGE_MASS:-0.10}"
+# 2026-08-27 (r19, user binding): the reward judge is EXCLUSIVELY the Huanxin
+# dp4 (deepseek-v4-flash) model — scores ALL candidates AT ONCE in a batch
+# COMPARATIVE pass (same URL + API key as `claude -p huanxin -m dp4`) — and the
+# raw reward scores are normalized across the group before the GRPO/SAPO
+# advantage. Default OFF / 'none' / empty = inert (batch judge disabled).
+export BATCH_COMPARATIVE_JUDGE="${ASI3_SAPO_BATCH_COMPARATIVE_JUDGE:-0}"
+export REWARD_NORMALIZATION="${ASI3_SAPO_REWARD_NORMALIZATION:-none}"
+export JUDGE_DP4_ENDPOINT="${ASI3_SAPO_JUDGE_DP4_ENDPOINT:-}"
+export JUDGE_DP4_MODEL="${ASI3_SAPO_JUDGE_DP4_MODEL:-dp4}"
+export JUDGE_DP4_MAX_TOKENS="${ASI3_SAPO_JUDGE_DP4_MAX_TOKENS:-4096}"
+export JUDGE_BRIDGE_PORT="${ASI3_SAPO_JUDGE_BRIDGE_PORT:-56237}"
+export REWARD_BREVITY_WEIGHT="${ASI3_SAPO_REWARD_BREVITY_WEIGHT:-0.05}"
 # 2026-08-26 (r16 judge wave): model-judge path with the base 27B as judge
 # on the SAME sharded model instance; verifier-watched (see asi2 launcher).
 export MODEL_JUDGE_ENABLED="${ASI3_SAPO_MODEL_JUDGE_ENABLED:-0}"
@@ -333,6 +358,15 @@ PY
     echo "[asi3] ERROR: adapter init is incomplete: $ADAPTER_INIT" >&2
     exit 1
   fi
+  # Adapter-init completeness gate (artifact-integrity lane 2026-09-01): the
+  # trainer's own rule (peft_checkpoint_complete) requires adapter_config.json
+  # PLUS weights (safetensors or bin). A config-only dir would otherwise pass
+  # the launcher, boot the full trainer (15-30 min model load), and only then
+  # crash inside PeftModel.from_pretrained — fail closed here instead.
+  if [[ -n "$ADAPTER_INIT" && ! -f "$ADAPTER_INIT/adapter_model.safetensors" && ! -f "$ADAPTER_INIT/adapter_model.bin" ]]; then
+    echo "[asi3] ERROR: adapter init is incomplete: $ADAPTER_INIT (missing adapter weights)" >&2
+    exit 1
+  fi
   if [[ -n "$ADAPTER_INIT" ]]; then
     python3 - "$ADAPTER_INIT/adapter_config.json" "$LORA_RANK" "$LORA_ALPHA" <<'PY'
 import json
@@ -373,6 +407,7 @@ echo "[asi3] NUM_NPU=$NUM_NPU NPU_DEVICE_MAP=$NPU_DEVICE_MAP GROUP=$GROUP_SIZE C
 echo "[asi3] VISIBLE_NPUS=$ASCEND_RT_VISIBLE_DEVICES MODEL=$MODEL_PATH OUT=$OUT"
 echo "[asi3] LOSS=$LOSS_MODE LR=$LR KL=$KL_COEFF INNER_EPOCHS=$INNER_EPOCHS LORA=$LORA_RANK/$LORA_ALPHA TOKENS=$MAX_NEW_TOKENS/$MAX_ADAPTIVE_NEW_TOKENS LOGIT_CLIP=$LOGIT_CLIP BENCHMARK=$BENCHMARK_FILE REPAIR_ROUNDS=$SELF_REPAIR_ROUNDS"
 echo "[asi3] GREEDY_ROLLOUT_FRACTION=${GREEDY_ROLLOUT_FRACTION} ENTROPY_FLOOR=${ENTROPY_FLOOR} ENTROPY_FLOOR_WEIGHT=${ENTROPY_FLOOR_WEIGHT} ENTROPY_TOKEN_CAP=${ENTROPY_TOKEN_CAP}"
+echo "[asi3] R19_REWARD MIN_GROUP_SIZE=${MIN_GROUP_SIZE} BATCH_COMPARATIVE_JUDGE=${BATCH_COMPARATIVE_JUDGE} REWARD_NORMALIZATION=${REWARD_NORMALIZATION} REWARD_MODE=${REWARD_MODE}"
 echo "[asi3] RESUME_FROM=${RESUME_FROM:-none} ADAPTER_INIT=${ADAPTER_INIT:-none} RESUME_STATE=${RESUME_STATE:-none}"
 # ── Guardian alarm 8 (2026-08-26): boot guard for the repair sidecar ──
 # The sidecar died SILENTLY at launch on runs 11/12 (SIGKILL from box-prep

@@ -32,7 +32,7 @@ import sys
 import tempfile
 import time
 import uuid
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -45,12 +45,18 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from training.compat import strict_zip as _strict_zip  # noqa: E402
+
+# ruff: noqa: UP038  # (X | Y) isinstance is py3.10-only; py3.9 .venv gate
 from training.generation import (  # noqa: E402
+    _CODE_FENCE_OPEN_RE,  # noqa: F401  # deliberate re-export, pinned by test_generation_module_extraction
     StopAfterClosedCodeFence,
     append_fence_stop_markers,
+    build_batched_prompt_inputs,
     build_generation_diagnostics,
     configured_eos_token_ids,
     extract_code,
+    has_closed_code_fence,  # noqa: F401  # deliberate re-export, pinned by test_generation_module_extraction
+    truncate_at_closing_fence,
 )
 from training.grpo_utils import (  # noqa: E402
     DEGENERATE_POLICY_REASON,
@@ -81,6 +87,7 @@ from training.grpo_utils import (  # noqa: E402
     judge_composite_score,
     leave_one_out_advantages,
     load_grpo_step_metrics_jsonl,
+    normalize_group_rewards,
     old_sampled_kl,
     policy_update_signal_magnitude,
     resolve_entropy_pos_cap,
@@ -174,6 +181,14 @@ def parse_args() -> argparse.Namespace:
         default=8,
         help="Cap on the posterior router's recommended group size (16 was the ASI2 stall trigger).",
     )
+    p.add_argument(
+        "--min-group-size",
+        type=int,
+        default=1,
+        help="2026-08-27 (r19, user binding): HARD FLOOR on the GROUP size — "
+        "every round rolls out AT LEAST this many candidates. Default 1 = inert "
+        "(prior adaptive behavior). Launch with --min-group-size 8 for 8/round.",
+    )
     p.add_argument("--grpo-steps", type=int, default=100)
     p.add_argument("--lr", type=float, default=1e-5)
     p.add_argument("--kl-coeff", type=float, default=0.05, help="KL penalty coefficient")
@@ -241,9 +256,11 @@ def parse_args() -> argparse.Namespace:
     p.add_argument(
         "--entropy-floor-weight",
         type=float,
-        default=0.01,
+        default=0.03,
         help="Weight of the entropy-floor penalty term "
-        "weight * max(0, floor - mean entropy). 0 disables the term entirely.",
+        "weight * max(0, floor - mean entropy). 0 disables the term entirely. "
+        "2026-08-27 (research audit T1c): strengthened 0.01 -> 0.03 — the "
+        "floor is the anti-collapse preventive layer.",
     )
     p.add_argument(
         "--entropy-token-cap",
@@ -342,8 +359,10 @@ def parse_args() -> argparse.Namespace:
     p.add_argument(
         "--reward-brevity-weight",
         type=float,
-        default=0.0,
-        help="Weight for brevity reward; set >0 to break flat-reward deadlocks.",
+        default=0.05,
+        help="Weight for brevity reward; 2026-08-27 (research audit P5): a "
+        "small positive counterweight against length-degenerate outputs "
+        "(run-5 prompt-echo is the brevity-like collapse class); 0 disables.",
     )
     p.add_argument(
         "--reward-import-hygiene-weight",
@@ -463,6 +482,15 @@ def parse_args() -> argparse.Namespace:
         "shared across tasks; 'none' keeps raw leave-one-out advantages.",
     )
     p.add_argument("--frontier-threshold", type=float, default=0.10)
+    p.add_argument(
+        "--difficulty-manifest",
+        default=None,
+        help="2026-08-27 (T1b): JSON file with the lineage difficulty manifest "
+        "{'hard_tasks': [...], 'difficulty_scale': 0.25} — v8 tasks that never "
+        "passed a first-visit probe across run-4..7 get a never-zero cold-start "
+        "sampling discount until the first pass>0 in the run. Absent => "
+        "pre-manifest behavior.",
+    )
     p.add_argument("--mastered-threshold", type=float, default=0.95)
     p.add_argument("--mix-targeted", type=float, default=0.5)
     p.add_argument("--mix-neighbor", type=float, default=0.25)
@@ -677,6 +705,47 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--reward-pass-mass", type=float, default=0.50)
     p.add_argument("--reward-shaped-mass", type=float, default=0.40)
     p.add_argument("--reward-judge-mass", type=float, default=0.10)
+    p.add_argument(
+        "--reward-normalization",
+        choices=["none", "minmax"],
+        default="none",
+        help="2026-08-27 (r19, user binding): normalize the RAW reward scores "
+        "across all candidates of the group before the GRPO/SAPO advantage "
+        "computation. 'minmax' scales the group to [0,1]; 'none' (default, "
+        "inert) leaves the raw scores byte-identical to the prior path.",
+    )
+    p.add_argument(
+        "--batch-comparative-judge",
+        action="store_true",
+        help="2026-08-27 (r19, user binding): score ALL group candidates in ONE "
+        "forward, with the ACTIVE training model judging its own rollouts "
+        "comparatively (vs the per-candidate independent frozen judge). "
+        "Default OFF = inert (per-candidate judge path).",
+    )
+    p.add_argument(
+        "--judge-dp4-endpoint",
+        default="",
+        help="2026-08-27 (r19, user directive): when set, the batch COMPARATIVE "
+        "judge is the Huanxin dp4 (deepseek-v4-flash) model served by this "
+        "Anthropic-compatible endpoint (e.g. http://127.0.0.1:55080 — the "
+        "proxy used by 'claude -p huanxin -m dp4') instead of the in-process "
+        "training model. Empty = in-process self-judge (inert default).",
+    )
+    p.add_argument(
+        "--judge-dp4-model",
+        default="dp4",
+        help="Model name sent to the dp4 endpoint (default: dp4 / deepseek-v4-flash).",
+    )
+    p.add_argument(
+        "--judge-dp4-max-tokens",
+        type=int,
+        default=4096,
+        help="2026-08-27 (critical review C1): token budget for the dp4 batch "
+        "comparative judge. INDEPENDENT of --model-judge-max-tokens (256, the "
+        "frozen per-candidate judge) — an 8-candidate comparative JSON needs "
+        "~280+ tokens, so 256 silently truncated every batch and made the "
+        "judge absent (w_J=0 every step).",
+    )
     p.add_argument("--tiered-alpha", type=float, default=0.10)
     p.add_argument("--tiered-gamma", type=float, default=0.10)
     # ── teacher-free self-repair rollout (Teacher-Free FV-GSPO plan §3/§8) ──
@@ -711,7 +780,7 @@ def parse_args() -> argparse.Namespace:
         "--sapo-tau-neg",
         type=float,
         default=1.05,
-        help="SAPO negative-advantage gate temperature (recommended > tau_pos " "for stability).",
+        help="SAPO negative-advantage gate temperature (recommended > tau_pos for stability).",
     )
     # ── checkpoint interval (periodic adapter save to disk) ──
     p.add_argument(
@@ -831,7 +900,12 @@ def load_test_harness(tests_py: Path):
 def extract_behavior_hints(tests_path: Path) -> list[str]:
     if not tests_path.exists():
         return []
-    return extract_behavior_hints_from_test_source(tests_path.read_text(encoding="utf-8"), cap=6)
+    # 2026-09-01 PROMPT-INTEGRITY audit: the prompt path suppresses hints that
+    # pin decisive numeric answers (exact expected values / answer bounds);
+    # structural sizes, shapes, traces, norms and tolerances survive.
+    return extract_behavior_hints_from_test_source(
+        tests_path.read_text(encoding="utf-8"), cap=6, suppress_decisive_numeric=True
+    )
 
 
 def task_behavior_hints(task: dict) -> list[str]:
@@ -1145,6 +1219,50 @@ Output ONLY a JSON object:
 {{"correctness": 0.0-1.0, "runnability": 0.0-1.0, "result_correctness": 0.0-1.0, "efficiency": 0.0-1.0, "quality": 0.0-1.0, "evidence": "one line"}}"""
 
 
+COMPREHENSIVE_BATCH_JUDGE_PROMPT = """You are a strict code evaluator. There are {n} candidate solutions (Candidate 1..{n}) to the same task. Score ALL {n} candidates TOGETHER, comparing them against each other, on five dimensions, each a float 0.0-1.0. Use the executable evidence per candidate as the authoritative anchor — do not contradict it: a candidate whose tests pass must not be scored below one whose tests fail on the executable dimensions.
+
+Dimensions (per candidate) — score EACH dimension INDEPENDENTLY from its own evidence; a failing test suite must NOT zero the other dimensions:
+- correctness: does the algorithm's logic produce the right result (0.0 if its tests fail)?
+- runnability: would the code execute without syntax/import/runtime errors? If EXECUTABLE EVIDENCE shows the code parsed/ran at all, this is ABOVE 0.0 even when tests fail.
+- result_correctness: do the actual outputs match the expected values?
+- efficiency: is runtime / circuit depth / gate count / resource use reasonable?
+- quality: is the code well-structured, readable, and maintainable? Judge the code AS CODE, independent of whether tests passed.
+
+The candidates ARE RELATIVE to each other: distribute the dimension scores so the ranking reflects genuine comparative quality across the 8 candidates, not an independent per-candidate guess.
+
+CANDIDATES (code + executable evidence):
+{candidates}
+
+TASK CONTEXT:
+{task_context}
+
+Output ONLY a JSON object of the form:
+{{"candidate_1": {{"correctness": 0.0-1.0, "runnability": 0.0-1.0, "result_correctness": 0.0-1.0, "efficiency": 0.0-1.0, "quality": 0.0-1.0}}, ..., "candidate_{n}": {{...}} }}
+No other text."""
+
+
+def _render_batch_judge_candidates(codes, evidences, *, rng=None) -> tuple[str, list[int]]:
+    """Render all G candidates (numbered) + their evidence for the batch prompt.
+
+    2026-08-29 (OSS-research adoption): candidate order is RANDOMIZED per call
+    and the permutation is returned so parsed scores map back to the original
+    indices. Kills LLM-judge position bias (first-presented candidates are
+    scored differently; AlpacaEval-style harnesses randomize for this reason).
+    """
+    n = len(codes)
+    order = list(range(n))
+    if rng is not None:
+        rng.shuffle(order)
+    parts = []
+    for pos, idx in enumerate(order, start=1):
+        parts.append(
+            f"Candidate {pos}:\n"
+            "```python\n" + str(codes[idx]) + "\n```\n"
+            f"EXECUTABLE EVIDENCE: {evidences[idx]}\n"
+        )
+    return "\n".join(parts), order
+
+
 def _extract_json_object(text: str) -> str | None:
     """First balanced {...} JSON object, STRING-AWARE: a '}' inside a string
     value must not truncate the match (2026-08-26 review F6)."""
@@ -1183,7 +1301,11 @@ def _parse_model_dim_scores(text: str) -> dict[str, float | None] | None:
         if not matched:
             return None
         data = json.loads(matched)
-    except (json.JSONDecodeError, ValueError):
+    except (json.JSONDecodeError, ValueError, RecursionError):
+        # 2026-09-01 (adversarial-judge lane): RecursionError is NOT a
+        # ValueError subclass — a pathological judge response (deeply nested
+        # braces) escaped this guard and crashed the training loop. Fail-
+        # closed: the whole response is unusable -> None (judge-absent).
         return None
     scores: dict[str, float | None] = {}
     for dim in MODEL_JUDGE_DIMENSIONS:
@@ -1195,6 +1317,95 @@ def _parse_model_dim_scores(text: str) -> dict[str, float | None] | None:
     if all(value is None for value in scores.values()):
         return None
     return scores
+
+
+def effective_group_size(*, recommended: int, max_adaptive_group: int, min_group_size: int) -> int:
+    """Resolve the effective GRPO group size (user directive 2026-08-27 r19).
+
+    ``min_group_size`` (default 1) is a HARD FLOOR — the user binds that
+    "every round the model should rollout 8 candidates (samples), not 4."
+    A floor of 1 is the inert default (prior behavior: the router's adaptive
+    recommendation, capped by ``max_adaptive_group``, passes through exactly).
+    A floor of 8 therefore overrides the router's fresh-task recommendation
+    of 4, but never lowers a legitimately higher recommendation.
+    """
+    return max(
+        int(min_group_size) if min_group_size > 0 else 1,
+        min(int(recommended), int(max_adaptive_group))
+        if max_adaptive_group > 0
+        else int(recommended),
+    )
+
+
+def _parse_model_batch_dim_scores(text: str, n: int) -> dict[int, dict[str, float | None]] | None:
+    """Parse the batch COMPARATIVE judge's JSON into per-candidate dim scores.
+
+    2026-08-27 (r19, batch comparative self-judge): the judge scores ALL n
+    candidates at once, comparing them within the group, and returns JSON of
+    the form ``{"candidate_1": {dims...}, ..., "candidate_N": {dims...}}``.
+
+    Fail-closed: a candidate ABSENT from the parse (or with non-numeric dims)
+    gets ``None`` for every dim (judge-absent) — it is NEVER silently scored 0.
+    Returns a mapping ``{index_0based: {dim: score|None}}`` of length n, or
+    None when the whole response is unparseable (the caller then falls back to
+    the per-candidate independent-judge path or records judge-absent).
+    """
+    if n <= 0:
+        return None
+    matched = _extract_json_object(text or "")
+    if not matched:
+        return None
+    try:
+        data = json.loads(matched)
+    except (json.JSONDecodeError, ValueError, RecursionError):
+        # 2026-09-01 (adversarial-judge lane): RecursionError is NOT a
+        # ValueError subclass — pathological nesting must fail closed (None),
+        # never crash the trainer.
+        return None
+    if not isinstance(data, dict):
+        return None
+    scores: dict[int, dict[str, float | None]] = {}
+    for i in range(1, n + 1):
+        cell: dict[str, float | None] = {}
+        raw = data.get(f"candidate_{i}")
+        if isinstance(raw, dict):
+            for dim in MODEL_JUDGE_DIMENSIONS:
+                v = raw.get(dim)
+                if isinstance(v, (int, float)) and not isinstance(v, bool):
+                    cell[dim] = min(1.0, max(0.0, float(v)))
+                else:
+                    cell[dim] = None
+        else:
+            for dim in MODEL_JUDGE_DIMENSIONS:
+                cell[dim] = None
+        scores[i - 1] = cell
+    # Fail-closed: if the response had no useful candidate at all, return None
+    # so the caller falls back instead of scoring everyone 0.
+    if all(all(v is None for v in cell.values()) for i, cell in scores.items()):
+        return None
+    return scores
+
+
+def _unpermute_batch_scores(
+    scores_by_position: dict[int, dict[str, float | None]] | None,
+    order: Sequence[int],
+) -> dict[int, dict[str, float | None]] | None:
+    """Map position-keyed parsed batch scores back to ORIGINAL candidate indices.
+
+    2026-09-01 (JUDGE-BRIDGE audit, RED regression): ``_render_batch_judge_candidates``
+    presents candidates in RANDOMIZED order (``order[pos]`` = original index
+    shown at 1-based slot ``pos+1``), but the judge's ``candidate_k`` JSON keys
+    are POSITION keys. Without this un-permutation the shuffled presentation
+    silently misattributes every score to the wrong candidate. Both batch-judge
+    callers (in-process and dp4) must remap before returning.
+    """
+    if scores_by_position is None:
+        return None
+    remapped: dict[int, dict[str, float | None]] = {}
+    for pos, cell in scores_by_position.items():
+        if 0 <= pos < len(order):
+            remapped[order[pos]] = cell
+    return remapped
 
 
 def effective_judge_weights(
@@ -1249,12 +1460,25 @@ def resolve_frozen_judge(
         and getattr(active_model, "base_model", None) is not None
     ):
         return active_model.base_model, True, judge_path
-    load = loader or (
-        lambda path: AutoModelForCausalLM.from_pretrained(
-            path, trust_remote_code=True, low_cpu_mem_usage=True, torch_dtype="auto"
-        )
-    )
+    load = loader or _default_judge_loader
     return load(judge_path), False, judge_path
+
+
+def _default_judge_loader(path: str):
+    """Default judge-model loader for ``resolve_frozen_judge``.
+
+    2026-08-31 (QA sweep): the fallback used to reference
+    ``AutoModelForCausalLM`` directly, a name that was only imported lazily
+    inside the training function — the "defaults to AutoModelForCausalLM"
+    docstring was a silent lie and the non-shared judge path always NameError'd.
+    The import is made here so the default loader actually works; tests inject
+    ``transformers.AutoModelForCausalLM`` via monkeypatch.
+    """
+    from transformers import AutoModelForCausalLM
+
+    return AutoModelForCausalLM.from_pretrained(
+        path, trust_remote_code=True, low_cpu_mem_usage=True, torch_dtype="auto"
+    )
 
 
 def _model_comprehensive_scores(
@@ -1364,6 +1588,215 @@ def _model_comprehensive_scores(
     return _parse_model_dim_scores(response_text)
 
 
+def _model_batch_dim_scores(
+    codes: Sequence[str],
+    evidences: Sequence[str],
+    task: dict,
+    model,
+    backend,
+    args,
+    device,
+) -> dict[int, dict[str, float | None]] | None:
+    """Batch COMPARATIVE self-judge (2026-08-27 r19, user directive).
+
+    The judge is the ACTIVE training model ITSELF (the model being trained
+    judges all of its own rollouts). All ``len(codes)`` candidates are scored
+    in ONE forward in a single prompt that asks the model to compare them
+    against each other (a group-relative ranking), and the parsed scores are
+    returned per 0-based candidate index. This is the opposite of the
+    per-candidate independent judge (``_model_comprehensive_scores``).
+
+    Fail-closed: any candidate the model fails to score gets ``None`` per dim
+    (judge-absent), never a fabricated 0. Returns None when the whole batch
+    response is unusable (the caller then falls back to the per-candidate
+    independent judge, and any still-missing dims stay judge-absent).
+    """
+    n = len(codes)
+    if n <= 0:
+        return None
+    task_desc = task.get("meta", {}).get(
+        "description",
+        task.get("meta", {}).get("name", str(task.get("task_dir", task.get("task_id", "unknown")))),
+    )
+    rng = random.Random()
+    candidates_text, perm = _render_batch_judge_candidates(codes, evidences, rng=rng)
+    prompt = COMPREHENSIVE_BATCH_JUDGE_PROMPT.format(
+        n=n, candidates=candidates_text, task_context=task_desc
+    )
+    messages = [{"role": "user", "content": prompt}]
+    response_text = None
+    try:
+        if hasattr(backend, "tokenizer"):
+            tokenized = backend.tokenizer.apply_chat_template(
+                messages, tokenize=True, return_tensors="pt", add_generation_prompt=True
+            ).to(device)
+            input_len = tokenized.shape[1]
+        elif hasattr(backend, "render_backend") and hasattr(
+            backend.render_backend, "apply_chat_template"
+        ):
+            try:
+                tokenized = backend.render_backend.apply_chat_template(
+                    messages,
+                    tokenize=True,
+                    return_tensors="pt",
+                    add_generation_prompt=True,
+                    enable_thinking=False,
+                ).to(device)
+            except TypeError:
+                tokenized = backend.render_backend.apply_chat_template(
+                    messages,
+                    tokenize=True,
+                    return_tensors="pt",
+                    add_generation_prompt=True,
+                ).to(device)
+            input_len = tokenized.shape[1]
+        elif hasattr(backend, "encode_chat"):
+            tokenized_ids = backend.encode_chat(messages, add_generation_prompt=True)
+            tokenized = torch.tensor([tokenized_ids], dtype=torch.long, device=device)
+            input_len = tokenized.shape[1]
+        else:
+            return None
+        judge_tokenizer = (
+            backend.text_backend
+            if hasattr(backend, "text_backend")
+            else (backend.tokenizer if hasattr(backend, "tokenizer") else None)
+        )
+        stop_eos_ids = configured_eos_token_ids(model, judge_tokenizer)
+        with torch.no_grad():
+            outputs = model.generate(
+                input_ids=tokenized,
+                max_new_tokens=getattr(args, "model_judge_max_tokens", 4096),
+                temperature=getattr(args, "model_judge_temperature", 0.0),
+                top_p=1.0,
+                do_sample=False,
+                use_cache=True,
+                eos_token_id=sorted(stop_eos_ids) if stop_eos_ids else None,
+                pad_token_id=(
+                    judge_tokenizer.pad_token_id
+                    if judge_tokenizer is not None
+                    and getattr(judge_tokenizer, "pad_token_id", None) is not None
+                    else getattr(backend, "pad_token_id", 0)
+                ),
+            )
+            response_ids = outputs[0][input_len:]
+            if hasattr(backend, "tokenizer"):
+                response_text = backend.tokenizer.decode(response_ids, skip_special_tokens=True)
+            elif hasattr(backend, "text_backend"):
+                response_text = backend.text_backend.decode(response_ids, skip_special_tokens=True)
+            else:
+                response_text = backend.decode(response_ids.tolist())
+    except Exception:
+        return None
+    finally:
+        _release_device_cache(torch)
+
+    # 2026-09-01 (JUDGE-BRIDGE audit RED): the candidates were presented in
+    # RANDOMIZED order (rng seeded per call) — the parsed scores are keyed by
+    # PRESENTATION POSITION, so they must be un-permuted back to the original
+    # candidate indices or every score lands on the wrong candidate.
+    return _unpermute_batch_scores(_parse_model_batch_dim_scores(response_text, n=n), perm)
+
+
+def _model_batch_dim_scores_dp4(
+    codes: Sequence[str],
+    evidences: Sequence[str],
+    task: dict,
+    *,
+    endpoint: str,
+    model: str = "dp4",
+    max_tokens: int = 4096,
+    temperature: float = 0.0,
+    timeout_s: float = 310.0,
+) -> dict[int, dict[str, float | None]] | None:
+    """Batch COMPARATIVE judge via the Huanxin dp4 (deepseek-v4-flash) model.
+
+    2026-08-27 (r19, user directive): the judge is the **dp4 / deepseek-v4-flash**
+    model served by the Huanxin Anthropic-compatible proxy (the same model used
+    by ``claude -p huanxin -m dp4``). All ``len(codes)`` candidates are scored
+    AT ONCE in ONE prompt that asks dp4 to COMPARE them against each other (a
+    group-relative ranking), not one independent score per candidate.
+
+    Pass is part — never the whole — of the comprehensive score: the executable
+    pass signal is blended (w_P) with the comparative judge dims (w_J). The
+    judge prompt embeds per-candidate executable evidence so dp4 anchors its
+    ranking to real pass/fail.
+
+    Fail-closed: any candidate dp4 fails to score gets ``None`` per dim
+    (judge-absent), never a fabricated 0. Returns None when the whole response
+    is unusable (the caller falls back to the in-process per-candidate judge or
+    records judge-absent).
+
+    ``endpoint`` is the Anthropic Messages base URL, e.g.
+    ``http://127.0.0.1:55080`` (the dp4 proxy); the caller also passes the API
+    key via env when required.
+    """
+    import urllib.request
+
+    n = len(codes)
+    if n <= 0:
+        return None
+    task_desc = task.get("meta", {}).get(
+        "description",
+        task.get("meta", {}).get("name", str(task.get("task_dir", task.get("task_id", "unknown")))),
+    )
+    # 2026-09-01 (JUDGE-BRIDGE audit RED): _render_batch_judge_candidates
+    # returns (text, perm) — binding the TUPLE here formatted the repr
+    # ('Candidate 1:\\n...', [0,1,..]) into the prompt (escaped newlines,
+    # the permutation list leaked into the judge) AND randomized order never
+    # reached the judge. Destructure + per-call rng (position-bias kill).
+    rng = random.Random()
+    candidates_text, perm = _render_batch_judge_candidates(codes, evidences, rng=rng)
+    prompt = COMPREHENSIVE_BATCH_JUDGE_PROMPT.format(
+        n=n, candidates=candidates_text, task_context=task_desc
+    )
+    payload = {
+        "model": model,
+        "max_tokens": max_tokens,
+        "temperature": temperature,
+        "messages": [
+            {
+                "role": "user",
+                "content": prompt,
+            }
+        ],
+    }
+    url = endpoint.rstrip("/") + "/v1/messages"
+    api_key = os.environ.get("HUANXIN_DP4_API_KEY", "test")
+    req = urllib.request.Request(
+        url,
+        data=json.dumps(payload).encode(),
+        headers={
+            "Content-Type": "application/json",
+            "x-api-key": api_key,
+            "anthropic-version": "2023-06-01",
+        },
+    )
+    try:
+        # 2026-08-27 (judge bridge): the box's env http_proxy (squid) 403s
+        # localhost — the dp4 endpoint is the box-local bridge (or a trusted
+        # proxy), so this client must NEVER route through the env proxy.
+        opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+        with opener.open(req, timeout=timeout_s) as resp:
+            body = json.loads(resp.read().decode())
+    except Exception:
+        return None
+    if not isinstance(body, dict):
+        return None
+    # Anthropic Messages shape: {"content": [{"type":"text","text": "..."}]}
+    text = None
+    for block in body.get("content") or []:
+        if isinstance(block, dict) and block.get("type") == "text":
+            text = block.get("text")
+            break
+    if not text:
+        return None
+    # Position-bias: the candidates were presented to the judge in RANDOMIZED
+    # order, so the parsed POSITION-keyed scores are un-permuted back to the
+    # original candidate indices — presentation order never leaks into the
+    # training loop (2026-09-01 JUDGE-BRIDGE audit RED).
+    return _unpermute_batch_scores(_parse_model_batch_dim_scores(text, n=n), perm)
+
+
 def _parse_self_eval_score(text: str) -> float:
     """Extract score 0-10 from model's judge response, normalize to 0-1."""
     import re
@@ -1386,7 +1819,10 @@ def _parse_self_eval_score(text: str) -> float:
                 raw = float(score_match.group(1))
             else:
                 return 0.5  # neutral default
-    except (json.JSONDecodeError, ValueError, KeyError):
+    except (json.JSONDecodeError, ValueError, KeyError, RecursionError):
+        # 2026-09-01 (adversarial-judge lane): RecursionError is NOT a
+        # ValueError subclass — pathological nesting must fail closed to the
+        # neutral default, never crash.
         return 0.5
 
     # Normalize: clamp to [0, 10], then divide to [0, 1]
@@ -1950,38 +2386,137 @@ def generate_group(
         # can spend many minutes before producing one candidate.
         model_config.use_cache = True
     try:
-        for index in range(group_size):
-            is_greedy = index < greedy_count
+        # 2026-08-28 (architect, root-cause of 2-week no-progress): the OLD loop
+        # generated each candidate SERIALLY (one model.generate per index) on a
+        # 27B sharded across 8 NPUs — the documented 60-110 min/step cost. This
+        # BATCHED version repeats the shared prompt to the whole group in ONE
+        # generate call (greedy subset in a second, do_sample=False call) so the
+        # 8 devices decode all candidates in parallel (~8x). Greedy (temp-0)
+        # candidates are emitted first per the greedy-augmentation contract; the
+        # fence stopper and EOS handling are unchanged (both are batch-safe).
+        prompt_len = int(inputs["input_ids"].shape[1])
+        # 2026-08-31 (Lane A, Tier-1): vLLM rollout seam. When SAPO_VLLM_URL is
+        # set, decode TEXT via the vLLM server (continuous batching, 10-50x),
+        # re-tokenize to completion ids, and SKIP both model.generate calls.
+        # Policy logprobs are later computed by the forward pass over
+        # (prompt+completion) — mathematically identical to the decode-path.
+        # Fail-closed: any vLLM error falls back to the transformers decode.
+        _vllm_url = os.environ.get("SAPO_VLLM_URL", "").strip()
+        _vllm_succeeded = False
+        if _vllm_url:
+            try:
+                from training.vllm_rollout_client import VllmRolloutClient, VllmUnavailable
+
+                _client = VllmRolloutClient(_vllm_url)
+                if not _client.is_up(force=True):
+                    raise VllmUnavailable("health check failed")
+                greedy_n2 = greedy_count
+                sampled_n2 = max(group_size - greedy_n2, 0)
+                raw_responses.clear()
+                completion_token_ids.clear()
+                prompt_text_ids = inputs["input_ids"][0].detach().cpu().tolist()
+                prompt_text = backend.text_backend.decode(prompt_text_ids, skip_special_tokens=True)
+                if greedy_n2 > 0:
+                    greedy_texts = _client.generate_batch(
+                        prompt_text, greedy_n2, int(effective_max_new_tokens), 0.0
+                    )
+                else:
+                    greedy_texts = []
+                if sampled_n2 > 0:
+                    sampled_texts = _client.generate_batch(
+                        prompt_text, sampled_n2, int(effective_max_new_tokens), effective_temp
+                    )
+                else:
+                    sampled_texts = []
+                for t in greedy_texts + sampled_texts:
+                    # 2026-09-01 (Lane A closure, distribution parity): the
+                    # vLLM server stops only on EOS/cap — a model that never
+                    # samples EOS returns fence-closed completions WITH
+                    # trailing prose. Truncate at the closing fence to match
+                    # the transformers decode path (StopAfterClosedCodeFence
+                    # is the primary stopper there), then re-tokenize. The
+                    # shared fence_stop_marker block below appends the EOS
+                    # training target — do NOT return early from the try.
+                    fenced_t = truncate_at_closing_fence(t)
+                    ids = (
+                        backend.text_backend(fenced_t, return_tensors="pt")["input_ids"][0]
+                        .detach()
+                        .cpu()
+                    )
+                    raw_responses.append(fenced_t)
+                    completion_token_ids.append(ids)
+                _release_device_cache(torch)
+                if not return_token_ids:
+                    return raw_responses, prompt
+                _vllm_succeeded = True
+            except ImportError as _imp_err:
+                # 2026-09-01 (Lane A audit): a deployed bundle without the
+                # client module must degrade like any other vLLM failure —
+                # loud stage line, transformers fallback — NOT crash the
+                # trainer with an uncaught ModuleNotFoundError.
+                print(
+                    json.dumps(
+                        {
+                            "stage": "vllm_rollout_unavailable",
+                            "reason": f"client module missing: {_imp_err}"[:160],
+                        }
+                    ),
+                    flush=True,
+                )
+                raw_responses.clear()
+                completion_token_ids.clear()
+                _vllm_succeeded = False
+            except VllmUnavailable as _exc:
+                print(
+                    json.dumps({"stage": "vllm_rollout_unavailable", "reason": str(_exc)[:160]}),
+                    flush=True,
+                )
+                raw_responses.clear()
+                completion_token_ids.clear()
+                _vllm_succeeded = False
+        greedy_n = greedy_count if not _vllm_succeeded else 0
+        sampled_n = max(group_size - greedy_n, 0) if not _vllm_succeeded else 0
+        if greedy_n > 0:
             with torch.no_grad():
-                outputs = model.generate(
-                    **inputs,
+                greedy_out = model.generate(
+                    **build_batched_prompt_inputs(inputs, group_size=greedy_n),
                     max_new_tokens=effective_max_new_tokens,
-                    temperature=(0.0 if is_greedy else effective_temp),
+                    temperature=0.0,
                     top_p=args.top_p,
-                    do_sample=not is_greedy,
+                    do_sample=False,
                     use_cache=True,
                     return_dict_in_generate=True,
                     output_scores=False,
                     eos_token_id=sorted(stop_eos_ids) if stop_eos_ids else None,
                     stopping_criteria=StoppingCriteriaList(
-                        [
-                            StopAfterClosedCodeFence(
-                                backend.text_backend,
-                                prompt_length=int(inputs["input_ids"].shape[1]),
-                            )
-                        ]
+                        [StopAfterClosedCodeFence(backend.text_backend, prompt_length=prompt_len)]
                     ),
                 )
-
-            gen_ids = outputs.sequences[0, inputs["input_ids"].shape[1] :]
-            response = backend.text_backend.decode(gen_ids, skip_special_tokens=True)
-            raw_responses.append(response)
-            # Preserve special generated tokens (notably EOS) that decode(...,
-            # skip_special_tokens=True) intentionally removes. Re-encoding the
-            # decoded text is not guaranteed to reproduce these IDs.
-            completion_token_ids.append(gen_ids.detach().cpu().clone())
-            # Long rollout groups fragment NPU memory across sequential generations;
-            # free the allocator cache between rollouts (p15: group-16 rollout hang).
+            for gids in greedy_out.sequences:
+                gen_ids = gids[prompt_len:]
+                raw_responses.append(backend.text_backend.decode(gen_ids, skip_special_tokens=True))
+                completion_token_ids.append(gen_ids.detach().cpu().clone())
+            _release_device_cache(torch)
+        if sampled_n > 0:
+            with torch.no_grad():
+                sampled_out = model.generate(
+                    **build_batched_prompt_inputs(inputs, group_size=sampled_n),
+                    max_new_tokens=effective_max_new_tokens,
+                    temperature=effective_temp,
+                    top_p=args.top_p,
+                    do_sample=True,
+                    use_cache=True,
+                    return_dict_in_generate=True,
+                    output_scores=False,
+                    eos_token_id=sorted(stop_eos_ids) if stop_eos_ids else None,
+                    stopping_criteria=StoppingCriteriaList(
+                        [StopAfterClosedCodeFence(backend.text_backend, prompt_length=prompt_len)]
+                    ),
+                )
+            for sids in sampled_out.sequences:
+                gen_ids = sids[prompt_len:]
+                raw_responses.append(backend.text_backend.decode(gen_ids, skip_special_tokens=True))
+                completion_token_ids.append(gen_ids.detach().cpu().clone())
             _release_device_cache(torch)
     finally:
         if model_config is not None and previous_use_cache is not None:
@@ -2527,9 +3062,10 @@ class DegeneratePolicyDetector:
         entropy_mean: float | None,
         completion_token_lengths: list[int] | None,
     ) -> bool:
-        """Feed one step; returns True exactly on the window-crossing step
-        (the 3rd consecutive degenerate step). A healthy step resets the
-        streak."""
+        """Feed one step; returns True from the window-crossing step onward
+        (the 3rd consecutive degenerate step and EVERY subsequent degenerate
+        step, so the rescue ladder keeps escalating during an ongoing
+        collapse). A healthy step resets the streak."""
         if is_degenerate_policy_step(
             entropy_mean=entropy_mean,
             completion_token_lengths=completion_token_lengths,
@@ -2562,6 +3098,45 @@ def alarm_degenerate_policy(
     # persists until no_trainable_tasks, run-6's 16-skip death).
     adaptive_temp.record_skip(DEGENERATE_POLICY_REASON)
     return True
+
+
+# 2026-08-27 (T1a, algorithm audit): quarantine-integrity gate. A collapsed
+# policy must NEVER produce evidence-free quarantines — run-6 quarantined ALL
+# 20 tasks (incl. the 5 learnable ones) under the EOS collapse because
+# repair-routing fires on any flat all-fail regardless of policy health.
+QUARANTINE_GATE_COLLAPSE_MAX_TOKENS: int = 8
+
+
+def quarantine_gate_active(
+    *,
+    degenerate_policy_alarm: bool,
+    entropy_mean: float | None,
+    completion_token_lengths: list[int] | None,
+    collapse_max_tokens: int = QUARANTINE_GATE_COLLAPSE_MAX_TOKENS,
+) -> bool:
+    """True when this step shows a policy-collapse signature — quarantine and
+    repair-routing must be suppressed.
+
+    Engages on ANY of:
+    - the 3-step degenerate alarm (r10) fired on this step;
+    - entropy below the degenerate floor (0.05) — the confident-wrong
+      single-mode collapse (run-6 step 25: entropy 0.0136);
+    - a stub-collapse group: EVERY completion shorter than 8 tokens (the
+      near-EOS-collapse class even at non-tiny entropy).
+
+    Deliberately does NOT use the loss entropy-floor (1.5): that bar would
+    gate healthy cold-task steps (run-5's s11/s12 repairs ran at entropy
+    0.25-0.32) and starve the repair lane.
+    """
+    if degenerate_policy_alarm:
+        return True
+    if entropy_mean is not None and float(entropy_mean) < DEGENERATE_POLICY_ENTROPY_MAX:
+        return True
+    if completion_token_lengths and max(int(length) for length in completion_token_lengths) < int(
+        collapse_max_tokens
+    ):
+        return True
+    return False
 
 
 def escalate_temperature_on_flat_route(
@@ -2841,8 +3416,7 @@ def load_resume_state(path: str | Path) -> dict[str, Any]:
     step = payload.get("step")
     if not isinstance(step, int) or isinstance(step, bool) or step < 0:
         raise ValueError(
-            f"--resume-state {state_path} must record a non-negative integer "
-            f"'step' (got {step!r})"
+            f"--resume-state {state_path} must record a non-negative integer 'step' (got {step!r})"
         )
     return payload
 
@@ -2993,9 +3567,11 @@ _ENTROPY_FLOOR_REDUCTION_NOTE = (
     " Entropy-floor term (2026-08-26 r10, see loss_breakdown.entropy_floor_penalty): "
     "when --entropy-floor-weight > 0, the final loss value adds "
     "weight*max(0, floor - mean current-policy train-pass entropy) — engaged "
-    "only below the floor, backpropped with the policy loss, and honored by "
-    "the math-audit final-loss identity (loss == loss_recomputed + "
-    "entropy_floor_penalty + DR terms)."
+    "only below the floor, honored by the math-audit final-loss identity "
+    "(loss == loss_recomputed + entropy_floor_penalty + DR terms). The mean "
+    "is DETACHED (run-10 double-backward fix): the term is a monitoring "
+    "value riding the loss identity and contributes no gradient — the "
+    "degenerate-policy alarm is the collapse rescue."
 )
 
 LOSS_REDUCTION_STRINGS: dict[str, str] = {
@@ -3025,6 +3601,38 @@ LOSS_REDUCTION_STRINGS: dict[str, str] = {
         + _ENTROPY_FLOOR_REDUCTION_NOTE
     ),
 }
+
+
+def evidence_free_candidate_entry() -> dict[str, Any]:
+    """A synthesized zero-value evaluation entry for a quarantine-suppressed step.
+
+    2026-09-01 (data-efficiency): when the collapse gate
+    (``quarantine_gate_active``) engages, the step loop SKIPS the expensive
+    reward pass (harness subprocess + self-eval/judge forwards per candidate)
+    because an evidence-free collapsed rollout (run-6 class: completions
+    [1,1,1,1], entropy 0.0137) can only produce flat all-fail evaluations.
+    The entry mirrors the keys ``evaluate_candidate`` produces so every
+    downstream consumer (reward tensors, probe, curriculum, advantages,
+    ``build_rollout_rewards``, emit) works unchanged: zero rewards,
+    passed=False, no judge dims, ``evidence_free=True`` for the auditor.
+    """
+    return {
+        "passed": False,
+        "pass_reward": 0.0,
+        "shaped_reward": 0.0,
+        "syntax_reward": 0.0,
+        "interface_reward": 0.0,
+        "verifier_reward": 0.0,
+        "brevity_reward": 0.0,
+        "import_hygiene_reward": 0.0,
+        "self_eval_reward": 0.0,
+        "self_eval_raw_score": 0.0,
+        "model_dim_scores": {},
+        "judge_reward": None,
+        "total_reward": 0.0,
+        "details": [],
+        "evidence_free": True,
+    }
 
 
 def per_candidate_stop_reasons(diagnostics: Mapping[str, Any]) -> list[str]:
@@ -3239,8 +3847,8 @@ def build_eval_result_row(
     from ``passed``/``details``/``detail_budget``) and candidates can be
     re-scored offline instead of being dropped after the temp-dir eval.
     Fields: {step, index, passed, details, detail_budget, code_hash, syntax,
-    interface, verifier, import_hygiene}. ``code`` is the extracted candidate
-    that was scored; ``code_hash`` is its sha256.
+    interface, verifier, brevity, import_hygiene}. ``code`` is the extracted
+    candidate that was scored; ``code_hash`` is its sha256.
     """
     return {
         "step": int(step),
@@ -3254,6 +3862,10 @@ def build_eval_result_row(
         "syntax": float(entry.get("syntax_reward", 0.0) or 0.0),
         "interface": float(entry.get("interface_reward", 0.0) or 0.0),
         "verifier": float(entry.get("verifier_reward", 0.0) or 0.0),
+        # 2026-08-27 (research audit P5): brevity is an executable component
+        # with weight 0.05 — the row must persist it or the exact-mode
+        # composition recompute silently drops the counterweight.
+        "brevity": float(entry.get("brevity_reward", 0.0) or 0.0),
         "import_hygiene": float(entry.get("import_hygiene_reward", 0.0) or 0.0),
     }
 
@@ -3579,6 +4191,7 @@ def emit_step_record(
         truncation_rate=ctx.get("truncation_rate"),
         eos_termination_rate=ctx.get("eos_termination_rate"),
         degenerate_policy_alarm=ctx.get("degenerate_policy_alarm"),
+        quarantine_suppressed=ctx.get("quarantine_suppressed"),
         fence_termination_rate=ctx.get("fence_termination_rate"),
         cap_run_with_fence_opener_rate=ctx.get("cap_run_with_fence_opener_rate"),
         completion_token_lengths=ctx.get("completion_token_lengths"),
@@ -3895,6 +4508,80 @@ def install_faulthandler_dumps(log_file: Any = None) -> Any:
     return target
 
 
+def _run_dp4_batch_judge(
+    args: argparse.Namespace,
+    codes: Sequence[str],
+    evidences: Sequence[str],
+    task: dict,
+) -> dict[int, dict[str, float | None]] | None:
+    """dp4 batch judge with its OWN token budget (2026-08-27, critical review
+    C1): the frozen per-candidate judge's ``--model-judge-max-tokens`` (launcher
+    default 256) cannot fit an 8-candidate comparative JSON (~968 chars / ~280
+    tokens minimum) — truncation made every step judge-absent. dp4 gets
+    ``--judge-dp4-max-tokens`` (default 4096), independent of the frozen-judge
+    knob."""
+    endpoint = (getattr(args, "judge_dp4_endpoint", "") or "").strip()
+    return _model_batch_dim_scores_dp4(
+        codes,
+        evidences,
+        task,
+        endpoint=endpoint,
+        model=getattr(args, "judge_dp4_model", "dp4") or "dp4",
+        max_tokens=int(getattr(args, "judge_dp4_max_tokens", 4096) or 4096),
+    )
+
+
+def batch_judge_active(args: argparse.Namespace) -> bool:
+    """dp4 batch comparative judge gate (2026-08-27): decoupled from the frozen
+    model-judge machinery — dp4 is an HTTP endpoint judge (the Huanxin
+    deepseek-v4-flash subscription), no local judge model is required, so
+    ``--model-judge-enabled`` is irrelevant to it."""
+    return bool(getattr(args, "batch_comparative_judge", False))
+
+
+def batch_dp4_judge_weights(
+    args: argparse.Namespace, calibrated: Mapping[str, float] | None
+) -> dict[str, float]:
+    """Weights for the dp4 batch comparative judge (2026-08-27, user binding).
+
+    The dp4 judge is ACTIVE whenever ``--batch-comparative-judge`` is on: with
+    no calibration file, a uniform map across MODEL_JUDGE_DIMENSIONS summing to
+    ``args.reward_judge_mass`` (default 0.10) so J contributes exactly w_J; with
+    calibration, the calibrated weights win. (The r17 calibration gate applies
+    to the per-candidate frozen-BASE judge, not to dp4.)
+    """
+    if calibrated:
+        return dict(calibrated)
+    raw = getattr(args, "reward_judge_mass", None)
+    mass = float(raw if raw is not None else 0.10)
+    if mass <= 0.0 or not MODEL_JUDGE_DIMENSIONS:
+        return {}
+    per_dim = mass / len(MODEL_JUDGE_DIMENSIONS)
+    return {dim: per_dim for dim in MODEL_JUDGE_DIMENSIONS}
+
+
+def validate_batch_judge_config(args: argparse.Namespace) -> None:
+    """Fail-closed guard for the batch COMPARATIVE judge (2026-08-27, user
+    binding): the judge is EXCLUSIVELY the Huanxin dp4 (deepseek-v4-flash) model
+    via ``--judge-dp4-endpoint`` — the same endpoint/auth ``claude -p huanxin -m
+    dp4`` uses. When ``--batch-comparative-judge`` is ON, a dp4 endpoint is
+    REQUIRED: the OLD code silently fell back to the in-process SELF-judge (the
+    ACTIVE training model judging its own rollouts), which directly violates the
+    dp4-ONLY mandate. This guard refuses to start (SystemExit) unless the dp4
+    endpoint is set. When the flag is OFF (inert default) this is a no-op.
+    """
+    if not getattr(args, "batch_comparative_judge", False):
+        return
+    endpoint = (getattr(args, "judge_dp4_endpoint", "") or "").strip()
+    if not endpoint:
+        raise SystemExit(
+            "--batch-comparative-judge requires --judge-dp4-endpoint (the Huanxin "
+            "dp4 / deepseek-v4-flash endpoint used by `claude -p huanxin -m dp4`). "
+            "The in-process self-judge fallback was REMOVED (2026-08-27): dp4 is "
+            "the ONLY judge."
+        )
+
+
 def main() -> int:
     # The trainer's stdout is redirected to the run log; block buffering would
     # swallow every phase marker if the container is killed mid-stall. Line-buffer
@@ -3911,6 +4598,10 @@ def main() -> int:
     # load phase (the silent-death zone) is covered.
     install_faulthandler_dumps()
     args = parse_args()
+    # 2026-08-27 (user binding): dp4 is the ONLY reward judge. If the batch
+    # comparative judge is enabled, the dp4 endpoint is mandatory — fail-closed,
+    # never the (removed) in-process self-judge fallback.
+    validate_batch_judge_config(args)
     if args.max_adaptive_new_tokens is None:
         args.max_adaptive_new_tokens = args.max_new_tokens
     if args.max_adaptive_new_tokens < args.max_new_tokens:
@@ -4346,7 +5037,7 @@ def main() -> int:
                     {
                         "stage": "gradient_checkpointing_verified",
                         "flagged": sum(
-                            1 for l in layers if getattr(l, "gradient_checkpointing", False)
+                            1 for layer in layers if getattr(layer, "gradient_checkpointing", False)
                         ),
                         "total": len(layers),
                     },
@@ -4500,6 +5191,22 @@ def main() -> int:
         frontier_threshold=args.frontier_threshold,
         mastered_threshold=args.mastered_threshold,
     )
+    difficulty_manifest_arg = getattr(args, "difficulty_manifest", None)
+    if difficulty_manifest_arg:
+        manifest_path = Path(difficulty_manifest_arg)
+        if not manifest_path.exists():
+            raise SystemExit(f"Invalid --difficulty-manifest {manifest_path}: file not found")
+        try:
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            raise SystemExit(f"Invalid --difficulty-manifest {manifest_path}: {exc}") from exc
+        hard_tasks = manifest.get("hard_tasks")
+        if not isinstance(hard_tasks, list) or not hard_tasks:
+            raise SystemExit(
+                f"Invalid --difficulty-manifest {manifest_path}: 'hard_tasks' list required"
+            )
+        router.difficulty_manifest = frozenset(str(task_id) for task_id in hard_tasks)
+        router.difficulty_scale = float(manifest.get("difficulty_scale", 0.25))
     if args.coverage_json:
         coverage_path = Path(args.coverage_json)
         if coverage_path.exists():
@@ -4713,7 +5420,13 @@ def main() -> int:
         # 2026-08-25: hard ceiling at 1.3 — behavior temperature must never
         # exceed the escalation ceiling regardless of the ladder.
         effective_temperature = clamp_adaptive_behavior_temperature(adaptive_temp.current_temp())
-        effective_g = min(router.recommended_group_size(task["task_id"]), args.max_adaptive_group)
+        # 2026-08-27 (r19, user binding): every round rolls out 8 candidates —
+        # a HARD FLOOR (default 1 = inert) overrides the router's adaptive 4.
+        effective_g = effective_group_size(
+            recommended=router.recommended_group_size(task["task_id"]),
+            max_adaptive_group=args.max_adaptive_group,
+            min_group_size=getattr(args, "min_group_size", 1),
+        )
         generation_token_budget = adaptive_generation_token_budget(
             task.get("reference_code_chars"),
             base_tokens=args.max_new_tokens,
@@ -4851,9 +5564,53 @@ def main() -> int:
             )
         _release_device_cache(torch)
 
+        # ── r10 / T1a: EOS-collapse detection + quarantine-integrity gate ──
+        # 2026-09-01 (data-efficiency reorder): computed here, BEFORE the
+        # reward pass — the alarm needs only entropy_mean (logprob pass) and
+        # completion_token_lengths (generation diagnostics), both already
+        # available. A collapsed step must never pay the expensive reward
+        # pass (harness subprocess + self-eval/judge forwards per candidate)
+        # on evidence-free 1-token completions, and repair-routing must be
+        # suppressed on evidence-free collapsed rollouts (run-6 quarantined
+        # ALL 20 tasks incl. the 5 learnable ones under the collapse).
+        degenerate_alarm = alarm_degenerate_policy(
+            degenerate_detector,
+            adaptive_temp,
+            entropy_mean=entropy_mean,
+            completion_token_lengths=generation_diagnostics["completion_token_lengths"],
+        )
+        if degenerate_alarm and rank == 0:
+            print(
+                json.dumps(
+                    {
+                        "stage": "degenerate_policy_alarm",
+                        "step": step,
+                        "task": task["task_id"],
+                        "consecutive_degenerate": degenerate_detector.consecutive_degenerate,
+                        "entropy_mean": entropy_mean,
+                        "completion_token_lengths": generation_diagnostics[
+                            "completion_token_lengths"
+                        ],
+                        "eos_termination_rate": generation_diagnostics["eos_termination_rate"],
+                        "escalated_temperature": adaptive_temp.current_temp(),
+                    },
+                    ensure_ascii=False,
+                ),
+                flush=True,
+            )
+        quarantine_suppressed = quarantine_gate_active(
+            degenerate_policy_alarm=degenerate_alarm,
+            entropy_mean=entropy_mean,
+            completion_token_lengths=generation_diagnostics["completion_token_lengths"],
+        )
+
         # Score each solution with verifier-aware shaped rewards + optional self-evaluation.
         judge_enabled = bool(args.model_judge_enabled and judge_model is not None)
         evaluations = []
+        # 2026-08-27 (r19): the batch COMPARATIVE judge needs every candidate's
+        # code + pass evidence collected across the group for one forward.
+        batch_codes: list[str] = list(codes)
+        batch_evidences: list[str] = []
         self_repair_summary: dict[str, Any] = {
             "enabled": int(args.self_repair_rounds > 0),
             "max_rounds": args.self_repair_rounds,
@@ -4861,7 +5618,16 @@ def main() -> int:
             "repairs_passed": 0,
             "total_repair_rounds": 0,
         }
+        # 2026-09-01 (data-efficiency): on a quarantine-suppressed (collapsed)
+        # step, SKIP the expensive reward pass — harness subprocess + self-eval
+        # /judge forwards per candidate on evidence-free 1-token completions is
+        # pure waste (run-6 class: [1,1,1,1], entropy 0.0137). Synthesized
+        # zero-value entries keep every downstream consumer (reward tensors,
+        # probe, curriculum, advantages, rollout record, emit) unchanged.
         for c in codes:
+            if quarantine_suppressed:
+                evaluations.append(evidence_free_candidate_entry())
+                continue
             entry = evaluate_candidate(
                 c,
                 test_harness,
@@ -4953,6 +5719,60 @@ def main() -> int:
                     ),
                 )
             evaluations.append(entry)
+            # (r19) collect per-candidate executable evidence for the batch
+            # comparative judge (anchors its ranking to real pass/fail).
+            batch_evidences.append(
+                "tests passed: {}; failures: {}".format(
+                    bool(float(entry.get("pass_reward", 0.0) or 0.0) > 0.0),
+                    "; ".join(str(d)[:120] for d in (entry.get("details") or [])[:3]) or "none",
+                )
+            )
+        # 2026-08-27 (r19, user binding): BATCH COMPARATIVE SELF-JUDGE — the ACTIVE
+        # training model judges ALL group candidates AT ONCE against each other.
+        # Pass is part of the comprehensive score (blend mass w_P), never the whole
+        # score; the comparative judge dims add quality/topic mass. Fail-closed:
+        # any candidate the model fails to score keeps dims None (judge-absent).
+        if batch_judge_active(args) and rank == 0 and not quarantine_suppressed:
+            # 2026-08-27 (user binding): the judge is EXCLUSIVELY the Huanxin dp4
+            # (deepseek-v4-flash) model — all candidates scored at once in one
+            # comparative prompt through the Anthropic-compatible endpoint. The
+            # in-process SELF-judge fallback was REMOVED (fail-closed at startup
+            # via validate_batch_judge_config): dp4 is the ONLY judge. Decoupled
+            # from the frozen model-judge machinery (dp4 is an HTTP judge).
+            (getattr(args, "judge_dp4_endpoint", "") or "").strip()
+            batch_weights = batch_dp4_judge_weights(args, judge_weights if judge_enabled else None)
+            batch_scores = _run_dp4_batch_judge(args, batch_codes, batch_evidences, task)
+            if batch_scores is None:
+                # 2026-08-27 (critical review C2): judge-absent must be LOUD —
+                # a silent None meant w_J=0 with no operator-visible signal.
+                print(
+                    json.dumps(
+                        {
+                            "stage": "dp4_judge_failed",
+                            "step": step,
+                            "task": task["task_id"],
+                            "reason": "no_scores_from_dp4",
+                        }
+                    ),
+                    flush=True,
+                )
+            if batch_scores is not None:
+                for idx, entry in enumerate(evaluations):
+                    cell = batch_scores.get(idx)
+                    if cell is None:
+                        continue
+                    entry["model_dim_scores"] = dict(cell)
+                    entry["judge_reward"] = (
+                        judge_composite_score(cell, batch_weights) if batch_weights else None
+                    )
+                    # Pass stays a part of the comprehensive score: recompute the
+                    # blended total with the comparative judge dims applied.
+                    entry["total_reward"] = compose_policy_training_reward(
+                        entry,
+                        args,
+                        model_dim_scores=dict(cell),
+                        judge_weights=batch_weights,
+                    )
         # Incorporate self-eval reward into total
         for entry in evaluations:
             entry["total_reward"] = entry.get("total_reward", entry.get("reward", 0.0))
@@ -4996,7 +5816,35 @@ def main() -> int:
             [float(entry.get("self_eval_reward", 0.0)) for entry in evaluations], device=device
         )
 
-        # Compute group-relative rewards.
+        # 2026-08-27 (r19, user binding): NORMALIZE the raw reward scores across
+        # all candidates of the group before the GRPO/SAPO advantage computation.
+        # 'none' (default, inert) leaves the raw path byte-identical.
+        # 2026-08-27 (critical review H1): normalization feeds ONLY the advantage
+        # path — the router probe, curriculum EMA and reward diagnostics keep the
+        # ABSOLUTE reward scale (minmax on a mastered all-pass group is
+        # indistinguishable from a fresh all-fail group; feeding that scale to
+        # the frontier router destroys mastery gating).
+        reward_normalization = getattr(args, "reward_normalization", "none") or "none"
+        advantage_rewards = rewards
+        if reward_normalization != "none":
+            advantage_rewards, _norm_rec = normalize_group_rewards(
+                rewards, mode=reward_normalization
+            )
+            if rank == 0:
+                print(
+                    json.dumps(
+                        {
+                            "stage": "reward_normalized",
+                            "step": step,
+                            "mode": reward_normalization,
+                            "task": task["task_id"],
+                        },
+                        ensure_ascii=False,
+                    ),
+                    flush=True,
+                )
+
+        # Compute group-relative rewards (ABSOLUTE scale — router/curriculum).
         mean_reward = rewards.mean()
         signal_stats = reward_signal_stats(
             rewards,
@@ -5021,6 +5869,8 @@ def main() -> int:
                     model_dim_means[dim] = sum(values) / len(values)
 
         # ── FV-GSPO: probe the group and route it (frontier router) ──
+        # (degenerate_alarm/quarantine_suppressed computed BEFORE the reward
+        # pass — see the r10/T1a block above the eval loop)
         pass_rate = float(pass_rewards.mean().item())
         probe = router.probe_record(
             task["task_id"],
@@ -5031,6 +5881,9 @@ def main() -> int:
             # must not misclassify a flat group as learnable RL data.
             signal_stats["reward_std"],
             group_size=effective_g,
+            # T1a: a collapsed policy must never produce evidence-free
+            # quarantines — the probe keeps the task in the RL targeted pool.
+            suppress_repair=quarantine_suppressed,
         )
         route = str(probe["route"])
         total_probes += 1
@@ -5052,7 +5905,10 @@ def main() -> int:
                 args.advantage_clip,
             )
         else:  # loo (FV-GSPO default)
-            advantages = leave_one_out_advantages(rewards)
+            # 2026-08-27 (critical review H1): advantages consume the NORMALIZED
+            # rewards (advantage_rewards) when --reward-normalization is on; the
+            # router/curriculum above used the absolute scale.
+            advantages = leave_one_out_advantages(advantage_rewards)
             if args.loo_advantage_scale == "shared_mad":
                 running_mad.update(advantages)
                 advantages = advantages / running_mad.scale
@@ -5121,11 +5977,12 @@ def main() -> int:
             "generation_tokens": generation_tokens,
             "repair_queued": repair_queued,
             "all_fail": all_fail,
-            # 2026-08-26 (r10): True when the EOS-collapse rescue alarm fired
-            # on this step (3rd consecutive step with entropy < 0.05 AND
-            # ~1-token completions) and behavior temperature was escalated
-            # immediately, before repair-routing.
-            "degenerate_policy_alarm": False,
+            # 2026-08-26 (r10) + 2026-08-27 (T1a): collapse-rescue alarm and
+            # quarantine-integrity gate (both computed BEFORE the probe so
+            # repair-routing is suppressed on evidence-free collapsed
+            # rollouts).
+            "degenerate_policy_alarm": degenerate_alarm,
+            "quarantine_suppressed": quarantine_suppressed,
             "frontier_fraction": frontier_fraction,
             "model_dim_scores": model_dim_means or None,
             "model_judge_enabled": judge_enabled or None,
@@ -5175,16 +6032,23 @@ def main() -> int:
         else:
             if sidecar_alarm_state["was_alive"] is False:
                 print(
-                    "[SIDECAR_RECOVERED] repair sidecar alive again: " f"pid={_sidecar.get('pid')}",
+                    f"[SIDECAR_RECOVERED] repair sidecar alive again: pid={_sidecar.get('pid')}",
                     flush=True,
                 )
             sidecar_alarm_state["was_alive"] = True
 
-        if should_queue_flat_all_fail(
-            all_fail=all_fail,
-            route=route,
-            update_signal_magnitude=update_signal_magnitude,
-            threshold=args.min_reward_std,
+        # T1a (2026-08-27): a collapsed policy must NEVER produce evidence-free
+        # quarantines — suppress the flat-all-fail repair-queue gate; the task
+        # stays in the RL targeted pool under the escalated temp ladder
+        # (degenerate_alarm/quarantine_suppressed computed before the probe).
+        if (
+            should_queue_flat_all_fail(
+                all_fail=all_fail,
+                route=route,
+                update_signal_magnitude=update_signal_magnitude,
+                threshold=args.min_reward_std,
+            )
+            and not quarantine_suppressed
         ):
             # A fresh-task posterior can initially call this frontier RL even
             # though its final LOO advantages are exactly zero. Quarantine it
@@ -5194,42 +6058,6 @@ def main() -> int:
             router.mark_repair(task["task_id"])
             route = REPAIR_SFT
             step_ctx["route"] = route
-
-        # ── 2026-08-26 (r10, run-6 killer): EOS-collapse rescue ──
-        # A collapsed policy (entropy < 0.05 AND ~1-token completions for 3
-        # consecutive steps) is a GLOBAL sampling-temperature problem, not a
-        # per-task routing decision. Detect it BEFORE repair-routing: the
-        # repair lane never escalates (2026-08-25 contract), so a swallowed
-        # collapse persists until every task is repair-quarantined and the
-        # run dies via no_trainable_tasks (run-6: 16 consecutive repair
-        # skips, temp stuck at 1.15, step-25 completions [1,1,1,1]).
-        degenerate_alarm = alarm_degenerate_policy(
-            degenerate_detector,
-            adaptive_temp,
-            entropy_mean=entropy_mean,
-            completion_token_lengths=generation_diagnostics["completion_token_lengths"],
-        )
-        if degenerate_alarm:
-            step_ctx["degenerate_policy_alarm"] = True
-            if rank == 0:
-                print(
-                    json.dumps(
-                        {
-                            "stage": "degenerate_policy_alarm",
-                            "step": step,
-                            "task": task["task_id"],
-                            "consecutive_degenerate": (degenerate_detector.consecutive_degenerate),
-                            "entropy_mean": entropy_mean,
-                            "completion_token_lengths": generation_diagnostics[
-                                "completion_token_lengths"
-                            ],
-                            "eos_termination_rate": generation_diagnostics["eos_termination_rate"],
-                            "escalated_temperature": adaptive_temp.current_temp(),
-                        },
-                        ensure_ascii=False,
-                    ),
-                    flush=True,
-                )
 
         # ── Route the group ──
         # All-fail groups with no shaped variation are NOT RL batches: they go to
@@ -5334,7 +6162,11 @@ def main() -> int:
         # Skip only when both total and component reward signals are flat on an
         # RL route (adaptive temperature escalation applies here).
         if route in RL_ROUTES and update_signal_magnitude < args.min_reward_std:
-            adaptive_temp.record_skip("low_reward_signal")
+            # T1a: a collapse-suppressed step lands here (route kept frontier);
+            # the r10 alarm already escalated on its crossing step — do not
+            # double-count the ladder on that step.
+            if not step_ctx.get("degenerate_policy_alarm"):
+                adaptive_temp.record_skip("low_reward_signal")
             trips = observe_and_evaluate_breakers(
                 breaker,
                 step=step,
@@ -5552,7 +6384,6 @@ def main() -> int:
             # no gradient (the degenerate-policy alarm is the collapse
             # rescue); its value still rides the loss identity.
             entropy_train_mean: float | None = None
-            entropy_floor_penalty_tensor: torch.Tensor | None = None
             entropy_floor_penalty_value = 0.0
             if entropy_floor_active and current_entropies:
                 entropy_train_mean = float(torch.stack(current_entropies).mean().detach().item())
@@ -6129,7 +6960,7 @@ def main() -> int:
         # emit_step_record had already appended the JSONL + log print — they
         # never landed in grpo_step_metrics.jsonl. All derived fields are now
         # passed into the record builder so they persist.
-        record = emit_step_record(
+        emit_step_record(
             rank=rank,
             metrics=metrics,
             step_metrics_path=step_metrics_path,

@@ -135,13 +135,31 @@ def blend_comprehensive_reward(
             return min(2.0, 1.0 + alpha * efficiency + gamma * quality)
         return q_progress
     if mode == "comprehensive":
-        effective_judge = max(0.0, float(judge_mass)) if weight_sum > 0.0 else 0.0
-        total_mass = max(
-            1e-8, max(0.0, float(pass_mass)) + max(0.0, float(shaped_mass)) + effective_judge
-        )
+        bounded_pass_mass = max(0.0, float(pass_mass))
+        bounded_shaped_mass = max(0.0, float(shaped_mass))
+        if weight_sum > 0.0:
+            # 2026-09-01 (ADVERSARIAL-JUDGE lane): the judge mass is BOUNDED.
+            # (a) [0,1] — w_J is a fraction of the unit blend (w_P+w_S+w_J=1);
+            #     a typo like --reward-judge-mass 2.0 used to renormalize to a
+            #     ~55% judge share and dominate pass (2.0/(0.5+0.4+2.0)).
+            # (b) the residual mass (1 - w_P - w_S) — enforces the documented
+            #     sum-to-one contract.
+            # (c) the executable-pass mass — the judge alone can NEVER decide
+            #     a pass: P=0,S=0 with a perfect J stays below the P=1
+            #     candidate regardless of misconfiguration (the blend mirrors
+            #     the prompt's executable anchor). All documented masses
+            #     (0.50/0.40/0.10) pass through untouched.
+            effective_judge = min(
+                max(0.0, min(1.0, float(judge_mass))),
+                max(0.0, 1.0 - bounded_pass_mass - bounded_shaped_mass),
+                bounded_pass_mass,
+            )
+        else:
+            effective_judge = 0.0
+        total_mass = max(1e-8, bounded_pass_mass + bounded_shaped_mass + effective_judge)
         reward = (
-            max(0.0, float(pass_mass)) / total_mass * bounded_pass
-            + max(0.0, float(shaped_mass)) / total_mass * bounded_shaped
+            bounded_pass_mass / total_mass * bounded_pass
+            + bounded_shaped_mass / total_mass * bounded_shaped
             + effective_judge / total_mass * model_term
             - penalty
         )
@@ -310,6 +328,11 @@ def build_grpo_step_record(
     # completions). The behavior temperature was escalated immediately —
     # before repair-routing — as the run-6 killer's rescue path.
     degenerate_policy_alarm: bool | None = None,
+    # 2026-08-27 (T1a, router lane): True when the collapse gate suppressed
+    # repair-routing on this step (degenerate alarm, or stub-collapse
+    # completions, or entropy below the degenerate floor). No repair record
+    # was written; the task stayed in the RL targeted pool.
+    quarantine_suppressed: bool | None = None,
     # 2026-08-26 (r10, rollout lane): the 3-way stop-reason breakdown.
     # fence_termination_rate = share of completions that closed a code
     # fence; cap_run_with_fence_opener_rate = share of TRUNCATED completions
@@ -454,6 +477,8 @@ def build_grpo_step_record(
         record["eos_termination_rate"] = float(eos_termination_rate)
     if degenerate_policy_alarm is not None:
         record["degenerate_policy_alarm"] = bool(degenerate_policy_alarm)
+    if quarantine_suppressed is not None:
+        record["quarantine_suppressed"] = bool(quarantine_suppressed)
     if fence_termination_rate is not None:
         record["fence_termination_rate"] = float(fence_termination_rate)
     if cap_run_with_fence_opener_rate is not None:
@@ -579,9 +604,7 @@ def summarize_python_interface(source: str) -> list[str]:
                 # default slot, None when absent); the strict-zip keyword is
                 # py3.10-only even as False and the canonical venv is py3.9
                 # (2026-08-26 Deploy Integrity register gate).
-                for kwarg, default in zip(
-                    node.args.kwonlyargs, node.args.kw_defaults, strict=False
-                ):
+                for kwarg, default in strict_zip(node.args.kwonlyargs, node.args.kw_defaults):
                     kwarg_text = kwarg.arg
                     if kwarg.annotation is not None:
                         kwarg_text += f": {ast.unparse(kwarg.annotation)}"
@@ -629,11 +652,68 @@ def _append_message_template(node: ast.AST) -> str | None:
     return None
 
 
-def extract_behavior_hints_from_test_source(test_source: str, cap: int = 8) -> list[str]:
+# 2026-09-01 PROMPT-INTEGRITY audit: hints that pin the graded numeric ANSWER
+# must not enter the train prompt. Structural quantities (sizes, shapes,
+# traces, norms, tolerances) stay -- they describe the contract, not the
+# computed result.
+_STRUCTURAL_HINT_WORDS = frozenset(
+    {
+        "amplitude",
+        "count",
+        "data",
+        "depth",
+        "edges",
+        "entries",
+        "error",
+        "features",
+        "fidelity",
+        "gates",
+        "generators",
+        "labels",
+        "length",
+        "list",
+        "matrix",
+        "norm",
+        "points",
+        "shape",
+        "shots",
+        "size",
+        "strings",
+        "terms",
+        "trace",
+    }
+)
+_DECISIVE_PAREN_RE = re.compile(r"\([^)]*\d[^)]*\)")  # e.g. "(3 and 5)"
+_DECISIVE_VALUE_RE = re.compile(
+    # expected 1.000000 / expected 4 / expected 0/0 / need<=-2.6 /
+    # should be 0 -- a concrete numeric literal as the stated outcome
+    r"(?:expected|need)\s*(?:[<>]=?|==)?\s*-?(?:\d+\.\d{3,}|\d+(?:/\d+)?)"
+    r"|should\s+be\s*-?\d+(?:\.\d+)?"
+)
+_SHAPE_RE = re.compile(r"\d+\s*x\s*\d+", re.IGNORECASE)
+
+
+def _is_decisive_numeric_hint(hint: str) -> bool:
+    """True when a hint pins a decisive numeric answer (not structural)."""
+    if _SHAPE_RE.search(hint):
+        return False  # "expected 2x2" / "expected [4, 4]" shapes are structural
+    if any(word in hint.lower() for word in _STRUCTURAL_HINT_WORDS):
+        return False  # sizes/counts/tolerances describe the contract
+    return bool(_DECISIVE_PAREN_RE.search(hint) or _DECISIVE_VALUE_RE.search(hint))
+
+
+def extract_behavior_hints_from_test_source(
+    test_source: str, cap: int = 8, *, suppress_decisive_numeric: bool = False
+) -> list[str]:
     if not test_source.strip():
         return []
 
     hints: list[str] = []
+
+    def _keep(hint: str) -> bool:
+        if suppress_decisive_numeric and _is_decisive_numeric_hint(hint):
+            return False
+        return True
 
     for raw_line in test_source.splitlines():
         line = raw_line.strip()
@@ -641,7 +721,7 @@ def extract_behavior_hints_from_test_source(test_source: str, cap: int = 8) -> l
             continue
         if line.startswith("# Test "):
             comment = line.lstrip("#").strip()
-            if len(comment) >= 12 and comment not in hints:
+            if len(comment) >= 12 and comment not in hints and _keep(comment):
                 hints.append(comment)
 
     try:
@@ -665,7 +745,7 @@ def extract_behavior_hints_from_test_source(test_source: str, cap: int = 8) -> l
             if not template:
                 continue
             normalized = " ".join(template.split())
-            if normalized and normalized not in hints:
+            if normalized and normalized not in hints and _keep(normalized):
                 hints.append(normalized)
             if len(hints) >= cap:
                 break
@@ -786,6 +866,18 @@ _DETAIL_WS_RE = re.compile(
 _DETAIL_CMP_RE = re.compile(r"(" + _NUM_RE + r")\s*(>=|<=|>|<|!=)\s*(" + _NUM_RE + r")")
 # explicit threshold markers: "need>=0.85", "need<=-1.50000", "need >= 0.6000"
 _DETAIL_NEED_RE = re.compile(r"need\s*(>=|<=|>|<)\s*(" + _NUM_RE + r")", re.IGNORECASE)
+# target keyword + comparator on FAIL lines: "expected >= 3.500000",
+# "expected <= 0.500000", "expected > 2.000000000" — the harness states the
+# pass threshold right after the target keyword (2026-08-31 vigilance audit:
+# quantum_rl_v2_qaoa_p2_maxcut's near-miss emitted ONLY
+# "optimized_cut=3.000000, expected >= 3.500000" and shaped 0.0 — the
+# differentiated-signal cure was defeated on that v9 wave-1 task).
+_DETAIL_TARGET_CMP_RE = re.compile(
+    r"\b(expected|true|theory|ideal|analytic|exact|threshold|target|vs)\s*(>=|<=|>|<)\s*("
+    + _NUM_RE
+    + r")",
+    re.IGNORECASE,
+)
 # arrow form on FAIL lines — the targeted10 harnesses report numeric near-misses
 # as "phase_estimation(0.25, 3) -> 3, expected 2" and "-> cost 1, expected 2"
 # (the observed value follows the arrow, optionally behind a unit word).  The
@@ -821,10 +913,6 @@ _PROGRESS_FLOOR = 0.1
 _PROGRESS_CAP = 0.9
 
 
-def _clamp01(value: float) -> float:
-    return max(0.0, min(1.0, value))
-
-
 def _progress_for_pair(
     key: str,
     value: float,
@@ -839,6 +927,13 @@ def _progress_for_pair(
     # ── threshold-anchored rules (strongest evidence) ──
     if higher_better is not None and higher_better > 0.0:
         return _clamp01(value / higher_better)
+    if higher_better is not None:
+        # zero-valued threshold ("expected >= 0.000000000"): closeness is the
+        # excess of the deficit (T - v) above zero, on the value's own scale —
+        # a tiny negative eigenvalue is a near miss, a large one is not.
+        scale = max(0.05, 0.25 * max(abs(value), 1.0))
+        excess = max(0.0, 0.0 - value)
+        return math.exp(-excess / scale)
     if lower_better is not None:
         if lower_better > 0.0:
             return _clamp01(lower_better / value) if value > 0.0 else 0.0
@@ -921,6 +1016,11 @@ def _detail_progress(line: str) -> float:
     for match in _DETAIL_NEED_RE.finditer(line):
         threshold = float(match.group(2))
         thresholds.append(("higher" if match.group(1).startswith(">") else "lower", threshold))
+    # target keyword + comparator ("expected >= 3.5"): same threshold
+    # semantics as the need form, keyed off the pass-target vocabulary.
+    for match in _DETAIL_TARGET_CMP_RE.finditer(line):
+        threshold = float(match.group(3))
+        thresholds.append(("higher" if match.group(2).startswith(">") else "lower", threshold))
 
     higher = None
     lower = None
@@ -1383,6 +1483,44 @@ def leave_one_out_advantages(rewards: torch.Tensor) -> torch.Tensor:
     return rewards - other_mean
 
 
+def normalize_group_rewards(
+    rewards: torch.Tensor,
+    mode: str = "none",
+    epsilon: float = 1e-8,
+) -> tuple[torch.Tensor, dict[str, float | str | None]]:
+    """Normalize the RAW reward scores across all group candidates before they
+    feed the GRPO/SAPO advantage computation (user directive 2026-08-27 r19).
+
+    ``mode="none"`` (the default / inert): returns the input unchanged and the
+    record ``{"mode": "none"}`` — byte-identical to the prior path.
+
+    ``mode="minmax"``: min-max scale the group to the unit interval [0, 1],
+    preserving order. A FLAT group (range == 0) is left unchanged (never a
+    divide-by-zero, never NaN/Inf — the output stays finite and all-equal).
+
+    Returns (normalized, record) where record carries the scale + mode for the
+    reward verifier / step record.
+    """
+    flat = rewards.float()
+    rec: dict[str, float | str | None] = {"mode": mode}
+    if mode == "none":
+        return rewards, rec
+    if mode == "minmax":
+        rmin = float(flat.min().item())
+        rmax = float(flat.max().item())
+        rec["min"] = rmin
+        rec["max"] = rmax
+        rng = rmax - rmin
+        if rng <= epsilon:
+            # flat group: leave unchanged (stable, finite, order-preserving)
+            rec["flat"] = True
+            return rewards, rec
+        norm = (flat - rmin) / rng
+        rec["flat"] = False
+        return norm, rec
+    raise ValueError(f"normalize_group_rewards: unknown mode {mode!r}")
+
+
 # ---------------------------------------------------------------------------
 # Teacher-Free FV-GSPO helpers (Teacher-Free-FV-GSPO-Final-Plan-ZH.docx)
 #
@@ -1716,7 +1854,7 @@ class _ChunkedRecomputeBackward(torch.autograd.Function):
         # p = exp((x_clamped/T - max)) / Z — recomputed per chunk; gradients:
         #   token-lp term:  d lps_i/dx_v = (delta_{v,t} - p_v) / T
         #   entropy term:   d H_i/dx_v  = -(1/T) p_v (log p_v + H_i)
-        log_z_shifted = sum_exp.log()
+        sum_exp.log()
         E = -neg_entropy if neg_entropy is not None else None
         if grad_entropy is not None and E is not None and ctx.entropy_pos_cap is not None:
             # The entropy output beyond the cap is a CONSTANT zero (the plain
@@ -2103,6 +2241,17 @@ class FrontierRouter:
     min_mastered_samples: int = 32
     repair_threshold: float = 0.10
 
+    # 2026-08-27 (T1b, algorithm audit): lineage difficulty manifest — the
+    # v8 tasks that never passed a first-visit probe across run-4..7 (15/20)
+    # get a cold-start sampling discount (capability-matched E2H curriculum:
+    # RL mass concentrates on the learnable set while hard tasks stay
+    # sampleable). The discount floors at ``min_weight`` (NEVER zeroes a task)
+    # and is removed the first time the task shows pass>0 in the run. Absent
+    # manifest (None) => byte-identical to pre-manifest behavior.
+    difficulty_manifest: frozenset[str] | None = None
+    difficulty_scale: float = 0.25
+    _proven_this_run: set[str] = field(default_factory=set)
+
     def get_state(self, task_id: str) -> dict[str, float]:
         current = self.state.get(task_id)
         if current is None:
@@ -2145,6 +2294,8 @@ class FrontierRouter:
         pass_rate: float,
         shaped_signal_std: float,
         group_size: int = 8,
+        *,
+        suppress_repair: bool = False,
     ) -> dict[str, float | str]:
         """Record one G-rollout probe and classify the group's route.
 
@@ -2201,6 +2352,18 @@ class FrontierRouter:
             repair_threshold=self.repair_threshold,
             min_mastered_samples=self.min_mastered_samples,
         )
+        if suppress_repair and current["route"] == REPAIR_SFT:
+            # 2026-08-27 (T1a, algorithm audit): a collapsed policy must never
+            # produce evidence-free quarantines (run-6: ALL 20 tasks incl. the
+            # 5 learnable ones were repair-quarantined under the EOS collapse).
+            # The group stays in the RL targeted pool under the escalated temp
+            # ladder; posterior evidence still accumulates for when the policy
+            # recovers.
+            current["route"] = FRONTIER_RL
+        if float(pass_rate) > 0.0:
+            # T1b: first pass>0 in the run proves the task and removes the
+            # lineage difficulty discount (full weight restored).
+            self._proven_this_run.add(task_id)
         lower, upper = posterior.credible_bounds()
         return {
             "route": current["route"],
@@ -2289,6 +2452,15 @@ class FrontierRouter:
             weight *= self.mastered_replay_scale
         elif route in {REPAIR_SFT, INVALID_OR_NOISY}:
             return self.min_weight
+        if (
+            self.difficulty_manifest is not None
+            and task_id in self.difficulty_manifest
+            and task_id not in self._proven_this_run
+        ):
+            # 2026-08-27 (T1b): lineage difficulty prior — down-weight hard
+            # tasks pre-signal. NEVER zero: the max(min_weight, ...) floor
+            # below still applies, so hard tasks stay sampleable.
+            weight *= self.difficulty_scale
         return max(self.min_weight, weight)
 
     def frontier_fraction(self) -> float:
@@ -2716,7 +2888,7 @@ def sapo_loss_metrics(
     sample_kls: list[torch.Tensor] = []
     all_ratio: list[torch.Tensor] = []
     all_gate: list[torch.Tensor] = []
-    for i, (cur, old) in enumerate(zip(token_log_probs, old_token_log_probs, strict=False)):
+    for i, (cur, old) in enumerate(strict_zip(token_log_probs, old_token_log_probs)):
         if cur is None or old is None or cur.numel() == 0 or old.numel() == 0:
             continue
         n = min(cur.numel(), old.numel())
@@ -2795,7 +2967,13 @@ def completion_entropy(
 
 
 class RunningMAD:
-    """Shared (across tasks) running median-absolute-deviation scale.
+    """Shared (across tasks) running mean-absolute-deviation scale.
+
+    The batch dispersion statistic is the mean absolute deviation from the
+    batch mean (``mean(|x - mean(x)|)``) — NOT the median absolute deviation
+    and NOT the standard deviation (2026-09-01 research/vigilance: the
+    docstring previously said "median"; the implementation, and the
+    hand-computed tests, are mean-absolute-deviation).
 
     Dr.GRPO forbids per-question reward-standard-deviation normalization; a
     single fixed MAD shared by the whole batch is the only allowed batch-level
