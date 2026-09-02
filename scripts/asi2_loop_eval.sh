@@ -299,8 +299,34 @@ if [[ -n "$RUN_TS" ]]; then
 fi
 
 # ---- step 1c: pick the eval target ----
+# 2026-09-02: SAPO_RUN_DIR override — evaluate the newest step_*_adapter in an
+# explicit run dir (resume-3 era). Takes precedence over NAS/run-glob selection
+# so the parallel-eval agent targets the LIVE run's checkpoints, not stale NAS.
+# SAPO_RUN_ADAPTER (basename) pins ONE checkpoint inside SAPO_RUN_DIR — used to
+# schedule high-priority legs (e.g. step_000009, the first-pass checkpoint).
 TARGET_KIND=""
-if [[ -n "$TS" ]]; then
+if [[ -n "${SAPO_RUN_DIR:-}" ]]; then
+  if [[ -n "${SAPO_RUN_ADAPTER:-}" ]]; then
+    SAPO_ADAPTER="${SAPO_RUN_DIR%/}/${SAPO_RUN_ADAPTER}"
+    if ! exec_remote "test -d '${SAPO_ADAPTER}'"; then
+      say "NO_CHECKPOINTS"
+      log "SAPO_RUN_ADAPTER ${SAPO_RUN_ADAPTER} not found in ${SAPO_RUN_DIR}"
+      exit 0
+    fi
+  elif ! SAPO_ADAPTER=$(exec_remote "ls -dt ${SAPO_RUN_DIR}/step_*_adapter 2>/dev/null | head -1"); then
+    printf '%s\n' "AUTH_DOWN"; exit 2
+  fi
+  SAPO_ADAPTER=$(printf '%s' "$SAPO_ADAPTER" | head -1 | tr -d '[:space:]')
+  if [[ -z "$SAPO_ADAPTER" ]]; then
+    say "NO_CHECKPOINTS"
+    log "SAPO_RUN_DIR set but no step_*_adapter found in ${SAPO_RUN_DIR}"
+    exit 0
+  fi
+  TARGET_KIND="run-adapter"
+  TS="$(basename "$SAPO_ADAPTER" | sed -E 's/step_0*([0-9]+)_adapter/\1/')"
+  ADAPTER="$SAPO_ADAPTER"
+  log "eval target (SAPO_RUN_DIR): ${ADAPTER}"
+elif [[ -n "$TS" ]]; then
   TARGET_KIND="nas-checkpoint"
   ADAPTER="${NAS_CHECKPOINT_ROOT}/checkpoint_${TS}"
   log "eval target: NAS checkpoint ${ADAPTER}"
@@ -632,15 +658,28 @@ print(d.get("verdict", "unknown"),
 ') || true
 log "precheck result: verdict=${PRECHECK_VERDICT} max_abs_diff=${PRECHECK_MAX_DIFF} phase=${PRECHECK_PHASE}"
 
-if [[ "$PRECHECK_VERDICT" == "inert" || "$PRECHECK_VERDICT" == "inert_at_precision" ]]; then
-  if [[ "$PRECHECK_VERDICT" == "inert" ]]; then
-    say "INERT ${TS} (max_abs_diff=${PRECHECK_MAX_DIFF})"
-  else
-    say "INERT_AT_PRECISION ${TS} (max_abs_diff=${PRECHECK_MAX_DIFF} below bf16 ULP)"
-  fi
-  log "adapter delta is zero/below bf16 ULP (verdict=${PRECHECK_VERDICT}) — skipping the expensive rubric eval"
+# 2026-09-02 (manager, realtime bug fix): PROVABLE-INERT-only gating.
+# The precheck used to SKIP the rubric holdout eval for BOTH "inert" (all LoRA
+# B tensors zero / max_abs_diff==0, i.e. provably no delta) AND
+# "inert_at_precision" (nonzero delta below one bf16 ULP at the largest weight
+# scale). The latter is a WRONG skip for LoRA: rank-16 deltas are ~1e-4-1e-3
+# while the bf16 ULP at a ~19-magnitude weight is 0.125, so the gate silently
+# discarded every genuine resume-3 adapter and NO holdout verdict ever fired
+# (step_000026 -> INERT_AT_PRECISION on the frozen 18-task gate despite the
+# trainer's own step-9 25% strict pass). A 2.4e-4 delta can still be
+# behaviorally significant; the frozen holdout eval is the ONLY ground truth
+# for "beats base". Fix: ONLY provable-inert (zero delta) skips. Everything
+# else (inert_at_precision / active / unknown) MUST reach the rubric eval so
+# the objective is actually measured.
+if [[ "$PRECHECK_VERDICT" == "inert" ]]; then
+  say "INERT ${TS} (max_abs_diff=${PRECHECK_MAX_DIFF})"
+  log "adapter delta is PROVABLY zero (verdict=${PRECHECK_VERDICT}) — the only case that skips the rubric eval"
   update_state "$TS" "inert" "adapter_delta_zero" "" "$ADAPTER" "$PRECHECK_MAX_DIFF" "{\"precheck_phase\": \"${PRECHECK_PHASE}\", \"verdict\": \"${PRECHECK_VERDICT}\"}"
   exit 0
+fi
+if [[ "$PRECHECK_VERDICT" == "inert_at_precision" ]]; then
+  say "INERT_AT_PRECISION_NOTE ${TS} (max_abs_diff=${PRECHECK_MAX_DIFF} below bf16 ULP at largest weight) — RUNNING holdout eval anyway (nonzero delta may be behaviorally significant)"
+  log "nonzero-but-sub-ULP delta; proceeding to the frozen holdout eval (ground truth)"
 fi
 if [[ "$PRECHECK_VERDICT" == "unknown" ]]; then
   log "precheck inconclusive — running the rubric eval anyway (conservative)"

@@ -70,3 +70,25 @@ def test_eval_benchmark_override_reaches_launch_command() -> None:
     assert "${EVAL_BENCHMARK#" in source, "EVAL_BENCHMARK_BOX must derive from EVAL_BENCHMARK"
     # the launch command uses the derived box path
     assert "'${EVAL_BENCHMARK_BOX}'" in source
+
+
+def test_only_provable_inert_skips_holdout_eval() -> None:
+    """2026-09-02 (manager, realtime bug fix): the precheck must SKIP the
+    frozen holdout eval ONLY for the PROVABLY-inert case (adapter delta exactly
+    0 / all LoRA-B zero). Any nonzero delta — including the 'inert_at_precision'
+    category (nonzero but below one bf16 ULP at the largest weight) — MUST reach
+    the rubric eval, because rank-16 LoRA deltas (~1e-4-1e-3) are far below the
+    bf16 ULP at ~19-magnitude weights (0.125) yet are behaviorally significant
+    (resume-3 step_000009: 25% strict pass in the trainer, and adapter_delta
+    classified inert_at_precision). Gating inert_at_precision out silently made
+    the beats-base instrument unable to EVER return a verdict.
+    """
+    source = LOOP.read_text(encoding="utf-8")
+    # the skip branch must select ONLY the provable-inert case
+    skip = source.split('if [[ "$PRECHECK_VERDICT"', 1)[1].split("fi", 1)[0]
+    assert '== "inert"' in skip
+    assert '== "inert_at_precision"' not in skip
+    # the inert_at_precision branch must proceed (not skip) to the eval
+    assert "proceeding to the frozen holdout eval" in source
+    # the inert skip must exit before the rubric eval
+    assert 'update_state "$TS" "inert" "adapter_delta_zero"' in source
