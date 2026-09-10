@@ -36,14 +36,48 @@ json.dump(d, open(os.environ.get("SK_HEARTBEAT", "/tmp/session_keeper_state.json
 EOF
 }
 
+# B-052b (2026-09-11): this probe MUST be bounded. It was an untimed nested
+# claude --print, so under load a single call blocked for minutes, stretched a
+# whole keeper cycle past the watchdog's 420s staleness bar, and the watchdog --
+# seeing only heartbeat-stale + process-alive -- executed a HEALTHY keeper.
+# The successor blocked in the same probe and was executed too: the livelock
+# that killed daemon healing. Bound it far below the bar so a healthy cycle can
+# never reach it (the bound is the fix; the watchdog grace is only a backstop).
+SK_AUTH_PROBE_TIMEOUT_S="${SK_AUTH_PROBE_TIMEOUT_S:-90}"
+
+# B-066 (2026-09-11): bounding EACH probe is not enough -- refresh_env_from_live_process
+# runs one probe PER CANDIDATE. Measured live: 25 `bin/claude` processes, 12 carrying
+# TOKEN+BASE_URL, so one failed-auth cycle could spend 12 x 90s = 18 min in the sweep
+# against a ~120s cycle contract. Section 4 (daemon healing) runs AFTER section 3
+# (auth), so a long sweep starves daemon healing: keeper pid 64759 completed ZERO
+# cycles in 11.8 min while ASI1 (:20646) sat dark and the 02:25-02:39 watchdog
+# restart loop fired. Budget the WHOLE sweep, and cap the candidates.
+SK_ENV_REFRESH_BUDGET_S="${SK_ENV_REFRESH_BUDGET_S:-120}"
+SK_ENV_REFRESH_MAX_CANDIDATES="${SK_ENV_REFRESH_MAX_CANDIDATES:-3}"
+
+# Pure predicate (no side effects) so the bound is unit-testable without a shell loop.
+# $1 = sweep start epoch seconds. Returns 0 (true) when the sweep must stop.
+env_refresh_deadline_passed() {
+  local start="${1:-0}" now
+  now=$(date +%s)
+  [ $(( now - start )) -ge "$SK_ENV_REFRESH_BUDGET_S" ]
+}
 headless_ok() {
-  bash -c "source '$ENVF' 2>/dev/null; '$CLAUDE' --print 'reply AUTH-OK only' < /dev/null" 2>/dev/null | grep -q "AUTH-OK"
+  python3 "${ROOT}/scripts/keeper_auth_probe.py" "${ENVF}" "${CLAUDE}" "${SK_AUTH_PROBE_TIMEOUT_S}" >/dev/null 2>&1
 }
 
 refresh_env_from_live_process() {
   # find a live router-backed claude process with a valid AUTH_TOKEN env
   # ps-based scan (pgrep -f missed processes in some visibility contexts)
+  # B-066: budget the whole sweep -- see SK_ENV_REFRESH_BUDGET_S above.
+  local _sweep_start _tried
+  _sweep_start=$(date +%s); _tried=0
   for pid in $(ps aux | grep -E "bin/claude" | grep -v grep | awk '{print $2}'); do
+    if env_refresh_deadline_passed "$_sweep_start" || [ "$_tried" -ge "$SK_ENV_REFRESH_MAX_CANDIDATES" ]; then
+      log "ACTION env refresh sweep bounded (tried=$_tried, budget=${SK_ENV_REFRESH_BUDGET_S}s) — deferring remainder to a later cycle so daemon healing is not starved"
+      break
+    fi
+    _tried=$((_tried + 1))
     tok=$(ps eww "$pid" 2>/dev/null | tr ' ' '\n' | grep -oE "^ANTHROPIC_AUTH_TOKEN=.+" | head -1 | cut -d= -f2-)
     [ -z "$tok" ] && continue
     base=$(ps eww "$pid" 2>/dev/null | tr ' ' '\n' | grep -oE "^ANTHROPIC_BASE_URL=.+" | head -1 | cut -d= -f2-)
@@ -77,15 +111,25 @@ refresh_env_from_live_process() {
 }
 
 daemon_check() {
+  # B-074 (2026-09-11): record EVERY not-ready port, not just the first. The
+  # bare boolean made the ALERT below fall back to a hardcoded port literal, so
+  # an ASI1-only outage was logged as "20653/19004" -- naming the two HEALTHY
+  # daemons and never the sick one (S9.1: a resource not reported is a resource
+  # not verified alive; S2.2: a misleading alarm costs as much as a missed one).
+  # Initialised before any read because this script runs under set -u.
+  SK_DAEMONS_NOT_READY=""
+  local p H
   for p in $SK_DAEMON_PORTS; do
     H=$(curl -s -m 4 "http://127.0.0.1:$p/health" 2>/dev/null)
-    echo "$H" | grep -q '"ok":true' || return 1
     # 2026-09-08 blind-keeper fix: the daemon reports ok:true even in
     # startupState=error (auth-bridge failure), which stamped daemons=OK while
     # /exec was down. OK requires the daemon to actually be ready.
-    echo "$H" | grep -q '"ready":true' || return 1
+    if echo "$H" | grep -q '"ok":true' && echo "$H" | grep -q '"ready":true'; then
+      continue
+    fi
+    SK_DAEMONS_NOT_READY="${SK_DAEMONS_NOT_READY:+$SK_DAEMONS_NOT_READY }$p"
   done
-  return 0
+  [ -z "$SK_DAEMONS_NOT_READY" ]
 }
 
 # FIX #2 (2026-09-07): detect daemon BUSY/congestion (single-exec mutex backlogged)
@@ -127,6 +171,27 @@ daemon_congested_check() {
   return 1  # not congested
 }
 
+# B-053 (2026-09-11): the heartbeat owns daemon convergence, and `kickstart -k`
+# KILLS a running instance. The pre-fix code fired it whenever the daemons were
+# merely "not ready" -- which is the normal state while they boot -- so the
+# keeper executed the very process doing the work, every 120s. The replacement
+# instance then read a transient probe failure as `down` and killed+reseeded all
+# three daemons (18:17:27Z: all 3 restarted simultaneously with no
+# "booting >15m -> wedged" line, i.e. the catch-all path, not the wedge path).
+# Convergence could therefore never complete. Three-state rule (5.4.1): kick
+# only on a POSITIVE DEAD/HUNG signal; UNKNOWN never fires.
+SK_HB_PATTERN="${SK_HB_PATTERN:-sapo_huanxin_heartbeat[.]sh}"
+SK_HEARTBEAT_LOG="${SK_HEARTBEAT_LOG:-/Users/daxu/software/quantum-gpt-new/logs/huanxin_heartbeat.log}"
+SK_HEARTBEAT_STALE_S="${SK_HEARTBEAT_STALE_S:-360}"
+hb_alive() {
+  pgrep -f "$SK_HB_PATTERN" >/dev/null 2>&1 || return 1   # DEAD: positively absent
+  [ -f "$SK_HEARTBEAT_LOG" ] || return 0                  # alive, unmeasurable -> UNKNOWN -> no kill
+  _age=$(python3 -c "import os,sys,time;print(int(time.time()-os.path.getmtime(sys.argv[1])))" "$SK_HEARTBEAT_LOG" 2>/dev/null)
+  case "$_age" in ''|*[!0-9]*) return 0 ;; esac           # UNKNOWN -> no kill
+  [ "$_age" -lt "$SK_HEARTBEAT_STALE_S" ] && return 0
+  return 1                                                # alive but silent = HUNG
+}
+
 daemons_recover() {
   # B-039 (2026-09-09): the heartbeat restarts daemons ONLY on error/authfail/
   # booting>15m - a ready:true+backlogged wedge (pendingRequestCount>=bar, no
@@ -153,9 +218,14 @@ daemons_recover() {
     esac
   done
   if [ "$wedged" = "0" ]; then
-    log "ACTION daemons not ready — running huanxin heartbeat kick"
-    # the launchd heartbeat owns daemon restart; nudge it and wait one cycle
-    launchctl kickstart -k "gui/$(id -u)/com.quantumgpt.huanxin-heartbeat" 2>/dev/null || true
+    if hb_alive; then
+      # B-053: a live, writing heartbeat is mid-convergence. `kickstart -k`
+      # would kill it and reset the cookie bridge -- heal by leaving it alone.
+      log "daemons not ready — heartbeat alive, letting it converge (no kill)"
+    else
+      log "ACTION daemons not ready — heartbeat dead/hung, running huanxin heartbeat kick"
+      launchctl kickstart -k "gui/$(id -u)/com.quantumgpt.huanxin-heartbeat" 2>/dev/null || true
+    fi
   fi
 }
 
@@ -194,9 +264,49 @@ if [ "${1:-}" = "--source-only" ]; then
   return 0 2>/dev/null || exit 0
 fi
 log "session_keeper started pid $$"
+# Carry-over probe results: the cycle-top stamp publishes the PREVIOUS
+# cycle's verdict (the current one is not known yet, and must not block it).
+# B-068 (2026-09-11): STARTING, not OK. B-052c stamps at the TOP of the cycle,
+# so THIS value is what the first stamp publishes -- before any probe has run.
+# Initialising it to OK published a healthy verdict beside headless_auth=unknown
+# and daemons=unknown, so a fresh keeper that then died having completed ZERO
+# cycles (pid 64759, 02:42:29) read as healthy to every standup tick. A resource
+# that has measured nothing is UNKNOWN, never OK (three-state rule 5.4.1). The
+# in-loop reset below is untouched, so cycles >= 2 still carry real verdicts.
+STATUS="STARTING"
+HEADLESS_STAMP="unknown"
+DAEMONS_STAMP="unknown"
 CYCLE=0
+# B-069 (2026-09-11): initialised BEFORE the loop, not at the end of the
+# first cycle.  The congestion branch increments this on cycle 1, so
+# under `set -u` an un-initialised read was fatal:
+#   line 323: CONGESTED_CYCLES: unbound variable
+# The keeper died on its first congested cycle -- before the
+# daemons_recover() that would clear the backlog -- and launchd
+# (KeepAlive, ThrottleInterval 30) restarted it into the same wall.
+# A livelock: the keeper could never heal the daemons killing it.
+CONGESTED_CYCLES="${CONGESTED_CYCLES:-0}"
 while true; do
   CYCLE=$((CYCLE+1))
+  # B-052c (2026-09-11): stamp FIRST, before any probe. Liveness must not
+  # depend on how long a probe takes -- the untimed auth probe stretched a
+  # cycle past the watchdog bar, the heartbeat looked dead while the keeper
+  # was working, and the watchdog executed it. A slow cycle now still
+  # refreshes the heartbeat; only a genuinely stopped one goes stale.
+  SK_HEARTBEAT="$HEARTBEAT" stamp_state "$STATUS" "$HEADLESS_STAMP" "$DAEMONS_STAMP" "$$"
+  # B-088 (2026-09-11): re-initialise the carry-over verdicts IMMEDIATELY after
+  # the stamp that publishes them. That call is the only place the previous
+  # cycle's verdicts SHOULD appear (B-052c keeps liveness independent of probe
+  # duration); past it they are stale, and the probes below overwrite them.
+  # Without this reset the heartbeat advertised a probe that had not run yet:
+  # live 06:39:26, /tmp/session_keeper_state.json read
+  #   {status: HEALING, headless_auth: ok}                  <- false healthy
+  # while session_keeper.log read
+  #   ERROR no live process with valid auth found; keep retrying every cycle.
+  # A verdict not measured THIS cycle is UNKNOWN, never the previous ok
+  # (three-state rule 5.4.1; same class as the phantom READY in tick #334).
+  HEADLESS_STAMP="unknown"
+  DAEMONS_STAMP="unknown"
   PROBES=""
   STATUS="OK"
 
@@ -221,7 +331,10 @@ while true; do
   else
     {
       echo "--- debug headless_ok raw output at $(date):"
-      bash -c "source '$ENVF' 2>/dev/null; '$CLAUDE' --print 'reply AUTH-OK only' < /dev/null" 2>&1 | tail -3
+      # B-052b: the debug dump was a SECOND unbounded probe, and it ran
+      # precisely when the first probe already failed -- doubling the stall
+      # that caused the livelock. Same bounded path, diagnostic preserved.
+      python3 "${ROOT}/scripts/keeper_auth_probe.py" "${ENVF}" "${CLAUDE}" "${SK_AUTH_PROBE_TIMEOUT_S}" 2>&1 | tail -3
       echo "--- ENVF head:"; head -c 120 "$ENVF" | sed "s/AUTH_TOKEN=.*/AUTH_TOKEN=<len $(grep -c . "$ENVF")>/"
       echo "--- PATH=$PATH HOME=$HOME"
     } >> "$LOG"
@@ -254,10 +367,9 @@ while true; do
     # would false-trigger on a slow-but-healthy daemon.
   else
     STATUS="${STATUS}-DAEMONS"
-    log "ALERT daemons not ready (20653/19004)"
+    log "ALERT daemons not ready ($SK_DAEMONS_NOT_READY)"
     daemons_recover
   fi
-  CONGESTED_CYCLES="${CONGESTED_CYCLES:-0}"
 
   [ $((CYCLE % 30)) -eq 1 ] && cron_doctor
   DAEMONS_STAMP="healing"; daemon_check && DAEMONS_STAMP="ok"
@@ -265,4 +377,3 @@ while true; do
   [ $((CYCLE % 30)) -eq 1 ] && log "HEARTBEAT cycle=$CYCLE status=$STATUS$PROBES"  # every ~1h keep log lean
   sleep 120
 done
-
