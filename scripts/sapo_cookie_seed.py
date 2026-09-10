@@ -79,7 +79,12 @@ EXPIRY_DAYS = 400  # long enough to survive churn; refreshed on every seed run
 # become ready. Observed live on ASI1/ASI3 2026-09-11. Same class as B-045:
 # bridge the LOGIN (KEYCLOAK_* SSO), never the site's own session state -- the
 # SPA mints its own AUTH_SESSION_ID during the flow.
-AUTH_COOKIE_PREFIXES = ("KEYCLOAK_",)
+# B-076 REVERTED 2026-09-11: dropping AUTH_SESSION_ID made the SPA render a BLANK
+# page (bodyLen 0, hasTerminal:false) — the kl-web login guard stalls without it,
+# so the daemon could never mount a shell. Measured: with KEYCLOAK_* + AUTH_SESSION_ID
+# (and ONLY the oversized 68b329_* ingress cookies excluded, per B-045) all three
+# daemons reached ready:true and served real /exec round-trips. Keep that set.
+AUTH_COOKIE_PREFIXES = ("KEYCLOAK_", "AUTH_SESSION_ID")
 # Measured on the live ingress: 6207 bytes -> 200, 6217 bytes -> 400.
 COOKIE_HEADER_BUDGET = 6000
 

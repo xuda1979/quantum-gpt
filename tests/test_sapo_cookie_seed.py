@@ -113,9 +113,10 @@ def test_only_auth_cookies_are_seeded():
     )
     for name in ("KEYCLOAK_IDENTITY", "KEYCLOAK_SESSION"):
         assert name in kept, f"{name} carries the SSO session and must be kept"
-    # B-076: AUTH_SESSION_ID is per-flow state, not an SSO credential. A stale
-    # one makes keycloak 404 the next auth URL and the terminal never mounts.
-    assert "AUTH_SESSION_ID" not in kept, "per-flow auth-session cookies must not be bridged"
+    # AUTH_SESSION_ID must be KEPT: the kl-web login guard stalls without it and
+    # the SPA renders blank (measured 2026-09-11). Only the oversized site
+    # session cookies (68b329_*, B-045) are excluded.
+    assert "AUTH_SESSION_ID" in kept, "the SPA needs AUTH_SESSION_ID to render"
 
 
 def test_seeded_header_stays_under_ingress_budget():
