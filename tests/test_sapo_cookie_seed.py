@@ -111,8 +111,11 @@ def test_only_auth_cookies_are_seeded():
         "site session cookies (68b329_*) must be dropped — they are stale and "
         "overflow the ingress header limit"
     )
-    for name in ("KEYCLOAK_IDENTITY", "KEYCLOAK_SESSION", "AUTH_SESSION_ID"):
+    for name in ("KEYCLOAK_IDENTITY", "KEYCLOAK_SESSION"):
         assert name in kept, f"{name} carries the SSO session and must be kept"
+    # B-076: AUTH_SESSION_ID is per-flow state, not an SSO credential. A stale
+    # one makes keycloak 404 the next auth URL and the terminal never mounts.
+    assert "AUTH_SESSION_ID" not in kept, "per-flow auth-session cookies must not be bridged"
 
 
 def test_seeded_header_stays_under_ingress_budget():

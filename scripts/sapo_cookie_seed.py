@@ -71,7 +71,15 @@ EXPIRY_DAYS = 400  # long enough to survive churn; refreshed on every seed run
 # The bridge's job is to carry the LOGIN, not the site's session state: the SPA
 # mints its own ingress/session cookies on first load. So seed only the SSO
 # cookies, and fail-safe on a hard header budget.
-AUTH_COOKIE_PREFIXES = ("KEYCLOAK_", "AUTH_SESSION_ID")
+# B-076 (2026-09-11): AUTH_SESSION_ID is keycloak's PER-LOGIN-FLOW auth-session
+# cookie (short-lived, minted fresh by every login attempt), NOT an SSO credential.
+# Seeding a stale one makes keycloak reject the next auth URL with 404 "页面走丢了"
+# -> the SPA lands in login_required -> the remote web terminal never reaches a
+# prompt (hasTerminal:false, connecting:true forever) and the daemon can never
+# become ready. Observed live on ASI1/ASI3 2026-09-11. Same class as B-045:
+# bridge the LOGIN (KEYCLOAK_* SSO), never the site's own session state -- the
+# SPA mints its own AUTH_SESSION_ID during the flow.
+AUTH_COOKIE_PREFIXES = ("KEYCLOAK_",)
 # Measured on the live ingress: 6207 bytes -> 200, 6217 bytes -> 400.
 COOKIE_HEADER_BUDGET = 6000
 
