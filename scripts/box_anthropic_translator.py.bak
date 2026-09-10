@@ -1,0 +1,98 @@
+#!/usr/bin/env python3
+"""Box-side Anthropic->dp4 translator (B-044, 2026-09-03).
+
+The trainer speaks Anthropic /v1/messages; the dp4 subscription speaks
+OpenAI /v1/chat/completions. This tiny box-local translator (127.0.0.1:56238)
+converts between the two and calls dp4 DIRECTLY through the box squid proxy
+with the JWT at /root/.dp4_jwt. Replaces the whole Mac bridge+watcher relay:
+judge latency drops from minutes to the dp4 call itself."""
+import json
+import os
+import urllib.request
+from http import HTTPStatus
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+JWT_PATH = "/root/.dp4_jwt"
+with open(JWT_PATH) as _f:
+    JWT = _f.read().strip()
+UPSTREAM = os.environ.get(
+    "DP4_UPSTREAM",
+    "https://aihuanxin.cn/kunlun/ingress/api/68b329/5c1bbb4620fc40eea9712a9771cece1b/"
+    "ai-69be0918a51147689dc012f2d8b44fda/service-496501784fc44902b73b7bf90ddd88a4",
+)
+
+
+class Handler(BaseHTTPRequestHandler):
+    def log_message(self, *a):
+        pass
+
+    def _json(self, status, payload):
+        data = json.dumps(payload).encode()
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
+
+    def do_GET(self):
+        if self.path in ("/health", "/healthz"):
+            self._json(HTTPStatus.OK, {"ok": True, "model": "dp4-box-translator"})
+        else:
+            self._json(HTTPStatus.NOT_FOUND, {"error": "not found"})
+
+    def do_POST(self):
+        if self.path != "/v1/messages":
+            self._json(HTTPStatus.NOT_FOUND, {"error": "not found"})
+            return
+        n = int(self.headers.get("Content-Length") or 0)
+        try:
+            req = json.loads(self.rfile.read(n).decode())
+        except Exception:
+            self._json(HTTPStatus.BAD_REQUEST, {"error": "bad json"})
+            return
+        parts = []
+        for m in req.get("messages", []):
+            c = m.get("content")
+            if isinstance(c, str):
+                parts.append(c)
+            elif isinstance(c, list):
+                parts.extend(b.get("text", "") for b in c if isinstance(b, dict))
+        prompt = "\n\n".join(p for p in parts if p)
+        up_body = json.dumps({
+            "model": "deepseek_v4",
+            "messages": [{"role": "user", "content": prompt}],
+            "max_tokens": int(req.get("max_tokens", 4096)),
+            "temperature": float(req.get("temperature") or 0.0),
+        }).encode()
+        up = urllib.request.Request(
+            UPSTREAM.rstrip("/") + "/v1/chat/completions",
+            data=up_body,
+            headers={"Content-Type": "application/json", "Authorization": "Bearer " + JWT},
+        )
+        opener = urllib.request.build_opener()  # honors env http_proxy (squid)
+        try:
+            with opener.open(up, timeout=280) as r:
+                d = json.loads(r.read().decode())
+            text = d["choices"][0]["message"]["content"]
+            self._json(HTTPStatus.OK, {
+                "id": d.get("id"), "type": "message", "role": "assistant",
+                "model": "dp4",
+                "content": [{"type": "text", "text": text}],
+                "stop_reason": "end_turn", "usage": d.get("usage", {}),
+            })
+        except Exception as e:
+            self._json(HTTPStatus.BAD_GATEWAY,
+                       {"error": {"message": repr(e)[:200], "type": "upstream_error"}})
+
+
+def main():
+    with open(JWT_PATH) as f:
+        jwt = f.read().strip()
+    assert len(jwt.split(".")) == 3, "JWT at %s malformed" % JWT_PATH
+    srv = ThreadingHTTPServer(("127.0.0.1", 56238), Handler)
+    print("box anthropic translator on :56238 -> dp4 direct", flush=True)
+    srv.serve_forever()
+
+
+if __name__ == "__main__":
+    main()

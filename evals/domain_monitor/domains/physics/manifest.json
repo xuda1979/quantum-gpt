@@ -1,0 +1,18 @@
+{
+  "domain": "physics",
+  "relevance": "physical quantum mechanics (Hamiltonian evolution, error correction, quantum info)",
+  "benchmark_sources": ["evals/benchmarks/quantum_science_holdout_v1.txt", "evals/benchmarks/quantum_generalization_holdout_v3_multi_framework.txt"],
+  "task_ids": [
+    "hamiltonian_simulation_trotter",
+    "quantum_science_hamiltonian_simulation_trotter_error",
+    "quantum_science_hamiltonian_simulation_qdrift_bound",
+    "bit_flip_code_correction",
+    "phase_flip_code_correction",
+    "error_detection_bit_flip",
+    "quantum_science_qec_surface_code_threshold",
+    "quantum_science_qec_stabilizer_formalism_basics",
+    "quantum_science_shor_period_finding_explanation",
+    "quantum_science_qaoa_depth_performance_tradeoff",
+    "quantum_science_vqe_barren_plateau_cause"
+  ]
+}

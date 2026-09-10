@@ -1,0 +1,23 @@
+{
+  "domain": "coding",
+  "relevance": "Qiskit/Stim API-correct software engineering (the executable-pass surface the adapter must nail)",
+  "benchmark_sources": [
+    "evals/benchmarks/quantum_generalization_holdout_v1.txt",
+    "evals/benchmarks/quantum_grpo_training_v9_rl_questions_v2.txt"
+  ],
+  "task_ids": [
+    "gate_alias_normalization",
+    "gate_alias_casefold_barrier",
+    "gate_alias_registry_cleanup",
+    "gate_token_canonicalizer",
+    "qiskit_qft_entangled",
+    "cirq_qaoa_line",
+    "grover_oracle_diffusion",
+    "qaoa_maxcut_5cycle",
+    "pauli_message_codec",
+    "measurement_bug_repair",
+    "circuit_phase_repair",
+    "circuit_depth_optimization",
+    "pennylane_qml_iris_classification"
+  ]
+}

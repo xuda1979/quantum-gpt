@@ -1,0 +1,19 @@
+{
+  "domain": "math",
+  "relevance": "mathematics underpinning quantum-computing coding (linear algebra, complex/phase, unitary normalization)",
+  "benchmark_sources": ["evals/benchmarks/quantum_science_holdout_v1.txt", "evals/benchmarks/quantum_generalization_holdout_v1.txt"],
+  "task_ids": [
+    "amplitude_amplification_iteration",
+    "phase_estimation_circuit",
+    "phase_kickback_adder",
+    "phase_register_roundtrip",
+    "qaoa_maxcut",
+    "density_matrix_partial_trace",
+    "hadamard_test_expectation",
+    "classical_shadow_tomography",
+    "bernstein_vazirani_hidden_string",
+    "deutsch_jozsa_balance_test",
+    "quantum_science_qpe_phase_estimation_accuracy",
+    "quantum_science_grover_quadratic_speedup_derivation"
+  ]
+}
