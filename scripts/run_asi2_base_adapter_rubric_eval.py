@@ -6,11 +6,10 @@ from __future__ import annotations
 import argparse
 import ast
 import gc
-import importlib.util
 import json
 import math
 import os
-import re
+import subprocess
 import sys
 import time
 from collections import defaultdict
@@ -18,7 +17,13 @@ from pathlib import Path
 from typing import Any
 
 import torch
-from peft import PeftModel
+
+try:  # 2026-09-02: peft is box-side only; local prompt-isolation tests import
+    # this module for its PROMPT BUILDER, not its model loader (H-83 class).
+    from peft import PeftModel
+except ImportError:  # pragma: no cover - exercised only on box
+    PeftModel = None
+
 from transformers import (
     AutoConfig,
     AutoModelForCausalLM,
@@ -27,30 +32,18 @@ from transformers import (
     PreTrainedTokenizerFast,
 )
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(os.environ.get("QG_ROOT", str(Path(__file__).resolve().parents[1])))
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from evals.runner.candidate_sanitize import sanitize_candidate_text
 from training.model_backend import (
     ensure_text_backend_preflight,
     load_causal_lm_with_text_backend_preflight,
 )
 from training.text_preprocessor_backend import load_text_preprocessor_backend
 
-TASK_IDS = [
-    "quantum_gate_alias_normalization",
-    "quantum_phase_estimation_circuit",
-    "quantum_qaoa_maxcut",
-    "quantum_superdense_coding",
-    "quantum_grover_oracle_diffusion",
-    "quantum_density_matrix_partial_trace",
-    "quantum_channel_depolarizing",
-    "quantum_ghz_state_witness",
-    "software_docstring_contract",
-    "software_duplicate_logic_refactor",
-    "software_off_by_one_bugfix",
-    "software_retry_decorator",
-]
+DEFAULT_BENCHMARK = "evals/benchmarks/quantum_grpo_training_v1.txt"
 
 
 def parse_args() -> argparse.Namespace:
@@ -58,14 +51,30 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--base-model", type=Path, required=True)
     parser.add_argument("--adapter", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument(
+        "--benchmark",
+        type=Path,
+        default=ROOT / DEFAULT_BENCHMARK,
+        help="benchmark file: one task id per line, '#' comments (default: 13-task training set)",
+    )
     parser.add_argument("--device", default="npu")
     parser.add_argument("--max-new-tokens", type=int, default=384)
     parser.add_argument("--limit", type=int, default=0)
+    # 2026-09-14 (parallel-eval speedup): slice the benchmark task list so
+    # multiple independent workers -- each sharded over its OWN NPU subset --
+    # can evaluate disjoint task groups CONCURRENTLY instead of one serial
+    # worker. Each worker sets ASCEND_RT_VISIBLE_DEVICES to its NPU subset and
+    # passes a disjoint --task-start/--task-count. Guards: clamp to the real
+    # list length; count<=0 means "rest of the list".
+    parser.add_argument("--task-start", type=int, default=0,
+                        help="0-based index of the first task this worker handles (parallel-eval split)")
+    parser.add_argument("--task-count", type=int, default=0,
+                        help="number of tasks this worker handles; 0 = through the end of the list")
+    parser.add_argument("--harness-timeout", type=int, default=300)
     parser.add_argument(
         "--hide-reference",
         action="store_true",
-        help="omit the task's own reference solution from the eval prompt "
-        "(same as EVAL_HIDE_REFERENCE=1; default embeds it for historical comparability)",
+        help="accepted for compatibility; the no-leak prompt is now unconditional",
     )
     return parser.parse_args()
 
@@ -74,8 +83,22 @@ def load_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def load_task_ids(bench_path: Path) -> list[str]:
+    if not bench_path.is_file():
+        raise SystemExit(f"benchmark file not found: {bench_path}")
+    ids: list[str] = []
+    for line in bench_path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        ids.append(line.split()[0])
+    if not ids:
+        raise SystemExit(f"benchmark file {bench_path} has no task ids")
+    return ids
+
+
 def find_task(task_id: str) -> Path:
-    suffix = task_id.split("_", 1)[1]
+    suffix = task_id.split("_", 1)[1] if "_" in task_id else task_id
     for path in (ROOT / "evals" / "tasks").glob("*/*/task.json"):
         data = load_json(path)
         if data.get("id") == task_id or path.parent.name == suffix:
@@ -96,12 +119,29 @@ def load_backend(model_path: Path):
 
 
 def load_model(model_path: Path, device: str):
+    model_kwargs = {"trust_remote_code": True, "low_cpu_mem_usage": True, "torch_dtype": "auto"}
+    if device.startswith("npu"):
+        # 2026-08-22: the full 27B (54GB bf16) on ONE 64GB card fragments the
+        # NPU pool at 44-59 GiB and OOMs the load (repeated). Use the trainer's
+        # PROVEN balanced-layers shard across ALL visible NPUs (~7GB/card).
+        from training.qwen_sft_peft import (
+            _visible_npu_indices,
+            build_balanced_npu_layer_device_map,
+        )
+
+        visible = _visible_npu_indices()
+        cfg = AutoConfig.from_pretrained(str(model_path), trust_remote_code=True)
+        model_kwargs["device_map"] = build_balanced_npu_layer_device_map(cfg, visible)
+        model_kwargs["max_memory"] = {f"npu:{idx}": "54GiB" for idx in range(len(visible))}
     model = load_causal_lm_with_text_backend_preflight(
         str(model_path),
         auto_config_cls=AutoConfig,
         auto_model_for_causal_lm_cls=AutoModelForCausalLM,
-        model_kwargs={"trust_remote_code": True, "low_cpu_mem_usage": True, "torch_dtype": "auto"},
-    ).to(device)
+        model_kwargs=model_kwargs,
+    )
+    if not device.startswith("npu"):
+        model = model.to(device)
+    return model
     if getattr(model, "generation_config", None) is not None:
         model.generation_config.do_sample = False
         model.generation_config.temperature = 1.0
@@ -133,50 +173,43 @@ def render_prompt(backend: Any, prompt: str) -> str:
 
 
 def build_prompt(task_dir: Path, meta: dict[str, Any], hide_reference: bool = False) -> str:
-    # EVAL_HIDE_REFERENCE=1 (or --hide-reference via the caller) drops the
-    # reference block; default OFF keeps historical comparability (design B).
-    hide_ref = hide_reference or os.environ.get("EVAL_HIDE_REFERENCE", "0") == "1"
-    tests = (task_dir / meta.get("test_file", "tests.py")).read_text(encoding="utf-8")
-    candidate_name = meta.get("candidate_file", "candidate.py")
-    reference = (
-        (task_dir / candidate_name).read_text(encoding="utf-8")
-        if (task_dir / candidate_name).exists()
-        else ""
+    # 2026-08-21 (review finding): QUESTION-ONLY prompt. The old prompt embedded
+    # tests.py (up to 8k chars — for distillation tasks that is the EXPECTED
+    # stdout verbatim) plus the reference candidate.py — a live leak that
+    # inflated base pass@1 (10/12). Prompt mirrors the trainer's build_prompt:
+    # task_prompt > description > name, + domain/category. (hide_reference kept
+    # for call-site compatibility; embedding is gone entirely.)
+    if meta.get("task_prompt"):
+        first = str(meta["task_prompt"])
+    elif meta.get("description"):
+        first = f"Task: {meta['description']}"
+    else:
+        first = f"Task: {meta.get('name', task_dir.name)}"
+    return "\n\n".join(
+        [
+            first,
+            f"Domain: {meta.get('domain', 'unknown')}\nCategory: {meta.get('category', 'unknown')}",
+            "Return only the final Python code.",
+        ]
     )
-    prompt = (
-        f"Task: {meta['name']}\n"
-        f"Domain: {meta['domain']}\n"
-        f"Category: {meta['category']}\n\n"
-        "Write candidate.py that satisfies this test harness.\n\n"
-        "Tests:\n"
-        "```python\n"
-        f"{tests[:8000]}\n"
-        "```\n\n"
-    )
-    if not hide_ref:
-        # candidate_file is the task's own verified reference solution; embedding it
-        # makes the eval a reconstruct-from-reference test (leak, design B).
-        # EVAL_HIDE_REFERENCE=1 / --hide-reference removes it. Default OFF keeps
-        # historical base 10/12 pass@1 and rubric 4.177 comparable.
-        prompt += (
-            "Existing/reference API shape, if useful:\n"
-            "```python\n"
-            f"{reference[:3000]}\n"
-            "```\n"
-        )
-    return prompt
 
 
 def sanitize_code(text: str) -> str:
+    # 2026-09-08: delegate to the canonical sanitizer (repo convention, pinned
+    # by tests/test_script_candidate_sanitize_wiring.py). Fixes the wave-6
+    # failure class: the old inline fence regex required a CLOSING fence, so
+    # token-cap-truncated generations starting "```python" hit ast.parse raw
+    # and scored ~0. Prose-marker trimming stays FIRST (canonical sanitizer has
+    # no prose-marker handling); fences/think-blocks/terminal markers and the
+    # longest-parseable-prefix repair are the canonical sanitizer's job.
     value = text.strip()
-    fenced = re.search(r"```(?:python)?\s*(.*?)```", value, re.S | re.I)
-    if fenced:
-        value = fenced.group(1).strip()
     markers = ["Here is", "Explanation:"]
     lines = value.splitlines()
     while lines and any(lines[0].strip().startswith(marker) for marker in markers):
         lines.pop(0)
-    return "\n".join(lines).strip() + "\n"
+    value = "\n".join(lines).strip()
+    sanitized = sanitize_candidate_text(value) if value else ""
+    return sanitized if sanitized.endswith("\n") or not sanitized else sanitized + "\n"
 
 
 def generate(model: Any, backend: Any, prompt: str, device: str, max_new_tokens: int) -> str:
@@ -196,26 +229,60 @@ def generate(model: Any, backend: Any, prompt: str, device: str, max_new_tokens:
     )
 
 
-def load_test_module(path: Path):
-    spec = importlib.util.spec_from_file_location(path.stem, path)
-    if spec is None or spec.loader is None:
-        raise RuntimeError(f"cannot load {path}")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
 def run_single_file_test(
-    task_dir: Path, meta: dict[str, Any], code: str, out_path: Path
+    task_dir: Path, meta: dict[str, Any], code: str, out_path: Path, timeout: int
 ) -> dict[str, Any]:
+    """Run the harness in a FRESH interpreter (fork-safe on the NPU box)."""
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(code, encoding="utf-8")
+    runner = ROOT / "evals" / "runner" / "single_candidate_eval.py"
+    if not runner.is_file():
+        return {
+            "passed": False,
+            "details": [f"single_candidate_eval.py missing at {runner} (deploy it first)"],
+        }
     try:
-        module = load_test_module(task_dir / meta.get("test_file", "tests.py"))
-        result = module.run_tests(str(out_path))
-        return {"passed": bool(result.get("passed")), "details": list(result.get("details", []))}
-    except Exception as exc:  # noqa: BLE001
-        return {"passed": False, "details": [f"{type(exc).__name__}: {exc}"]}
+        proc = subprocess.run(
+            [
+                sys.executable,
+                str(runner),
+                "--candidate",
+                str(out_path),
+                "--tests",
+                str(task_dir / meta.get("test_file", "tests.py")),
+                "--task-dir",
+                str(task_dir),
+                "--meta",
+                str(task_dir / "task.json"),
+                "--timeout",
+                str(timeout),
+            ],
+            capture_output=True,
+            text=True,
+            timeout=timeout + 60,
+        )
+    except subprocess.TimeoutExpired:
+        return {"passed": False, "details": ["harness subprocess timed out"]}
+    lines = [ln for ln in (proc.stdout or "").strip().splitlines() if ln.strip()]
+    if not lines:
+        return {
+            "passed": False,
+            "details": [f"harness produced no output: {(proc.stderr or '')[:200]}"],
+        }
+    try:
+        result = json.loads(lines[-1])
+    except json.JSONDecodeError:
+        return {
+            "passed": False,
+            "details": [f"harness output unparseable: {lines[-1][:200]}"],
+        }
+    harness = result.get("harness")
+    if isinstance(harness, dict) and "passed" in harness:
+        return {"passed": bool(harness["passed"]), "details": list(harness.get("details", []))}
+    return {
+        "passed": False,
+        "details": [f"harness returned no result: {str(result.get('error'))[:200]}"],
+    }
 
 
 def static_scores(code: str, passed: bool) -> dict[str, float]:
@@ -230,7 +297,7 @@ def static_scores(code: str, passed: bool) -> dict[str, float]:
     has_defs = bool(
         tree
         and any(
-            isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef)
+            isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
             for node in ast.walk(tree)
         )
     )
@@ -239,9 +306,9 @@ def static_scores(code: str, passed: bool) -> dict[str, float]:
     nested_loops = 0
     if tree:
         for node in ast.walk(tree):
-            if isinstance(node, ast.For | ast.While):
+            if isinstance(node, (ast.For, ast.While)):
                 nested_loops += sum(
-                    isinstance(child, ast.For | ast.While)
+                    isinstance(child, (ast.For, ast.While))
                     for child in ast.walk(node)
                     if child is not node
                 )
@@ -269,6 +336,8 @@ def static_scores(code: str, passed: bool) -> dict[str, float]:
 def eval_loss(
     model: Any, backend: Any, eval_file: Path, device: str, limit: int = 20
 ) -> dict[str, float]:
+    if not eval_file.is_file():
+        return {"loss": None, "perplexity": None, "examples": 0}
     losses: list[float] = []
     rows = [
         json.loads(line)
@@ -324,12 +393,11 @@ def run_model(
     backend: Any,
     tasks: list[tuple[Path, dict[str, Any]]],
     args: argparse.Namespace,
-    hide_reference: bool = False,
 ) -> list[dict[str, Any]]:
     records = []
     for index, (task_json, meta) in enumerate(tasks, 1):
         task_dir = task_json.parent
-        prompt = build_prompt(task_dir, meta, hide_reference=hide_reference)
+        prompt = build_prompt(task_dir, meta)
         print(
             json.dumps(
                 {"stage": "generate", "model": model_name, "index": index, "task": meta["id"]}
@@ -338,7 +406,9 @@ def run_model(
         )
         code = generate(model, backend, prompt, args.device, args.max_new_tokens)
         candidate_path = args.output.parent / "candidates" / model_name / f"{meta['id']}.py"
-        test_result = run_single_file_test(task_dir, meta, code, candidate_path)
+        test_result = run_single_file_test(
+            task_dir, meta, code, candidate_path, args.harness_timeout
+        )
         scores = static_scores(code, test_result["passed"])
         records.append(
             {
@@ -352,7 +422,8 @@ def run_model(
                 "details": test_result["details"],
                 "scores": scores,
                 "output_chars": len(code),
-                "reference_hidden": hide_reference,
+                "reference_hidden": True,
+                "prompt_mode": "question-only",
             }
         )
     return records
@@ -360,10 +431,21 @@ def run_model(
 
 def main() -> int:
     args = parse_args()
-    hide_reference = bool(args.hide_reference or os.environ.get("EVAL_HIDE_REFERENCE", "0") == "1")
     started = time.time()
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    selected = TASK_IDS[: args.limit] if args.limit else TASK_IDS
+    task_ids = load_task_ids(args.benchmark)
+    selected = task_ids[: args.limit] if args.limit else task_ids
+    # 2026-09-14 (parallel-eval speedup): apply the disjoint slice. --task-count
+    # of 0 means run to the end of the list. Clamp --task-start so it cannot
+    # exceed the list.
+    if args.task_start or args.task_count:
+        start = max(0, min(args.task_start, len(selected)))
+        if args.task_count > 0:
+            selected = selected[start:start + args.task_count]
+        else:
+            selected = selected[start:]
+        if not selected:
+            raise SystemExit(f"task slice [{args.task_start}:+{args.task_count}] selects no tasks")
     tasks = []
     for task_id in selected:
         task_json = find_task(task_id)
@@ -371,6 +453,12 @@ def main() -> int:
         if meta.get("candidate_files"):
             continue
         tasks.append((task_json, meta))
+    if not tasks:
+        raise SystemExit(f"no tasks selected from {args.benchmark}")
+    print(
+        json.dumps({"stage": "tasks", "benchmark": str(args.benchmark), "n": len(tasks)}),
+        flush=True,
+    )
 
     backend = load_backend(args.base_model)
     eval_file = (
@@ -380,7 +468,7 @@ def main() -> int:
 
     print(json.dumps({"stage": "load_base"}), flush=True)
     base = load_model(args.base_model, args.device)
-    base_records = run_model("base", base, backend, tasks, args, hide_reference)
+    base_records = run_model("base", base, backend, tasks, args)
     base_eval_loss = eval_loss(base, backend, eval_file, args.device)
     del base
     gc.collect()
@@ -388,10 +476,17 @@ def main() -> int:
         torch.npu.empty_cache()
 
     print(json.dumps({"stage": "load_adapter"}), flush=True)
-    adapter_base = load_model(args.base_model, args.device)
-    adapter = PeftModel.from_pretrained(adapter_base, str(args.adapter))
+    # 2026-08-22 (fix): the old path loaded base on CPU and then
+    # ``adapter.to("npu")`` moved the ENTIRE 54GB merged model onto ONE card,
+    # which OOMs whenever concurrent training holds HBM there (2 runs ~29GB on
+    # card 0 -> 2.9MiB free). Mirror the trainer (qwen_sft_peft.py): load the
+    # base SHARDED across all visible NPUs (balanced layer map), then wrap with
+    # PeftModel directly — PEFT injects LoRA at forward time, no merge
+    # transient, weights stay ~13.5GB/card.
+    adapter = load_model(args.base_model, args.device)
+    adapter = PeftModel.from_pretrained(adapter, str(args.adapter))
     adapter.eval()
-    adapter_records = run_model("adapter", adapter, backend, tasks, args, hide_reference)
+    adapter_records = run_model("adapter", adapter, backend, tasks, args)
     adapter_eval_loss = eval_loss(adapter, backend, eval_file, args.device)
 
     records = base_records + adapter_records
@@ -399,7 +494,9 @@ def main() -> int:
         "created_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "base_model": str(args.base_model),
         "adapter": str(args.adapter),
-        "reference_hidden": hide_reference,
+        "benchmark": str(args.benchmark),
+        "prompt_mode": "question-only",
+        "reference_hidden": True,
         "task_ids": [meta["id"] for _, meta in tasks],
         "heldout_sft_eval": {"base": base_eval_loss, "adapter": adapter_eval_loss},
         "summary": summarize(records),
