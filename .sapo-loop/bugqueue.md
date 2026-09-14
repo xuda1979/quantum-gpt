@@ -7381,3 +7381,364 @@ NEXT DISCRIMINATOR (cheap, decides the mechanism -- run before any fix):
 IMPACT: pass_rate 0.0 / all_fail True on every step so far; the run is being throttled 8x
 below base lr by this instrument. Not stop-worthy (training is advancing and checkpointing),
 but no conclusion about learning rate or convergence is valid until it is fixed.
+
+## B-225 (2026-09-14, tick #453) -- THE RUNNER'S OWN TESTS ARE POISONED BY THE LIVE SUITE (single-flight lock not neutralised) -- FIXED, TDD, 22/22 + 62/62 GREEN
+
+STATUS: FIXED tree-side (3 test files + 1 new guard). Severity: MEDIUM-HIGH -- it makes section 9.3
+self-defeating: the runner's tests go RED precisely BECAUSE the runner is running.
+
+MEASURED (tick #453, 2026-09-14 ~03:02Z, standalone -- deliberately NOT read from a chunk, so
+co-tenancy could not be blamed):
+
+    /usr/bin/python3 -m pytest -q tests/test_full_suite_runner_chunk_timeout.py \
+        tests/test_full_suite_runner_reports_failing_ids.py \
+        tests/test_full_suite_runner_reports_incomplete.py
+    -> TESTSUITE_COUNTS passed=7 failed=12 errors=0 total=19
+
+Every one of the 12 carried the SAME signature: "expected 3 chunks, ran 0".
+
+ROOT CAUSE (code path, not inference). Those files drive the runner's main() in-process.
+`_load_runner()` neutralised `PS_SOURCE` (B-216) and `_drive()` pinned `env_verdict` (B-173) --
+but NOT the single-flight lock. So main() reached run_full_suite.py:532
+`_SINGLE_FLIGHT_HANDLE = acquire_single_flight()`, which reads the module global `SUITE_LOCK`
+(run_full_suite.py:122 `path = lock_path or SUITE_LOCK`) -> the REAL
+`.sapo-loop/suite_runner.lock`, held by the live runner pid 33860 -> returned None -> main()
+returned SINGLE_FLIGHT_EXIT (4) BEFORE any chunk -> `_drive`'s
+`assert len(calls) == len(plan)` fired as "expected 3 chunks, ran 0".
+
+WHY IT IS WORSE THAN 12 ORDINARY FAILURES: the RED was CAUSED by the suite running. Any tick
+that satisfied section 9.3 (run the full suite) manufactured ~12 fresh failures in the very
+instrument that polices section 9.3, so the suite could never read green while doing its job.
+It is the same ambient-dependency class B-216 fixed one layer over (PS_SOURCE), and B-173 before
+that (os.execv) -- the third member of that family in the runner's test harness.
+
+THE FIX (smallest, and it keeps the flock REAL -- only its PATH moves): each `_load_runner()` now
+points SUITE_LOCK at a private temp path:
+    mod.SUITE_LOCK = os.path.join(tempfile.mkdtemp(prefix="suite_lock_"), "runner.lock")
+so the flock is still exercised for real, just never against a live run.
+
+RED EVIDENCE: measured 12 failed / 7 passed BEFORE the fix (the run above), 22/22 GREEN AFTER.
+
+NEW GUARD -- tests/test_full_suite_runner_lock_hermetic.py (4 tests, all green), checking BOTH
+directions so neither half is vacuous:
+  1. test_the_runners_shipped_default_really_is_the_live_lock_path -- the runner's real default IS
+     `<repo>/.sapo-loop/suite_runner.lock` and SINGLE_FLIGHT_EXIT == 4. ANCHOR: without this, leg 2
+     could pass on a wrong path.
+  2. test_every_runner_test_module_neutralises_the_single_flight_lock -- all three runner-test
+     files must point away from the live path; a FOURTH file that forgets now fails this.
+  3. test_driven_main_still_runs_its_chunks_while_the_real_lock_is_held -- behavioural: with the
+     live path genuinely held, a driven main() still reports 2/2 chunks and VERDICT=COMPLETE.
+  4. test_undoing_the_neutralisation_reproduces_the_failure -- FALSIFICATION leg: put SUITE_LOCK
+     back to the live path and the same drive must fail matching r"ran 0". Proves the
+     neutralisation is LOAD-BEARING, not decorative.
+Leg 3's helper tolerates the live path already being held by a real runner (BlockingIOError ->
+return None, never released), so the guard holds both with and without a live run.
+
+REGRESSION: the ENTIRE runner test surface -- all 11 files matching run_full_suite in tests/
+(argv_guard, chunk_timeout, chunks_collected_ids, co_tenancy, lock_hermetic, reports_failing_ids,
+reports_incomplete, single_flight, unique_output, suite_runner_pins_interpreter,
+suite_runner_source_stamp) -> 62 passed / 0 failed.
+
+NOT DEPLOYED ANYWHERE: test files only; `run_full_suite.py` itself is UNCHANGED, so the runner's
+B-178 SOURCE stamp does not drift and the in-flight run 33860 keeps measuring one identity.
+
+IN-FLIGHT RUN INTERACTION (recorded, not a defect): runner 33860 executed chunk 04 (ids 601..800)
+BEFORE this fix, so its TOTAL will still carry those 12 failures -- a STALE measurement of a tree
+that no longer exists, not a live regression. Chunks it has not yet reached read the fixed files
+from disk and will be green.
+
+RELATED: B-211 (acquisition-time single-flight refusal -- WORKING as designed; this bug is its
+test-harness shadow), B-216 (PS_SOURCE / co-tenancy verdict -- CLOSED), B-173 (execv B-173 guard
+in the same helper).
+
+
+## B-226 — pytest harness orphans a PRODUCTION judge-health agent which then
+## evades the singleton lock (FOUND + ROOT-CAUSED + FIXED 2026-09-14, tick #454)
+
+SYMPTOM (measured live): THREE `sapo_judge_health_agent.py` processes resident
+at once (pids 23345 @04:48, 46573 @10:54, 53616 @00:48).
+
+EVIDENCE / ROOT CAUSE (not a hypothesis — env read off the live pids):
+  - `ps eww -p 46573` -> SAPO_LOCK_DIR=/private/tmp/pytest-of-daxu/pytest-687/
+      test_loop_with_a_dead_observer0/locks
+  - `ps eww -p 23345` -> SAPO_LOCK_DIR=/private/tmp/pytest-of-daxu/pytest-590/
+      test_loop_with_a_dead_observer0/locks
+  - `ps eww -p 53616` -> no override; it holds the REAL lock
+      (/tmp/sapo_locks/sapo_judge_health_agent/holder == 53616).
+
+So 53616 is the legitimate singleton; 23345 and 46573 are ORPHANS spawned by
+tests/test_huanxin_broker_probe_three_state.py::
+test_loop_with_a_dead_observer_never_reaches_a_kick.
+
+MECHANISM: that test drives the SHIPPED loop under `subprocess.run(..., timeout=3)`.
+On expiry Python signals ONLY the direct child (the bash harness). The
+grandchild the shipped loop starts survives, reparents to pid 1 -- and because
+the test injects a PRIVATE SAPO_LOCK_DIR (to stay off the live lock root, which
+is CORRECT for isolation), the survivor's singleton probe resolves to a
+throwaway lock dir, so the production guard can never refuse it. It then
+double-writes the shared /tmp/sapo_judge_health.log + _state.json (visible in
+the log as interleaved strike counters 55/56/57/58 resuming after each restart)
+and may walk the auto-repair chain forever.
+
+REFUTED ALTERNATIVES (recorded so they are not re-tried):
+  - "the 10s subprocess timeout in _singleton_lock() fails OPEN under load" --
+    REFUTED by measurement: the lock script returns in 0.18s under the current
+    load-114 host. The except-returns-True path is real but was NOT the cause.
+  - "the lock script is too permissive" -- REFUTED by reading: holder_refresh_stale
+    returns 1 when no .refreshed file exists, i.e. it fails CLOSED for a live holder.
+  - "they are zombies / subshell phantoms" -- REFUTED: all three are STAT S.
+
+CLASS: B-121 (pytest scaffold orphans; cure = killpg) and B-084 (a bound must kill
+the GROUP, not the child pid). Same cure, already used by four sibling test files.
+
+FIX (smallest): in test_loop_with_a_dead_observer_never_reaches_a_kick, run the
+harness with `start_new_session=True` and, on TimeoutExpired,
+`os.killpg(os.getpgid(proc.pid), SIGKILL)` + a final communicate(). Added
+`import signal`.
+
+TDD: NEW tests/test_broker_probe_harness_orphan_guard.py (3 tests)
+  1. ANCHOR -- the guarded file IS the one that injects SAPO_LOCK_DIR (non-vacuity).
+  2. SOURCE -- it must contain start_new_session AND killpg. RED before the fix
+     (measured: 2 passed / 1 failed), GREEN after.
+  3. BEHAVIOURAL -- a stubbed grandchild carrying a unique argv marker is started
+     under a bounded harness; after expiry the GROUP kill must reap it
+     (pgrep proves nothing is left). Proves the mechanism, not its spelling.
+RESULT: 13/13 GREEN on guard + patched file; 49/49 GREEN regression across
+metrics_poller_transport_orphans, huanxin_heartbeat_three_state_probe,
+sapo_parallel_eval_agent_{run_keying,coverage}, eval_state_key_full_path,
+sapo_contract_queue_watch, heartbeat_daemon_pgid_isolation, single_instance_lock_steal_race.
+
+RESIDUAL (B-226-R, OPEN, PERMISSION-GATED this session): the two already-resident
+orphans 23345 and 46573 could not be killed -- `kill` required approval the tick
+session did not have. They are harmless-ish (they duplicate-poll a judge upstream
+that is 5xx anyway) but they ARE the defect's live residue. NEXT TICK: kill -TERM
+23345 46573, keep 53616 (the real lock holder). A source fix does not retroactively
+clean a running orphan.
+
+
+## B-227 - dp4 judge 5xx is the Huanxin SUBSCRIPTION ROUTE (CONSOLE-GATED); a watcher
+## restart does NOT restore the judge (ROOT-CAUSED 2026-09-14, tick #455 addendum)
+
+SYMPTOM (measured, per-candidate not by mean): `judge_reward` is None for ALL 8
+candidates on ALL 5 banked steps of sapo-27b-ai-20260913T233607Z (judge=0/8 every
+step). Dark judged mass = 0.10 of 1.35 total weight, about 7.4%.
+
+EVIDENCE (direct probe, not inferred). POST to the Mac dp4 proxy
+http://127.0.0.1:55648/v1/messages returned:
+    HTTP 500  error.type="upstream_route_error"
+    error.message="Huanxin inference gateway returned HTTP 500: subscription route not found"
+So the PROXY IS UP AND ANSWERING; the fault is the Huanxin subscription route.
+
+The watcher is NOT blind and NOT idle (checked against B-138/B-144 failure modes):
+its log shows `queue-run: OK` every ~40s against the CORRECT queue, and it staged
+resp files at 03:41:03Z and 03:43:42Z - each carrying the 500. Fail-closed worked:
+the trainer saw a 504 and recorded judge-absent rather than a silent score.
+
+CONSEQUENCE (citable; prevents a wasted restart): reloading B-206 into the live
+watcher restores only VISIBILITY of the body above. It does NOT restore the judge
+and must not be cited as a judge fix. A proxy relaunch is REFUTED - the proxy
+answers. The route is fixed in the Huanxin CONSOLE -> USER-GATED.
+
+STATUS: OPEN, USER-GATED (console access required). No local fix exists.
+RELATED: B-206 (watcher swallowed the upstream body - the reason this took a direct
+probe to see), B-219 (queue-empty is transient).
+
+## B-224 UPDATE (2026-09-14, divide-and-conquer cycle) -- COUNT-MISMATCH HYPOTHESIS REFUTED AT THE UNIT LEVEL; DO NOT IMPLEMENT THAT FIX
+Status: hypothesis REFUTED. A RED test proved the trust-region gate is
+INVARIANT to token count when both sides are per-candidate MEANS, so the B-224
+"count mismatch" mechanism cannot, on its own, fire the false violation.
+
+EVIDENCE (TDD, tests/test_b224_trust_region_samepass.py):
+- sequence_ratio_stats (grpo_utils.py:2720) diffs per-candidate MEAN log-probs:
+    seq_kl = (expm1(clipped(cur-old)) - clipped(cur-old)).clamp_min(0).mean()
+- OLD side: old_log_probs[idx] / old_token_counts[idx]  (a mean, trainer:6951/6955)
+- POST side: post_log_prob / post_token_count  (a mean, trainer:7461/7485)
+- compute_completion_log_prob returns a SUM, but the caller normalizes it to a
+  mean by dividing by count on BOTH sides. So a count mismatch alone changes
+  NEITHER side's per-candidate value -> seq_kl stays ~0. My RED test
+  (mismatched prefix lengths, unchanged policy) PASSED, i.e. did not reproduce
+  a violation. That is a NEGATIVE result: the "count mismatch" fix candidate is
+  WRONG and must not be implemented.
+- Temperature is also symmetric: policy_temperature=effective_temperature is
+  passed on BOTH the rollout-time pass (6070) and the post-update re-encode
+  (7469). So the temperature hypothesis is also not the trigger.
+
+WHAT STILL MUST EXPLAIN IT (leave open, do not fix on guess):
+  step 2 ratio_after=11.17, seq_kl_after=9.04 is ~2.4 nats/token of post-update
+  shift — not credible as policy movement at lr 2.5e-5, but NOT explained by
+  count/temperature. The post-update forward runs a FRESH logit computation on
+  the UPDATED LoRA weights; a mismatch there vs the rollout-time cache, or a
+  genuinely explosive update on the truncated candidates' prefixes, are the
+  remaining candidates. Next step before any fix: dump per-candidate
+  old_log_probs[idx], post_log_prob, and post_token_count for one violating
+  step and diff them numerically.
+
+## B-224 ADDENDUM 2 (tick #456, 2026-09-14 11:58 CST) -- SAME-STEP DISCRIMINATOR FOUND: THE POST-UPDATE PROBE AND THE TRAIN PASS DISAGREE BY ~250x, AND THE INSTRUMENT NEEDED TO SETTLE IT IS NOT PERSISTED
+
+TWO FIX CANDIDATES KILLED THIS TICK (both by code inspection, no fix written on either):
+  (a) COUNT-MISMATCH -- already refuted at unit level (B-224 UPDATE above).
+  (b) TEMPERATURE -- REFUTED THIS TICK. Hypothesis: escalate_temperature_on_flat_route()
+      (grpo_trainer.py:7442) runs BEFORE the trust-region block (:7449), so the post-update
+      re-encode at :7469 might use a higher temperature than the rollout-time pass at :6070.
+      FALSE: effective_temperature is computed exactly ONCE per step at :5980
+      (clamp_adaptive_behavior_temperature(adaptive_temp.current_temp())), and the SAME variable is
+      passed to BOTH :6070 and :7469. The escalation mutates adaptive_temp, so it takes effect at the
+      NEXT step's :5980, not this step's post-encode.
+  Also VERIFIED (not refuted): B-212's own rationale is correct. At :6943-6956, when
+  n_train < n_old the old side is old_prefix = consistent_old_token_lps[idx][:n_train]; then
+  .mean() -- a per-candidate MEAN over the identical first n_train tokens the capped post pass uses
+  (:7460-7485, post_log_prob / post_token_count.clamp_min(1)). Both sides are means over the SAME
+  prefix. Keep the cap; it removes a real OOM risk and is NOT the cause.
+
+NEW MEASURED DISCRIMINATOR (step 6, banked, grpo_step_metrics.jsonl / train_stdout.log):
+    train_pass_truncation_rate : 1.0     <- EVERY candidate was truncated by the 2048 train cap
+    truncation_rate (generation): 0.0
+    trust_region_violated      : false
+    trust_region_violation_count: 3      <- CUMULATIVE (grpo_trainer.py:7502 += 1; restored :5861)
+    ratio_after_update         : 0.5999
+    clip_fraction_after_update : 0.75
+    seq_kl_after               : 0.2477
+    in-training per-candidate sapo seq_kl, SAME step:
+      [0.0002395, 0.0003167, 0.0001551, 0.05027, 0.04825, 0.000432, 0.00203, 0.05422]
+      (max 0.0542; mean ~0.0196)
+
+READING: on the SAME step, over the SAME (truncated) prefix, the post-update trust-region probe
+reports a shift (seq_kl_after 0.2477; mean ratio 0.5999) that is ~4.6x the LARGEST per-candidate
+train-pass value and ~250x the mean. A 2.5e-5-lr LoRA update cannot move the policy that much. The
+two probes are measuring the same quantity and disagreeing, so ONE of them is wrong.
+
+THE BLOCKING DEFECT (this is what to fix; TDD-able, launch-boundary only):
+  The step record does NOT persist the per-candidate post-update values, so the dump B-224's own
+  next-step note asks for (old_log_probs[idx], post_log_prob, post_token_count) is IMPOSSIBLE for
+  any banked step. grep confirms :7460-7485 computes post_log_probs and post_token_count as locals
+  and only the AGGREGATES (ratio_after_update / clip_fraction_after_update / seq_kl_after) reach
+  record_update (:7636-7638). Next step: persist per-candidate post_token_count AND the per-candidate
+  post-vs-old mean delta (or the per-candidate ratio) in the step record, RED-first, then re-run one
+  violating step and diff numerically. Do NOT guess a fix for B-224 before that dump exists.
+
+STATUS: OPEN. Two of three candidate branches now dead. Instrumentation gap is the next step, owned
+by the bug-clearing lane. DO NOT touch training/ while the live run is in flight (S5.4.2) - land at
+the next launch boundary.
+
+* 2026-09-14 (Judge-Chain lane, tick cross-check) — ORDER-1 PREMISE FALSIFIED: the '3-purist duplicate sapo_judge_health_agent herd' is NOT a production herd. MEASURED via `ps -Eww`: pid 23345 and 46573 carry SAPO_LOCK_DIR=/private/tmp/pytest-of-daxu/pytest-<590|687>/test_loop_with_a_dead_observer0/locks, i.e. they are PYTEST-LEAKED orphans from tests/test_huanxin_broker_probe_three_state.py ::test_loop_with_a_dead_observer_never_reaches_a_kick, already filed as B-226 and FIXED (start_new_session=True L255 + os.killpg L261; tests/test_broker_probe_harness_orphan_guard.py GREEN 3/3). pid 53616 is the ONLY production agent; it holds /tmp/sapo_locks/sapo_judge_health_agent (holder=53616). The B-171 single-instance guard (scripts/sapo_judge_health_agent.py:182-217) is CORRECT and NOT defective: a second production invocation refuses, rc=1 in 0.07s, measured against a copy of the live lock state preserving the 41905s-old dir mtime. So NO new guard and NO new RED test were written — that would duplicate the green tests/test_judge_health_agent_singleton.py (5/5) and encode a falsified premise. RESIDUAL (user-gated, not actioned): the two PRE-FIX orphans are still resident PPID 1 and no future run can reap them; they are permanent duplicate writers of /tmp/sapo_judge_health.log. Resolves the same way as B-195 (keep-one).
+
+## B-228 - the Qwen3.8-27B retirement was INCOMPLETE in the model registry: a stale
+## `expected_substring` (a FAIL-CLOSED verifier target, not a "model default" key)
+## plus a malformed `remote_model_dir`; the B-220 class guard was blind to both
+## (ROOT-CAUSED + FIXED 2026-09-14, tick #458)
+
+SYMPTOM (measured standalone, NOT load-sensitive): `tests/test_model_family_support.py::
+test_public_models_exposes_gemma4_targets` RED in the full-suite chunk AND repeated
+standalone; `tests/test_keeper_pid_resolution_b210.py::test_parent_map_is_read_from_one_snapshot`
+likewise. Both were carried in the 15-failure in-chunk set of suite run 33860.
+
+ROOT CAUSE 1 (production defect, B-220 class - WIDER than tick #457 believed).
+`training/acquire_public_qwen_snapshot.py` PUBLIC_MODELS["qwen36-27b"] was edited by the
+retirement commit (1b7ca92) to point `model_id` at the new base, but left:
+    "expected_substring": "Qwen3.6-27B",     <- STALE, names the RETIRED model
+    "remote_model_dir": "/root/software/quantum-gpt//root/work/filestorage/Qwen3.8-27B",
+                                             <- MALFORMED: relative prefix concatenated
+                                                onto an absolute path
+`expected_substring` is NOT cosmetic: main() passes it to
+`verify_qwen_snapshot.py --expected-substring`, which EXITS NONZERO when the downloaded
+directory does not contain it. Pointed at the retired model while model_id is the new
+one, that check can never pass - the acquire path fails closed EVERY time.
+BOX EVIDENCE (positive control, ASI3 :20653):
+    ls -d /root/work/filestorage/Qwen3.8-27B          -> EXISTS (LICENSE, config.json, ...)
+    ls -d /root/work/software/quantum-gpt//root       -> No such file or directory
+so the OLD remote_model_dir names a path that cannot exist and the NEW one names the
+directory the live trainer actually loads.
+
+ROOT CAUSE 2 (why the class guard missed it). tests/test_qwen38_base_model_retirement.py
+matches only model-DEFAULT key shapes (_MODEL / MODEL_PATH / MODEL_NAME / BASE_MODEL).
+The retirement class is broader: the SAME commit left a stale retired-model reference in
+a key that names a VERIFICATION TARGET. The matcher is correct for what it scopes; the
+scope was the hole.
+
+FIX (TDD, RED first).
+ - RED: corrected the stale assertions in test_model_family_support.py to the
+   post-retirement truth, and added 3 STRUCTURAL invariants to the retirement guard:
+   (a) no registry VALUE may reference the retired model, under ANY key;
+   (b) `expected_substring` must appear in `model_id` (the verifier is fail-closed on it);
+   (c) `remote_model_dir` must be canonical (os.path.normpath(v) == v), absolute, and
+       must not nest a second absolute path.
+   Demonstrated RED: 4 failed.
+ - FIX: the two stale/malformed values.
+ - GREEN: 81/81 across the touched retirement cluster.
+ - MUTATION-PROVEN NON-VACUOUS: re-injecting "Qwen3.6-27B" into the real expected_substring
+   -> 2 failed; restored -> 10 passed, file sha256 byte-identical.
+
+ROOT CAUSE 3 (test defect, different class - same tick). test_keeper_pid_resolution_b210::
+test_parent_map_is_read_from_one_snapshot asserted `86975 in m`, where 86975 was lifted
+from the tick #439 forensic log (a transient keeper SUBSHELL, etime 24:30 at 08:49Z).
+MEASURED: `ps -p 86975 -o pid=` -> EMPTY; the pid is gone. `_parent_map` is CORRECT - its
+own docstring says a vanished pid is legitimately absent from the map. The TEST was
+non-hermetic: a pid quoted from a log is not a fact about this machine's process table, so
+the test detonates the moment that subshell exits. FIX: bind the assertions to processes
+the test owns - os.getpid() (alive by construction, real ppid checked) and a child it
+spawns and reaps itself - plus a never-raises case. 12/12 GREEN.
+
+CLASS NAMED: a TEST that asserts a fact about the LIVE PROCESS TABLE using a pid captured
+in a LOG. Its green is a scheduling coincidence, not a measurement.
+
+## B-229 - eval marker fallback is not checkpoint-scoped: a stale artifact suppresses a leg (FIXED, TDD)
+
+STATUS: FIXED in the Mac tree. scripts/asi2_loop_eval.sh sha256 210a63c84b880e7b;
+new guard tests/test_eval_marker_checkpoint_scoped.py sha256 fcad4f9408cc10db (4/4 GREEN);
+touched cluster 46/46 GREEN.
+
+MEASURED LIVE 2026-09-14, run sapo-27b-ai-20260913T233607Z, ASI2 parallel-eval lane,
+/private/tmp/sapo-logs/eval_step_000003_adapter.log:
+  [2026-09-14T04:19:54Z] on-box marker found: .../outputs/reeval_latest_3.json; backfilling local state
+The state file then reports that checkpoint status=done verdict=marker-found. But reeval_latest_3.json is
+dated 2026-09-02T13:58:57Z and belongs to a DIFFERENT measurement epoch (pass_at_1 adapter 3/18 base 3/18).
+step_000003_adapter was therefore NEVER evaluated in this run -- a false DONE, i.e. a silent coverage gap in
+the very instrument that produces the beats-base verdict.
+
+ROOT CAUSE: scripts/asi2_loop_eval.sh carries a fail-closed identity check for the LOCAL state file (B-107;
+its own comment: only THIS checkpoint's own identity counts as a verdict, an unmatched key suppressing a leg
+is a silent coverage gap, the worse failure of the two). The on-box MARKER fallback that follows re-opened
+exactly that gap: it globs outputs/reeval_latest_<leg short name>.json, keyed by a bare step number that is
+identical across runs, and took mere file EXISTENCE as a verdict.
+
+FIX (smallest, fail-closed): new helper marker_is_for_checkpoint MARKER ADAPTER. A marker is a verdict only
+for the checkpoint it was produced FROM, so it must be at least as new as the adapter directory. Freshness is
+format-agnostic -- the two marker producers write different JSON shapes, so an identity field read is not
+available on both. Unknown freshness (daemon down, auth down, no stat) resolves to EVALUATE, never to DONE.
+The stale case now emits STALE_MARKER and the leg runs.
+
+RED first: helper absent -> W1 (non-vacuity) and W4 (decision site uses the helper) failed.
+GREEN after: 4/4. W1 asserts a fresh marker STILL suppresses, so the fix is not always-re-run.
+CONSEQUENCE: step_000003_adapter returns to PENDING and will be evaluated on a later cycle.
+
+
+## B-225 (2026-09-14) -- THE EVAL BOX LACKED QISKIT, SO THE PASS MASS WAS STRUCTURALLY UNEARNABLE (THE REAL DARK-REWARD ROOT CAUSE) -- FIXED
+Status: FIXED (installed qiskit on the ASI2 eval runtime). Root cause of the
+flat comprehensive scores is NOT primarily the lr bleed -- it is that opponents
+could not run at all on the eval host.
+
+EVIDENCE (measured live, eval_results.jsonl, 88 records):
+  - pass rate 5.7% (5/88)
+  - import_error 27, SyntaxError 24  -> 58% fail before execution
+  - dominant import fault:
+      ImportError: cannot import name 'StatevectorSampler'
+      from 'qiskit.quantum_info'
+  - ROOT: python3 -c "import qiskit" on ASI2 (port 19004) -> "No module named 'qiskit'"
+    ASI3 (train, 20653) has qiskit 2.5.2 + aer 0.17.2; ASI2 had NONE.
+  - So every candidate that imports qiskit scored 0.0 on pass + shaped + verifier:
+    the 0.45 pass + 0.40 shaped + 0.10 judge reward mass was dark for a MECHANICAL
+    reason independent of model quality or learning rate.
+
+FIX (applied, non-destructive -- separate host from training):
+  Installed on ASI2 to match ASI3 exactly:
+    qiskit 2.5.2, qiskit-aer 0.17.2, cirq 1.7.0, pennylane 0.45.1 (+lightning), openqasm3
+  Verified: StatevectorSampler imports from qiskit.primitives; basic circuit
+  transpiles/runs. The next eval legs (step_000005+) can now actually score pass.
+
+NOTE (do not reopen B-193): this is the grader-RUNTIME install gap, not the
+"policy imports wrong module" reading. Now that qiskit is present, the remaining
+import_error class is candidates using a WRONG API path (quantum_info.vs.primitives),
+which is a model/generation concern -- the runtime can now execute them.
+
+REMAINING (separate): the lr bleed (B-224) is a real but SECONDARY contributor.
+At full lr with qiskit present, the model finally gets gradient on the pass mass.
