@@ -6,7 +6,7 @@ set -euo pipefail
 
 NAS_ROOT="${NAS_ROOT:-/root/work/software/quantum-gpt}"
 cd "$NAS_ROOT"
-BASE="${BASE:-/root/work/filestorage/Qwen3.6-27B}"
+BASE="${BASE:-/root/work/filestorage/Qwen3.8-27B}"
 EVAL_FILE="${EVAL_FILE:-data/generated/quantum_finetune_verified_chat_sft_dedup_1k/eval_chatml.jsonl}"
 LIMIT="${LIMIT:-0}"
 MAXNEW="${MAXNEW:-768}"

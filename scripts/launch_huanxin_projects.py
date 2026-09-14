@@ -33,7 +33,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--huanxin-headless", default=os.environ.get("HUANXIN_HEADLESS", "1"))
     parser.add_argument(
         "--quantum-model-name",
-        default=os.environ.get("QWEN_BASE_MODEL", "Qwen/Qwen3.6-27B"),
+        default=os.environ.get("QWEN_BASE_MODEL", "/root/work/filestorage/Qwen3.8-27B"),
     )
     parser.add_argument(
         "--out",

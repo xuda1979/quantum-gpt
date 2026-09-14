@@ -6,10 +6,10 @@ cd "$ROOT"
 
 TS="${QG_TS:-$(date -u +%Y%m%dT%H%M%SZ)}"
 export QG_ROOT="$ROOT"
-export QG_MODEL="${QG_MODEL:-/root/work/filestorage/Qwen3.6-27B}"
+export QG_MODEL="${QG_MODEL:-/root/work/filestorage/Qwen3.8-27B}"
 if [[ ! -d "$QG_MODEL" ]]; then
   for candidate in \
-    /root/work/filestorage/Qwen3.6-27B \
+    /root/work/filestorage/Qwen3.8-27B \
     /root/work/filestorage/Qwen3.6-35B-A3B \
     /root/work/filestorage/Qwen3.6-35B-A3B-Instruct \
     /root/work/filestorage/Qwen3.6-35B-A3B-W8A8; do

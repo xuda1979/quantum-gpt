@@ -9,7 +9,7 @@
 set -euo pipefail
 
 REMOTE_ROOT="${ASI2_REMOTE_ROOT:-/vllm-workspace/quantum-gpt}"
-MODEL_NAME="${ASI2_MODEL_NAME:-/root/work/filestorage/Qwen3.6-27B}"
+MODEL_NAME="${ASI2_MODEL_NAME:-/root/work/filestorage/Qwen3.8-27B}"
 SPLIT_DIR="${ASI2_SPLIT_DIR:-high_quality_data}"
 TRAIN_FILE="${ASI2_TRAIN_FILE:-${SPLIT_DIR%/}/merged_sft_dataset.jsonl}"
 EVAL_FILE="${ASI2_EVAL_FILE:-}"

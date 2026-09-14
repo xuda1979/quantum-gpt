@@ -20,7 +20,7 @@ set -euo pipefail
 
 NAS_ROOT="${NAS_ROOT:-/root/work/software/quantum-gpt}"
 cd "$NAS_ROOT"
-MODEL="${MODEL:-/root/work/filestorage/Qwen3.6-27B}"
+MODEL="${MODEL:-/root/work/filestorage/Qwen3.8-27B}"
 DATA="${DATA:-data/generated/glm52_soft_distill_sft_iter4_27b}"
 RUN_ID="${RUN_ID:-iter4-distill-27b-$(date -u +%Y%m%dT%H%M%SZ)}"
 OUT="${OUT:-$NAS_ROOT/outputs/qg-27b-iter4-distill-sft-${RUN_ID}}"

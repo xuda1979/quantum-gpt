@@ -215,7 +215,7 @@ def main() -> int:
         "to get the execution-grounded label",
     )
     ap.add_argument("--adapter-path", type=str, default=None)
-    ap.add_argument("--base-model", type=str, default="Qwen/Qwen3.6-27B")
+    ap.add_argument("--base-model", type=str, default="/root/work/filestorage/Qwen3.8-27B")
     ap.add_argument(
         "--mock-critic",
         action="store_true",

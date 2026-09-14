@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 REMOTE_ROOT="${AI_REMOTE_ROOT:-/root/software/quantum-gpt}"
-MODEL_NAME="${AI_TRAIN_MODEL_NAME:-models/Qwen3.6-27B}"
+MODEL_NAME="${AI_TRAIN_MODEL_NAME:-/root/work/filestorage/Qwen3.8-27B}"
 TRAIN_FILE="${AI_TRAIN_FILE:-data/generated/omnicoder-quantum-generalization-holdout-v1/train.jsonl}"
 EVAL_FILE="${AI_EVAL_FILE:-data/generated/omnicoder-quantum-generalization-holdout-v1/eval.jsonl}"
 RUNTIME_SRC="${AI_TRANSFORMERS_RUNTIME_SRC:-$REMOTE_ROOT/artifacts/runtime-bundles/omnicoder-qwen35-runtime-c585eea/transformers-src/src}"

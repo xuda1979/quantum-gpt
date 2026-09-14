@@ -22,7 +22,7 @@ set -euo pipefail
 # ----------------------------------------------------------------------------
 REMOTE_ROOT="${ASI2_REMOTE_ROOT:-/vllm-workspace/quantum-gpt}"
 # Use unquantized version to avoid aclnnMm DT_INT8 fallback preflight blocker on Ascend NPU
-MODEL_NAME="${ASI2_MODEL_NAME:-/root/work/filestorage/Qwen3.6-27B}"
+MODEL_NAME="${ASI2_MODEL_NAME:-/root/work/filestorage/Qwen3.8-27B}"
 SPLIT_DIR="${ASI2_SPLIT_DIR:-high_quality_data}"
 OUTPUT_DIR="${ASI2_OUTPUT_DIR:-outputs/qwen36-27b-quantum-distill-lora-r32-broad-ln}"
 LOG_PATH="${ASI2_LOG_PATH:-logs/asi2_qwen36_27b_lora_r32_broad_ln.log}"

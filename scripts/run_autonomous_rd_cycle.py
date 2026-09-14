@@ -115,9 +115,9 @@ TARGETS: dict[str, TargetSpec] = {
     ),
     "qwen36-27b": TargetSpec(
         target_id="qwen36-27b",
-        model_id="Qwen/Qwen3.6-27B",
+        model_id="/root/work/filestorage/Qwen3.8-27B",
         audit_artifact="artifacts/model-source-audit-qwen36-27b.json",
-        local_model_dir="models/Qwen3.6-27B",
+        local_model_dir="/root/work/filestorage/Qwen3.8-27B",
         train_file="data/generated/omnicoder-quantum-generalization-holdout-v1/train.jsonl",
         eval_file="data/generated/omnicoder-quantum-generalization-holdout-v1/eval.jsonl",
         manifest_file="data/generated/omnicoder-quantum-generalization-holdout-v1/manifest.json",

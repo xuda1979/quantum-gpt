@@ -43,7 +43,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--slice-json", type=Path, default=Path("reports/base_vs_adapter_eval_slice.json")
     )
-    parser.add_argument("--base-model", type=Path, default=Path("models/Qwen3.6-27B"))
+    parser.add_argument(
+        "--base-model", type=Path, default=Path("/root/work/filestorage/Qwen3.8-27B")
+    )
     parser.add_argument(
         "--adapter", type=Path, default=Path("outputs/fast-lora-qwen25-1p5b-mini/adapter")
     )

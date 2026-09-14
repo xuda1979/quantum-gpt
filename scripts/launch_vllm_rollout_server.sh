@@ -1,7 +1,7 @@
 #!/bin/bash
 # vLLM-ascend rollout server launcher (box-side, TP=8, runs next to training).
 # Usage: bash scripts/launch_vllm_rollout_server.sh [MODEL_PATH] [PORT]
-MODEL="${1:-/root/work/filestorage/Qwen3.6-27B}"
+MODEL="${1:-/root/work/filestorage/Qwen3.8-27B}"
 PORT="${2:-8355}"
 LOG="/root/work/software/quantum-gpt/outputs/vllm_server.log"
 # Sleep/wake lifecycle (scripts/vllm_lifecycle.py): vLLM >= 0.10 / V1 engine
@@ -19,11 +19,11 @@ nohup python3 -m vllm.entrypoints.openai.api_server \
   --model "$MODEL" \
   --port "$PORT" \
   --tensor-parallel-size 8 \
-  --max-model-len 4096 \
+  --max-model-len 8192 \
   --dtype bfloat16 \
-  --gpu-memory-utilization 0.10 \
+  --gpu-memory-utilization ${VLLM_UTIL:-0.45} \
   "${SLEEP_MODE_ARGS[@]}" \
   > "$LOG" 2>&1 < /dev/null &
 echo "vllm server launching on :$PORT (pid $!) — log: $LOG"
-echo "NOTE: gpu-memory-utilization 0.10 shares NPUs with training; raise when training is paused."
+echo "NOTE: gpu-memory-utilization 0.45 shares NPUs with training; raise when training is paused."
 echo "NOTE: sleep/wake lifecycle (vllm_lifecycle.py) needs VLLM_SLEEP_MODE=1 (adds --enable-sleep-mode + VLLM_SERVER_DEV_MODE=1)."

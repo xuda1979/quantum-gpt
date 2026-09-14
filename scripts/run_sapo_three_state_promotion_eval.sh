@@ -5,8 +5,11 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-SAPO_PROMOTION_ROOT="${SAPO_PROMOTION_ROOT:-/root/software/quantum-gpt}"
-BASE_MODEL="${SAPO_PROMOTION_BASE_MODEL:-$SAPO_PROMOTION_ROOT/models/Qwen3.6-27B}"
+# 2026-09-14: base is Qwen3.8-27B ONLY (Qwen3.6 retired), and the tree is /root/work,
+# not /root/software. Line 16's `test -f $BASE_MODEL/config.json` is fail-closed, so a
+# stale default fails loudly instead of silently scoring against the wrong model.
+SAPO_PROMOTION_ROOT="${SAPO_PROMOTION_ROOT:-/root/work/software/quantum-gpt}"
+BASE_MODEL="${SAPO_PROMOTION_BASE_MODEL:-/root/work/filestorage/Qwen3.8-27B}"
 WARM_ADAPTER="${SAPO_PROMOTION_WARM_ADAPTER:?set SAPO_PROMOTION_WARM_ADAPTER to the exact warm-start adapter}"
 SAPO_ADAPTER="${SAPO_PROMOTION_SAPO_ADAPTER:?set SAPO_PROMOTION_SAPO_ADAPTER to one complete atomic step_*_adapter checkpoint}"
 STAMP="${SAPO_PROMOTION_STAMP:-$(date -u +%Y%m%dT%H%M%SZ)}"

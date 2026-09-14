@@ -95,7 +95,7 @@ cat > "$OUT/run_config.json" <<CFG
 }
 CFG
 
-MODEL="${MODEL:-Qwen/Qwen3.6-27B}"
+MODEL="${MODEL:-/root/work/filestorage/Qwen3.8-27B}"
 
 echo "Launching 27B self-correcting-distillation KL-SFT..."
 echo "  model: $MODEL"

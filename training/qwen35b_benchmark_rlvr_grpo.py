@@ -33,7 +33,7 @@ except Exception:
 
 DEFAULT_ROOT = Path(__file__).resolve().parents[1]
 ROOT = Path(os.environ.get("QG_ROOT", str(DEFAULT_ROOT)))
-MODEL = os.environ.get("QG_MODEL", "/root/work/filestorage/Qwen3.6-27B")
+MODEL = os.environ.get("QG_MODEL", "/root/work/filestorage/Qwen3.8-27B")
 OUT = Path(
     os.environ.get(
         "QG_OUT",

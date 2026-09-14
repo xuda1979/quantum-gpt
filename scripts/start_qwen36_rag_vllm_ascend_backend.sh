@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-MODEL_DIR="${QWEN36_HF_MODEL_DIR:-$ROOT/models/Qwen3.6-27B}"
+MODEL_DIR="${QWEN36_HF_MODEL_DIR:-$ROOT//root/work/filestorage/Qwen3.8-27B}"
 HOST="${QWEN36_VLLM_HOST:-127.0.0.1}"
 PORT="${QWEN36_VLLM_PORT:-8012}"
 SERVED_MODEL="${QWEN36_VLLM_SERVED_MODEL:-qwen3.6-27b-rag}"

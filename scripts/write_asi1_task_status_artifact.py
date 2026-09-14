@@ -605,7 +605,7 @@ def main() -> int:
     parser.add_argument("--remote-root", default="/workspace/quantum-gpt")
     parser.add_argument("--remote-output-dir", default="")
     parser.add_argument("--log-path", default="")
-    parser.add_argument("--model-name", default="/root/work/filestorage/Qwen3.6-27B")
+    parser.add_argument("--model-name", default="/root/work/filestorage/Qwen3.8-27B")
     parser.add_argument(
         "--benchmark-file", default="evals/benchmarks/agentic_coding_trajectory_training_v1.txt"
     )

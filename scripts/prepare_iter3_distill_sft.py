@@ -444,7 +444,7 @@ def cmd_build(args: argparse.Namespace) -> int:
         },
         "recommended_training": {
             "ASI1": {
-                "base_model": "Qwen/Qwen3.6-27B",
+                "base_model": "/root/work/filestorage/Qwen3.8-27B",
                 "max_length": 2048,
                 "lr": 1e-5,
                 "adapter_init": "models/iter2-27b-asi3-r21",

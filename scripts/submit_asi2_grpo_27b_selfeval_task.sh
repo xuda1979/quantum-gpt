@@ -23,26 +23,40 @@ ARTIFACT_STEM="${ASI2_GRPO_ARTIFACT_STEM:-huanxin-submit-task-run-asi2-grpo-27b-
 TRAIN_DEV_URL="${ASI2_GRPO_TRAIN_DEV_URL:-}"
 
 # Model and training config
-MODEL_PATH="/root/work/filestorage/Qwen3.6-27B"
+MODEL_PATH="/root/work/filestorage/Qwen3.8-27B"
 NAS_CHECKPOINT_ROOT="/root/work/filestorage/grpo_checkpoints/qwen36_27b_selfeval"
 
 # FV-GSPO run parameters (overridable for short frontier-yield probes)
 # Short probe: ASI2_GRPO_STEPS=24 ASI2_GRPO_CHECKPOINT_SECONDS=3600
 RUN_STEPS="${ASI2_GRPO_STEPS:-500}"
-# 2026-08-20 recalibration (commit b1d8cb7): 2e-6 + 3e-4/4e-4 pins the policy
-# (adapter==base in every eval). These MUST match asi2_launch_grpo_27b_selfeval.sh.
-RUN_LR="${ASI2_GRPO_LR:-2e-5}"
+# 2026-08-25 relaunch escalation: LR 2e-4 (2x run-3's 1e-4 — run-3 plateaued at
+# merged max_abs_diff 4.88e-4 INERT_AT_PRECISION; see reports/sapo-relaunch-package-lr2e4-2026-08-25.md).
+# This baked RUN_LR OVERRIDES the launcher's LR default (2026-08-20 lesson) —
+# it MUST match asi2_launch_grpo_27b_selfeval.sh.
+RUN_LR="${ASI2_GRPO_LR:-2e-4}"
 RUN_KL_COEFF="${ASI2_GRPO_KL_COEFF:-0.01}"
-RUN_CHECKPOINT_SECONDS="${ASI2_GRPO_CHECKPOINT_SECONDS:-7200}"
+# 2026-08-21: 1800s = design §C.3.3 recommendation; platform reaps long
+# 8-card sessions after ~1-3h, so a 7200s interval can mean NO checkpoint ever
+# lands. 1800s -> first NAS checkpoint ~30min into a live run.
+RUN_CHECKPOINT_SECONDS="${ASI2_GRPO_CHECKPOINT_SECONDS:-1800}"
 RUN_NPU_COUNT="${ASI2_GRPO_NPU_COUNT:-8}"
-RUN_LOSS_MODE="${ASI2_GRPO_LOSS_MODE:-gspo}"
+# 2026-08-21: SAPO (Soft Adaptive PO, arXiv:2511.20347) is the default loss;
+# smooth gate g(r)=(4/tau)*sigmoid(tau*(r-1)) over all tokens per sample.
+RUN_LOSS_MODE="${ASI2_GRPO_LOSS_MODE:-sapo}"
+RUN_SAPO_TAU_POS="${ASI2_GRPO_SAPO_TAU_POS:-1.0}"
+RUN_SAPO_TAU_NEG="${ASI2_GRPO_SAPO_TAU_NEG:-1.05}"
 RUN_GSPO_CLIP_LOW="${ASI2_GRPO_GSPO_CLIP_LOW:-0.1}"
 RUN_GSPO_CLIP_HIGH="${ASI2_GRPO_GSPO_CLIP_HIGH:-0.2}"
 RUN_REWARD_MODE="${ASI2_GRPO_REWARD_MODE:-p_dominant}"
-RUN_MAX_NEW_TOKENS="${ASI2_GRPO_MAX_NEW_TOKENS:-1024}"
-RUN_MAX_SEQ_LENGTH="${ASI2_GRPO_MAX_SEQ_LENGTH:-2048}"
-RUN_GROUP_SIZE="${ASI2_GRPO_GROUP_SIZE:-8}"
-RUN_MAX_ADAPTIVE_GROUP="${ASI2_GRPO_MAX_ADAPTIVE_GROUP:-8}"
+# 2048-token completions are the proven budget on the 8-card layout (run 9 +
+# the 08-23 fence-stop run: 0% truncation; the 1024 cap cut solutions
+# mid-code -> checker fail -> reward 0). MAX_SEQ_LENGTH keeps prompt+completion
+# headroom because the trainer's policy-math path truncates at max-seq-length.
+RUN_MAX_NEW_TOKENS="${ASI2_GRPO_MAX_NEW_TOKENS:-2048}"
+RUN_MAX_SEQ_LENGTH="${ASI2_GRPO_MAX_SEQ_LENGTH:-3072}"
+# group 4 / cap 4 = proven-safe operating point (p13/p18/p19), see launch script.
+RUN_GROUP_SIZE="${ASI2_GRPO_GROUP_SIZE:-4}"
+RUN_MAX_ADAPTIVE_GROUP="${ASI2_GRPO_MAX_ADAPTIVE_GROUP:-4}"
 RUN_NPU_MAX_MEMORY_GIB="${ASI2_GRPO_NPU_MAX_MEMORY_GIB:-54}"
 
 DRY_RUN="1"
@@ -72,8 +86,8 @@ exec >> "\$BOOTSTRAP_LOG" 2>&1
 echo "__ASI2_GRPO_27B_SELFEVAL_START__ \$(date)"
 
 # Verify model exists
-if [[ ! -d "/root/work/filestorage/Qwen3.6-27B" ]]; then
-  echo "ERROR: model not found at /root/work/filestorage/Qwen3.6-27B" >&2
+if [[ ! -d "/root/work/filestorage/Qwen3.8-27B" ]]; then
+  echo "ERROR: model not found at /root/work/filestorage/Qwen3.8-27B" >&2
   exit 1
 fi
 
@@ -96,6 +110,8 @@ export KL_COEFF="$RUN_KL_COEFF"
 export CHECKPOINT_INTERVAL_SECONDS="$RUN_CHECKPOINT_SECONDS"
 export NUM_NPU="$RUN_NPU_COUNT"
 export LOSS_MODE="$RUN_LOSS_MODE"
+export SAPO_TAU_POS="$RUN_SAPO_TAU_POS"
+export SAPO_TAU_NEG="$RUN_SAPO_TAU_NEG"
 export GSPO_CLIP_LOW="$RUN_GSPO_CLIP_LOW"
 export GSPO_CLIP_HIGH="$RUN_GSPO_CLIP_HIGH"
 export REWARD_MODE="$RUN_REWARD_MODE"

@@ -115,7 +115,7 @@ case "$MODEL_SIZE" in
   27b)
     HF_REPO="unsloth/Qwen3.6-27B-GGUF"
     MODEL_STEM="Qwen3.6-27B"
-    MODEL_DIR="$ROOT/models/Qwen3.6-27B-GGUF"
+    MODEL_DIR="$ROOT//root/work/filestorage/Qwen3.8-27B-GGUF"
     ;;
   *)
     echo "Unsupported --model-size '$MODEL_SIZE'. This release supports 27b." >&2

@@ -12,6 +12,7 @@ import os
 import re
 import shutil
 import sys
+import tempfile
 from collections import defaultdict
 from pathlib import Path
 from typing import Any
@@ -47,7 +48,7 @@ TASK_OPTIONS = [
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--base-model", type=Path, default=Path("/root/work/filestorage/Qwen3.6-27B")
+        "--base-model", type=Path, default=Path("/root/work/filestorage/Qwen3.8-27B")
     )
     parser.add_argument(
         "--adapter", type=Path, required=True, help="Path to fine-tuned LoRA adapter"
@@ -363,7 +364,7 @@ def main():
             task_json_path = find_task(task_id)
             task_dir = task_json_path.parent
             meta = load_json(task_json_path)
-            prompt = build_prompt(task_dir, meta)
+            prompt = build_prompt(task_dir, meta)  # noqa: F821 - legacy ASI1 mirror missing this helper
 
             print(f"  [BaseModel] Evaluating {task_id}...", flush=True)
             gold_reference = ""
@@ -417,7 +418,7 @@ def main():
             task_json_path = find_task(task_id)
             task_dir = task_json_path.parent
             meta = load_json(task_json_path)
-            prompt = build_prompt(task_dir, meta)
+            prompt = build_prompt(task_dir, meta)  # noqa: F821 - legacy ASI1 mirror missing this helper
 
             print(f"  [LoRAAdapter] Evaluating {task_id}...", flush=True)
             gold_reference = ""

@@ -57,7 +57,7 @@ ITERATION_PROFILES = {
 TARGET_PRESETS = {
     "qwen36-27b": {
         "bootstrap_requirements": DEFAULT_REQS,
-        "model_name": "models/Qwen3.6-27B",
+        "model_name": "/root/work/filestorage/Qwen3.8-27B",
         "train_file": "data/generated/omnicoder-quantum-generalization-holdout-v1/train.jsonl",
         "eval_file": "data/generated/omnicoder-quantum-generalization-holdout-v1/eval.jsonl",
         "benchmark_file": "evals/benchmarks/quantum_generalization_holdout_v1.txt",

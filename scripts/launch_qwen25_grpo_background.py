@@ -12,7 +12,7 @@ from pathlib import Path
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--model-name", default="models/Qwen3.6-27B")
+    parser.add_argument("--model-name", default="/root/work/filestorage/Qwen3.8-27B")
     parser.add_argument("--adapter-init", required=True)
     parser.add_argument("--benchmark-file", required=True)
     parser.add_argument("--output-dir", required=True)

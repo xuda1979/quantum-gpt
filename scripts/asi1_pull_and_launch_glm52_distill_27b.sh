@@ -31,7 +31,7 @@ acl = private
 force_path_style = true
 __CONF__
 
-RCLONE_BIN="$(command -v rclone || echo /root/work/filestorage/Qwen3.6-27B/rclone-current-linux-arm64/rclone)"
+RCLONE_BIN="$(command -v rclone || echo /root/work/filestorage/Qwen3.8-27B/rclone-current-linux-arm64/rclone)"
 test -x "$RCLONE_BIN" || { echo "rclone not found" >&2; exit 4; }
 
 SRC="iner:${S3_BUCKET}/${S3_ROOT_PATH}/${S3_SYNC_PREFIX}"

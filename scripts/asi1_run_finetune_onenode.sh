@@ -15,7 +15,7 @@ REMOTE_ROOT=/workspace
 # Qwen3.6-27B is a non-quantized bf16 checkpoint (model_type qwen3_5). The
 # 35B-A3B-W8A8 variant cannot train on Ascend because its int8 MoE experts hit
 # aclnnMm (DT_INT8 unsupported). 27B trains cleanly via the same runtime stack.
-MODEL="${ASI1_MODEL:-/root/work/filestorage/Qwen3.6-27B}"
+MODEL="${ASI1_MODEL:-/root/work/filestorage/Qwen3.8-27B}"
 SPLIT_DIR=data/generated/quantum_finetune_verified_chat_sft
 RUNTIME_SRC="${ASI1_RUNTIME_SRC:-artifacts/runtime-full}"
 RUN_ID="${ASI1_RUN_ID:-20260616}"

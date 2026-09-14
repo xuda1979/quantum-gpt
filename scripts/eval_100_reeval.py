@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations  # py3.9-safe (PEP 604) annotations
+
 """eval_100_reeval.py — 100-sample re-eval with robust code extraction (ASI2, 4 NPUs).
 
 Replaces the eval10 methodology that treated "response contains text" as
@@ -39,7 +41,7 @@ import tempfile
 import textwrap
 import time
 
-BASE = "/root/work/filestorage/Qwen3.6-27B"
+BASE = "/root/work/filestorage/Qwen3.8-27B"
 ADAPTER = "/root/work/quantum-gpt/outputs/qg-27b-sft-formal-27b-sft-formal-20260803T153806Z/checkpoints/step-22/adapter"
 EVAL_FILE = "/root/work/quantum-gpt/data/generated/quantum_dedup_1k_glm52_soft_distill_v3/eval_sft_questions_code.jsonl"
 N_DEFAULT = 100
@@ -386,7 +388,7 @@ def setup_ascend(devices):
     _orig = acc_modeling.get_max_memory
 
     def _size_to_bytes(value):
-        if isinstance(value, int | float) and not isinstance(value, bool):
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
             return float(value)
         text = str(value).strip().upper()
         for unit, mult in (
@@ -529,7 +531,7 @@ def gen_mode(args, torch, AutoModelForCausalLM, AutoTokenizer):
                     texts.append("")
                     errs.append(str(e2))
             print(f"[{args.which}] batch fallback after {e}", flush=True)
-        for (ex, sample_idx), text, gen_err in zip(chunk, texts, errs, strict=False):
+        for (ex, sample_idx), text, gen_err in zip(chunk, texts, errs):  # noqa: B905 plain zip (strict= is py3.10-only)
             code, method = extract_code_robust(text)
             res = run_code(code)
             rec = {
@@ -679,7 +681,7 @@ def judge_mode(args, torch, AutoModelForCausalLM, AutoTokenizer):
         texts = generate_batch(
             model, tok, [[{"role": "user", "content": p}] for p in prompts], JUDGE_MAX_TOKENS, torch
         )
-        for tag, row, text in zip(tags, [r for _, r in rows if r is not None], texts, strict=False):
+        for tag, row, text in zip(tags, [r for _, r in rows if r is not None], texts):  # noqa: B905 plain zip (strict= is py3.10-only)
             dims, raw = parse_dim_scores(text), text
             p = 1.0 if row.get("exec", {}).get("passed", False) else 0.0
             s = 1.0 if row.get("exec", {}).get("syntax_ok", False) else 0.0

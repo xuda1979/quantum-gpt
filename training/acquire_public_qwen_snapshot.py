@@ -28,13 +28,13 @@ HF_MIRROR_ENDPOINT = "https://hf-mirror.com"
 
 PUBLIC_MODELS = {
     "qwen36-27b": {
-        "model_id": "Qwen/Qwen3.6-27B",
+        "model_id": "/root/work/filestorage/Qwen3.8-27B",
         "expected_substring": "Qwen3.6-27B",
         "expected_family_substring": "qwen",
         "supports_generic_remote_commands": True,
         "audit_out": "artifacts/model-source-audit-qwen36-27b.json",
         "handoff_note": "research/qwen36-27b-handoff.md",
-        "remote_model_dir": "/root/software/quantum-gpt/models/Qwen3.6-27B",
+        "remote_model_dir": "/root/software/quantum-gpt//root/work/filestorage/Qwen3.8-27B",
         "handoff_manifest": "artifacts/qwen36-27b-local-snapshot-handoff.json",
         "preflight_manifest": "artifacts/qwen36-27b-local-snapshot-preflight.json",
     },

@@ -13,7 +13,7 @@ def export_line(name: str, value: str | int | float) -> str:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--remote-root", default="/root/work/quantum-gpt")
-    parser.add_argument("--model-name", default="/root/work/filestorage/Qwen3.6-27B")
+    parser.add_argument("--model-name", default="/root/work/filestorage/Qwen3.8-27B")
     parser.add_argument(
         "--benchmark-file", default="evals/benchmarks/agentic_coding_trajectory_training_v1.txt"
     )
