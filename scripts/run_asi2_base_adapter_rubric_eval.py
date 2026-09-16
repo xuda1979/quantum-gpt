@@ -66,10 +66,18 @@ def parse_args() -> argparse.Namespace:
     # worker. Each worker sets ASCEND_RT_VISIBLE_DEVICES to its NPU subset and
     # passes a disjoint --task-start/--task-count. Guards: clamp to the real
     # list length; count<=0 means "rest of the list".
-    parser.add_argument("--task-start", type=int, default=0,
-                        help="0-based index of the first task this worker handles (parallel-eval split)")
-    parser.add_argument("--task-count", type=int, default=0,
-                        help="number of tasks this worker handles; 0 = through the end of the list")
+    parser.add_argument(
+        "--task-start",
+        type=int,
+        default=0,
+        help="0-based index of the first task this worker handles (parallel-eval split)",
+    )
+    parser.add_argument(
+        "--task-count",
+        type=int,
+        default=0,
+        help="number of tasks this worker handles; 0 = through the end of the list",
+    )
     parser.add_argument("--harness-timeout", type=int, default=300)
     parser.add_argument(
         "--hide-reference",
@@ -431,6 +439,16 @@ def run_model(
 
 def main() -> int:
     args = parse_args()
+    # C-0024: fail-closed freeze check BEFORE any eval work. Drift in, or a
+    # missing file from, the pinned 18-task holdout or the scorer chain aborts
+    # the leg with a nonzero exit.
+    from evals.runner.holdout_freeze import HoldoutFreezeError, verify_holdout_freeze
+
+    try:
+        verify_holdout_freeze()
+    except HoldoutFreezeError as exc:
+        print("[freeze] FAIL-CLOSED: " + str(exc), file=sys.stderr)
+        return 2
     started = time.time()
     args.output.parent.mkdir(parents=True, exist_ok=True)
     task_ids = load_task_ids(args.benchmark)
@@ -441,7 +459,7 @@ def main() -> int:
     if args.task_start or args.task_count:
         start = max(0, min(args.task_start, len(selected)))
         if args.task_count > 0:
-            selected = selected[start:start + args.task_count]
+            selected = selected[start : start + args.task_count]
         else:
             selected = selected[start:]
         if not selected:
