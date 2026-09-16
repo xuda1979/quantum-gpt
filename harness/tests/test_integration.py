@@ -590,3 +590,77 @@ class TestDispatchDeadlineIntegrity(unittest.TestCase):
         self.assertTrue(alive_worker, "corrupt deadline must not overrun-kill a live worker")
         proc_pid = fleet["agents"][0]["pid"]
         os.killpg(proc_pid, 15)  # cleanup
+
+
+class TestDepBlockerSelfHeal(unittest.TestCase):
+    """A ready card dep-blocked on a TERMINALLY bounced card whose bounces were
+    environmental must self-heal: the blocker re-arms (strikes reset), the child
+    becomes claimable. Deps on DEAD cards mint a planner card instead."""
+
+    def setUp(self):
+        for sub in ("agents", "briefs", "locks", "standup", "probes"):
+            os.makedirs(os.path.join(qgh.STATE, sub), exist_ok=True)
+        qgh.save_json(os.path.join(qgh.STATE, "QUEUE.json"), {"cards": [], "seq": 0})
+        qgh.save_json(os.path.join(qgh.STATE, "FLEET.json"), {"agents": []})
+        qgh.save_json(
+            os.path.join(qgh.STATE, "OPS.json"),
+            {"consecutive_spawn_failures": 0, "backoff_until_utc": None},
+        )
+
+    def test_env_bounced_blocker_requeues_and_unblocks_child(self):
+        blocker = seed_card(title="box leg", lane="evaluator")
+        q = qgh.load_queue(qgh.STATE)
+        b = H.find_card(q, blocker["id"])
+        b["status"] = "bounced"  # terminal
+        b["bounce_count"] = 3
+        b["bounce_reason"] = "no RESULT verdict (dead) API Error: Unable to connect to API"
+        b["result"] = "API Error: Unable to connect to API"
+        child = H.add_card(
+            q,
+            H.new_card(
+                title="child", lane="evaluator", why="w", acceptance=["a"], deps=[blocker["id"]]
+            ),
+        )
+        qgh.save_queue(qgh.STATE, q)
+        qgh._reconcile_dep_blockers()
+        q = qgh.load_queue(qgh.STATE)
+        b2 = H.find_card(q, blocker["id"])
+        self.assertEqual(b2["status"], "ready", "env-bounced blocker must re-arm")
+        self.assertEqual(b2["bounce_count"], 0, "environmental strikes must reset")
+        # child stays blocked until the blocker COMPLETES (correct semantics):
+        self.assertNotIn(child["id"], [c["id"] for c in H.ready_cards(q)])
+        b2["status"] = "done"
+        qgh.save_queue(qgh.STATE, q)
+        q = qgh.load_queue(qgh.STATE)
+        self.assertIn(
+            child["id"],
+            [c["id"] for c in H.ready_cards(q)],
+            "child must unblock once the re-armed blocker completes",
+        )
+
+    def test_dead_blocker_mints_planner(self):
+        blocker = seed_card(title="hopeless", lane="fixer")
+        q = qgh.load_queue(qgh.STATE)
+        b = H.find_card(q, blocker["id"])
+        b["status"] = "dead"
+        b["bounce_reason"] = "genuine failure 3 strikes"
+        H.add_card(
+            q,
+            H.new_card(
+                title="child2", lane="fixer", why="w", acceptance=["a"], deps=[blocker["id"]]
+            ),
+        )
+        qgh.save_queue(qgh.STATE, q)
+        planners_before = sum(
+            1 for c in q["cards"] if c["lane"] == "planner" and c["status"] == "ready"
+        )
+        qgh._reconcile_dep_blockers()
+        q = qgh.load_queue(qgh.STATE)
+        planners_after = sum(
+            1 for c in q["cards"] if c["lane"] == "planner" and c["status"] == "ready"
+        )
+        self.assertEqual(
+            planners_after,
+            planners_before + 1,
+            "dead blocker must trigger planner re-decomposition",
+        )

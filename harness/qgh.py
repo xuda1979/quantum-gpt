@@ -701,12 +701,69 @@ def _reap():
             event(STATE, "card_dead", {"card": c["id"], "title": c["title"]})
     save_queue(STATE, queue)
     save_fleet(STATE, fleet)
+    # dep-blocker self-heal FIRST (re-queue env-bounced blockers, escalate dead
+    # ones), then re-read the queue before the top-up decision
+    _reconcile_dep_blockers()
+    queue = load_queue(STATE)
     # planner top-up: only when the queue is GENUINELY idle -- the <2 trigger
     # counts CLAIMABLE cards and a saturated board (dep-blocked on running
     # deps) must not mint (C-0021)
     if planner_topup_needed(queue) and running_count(queue, "planner") == 0:
         _auto_plan(goal)
     return reaped
+
+
+ENV_BOUNCE_SIGNATURES = (
+    "api error",
+    "not logged in",
+    "transport",
+    "exec",
+    "connection",
+    "rate limit",
+    "no exec path",
+    "daemon",
+    "booting",
+    "backoff",
+    "timeout",
+)
+
+
+def _bounce_was_environmental(card):
+    reason = ((card.get("bounce_reason") or "") + " " + (card.get("result") or "")).lower()
+    return any(sig in reason for sig in ENV_BOUNCE_SIGNATURES)
+
+
+def _reconcile_dep_blockers():
+    """Self-heal dep livelock: ready cards blocked on TERMINAL (bounced/dead)
+    deps. Environmental bounces re-arm the blocker (strikes reset -- they were
+    never the card's fault); genuinely dead blockers trigger a planner mint to
+    re-decompose. Runs every tick before the planner top-up check."""
+    queue = load_queue(STATE)
+    changed = False
+    dead_blockers = []
+    for c in queue["cards"]:
+        if c["status"] != "ready":
+            continue
+        for dep_id in c["deps"]:
+            dep = find_card(queue, dep_id)
+            if dep is None or dep["status"] not in ("bounced", "dead"):
+                continue
+            if dep["status"] == "bounced" and _bounce_was_environmental(dep):
+                dep["status"] = "ready"
+                dep["bounce_count"] = 0
+                dep["claimed_by"] = None
+                dep["claimed_utc"] = None
+                dep["deadline_utc"] = None
+                changed = True
+                event(STATE, "dep_blocker_requeued", {"blocker": dep["id"], "unblocks": c["id"]})
+            elif dep["id"] not in dead_blockers:
+                dead_blockers.append(dep["id"])
+    if changed:
+        save_queue(STATE, queue)
+    if dead_blockers:
+        _auto_plan(load_goal(STATE))
+        event(STATE, "dead_dep_escalated", {"blockers": dead_blockers})
+    return changed, dead_blockers
 
 
 def _auto_plan(goal):

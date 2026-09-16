@@ -21,6 +21,52 @@ import urllib.request
 DAEMON_PORTS = {"asi1": 20646, "asi2": 19004, "asi3": 20653}
 TRAINER_PS_CMD = "ps -eo pid,etimes,args | grep -E 'grpo_trainer\\.py' | grep -v grep | head -3"
 
+# B-263 heal-detect thresholds (C-0008): /health ready=true does NOT certify
+# the /exec transport. Measured 2026-09-16: ASI1/ASI3 sat ready with a stuck
+# busy exec slot while the pending queue only grew; every /exec echo timed out.
+WEDGE_BUSY_AGE_MS = 120_000  # busy exec slot stuck >= 2 min with no completion
+WEDGE_PENDING_MIN = 25  # pending queue flood; a healthy daemon drains it
+BOOT_STUCK_UPTIME_S = 420  # normal boot is ~4-5 min; still booting past this = stuck
+
+
+def classify_transport(health):
+    """Classify a parsed /health body (B-263 heal-detect, C-0008).
+
+    /health ready=true does NOT certify the /exec transport: a daemon can sit
+    ready with a permanently-stuck busy exec slot while its pending queue only
+    grows (measured ASI1/ASI3 2026-09-16). Returns dict(status, evidence) with
+    status in: ready | exec_wedged | boot_failed | boot_stuck | booting | unknown.
+    """
+    ev = dict()
+    try:
+        ev["startupState"] = health.get("startupState")
+        ev["ready"] = bool(health.get("ready"))
+        ev["uptime_s"] = health.get("uptime")
+        ev["busy"] = bool(health.get("busy"))
+        ev["busyAgeMs"] = health.get("busyAgeMs")
+        ev["pendingRequestCount"] = health.get("pendingRequestCount")
+        ev["lastCommandStartedAt"] = health.get("lastCommandStartedAt")
+        ev["lastCommandCompletedAt"] = health.get("lastCommandCompletedAt")
+    except AttributeError:
+        return dict(status="unknown", evidence=ev)
+    if ev["startupState"] == "error":
+        return dict(status="boot_failed", evidence=ev)
+    if ev["startupState"] == "booting":
+        up = ev["uptime_s"] or 0
+        stuck = up > BOOT_STUCK_UPTIME_S
+        return dict(status="boot_stuck" if stuck else "booting", evidence=ev)
+    if not ev["ready"]:
+        return dict(status="unknown", evidence=ev)
+    slot_done = ev["lastCommandCompletedAt"] is not None
+    age_ok = isinstance(ev["busyAgeMs"], int | float)
+    stall = ev["busy"] and not slot_done and age_ok and ev["busyAgeMs"] >= WEDGE_BUSY_AGE_MS
+    pend = ev["pendingRequestCount"]
+    flood = isinstance(pend, int | float) and pend >= WEDGE_PENDING_MIN
+    stuck = stall or flood
+    if stuck:
+        return dict(status="exec_wedged", evidence=ev)
+    return dict(status="ready", evidence=ev)
+
 
 def _default_health(port, timeout=6):
     url = f"http://127.0.0.1:{port}/health"
@@ -58,8 +104,21 @@ def probe_daemon(name, port, health_fn=None):
         return _unknown("health body unparseable", body[:60])
     if not ready:
         return {"status": "unknown", "summary": "UNKNOWN (daemon reachable, ready=false)"}
+    # B-263: /health liveness does not certify /exec. A ready daemon with a
+    # stuck busy exec slot renders UNKNOWN (exec_wedged), never READY.
+    cls = classify_transport(data)
+    if cls["status"] == "exec_wedged":
+        ev = cls["evidence"]
+        return dict(
+            status="unknown",
+            transport=cls,
+            summary=(
+                "UNKNOWN (ready-but-exec_wedged: busyAgeMs={} pendingRequestCount={} "
+                "lastCommandCompletedAt=null)"
+            ).format(ev.get("busyAgeMs"), ev.get("pendingRequestCount")),
+        )
     summary = f"READY /health ready=true pid={pid}" if pid else "READY /health ready=true"
-    out = dict(status="ready", summary=summary)
+    out = dict(status="ready", summary=summary, transport=cls)
     # positive liveness term (C-0030): the pid the daemon reported over the
     # wire; without one, the observed 200+ready=true is the positive term.
     out["liveness"] = dict(term="health_pid", pid=pid) if pid else dict(term="health_200_ready")
@@ -128,6 +187,70 @@ def box_exec(port, cmd, timeout=90):
     if isinstance(out, dict):
         out = out.get("output", "")
     return str(out)
+
+
+def _default_exec_post(port, payload, timeout):
+    """POST helper for probe_exec_echo; returns (status, body) for classification."""
+    req = urllib.request.Request(
+        f"http://127.0.0.1:{port}/exec",
+        data=payload,
+        headers=dict([("Content-Type", "application/json")]),
+    )
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        return dict(status=resp.status, body=resp.read(65536).decode("utf-8", "replace"))
+
+
+def probe_exec_echo(port, post_fn=None, timeout=10, marker=None):
+    """The C-0008/B-263 acceptance instrument: POST `echo <marker>` and require
+    the marker back within `timeout` seconds.
+
+    rc=0 only on a verified roundtrip (unique marker echoed back). A timeout is
+    UNKNOWN (rc=1) — never "dead"; a wrong output is FAIL (rc=1). Every call
+    generates a fresh marker so a wedged daemon replaying a cached echo cannot
+    pass the second probe.
+    """
+    import time
+    import uuid
+
+    marker = marker or (f"ECHO_{uuid.uuid4().hex[:12].upper()}")
+    fn = post_fn or _default_exec_post
+    payload = json.dumps(dict(command="echo " + marker)).encode()
+    t0 = time.monotonic()
+    try:
+        r = fn(port, payload, timeout)
+        elapsed = time.monotonic() - t0
+        body = r.get("body", "") if isinstance(r, dict) else str(r)
+        try:
+            d = json.loads(body)
+            out = d.get("output", d)
+            if isinstance(out, dict):
+                out = out.get("output", "")
+        except ValueError:
+            out = body
+        out = str(out).strip()
+        if marker in out:
+            return dict(
+                rc=0,
+                marker=marker,
+                output=out,
+                elapsed_s=round(elapsed, 3),
+                summary=f"OK echo roundtrip {elapsed:.2f}s marker={marker}",
+            )
+        return dict(
+            rc=1,
+            marker=marker,
+            output=out,
+            elapsed_s=round(elapsed, 3),
+            summary=f"FAIL marker missing from output within {timeout:.1f}s",
+        )
+    except Exception as exc:
+        elapsed = time.monotonic() - t0
+        return dict(
+            rc=1,
+            marker=marker,
+            elapsed_s=round(elapsed, 3),
+            summary=f"UNKNOWN (exec echo transport: {str(exc)[:100]})",
+        )
 
 
 if __name__ == "__main__":
