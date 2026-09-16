@@ -1,3 +1,8 @@
+import os as _os
+import tempfile as _tempfile
+
+if not _os.environ.get("QGH_STATE_DIR"):
+    _os.environ["QGH_STATE_DIR"] = _tempfile.mkdtemp(prefix="qgh-test-state-")
 import json
 import os
 import sys
