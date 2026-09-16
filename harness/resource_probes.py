@@ -23,7 +23,7 @@ TRAINER_PS_CMD = "ps -eo pid,etimes,args | grep -E 'grpo_trainer\\.py' | grep -v
 
 
 def _default_health(port, timeout=6):
-    url = "http://127.0.0.1:%d/health" % port
+    url = f"http://127.0.0.1:{port}/health"
     try:
         with urllib.request.urlopen(url, timeout=timeout) as resp:
             return {"code": resp.status, "body": resp.read(65536).decode("utf-8", "replace")}
@@ -83,7 +83,7 @@ def probe_trainer(port, exec_fn=None):
     pid = int(m.group(1))
     return {
         "status": "ready",
-        "summary": "READY trainer pid=%d (%s)" % (pid, m.group(3)[:48]),
+        "summary": f"READY trainer pid={pid} ({m.group(3)[:48]})",
         "liveness": {"term": "ps_pid", "pid": pid},
     }
 
