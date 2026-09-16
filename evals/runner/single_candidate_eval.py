@@ -66,11 +66,11 @@ def _clean(value):
     """
     if isinstance(value, bool):
         return value
-    if isinstance(value, (int, float)):
+    if isinstance(value, (int, float)):  # noqa: UP038 -- py3.9 runtime: X|Y is TypeError
         return value
     if isinstance(value, dict):
         return {str(k): _clean(v) for k, v in value.items()}
-    if isinstance(value, (list, tuple)):
+    if isinstance(value, (list, tuple)):  # noqa: UP038 -- py3.9 runtime: X|Y is TypeError
         return [_clean(v) for v in value]
     return str(value)
 
@@ -111,7 +111,20 @@ def run_harness(candidate_path: str, tests_path: Path) -> dict:
     tests = _load_module(tests_path, f"tests_{tests_path.stem}")
     if not hasattr(tests, "run_tests"):
         raise AttributeError(f"{tests_path} has no run_tests()")
-    result = tests.run_tests(candidate_path)
+    # C-0034 (2026-09-16), None-candidate TypeError class: a candidate
+    # callable that returns None or raises makes the task tests.py raise
+    # mid-run (measured: superdense candidate -> TypeError propagating out
+    # of run_tests). Contain PER TASK, fail-closed: that task grades FAIL
+    # with the underscore token candidate_none_graded_fail and the leg
+    # continues to the remaining tasks. Crash-containment only -- never a
+    # skip or a pass.
+    try:
+        result = tests.run_tests(candidate_path)
+    except Exception as exc:  # noqa: BLE001
+        return {
+            "passed": False,
+            "details": ["candidate_none_graded_fail", f"{type(exc).__name__}: {exc}"],
+        }
     if not isinstance(result, dict):
         return {
             "passed": False,
