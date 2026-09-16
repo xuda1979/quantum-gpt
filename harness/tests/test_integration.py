@@ -778,3 +778,91 @@ class TestDuplicateIdAutoRepair(unittest.TestCase):
         self.assertEqual(a["id"], ids[0], "oldest keeps its id")
         self.assertNotEqual(ids[1], a["id"], "duplicate gets a fresh id")
         self.assertIn(a["id"], child["deps"], "deps keep pointing at the keeper")
+
+
+class TestTransportGate(unittest.TestCase):
+    """Box-bound lanes (evaluator/trainer-ops/deploy-integrity) must not
+    dispatch while the exec transport is PERSISTENT-wedged: every cycle
+    burns a worker spawn just to rediscover the outage."""
+
+    def setUp(self):
+        for sub in ("agents", "briefs", "locks", "standup", "probes"):
+            os.makedirs(os.path.join(qgh.STATE, sub), exist_ok=True)
+        qgh.save_json(os.path.join(qgh.STATE, "QUEUE.json"), {"cards": [], "seq": 0})
+        qgh.save_json(os.path.join(qgh.STATE, "FLEET.json"), {"agents": []})
+        qgh.save_json(
+            os.path.join(qgh.STATE, "OPS.json"),
+            {"consecutive_spawn_failures": 0, "backoff_until_utc": None},
+        )
+
+    def test_box_bound_lanes_held_while_transport_wedged(self):
+        seed_card(title="eval leg", lane="evaluator")
+        seed_card(title="box verify", lane="deploy-integrity")
+        seed_card(title="local refactor", lane="qa-steward")  # not box-bound
+        H.save_json(
+            os.path.join(qgh.STATE, "probes", "asi3.json"),
+            {
+                "ts": H.now_iso(),
+                "status": "unknown",
+                "summary": "UNKNOWN (ready-but-exec_wedged: busyAgeMs=30000)",
+            },
+        )
+        order = []
+
+        def fake_spawn(goal, queue, card, dep_results):
+            order.append(card["id"])
+            return {
+                "pid": os.getpid(),
+                "card": card["id"],
+                "lane": card["lane"],
+                "brief": "x",
+                "log": "x",
+                "started_utc": H.now_iso(),
+                "deadline_utc": (H.datetime.utcnow() + H.timedelta(minutes=5)).strftime(
+                    "%Y-%m-%dT%H:%M:%SZ"
+                ),
+                "status": "running",
+            }
+
+        real = qgh.spawn_worker
+        qgh.spawn_worker = fake_spawn
+        try:
+            qgh.cmd_dispatch(type("A", (), {"lane": None})())
+        finally:
+            qgh.spawn_worker = real
+        q = qgh.load_queue(qgh.STATE)
+        dispatched_lanes = {c["lane"] for c in q["cards"] if c["status"] == "running"}
+        self.assertNotIn("evaluator", dispatched_lanes)
+        self.assertNotIn("deploy-integrity", dispatched_lanes)
+        self.assertIn("qa-steward", dispatched_lanes)
+
+    def test_box_lanes_resume_when_transport_ready(self):
+        seed_card(title="eval leg", lane="evaluator")
+        H.save_json(
+            os.path.join(qgh.STATE, "probes", "asi3.json"),
+            {"ts": H.now_iso(), "status": "ready", "summary": "READY /health ready=true pid=999"},
+        )
+        order = []
+
+        def fake_spawn(goal, queue, card, dep_results):
+            order.append(card["id"])
+            return {
+                "pid": os.getpid(),
+                "card": card["id"],
+                "lane": card["lane"],
+                "brief": "x",
+                "log": "x",
+                "started_utc": H.now_iso(),
+                "deadline_utc": (H.datetime.utcnow() + H.timedelta(minutes=5)).strftime(
+                    "%Y-%m-%dT%H:%M:%SZ"
+                ),
+                "status": "running",
+            }
+
+        real = qgh.spawn_worker
+        qgh.spawn_worker = fake_spawn
+        try:
+            qgh.cmd_dispatch(type("A", (), {"lane": None})())
+        finally:
+            qgh.spawn_worker = real
+        self.assertEqual(len(order), 1, "box lanes must dispatch once transport is ready")

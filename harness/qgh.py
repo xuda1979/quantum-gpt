@@ -485,6 +485,23 @@ def spawn_worker(goal, queue, card, dep_results):
     return entry
 
 
+BOX_BOUND_LANES = ("evaluator", "trainer-ops", "deploy-integrity")
+TRANSPORT_WEDGE_MARK = "exec_wedged"
+
+
+def transport_wedged():
+    """True iff the freshest asi3 probe reports an exec wedge. Fail-open for
+    MISSING probes (never dispatched against an unmeasured box anyway) but
+    STALE wedge evidence still holds the gate (absence of news ≠ recovery)."""
+    p = os.path.join(STATE, "probes", "asi3.json")
+    data = load_json(p)
+    if not data:
+        return False
+    if "exec_wedged" in str(data.get("summary", "")):
+        return True
+    return False
+
+
 def cmd_dispatch(args):
     goal = load_goal(STATE)
     queue = load_queue(STATE)
@@ -493,6 +510,11 @@ def cmd_dispatch(args):
     if backoff_active(ops):
         print(f"dispatch skipped: API backoff until {ops.get(BACKOFF_PATH_KEY)}")
         return
+    wedged = transport_wedged()
+    if wedged and not args.lane:
+        print("dispatch note: exec transport wedged - box-bound lanes held")
+    elif wedged:
+        pass  # explicit lane request overrides the gate (operator escape hatch)
     live = [a for a in fleet["agents"] if a.get("status") == "running" and pid_alive(a.get("pid"))]
     n_spawned = 0
     lanes = args.lane.split(",") if args.lane else None
@@ -507,6 +529,7 @@ def cmd_dispatch(args):
             for c in ready_cards(queue)
             if (lanes is None or c["lane"] in lanes)
             and lane_live.get(c["lane"], 0) < WIP_LIMITS.get(c["lane"], 1)
+            and not (wedged and c["lane"] in BOX_BOUND_LANES and (args.lane is None))
         ]
         if not candidates:
             break
@@ -681,11 +704,10 @@ def _reap():
         else:
             # no RESULT contract -> fail closed; card re-arms (max 2) then dies
             if card:
-                reason = (
-                    f"no RESULT verdict ({outcome})"
-                    if outcome != "stalled-killed"
-                    else f"stalled: heartbeat stale >{H.STALL_MIN} min"
-                )
+                # C-9048: truthful reason, quotes the literal RESULT contract;
+                # a PARTIAL verdict present at reap must not be reported as
+                # "no RESULT verdict".
+                reason = H.bounce_reason(verdict, outcome, over)
                 release_card(card, "bounced", (tail[-1] if tail else ""), reason)
         if not environmental:
             ops = load_ops(STATE)
@@ -700,6 +722,11 @@ def _reap():
         a["status"] = "stopped"
         if os.path.exists(os.path.join(STATE, "locks", "agent-{}.lock".format(a.get("card")))):
             _rmtree(os.path.join(STATE, "locks", "agent-{}.lock".format(a.get("card"))))
+    # C-9014: re-arm running cards with no live fleet entry (ghosts from
+    # event-log recovery or lost fleet rows) -- AFTER the harvest loop so
+    # just-reaped agents are already stopped and never double-counted.
+    for _ghost_id in H.rearm_ghost_running_cards(queue, fleet):
+        event(STATE, "card_ghost_rearmed", {"card": _ghost_id})
     # dead cards that exhausted retries
     for c in queue["cards"]:
         if (
@@ -896,8 +923,39 @@ def cmd_tick(_args):
         release_lock(lock)
 
 
-def _next_standup_no():
-    d = os.path.join(STATE, "standup")
+def _tick_floor(state_dir=None):
+    """C-9007: highest tick# ever recorded in STATUS.md (durable history).
+
+    The tick counter is file-derived (standup-*.md); the 2026-09-17 recovery
+    recreated that dir empty and the counter fell 127 -> 1 (STATUS.md
+    18:40:01Z -> 18:40:27Z), reusing pre-reset numbers that durable card
+    text references. STATUS.md survives standup-dir wipes, so its max tick#
+    floors the counter: a wipe can never reset tick numbering backwards.
+    """
+    sd = state_dir or STATE
+    mx = 0
+    try:
+        with open(os.path.join(sd, "STATUS.md")) as f:
+            for line in f:
+                i = line.find("tick#")
+                if i < 0:
+                    continue
+                digits = ""
+                for ch in line[i + len("tick#") :]:
+                    if ch.isdigit():
+                        digits += ch
+                    else:
+                        break
+                if digits:
+                    mx = max(mx, int(digits))
+    except OSError:
+        pass
+    return mx
+
+
+def _next_standup_no(state_dir=None):
+    sd = state_dir or STATE
+    d = os.path.join(sd, "standup")
     os.makedirs(d, exist_ok=True)
     nums = []
     for name in os.listdir(d):
@@ -913,7 +971,9 @@ def _next_standup_no():
             os.remove(os.path.join(d, f"standup-{old}.md"))
         except OSError:
             pass
-    return (nums[-1] + 1) if nums else 1
+    file_next = (nums[-1] + 1) if nums else 1
+    # C-9007: never tick backwards past durable history (see _tick_floor)
+    return max(file_next, _tick_floor(sd) + 1)
 
 
 def refresh_trainer_probe(state_dir=None, outputs_dir=None):
