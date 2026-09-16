@@ -768,6 +768,16 @@ def _reconcile_dep_blockers():
 
 def _auto_plan(goal):
     queue = load_queue(STATE)
+    # idempotency guard: never mint a second identical planner card while one
+    # is already ready/running (the C-0044/45/46 duplicate-mint class)
+    for c in queue["cards"]:
+        if (
+            c["lane"] == "planner"
+            and c["status"] in ("ready", "running")
+            and c["title"].startswith("Queue nearly empty")
+        ):
+            event(STATE, "auto_plan_skipped", {"existing": c["id"]})
+            return
     card = new_card(
         "Queue nearly empty: decompose next objective steps",
         "planner",

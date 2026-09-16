@@ -664,3 +664,21 @@ class TestDepBlockerSelfHeal(unittest.TestCase):
             planners_before + 1,
             "dead blocker must trigger planner re-decomposition",
         )
+
+
+class TestAutoPlanIdempotent(unittest.TestCase):
+    def test_no_duplicate_planner_mint(self):
+        for sub in ("agents", "briefs", "locks", "standup", "probes"):
+            os.makedirs(os.path.join(qgh.STATE, sub), exist_ok=True)
+        qgh.save_json(os.path.join(qgh.STATE, "QUEUE.json"), {"cards": [], "seq": 0})
+        qgh.save_json(os.path.join(qgh.STATE, "FLEET.json"), {"agents": []})
+        qgh._auto_plan({})
+        qgh._auto_plan({})
+        qgh._auto_plan({})
+        q = qgh.load_queue(qgh.STATE)
+        n = sum(
+            1
+            for c in q["cards"]
+            if c["lane"] == "planner" and c["title"].startswith("Queue nearly empty")
+        )
+        self.assertEqual(n, 1, "auto_plan must be idempotent while one is live")
