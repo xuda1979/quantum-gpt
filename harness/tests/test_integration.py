@@ -748,3 +748,33 @@ class TestPidReuseSafety(unittest.TestCase):
             os.killpg(real_worker_pid, 15)
         except ProcessLookupError:
             pass
+
+
+class TestDuplicateIdAutoRepair(unittest.TestCase):
+    """Concurrent card-adds can mint duplicate ids (observed live: C-9020/21).
+    The tick must re-id duplicates automatically — a single duplicate refused
+    by the preflight must never hold the whole dispatch hostage."""
+
+    def setUp(self):
+        for sub in ("agents", "briefs", "locks", "standup", "probes"):
+            os.makedirs(os.path.join(qgh.STATE, sub), exist_ok=True)
+        qgh.save_json(os.path.join(qgh.STATE, "QUEUE.json"), {"cards": [], "seq": 0})
+        qgh.save_json(os.path.join(qgh.STATE, "FLEET.json"), {"agents": []})
+
+    def test_dedup_reids_duplicates_keeps_oldest(self):
+        q = qgh.load_queue(qgh.STATE)
+        a = H.add_card(q, H.new_card(title="first", lane="fixer", why="w", acceptance=["a"]))
+        b = H.add_card(q, H.new_card(title="dup", lane="fixer", why="w", acceptance=["a"]))
+        b["id"] = a["id"]  # simulate the duplicate mint
+        child = H.add_card(
+            q, H.new_card(title="child", lane="fixer", why="w", acceptance=["a"], deps=[a["id"]])
+        )
+        qgh.save_queue(qgh.STATE, q)
+        changed = qgh._dedup_card_ids()
+        self.assertTrue(changed)
+        q = qgh.load_queue(qgh.STATE)
+        ids = [c["id"] for c in q["cards"]]
+        self.assertEqual(len(ids), len(set(ids)), "no duplicates may remain")
+        self.assertEqual(a["id"], ids[0], "oldest keeps its id")
+        self.assertNotEqual(ids[1], a["id"], "duplicate gets a fresh id")
+        self.assertIn(a["id"], child["deps"], "deps keep pointing at the keeper")

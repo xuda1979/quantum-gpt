@@ -711,8 +711,11 @@ def _reap():
             event(STATE, "card_dead", {"card": c["id"], "title": c["title"]})
     save_queue(STATE, queue)
     save_fleet(STATE, fleet)
-    # dep-blocker self-heal FIRST (re-queue env-bounced blockers, escalate dead
-    # ones), then re-read the queue before the top-up decision
+    # duplicate-id repair FIRST (a single duplicate refused by the preflight
+    # must never hold the whole dispatch hostage), then dep-blocker self-heal
+    _dedup_card_ids()
+    # dep-blocker self-heal (re-queue env-bounced blockers, escalate dead ones),
+    # then re-read the queue before the top-up decision
     _reconcile_dep_blockers()
     queue = load_queue(STATE)
     # planner top-up: only when the queue is GENUINELY idle -- the <2 trigger
@@ -741,6 +744,43 @@ ENV_BOUNCE_SIGNATURES = (
 def _bounce_was_environmental(card):
     reason = ((card.get("bounce_reason") or "") + " " + (card.get("result") or "")).lower()
     return any(sig in reason for sig in ENV_BOUNCE_SIGNATURES)
+
+
+def _dedup_card_ids():
+    """Repair duplicate card ids (concurrent card-add race): keep the running
+    one, else the oldest; re-id the rest and repoint dependent cards' deps."""
+    queue = load_queue(STATE)
+    from collections import Counter
+
+    ids = Counter(c["id"] for c in queue["cards"])
+    dup_ids = {i for i, n in ids.items() if n > 1}
+    if not dup_ids:
+        return False
+    maxnum = max(
+        [
+            int(c["id"][2:])
+            for c in queue["cards"]
+            if c["id"].startswith("C-") and c["id"][2:].isdigit()
+        ]
+        or [0]
+    )
+    for cid in dup_ids:
+        entries = [c for c in queue["cards"] if c["id"] == cid]
+        entries.sort(key=lambda c: (c["status"] != "running", c["created_utc"]))
+        for extra in entries[1:]:
+            maxnum += 1
+            old, fresh = extra["id"], f"C-{maxnum:04d}"
+            extra["id"] = fresh
+            for c in queue["cards"]:
+                c["deps"] = [fresh if d == old else d for d in c.get("deps", [])]
+            event(
+                STATE,
+                "duplicate_id_repaired",
+                {"was": old, "now": fresh, "title": extra["title"][:80]},
+            )
+    queue["seq"] = max(maxnum, queue.get("seq", 0))
+    save_queue(STATE, queue)
+    return True
 
 
 def _reconcile_dep_blockers():
@@ -833,6 +873,7 @@ def cmd_tick(_args):
         fleet = load_fleet(STATE)
         tick_no = _next_standup_no()
         verdicts = scan_verdicts(REPO)
+        refresh_trainer_probe()  # C-0074: trainer row from live file evidence
         probes = _probe_results()
         text = render_standup(goal, queue, fleet, tick_no, verdicts, probes, state_dir=STATE)
         path = os.path.join(STATE, "standup", f"standup-{tick_no}.md")
@@ -875,6 +916,34 @@ def _next_standup_no():
     return (nums[-1] + 1) if nums else 1
 
 
+def refresh_trainer_probe(state_dir=None, outputs_dir=None):
+    """C-0074: refresh probes/trainer.json from live run-dir file evidence.
+
+    The no-exec trainer instrument: newest run dir under outputs/ (read-time
+    resolution), its eval_results.jsonl step ladder + freshness/proc state.
+    Never raises -- on failure the existing record goes stale honestly
+    (_probe_results renders STALE past 30 min).
+    """
+    try:
+        import resource_probes
+
+        sd = state_dir or STATE
+        od = outputs_dir or os.path.join(REPO, "outputs")
+        p = resource_probes.probe_trainer_files(od)
+        save_json(
+            os.path.join(sd, "probes", "trainer.json"),
+            dict(
+                ts=now_iso(),
+                status=p.get("status"),
+                summary=p.get("summary"),
+                liveness=p.get("liveness"),
+            ),
+        )
+        return p
+    except Exception:
+        return None
+
+
 def _probe_results():
     """Read box-probe result files (written by probe agents), fail-stale-closed."""
     probes = {}
@@ -900,6 +969,7 @@ def cmd_metrics(_args):
 
 
 def cmd_standup(_args):
+    refresh_trainer_probe()  # C-0074: trainer row from live file evidence
     goal = load_goal(STATE)
     queue = load_queue(STATE)
     fleet = load_fleet(STATE)
