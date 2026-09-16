@@ -24,7 +24,8 @@ def run_tests(candidate_path: str) -> dict:
         bits = module.phase_to_register_bits(phase, n_qubits)
         if bits != expected:
             failures.append(
-                f"phase_to_register_bits({phase}, {n_qubits}) -> {bits}, expected {expected}"
+                f"phase_to_register_bits({phase}, {n_qubits}) -> {bits}, expected {expected}; "
+                f"mismatched_bits={sum(a != b for a, b in zip(bits, expected, strict=False))}, expected 0"
             )
 
     for phase, n_qubits, _ in cases:
@@ -33,7 +34,8 @@ def run_tests(candidate_path: str) -> dict:
         scale = 1 << n_qubits
         if abs(recovered - phase) > 1.0 / scale:
             failures.append(
-                f"round-trip {phase} with {n_qubits} qubits -> {recovered}, tolerance {1.0/scale}"
+                f"round-trip {phase} with {n_qubits} qubits -> {recovered}, tolerance {1.0/scale}; "
+                f"error={abs(recovered - phase):.6f}, need<={1.0/scale}"
             )
 
     try:

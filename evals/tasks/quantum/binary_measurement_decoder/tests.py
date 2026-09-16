@@ -24,7 +24,9 @@ def run_tests(candidate_path: str) -> dict:
     for bits, expected_int, expected_phase in cases:
         actual_int = module.bit_register_to_int(bits)
         if actual_int != expected_int:
-            failures.append(f"bit_register_to_int({bits!r}) -> {actual_int}, expected {expected_int}")
+            failures.append(
+                f"bit_register_to_int({bits!r}) -> {actual_int}, expected {expected_int}"
+            )
         actual_phase = module.measurement_register_to_phase(bits)
         if not math.isclose(actual_phase, expected_phase, abs_tol=1e-9):
             failures.append(
@@ -37,11 +39,14 @@ def run_tests(candidate_path: str) -> dict:
         except ValueError:
             continue
         except Exception as exc:
-            failures.append(f"bit_register_to_int({bad_bits!r}) raised {type(exc).__name__}, expected ValueError")
+            failures.append(
+                f"bit_register_to_int({bad_bits!r}) raised {type(exc).__name__}, expected ValueError"
+            )
         else:
             failures.append(f"bit_register_to_int({bad_bits!r}) did not raise ValueError")
 
     return {
         "passed": not failures,
-        "details": failures or ["binary measurement decoder enforces {0,1} registers and correct phase conversion"],
+        "details": failures
+        or ["binary measurement decoder enforces {0,1} registers and correct phase conversion"],
     }

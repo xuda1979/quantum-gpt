@@ -3,6 +3,7 @@
   "name": "Phase register round-trip utility",
   "domain": "quantum",
   "category": "interface_contract",
+  "task_prompt": "Use a most-significant-bit-first fixed-point phase register. phase_to_register_bits validates n_qubits > 0 and 0 <= phase < 1, computes floor(phase * 2**n_qubits), and returns exactly n_qubits binary digits. register_bits_to_phase validates a non-empty 0/1 list, interprets it as an unsigned MSB-first integer, and divides by 2**len(bits). Raise ValueError for invalid ranges, sizes, or bit values.",
   "candidate_file": "candidate.py",
   "test_file": "tests.py"
 }

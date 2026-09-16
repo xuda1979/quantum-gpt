@@ -50,11 +50,11 @@ def run_tests(candidate_path: str) -> dict:
     else:
         s2 = 1.0 / math.sqrt(2)
         if not _close(ghz4[0], s2) or not _close(ghz4[15], s2):
-            failures.append(f"ghz_state(4) endpoints wrong")
+            failures.append("ghz_state(4) endpoints wrong")
 
     # Normalization
     for n, state in [(2, ghz2), (3, ghz3), (4, ghz4)]:
-        norm = sum(a ** 2 for a in state)
+        norm = sum(a**2 for a in state)
         if not _close(norm, 1.0, tol=1e-6):
             failures.append(f"ghz_state({n}) not normalized: {norm}")
 
@@ -118,5 +118,6 @@ def run_tests(candidate_path: str) -> dict:
 
     return {
         "passed": not failures,
-        "details": failures or ["GHZ/W state construction and entanglement witness correct for all test cases"],
+        "details": failures
+        or ["GHZ/W state construction and entanglement witness correct for all test cases"],
     }

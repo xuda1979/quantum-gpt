@@ -21,7 +21,11 @@ def run_tests(candidate_path: str) -> dict:
     for raw, expected in cases:
         actual = module.normalize_gate_sequence(raw)
         if actual != expected:
-            failures.append(f"normalize_gate_sequence({raw!r}) -> {actual!r}, expected {expected!r}")
+            failures.append(
+                f"normalize_gate_sequence({raw!r}) -> {actual!r}, expected {expected!r}; "
+                f"mismatched_gates={abs(len(actual) - len(expected)) + sum(a != b for a, b in zip(actual, expected, strict=False))}, "
+                f"expected 0"
+            )
 
     for bad in [["swap"], ["H", "measure"]]:
         try:
@@ -29,11 +33,14 @@ def run_tests(candidate_path: str) -> dict:
         except ValueError:
             continue
         except Exception as exc:
-            failures.append(f"normalize_gate_sequence({bad!r}) raised {type(exc).__name__}, expected ValueError")
+            failures.append(
+                f"normalize_gate_sequence({bad!r}) raised {type(exc).__name__}, expected ValueError"
+            )
         else:
             failures.append(f"normalize_gate_sequence({bad!r}) did not raise ValueError")
 
     return {
         "passed": not failures,
-        "details": failures or ["Gate alias normalization handles casing, whitespace, and invalid aliases"],
+        "details": failures
+        or ["Gate alias normalization handles casing, whitespace, and invalid aliases"],
     }

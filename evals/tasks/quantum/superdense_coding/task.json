@@ -3,6 +3,7 @@
   "name": "Superdense coding encode/decode",
   "domain": "quantum",
   "category": "reasoning",
+  "task_prompt": "Implement the classical message-to-Pauli-label convention used by superdense coding. encode_message maps 00 to I, 01 to X, 10 to Z, and 11 to XZ. decode_message performs the exact inverse mapping. Raise ValueError for any unsupported two-bit message or operation label.",
   "candidate_file": "candidate.py",
   "test_file": "tests.py"
 }

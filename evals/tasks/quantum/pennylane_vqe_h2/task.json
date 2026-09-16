@@ -4,6 +4,7 @@
   "domain": "quantum",
   "category": "algorithm_implementation",
   "framework": "pennylane",
+  "task_prompt": "Implement a two-qubit PennyLane VQE for the frozen-core parity-mapped H2 Hamiltonian H = -0.4804 I(0) + 0.3435 Z(0) - 0.4347 Z(1) + 0.5716 Z(0)Z(1) + 0.0910 X(0)X(1) + 0.0910 Y(0)Y(1). vqe_circuit uses four parameters in this order: RY on wire 0, RY on wire 1, CNOT 0->1, RY on wire 0, RY on wire 1. run_vqe performs deterministic seeded variational minimization for the requested number of steps and returns {'energy': the final expectation as a float, 'params': the four final parameter values}; compute the result from the circuit and Hamiltonian rather than hard-coding an energy.",
   "candidate_file": "candidate.py",
   "test_file": "tests.py"
 }

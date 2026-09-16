@@ -1,5 +1,5 @@
-# C-0024 canonical freeze manifest: 18-task SAPO promotion holdout + scorer chain.
-# sha256sum format, paths relative to repo root. Regenerate ONLY deliberately.
+# C-0024: canonical sha256 freeze manifest, 18-task SAPO promotion holdout.
+# Regenerate ONLY deliberately via evals/runner/holdout_freeze.compute_manifest().
 b40ca7f2b16e19809059c7dde60414e6e88631d0613e36425002c376f03ea7f1  evals/benchmarks/sapo_promotion_holdout_v1_18.txt
 f1cf1e1144aeef96acac9f527b6b3d96ea9c0c938121a48d9f2fc735599d9525  evals/tasks/quantum/gate_alias_normalization/task.json
 fafaf612e4e70afd499e6e9137672638d48fd00842c351cff8ff08e16a961c91  evals/tasks/quantum/gate_alias_normalization/tests.py
@@ -37,7 +37,7 @@ cef961ca651f7d14be1de207da598be883f1b3df1f1aadbec677c7f7ae724d8c  evals/tasks/qu
 328bedb0304762c6ca9432777de7d3c99de45f84e1624086225fdbfc062db62b  evals/tasks/quantum/phase_register_roundtrip/tests.py
 976677faa3f3138f9ac53c1435cbb8002ef380dabff6dc74f2f4fc4821620da1  evals/tasks/quantum/binary_measurement_decoder/task.json
 114bd9cf91467960db9b629475aad730929625271b7ea76e453199b3b40b6690  evals/tasks/quantum/binary_measurement_decoder/tests.py
-3995473924add1b0355fe92fa5fcecedabee7df16f344755a20dea1c2eaf9826  evals/runner/single_candidate_eval.py
-fcae877f9a3f2780a1dfc4767f6534ecf5c2c3b40c7a4f59b26ca4e32936ae75  scripts/run_asi2_base_adapter_rubric_eval.py
+ba05e8aa26fce617b6db9dc91eb675abc51217b96c32d6d411a5e1ccc6a5da3b  evals/runner/single_candidate_eval.py
+dced4c1e733499b653b69047fe0dc7ce46a28ab0cdd560a1f4092c5d3385e7fd  scripts/run_asi2_base_adapter_rubric_eval.py
 18d8b065dd70c63dd55c3b4e6f229b2c741f77b39f8bd9ae409686aaa6b3ac65  evals/runner/candidate_sanitize.py
 fd6c7851ae01e067d090ea8c18444d00c7c9f7f1798705233ca38e909b60ba20  harness/beats_base.py

@@ -305,7 +305,7 @@ def static_scores(code: str, passed: bool) -> dict[str, float]:
     has_defs = bool(
         tree
         and any(
-            isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
+            isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))  # noqa: UP038
             for node in ast.walk(tree)
         )
     )
@@ -314,9 +314,9 @@ def static_scores(code: str, passed: bool) -> dict[str, float]:
     nested_loops = 0
     if tree:
         for node in ast.walk(tree):
-            if isinstance(node, (ast.For, ast.While)):
+            if isinstance(node, (ast.For, ast.While)):  # noqa: UP038
                 nested_loops += sum(
-                    isinstance(child, (ast.For, ast.While))
+                    isinstance(child, (ast.For, ast.While))  # noqa: UP038
                     for child in ast.walk(node)
                     if child is not node
                 )
@@ -412,12 +412,37 @@ def run_model(
             ),
             flush=True,
         )
-        code = generate(model, backend, prompt, args.device, args.max_new_tokens)
-        candidate_path = args.output.parent / "candidates" / model_name / f"{meta['id']}.py"
-        test_result = run_single_file_test(
-            task_dir, meta, code, candidate_path, args.harness_timeout
-        )
-        scores = static_scores(code, test_result["passed"])
+        # C-0049 per-task fail-closed containment: a poisoned candidate
+        # (generation raises or returns None) grades FAIL for ITS task
+        # only -- the pinned crash-class token -- and the leg continues
+        # to the remaining tasks. Never a skip, never a pass.
+        code = ""
+        try:
+            code = generate(model, backend, prompt, args.device, args.max_new_tokens)
+            candidate_path = args.output.parent / "candidates" / model_name / f"{meta['id']}.py"
+            test_result = run_single_file_test(
+                task_dir, meta, code, candidate_path, args.harness_timeout
+            )
+        except Exception as exc:  # noqa: BLE001
+            test_result = dict(
+                passed=False,
+                details=[
+                    "candidate_none_graded_fail",
+                    f"{type(exc).__name__}: {exc}",
+                ],
+            )
+            print(
+                json.dumps(
+                    dict(
+                        stage="task_contained",
+                        model=model_name,
+                        task=meta["id"],
+                        token="candidate_none_graded_fail",
+                    )
+                ),
+                flush=True,
+            )
+        scores = static_scores(code if isinstance(code, str) else "", test_result["passed"])
         records.append(
             {
                 "model": model_name,
@@ -429,7 +454,7 @@ def run_model(
                 "passed": test_result["passed"],
                 "details": test_result["details"],
                 "scores": scores,
-                "output_chars": len(code),
+                "output_chars": len(code) if isinstance(code, str) else 0,
                 "reference_hidden": True,
                 "prompt_mode": "question-only",
             }

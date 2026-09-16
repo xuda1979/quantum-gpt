@@ -26,14 +26,18 @@ def run_tests(candidate_path: str) -> dict:
         failures.append(f"bell_circuit() raised: {e}")
 
     # parity_check
-    if mod.parity_check("00") != 0:
-        failures.append("parity_check('00') should be 0")
-    if mod.parity_check("11") != 0:
-        failures.append("parity_check('11') should be 0 (even parity)")
-    if mod.parity_check("01") != 1:
-        failures.append("parity_check('01') should be 1")
-    if mod.parity_check("10") != 1:
-        failures.append("parity_check('10') should be 1")
+    p00 = mod.parity_check("00")
+    if p00 != 0:
+        failures.append(f"parity_check('00') should be 0; parity={p00}, expected 0")
+    p11 = mod.parity_check("11")
+    if p11 != 0:
+        failures.append(f"parity_check('11') should be 0 (even parity); parity={p11}, expected 0")
+    p01 = mod.parity_check("01")
+    if p01 != 1:
+        failures.append(f"parity_check('01') should be 1; parity={p01}, expected 1")
+    p10 = mod.parity_check("10")
+    if p10 != 1:
+        failures.append(f"parity_check('10') should be 1; parity={p10}, expected 1")
 
     # Sampling: only |00> and |11> should appear (Bell state)
     try:
@@ -48,7 +52,8 @@ def run_tests(candidate_path: str) -> dict:
                     # Allow a tiny simulation noise tolerance: < 5% of shots
                     if v > 20:
                         failures.append(
-                            f"odd-parity outcome {k!r} count={v} too high for a Bell state"
+                            f"odd-parity outcome {k!r} count={v} too high for a Bell state; "
+                            f"need<={20}"
                         )
     except Exception as e:  # noqa: BLE001
         failures.append(f"sample_bell_state() raised: {e}")

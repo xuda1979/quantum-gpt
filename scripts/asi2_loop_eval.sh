@@ -44,13 +44,20 @@
 #   REMOTE_ROOT             remote repo root (default /root/work/software/quantum-gpt)
 #   NAS_CHECKPOINT_ROOT     NAS checkpoint root (default
 #                           /root/work/filestorage/grpo_checkpoints/qwen36_27b_selfeval)
-#   BASE_MODEL              base model path (default /root/work/filestorage/Qwen3.6-27B)
+#   BASE_MODEL              base model path (default /root/work/filestorage/Qwen3.8-27B,
+#                           the model the SAPO run fine-tunes; must match its --model-name)
 #   EVAL_WAIT_SECONDS       max wait for rubric eval output (default 7200)
 #   EVAL_POLL_INTERVAL      rubric eval poll cadence (default 60)
 #   PRECHECK_WAIT_SECONDS   max wait for precheck output (default 3600)
 #   PRECHECK_POLL_INTERVAL  precheck poll cadence (default 30)
 #   PRECHECK_DEVICE         precheck merge device (default cpu; NPU-free)
 #   EVAL_STATE_FILE         local state marker file (default reports/.asi2_eval_state.json)
+#   SAPO_RUN_DIR            evaluate a checkpoint inside this run dir (the
+#                           parallel-eval agent's driver; takes precedence)
+#   SAPO_RUN_ADAPTER        basename pinning ONE checkpoint inside SAPO_RUN_DIR
+#   SAPO_EVAL_LIB_ONLY=1    define the functions and STOP (test seam: lets a
+#                           test call checkpoint_identity/state_get/update_state
+#                           without a box probe or a main flow)
 #   DRY_RUN=1               print the plan without touching anything
 # =============================================================================
 set -euo pipefail
@@ -62,13 +69,36 @@ DAEMON_PORT="${DAEMON_PORT:-19004}"
 DAEMON_BASE="http://127.0.0.1:${DAEMON_PORT}"
 REMOTE_ROOT="${REMOTE_ROOT:-/root/work/software/quantum-gpt}"
 NAS_CHECKPOINT_ROOT="${NAS_CHECKPOINT_ROOT:-/root/work/filestorage/grpo_checkpoints/qwen36_27b_selfeval}"
-BASE_MODEL="${BASE_MODEL:-/root/work/filestorage/Qwen3.6-27B}"
+# B-221 (2026-09-14): the SAPO run fine-tunes Qwen3.8-27B (its --model-name), and the
+# promotion verdict instrument scores against THAT base (1/18). This default used to be
+# Qwen3.6-27B, so every leg fired without an explicit BASE_MODEL compared the adapter
+# against the WRONG base (3/18) and wrote verdicts saying
+#   "tie vs Qwen3.6 base (3/18=3/18); ... NO promotion per tie rule"
+# for adapters that genuinely beat the real base. A stale default that silently changes
+# the meaning of every verdict is the worst class of instrument defect.
+BASE_MODEL="${BASE_MODEL:-/root/work/filestorage/Qwen3.8-27B}"
 EVAL_WAIT_SECONDS="${EVAL_WAIT_SECONDS:-7200}"
 EVAL_POLL_INTERVAL="${EVAL_POLL_INTERVAL:-60}"
 PRECHECK_WAIT_SECONDS="${PRECHECK_WAIT_SECONDS:-3600}"
 PRECHECK_POLL_INTERVAL="${PRECHECK_POLL_INTERVAL:-30}"
 PRECHECK_DEVICE="${PRECHECK_DEVICE:-cpu}"
 EVAL_STATE_FILE="${EVAL_STATE_FILE:-${ROOT_DIR}/reports/.asi2_eval_state.json}"
+# C-0036: asi2-eval box lease -- serialize eval-leg dispatch at ASI2. C-0035
+# measured ZERO callers of the landed helper lock, so N concurrent launchers
+# still double-fired 18-task NPU legs. EVAL_LOCK_FILE is overridable so tests
+# can point it at a temp dir (test_eval_launcher_lock.py).
+EVAL_LOCK_FILE="${EVAL_LOCK_FILE:-${ROOT_DIR}/harness/state/locks/asi2-eval.lock}"
+EVAL_LOCK_TOKEN=""
+
+# C-0048 (finishing bounced C-0028): launch-side freeze-integrity gate. The
+# asi2-eval lease serializes legs, but nothing here refused to FIRE a leg
+# against a drifted holdout/scorer -- the box-side driver check (C-0024)
+# only runs AFTER the leg is dispatched, so the serialized slot and the
+# poll window still burn. FREEZE_* are overridable so tests can point the
+# gate at a throwaway tree (test_eval_launcher_freeze_gate.py).
+FREEZE_REPO_ROOT="${FREEZE_REPO_ROOT:-${ROOT_DIR}}"
+FREEZE_MANIFEST="${FREEZE_MANIFEST:-${FREEZE_REPO_ROOT}/evals/benchmarks/sapo_promotion_holdout_v1_18.sha256}"
+
 # 2026-09-01 (manager, beats-base instrument fix): the rubric eval MUST run on
 # the FROZEN promotion holdout — the loop previously omitted --benchmark and
 # the evaluator defaulted to the 13-task v1 TRAINING set (whose header forbids
@@ -102,6 +132,45 @@ fi
 log() { printf '[%s] %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*" >&2; }
 # say: status keywords for the watchdog loop -> stdout
 say() { printf '%s\n' "$*"; }
+
+# checkpoint_identity CHECKPOINT_PATH -> the state key for this checkpoint.
+#
+# 2026-09-11 (B-107, the B-105 family): the state entry used to be keyed by the
+# BARE STEP NUMBER (`step_000047_adapter` -> `47`), with the adapter path kept
+# only in the entry's `adapter` field. The parallel-eval agent keys its
+# done-filter by the checkpoint's FULL PATH, and the state file is per-ENV, not
+# per-run — so the agent's lookup never matched a verdict this loop wrote and
+# re-fired every already-evaluated checkpoint (the live, endless
+# `step_000024_adapter` re-eval loop). A bare step number is not an identity:
+# it is identical across runs, which is exactly the ambiguity B-105 fixed on the
+# agent side. The fix belongs HERE, in the writer, so writer and reader agree on
+# one key; making the reader re-derive a key from `adapter` would keep two
+# implementations of "which checkpoint is this" in the tree.
+#
+# The key is the path the caller gave, normalized (no trailing slash, no doubled
+# slash) and otherwise verbatim — exactly the string the agent computes from its
+# own listing. A bare basename (no path separator, so nothing to disambiguate)
+# is returned UNFOLDED: folding `step_000004_adapter` to `4` here would recreate
+# the cross-run ambiguity this fix removes, and would key the same checkpoint
+# under two different names depending on how the caller spelled it.
+#
+# FAIL-CLOSED: no caller may treat a NON-matching key as a verdict. An
+# unrecognised checkpoint stays PENDING and is re-evaluated (see state_get +
+# the already-evaluated check below) — re-evaluating a finished checkpoint costs
+# one leg, while suppressing an unevaluated one is a silent coverage gap.
+checkpoint_identity() {
+  local raw="${1:-}" path
+  # collapse the doubled slashes a caller-built run dir can carry
+  # (live state shows `.../outputs/sapo-27b-ai-20260902T072812Z//step_000001_adapter`)
+  # so the same checkpoint always yields the same key.
+  path="$(printf '%s' "$raw" | sed -e 's|//*|/|g')"
+  case "$path" in
+    "")  printf '%s' ""; return 0;;
+    /)   printf '%s' "/"; return 0;;           # degenerate, but a path
+    */*) printf '%s' "${path%/}"; return 0;;   # a real path is its own identity
+  esac
+  printf '%s' "$path"   # bare name: no path to normalise, and never folded
+}
 
 jq_escape() {
   python3 -c 'import json, sys; print(json.dumps(sys.argv[1]))' "$1"
@@ -143,6 +212,35 @@ if isinstance(out, str):
   fi
   printf '%s' "$out"
   return 0
+}
+
+# marker_is_for_checkpoint MARKER ADAPTER -> is MARKER a verdict for ADAPTER?
+#
+# B-229 (measured live 2026-09-14, run sapo-27b-ai-20260913T233607Z): the on-box
+# marker fallback below globs outputs/reeval_latest_<TS>.json, keyed by the leg's
+# SHORT name alone -- a bare step number, identical across runs. An existing file
+# was therefore taken as a verdict for whatever checkpoint this leg happened to be
+# evaluating. Live: step_000003_adapter was backfilled as status=done
+# verdict=marker-found from reeval_latest_3.json dated 2026-09-02T13:58:57Z
+# (a different epoch: pass_at_1 adapter 3/18 base 3/18) and the leg never ran.
+# That is the silent coverage gap the identity check above exists to prevent --
+# the marker path re-opened it (same shape as B-105/B-107, one layer down).
+#
+# A marker is a verdict only for the checkpoint it was produced FROM, so it must
+# be at least as new as the adapter directory it is claimed for. Freshness is
+# format-agnostic (the two marker producers write different JSON shapes).
+# Unknown freshness -- daemon down, auth down, no stat -- fails CLOSED: the
+# checkpoint is EVALUATED. A re-run costs one leg; a false DONE costs coverage.
+marker_is_for_checkpoint() {
+  local marker="$1" adapter="$2" out m a
+  if [[ -z "$marker" || -z "$adapter" ]]; then return 1; fi
+  if ! out=$(exec_remote "stat -c %Y '$marker' 2>/dev/null; stat -c %Y '$adapter' 2>/dev/null"); then
+    return 1
+  fi
+  m=$(printf '%s\n' "$out" | sed -n '1p' | tr -dc '0-9')
+  a=$(printf '%s\n' "$out" | sed -n '2p' | tr -dc '0-9')
+  if [[ -z "$m" || -z "$a" ]]; then return 1; fi
+  [[ "$m" -ge "$a" ]]
 }
 
 # state_get TS -> prints the state entry status ("" if absent)
@@ -225,6 +323,82 @@ poll_for_file() {
   return 1
 }
 
+# ---------------- asi2-eval box lease (C-0036) ----------------
+# Defined BEFORE the SAPO_EVAL_LIB_ONLY seam so tests can source the launcher
+# and drive the lease path with no box probe (test_eval_launcher_lock.py).
+asi2_eval_lock_acquire() {
+  # Take the lease via harness_lib.acquire_lock, then rewrite the holder pid
+  # to THIS launcher shell ($$): acquire_lock stamps the short-lived python
+  # helper's pid, and a young lock with a dead pid is taken over, so without
+  # the rewrite the next launcher could steal the lease mid-dispatch. Prints
+  # LOCK_BUSY (rc 1) when a fresh lease held by a live pid exists.
+  EVAL_LOCK_TOKEN="$(python3 - "$EVAL_LOCK_FILE" "$$" "${ROOT_DIR}/harness" <<'PYLOCK'
+import json, sys
+sys.path.insert(0, sys.argv[3])
+import harness_lib
+tok = harness_lib.acquire_lock(sys.argv[1])
+if tok is None:
+    print("LOCK_BUSY")
+else:
+    tok["pid"] = int(sys.argv[2])
+    with open(sys.argv[1], "w", encoding="utf-8") as f:
+        json.dump(tok, f)
+    print(json.dumps(tok))
+PYLOCK
+)" || return 1
+  if [[ "$EVAL_LOCK_TOKEN" == "LOCK_BUSY" ]]; then
+    return 1
+  fi
+  log "asi2-eval lease acquired: ${EVAL_LOCK_FILE}"
+  return 0
+}
+
+asi2_eval_lock_release() {
+  if [[ -n "${EVAL_LOCK_TOKEN:-}" ]]; then
+    python3 - "$EVAL_LOCK_FILE" "$EVAL_LOCK_TOKEN" "${ROOT_DIR}/harness" <<'PYUNLOCK' >/dev/null 2>&1 || true
+import json, sys
+sys.path.insert(0, sys.argv[3])
+import harness_lib
+print(harness_lib.release_lock(sys.argv[1], json.loads(sys.argv[2])))
+PYUNLOCK
+    EVAL_LOCK_TOKEN=""
+  fi
+  return 0
+}
+
+# ---------------- freeze-integrity sha gate (C-0024/C-0048) ----------------
+# Defined BEFORE the SAPO_EVAL_LIB_ONLY seam so tests can source the launcher
+# and drive the gate against a throwaway tree with no box probe
+# (test_eval_launcher_freeze_gate.py). Fail-closed: drift, a missing covered
+# file, or a missing manifest all refuse the leg and NAME the violation. On
+# success it stamps one `freeze sha <digest> <rel>` line per covered file
+# into this log, so the leg log records WHICH bytes the holdout/scorer ran
+# under (traceability for cross-leg verdict comparison).
+asi2_eval_freeze_gate() {
+  local out
+  if ! out="$(python3 - "$ROOT_DIR" "${FREEZE_REPO_ROOT}" "${FREEZE_MANIFEST}" <<'PYFREEZE'
+import sys
+sys.path.insert(0, sys.argv[1])
+from evals.runner.holdout_freeze import HoldoutFreezeError, verify_holdout_freeze
+try:
+    entries = verify_holdout_freeze(repo_root=sys.argv[2], manifest_path=sys.argv[3])
+except HoldoutFreezeError as exc:
+    print("FREEZE_VIOLATION: " + str(exc))
+    sys.exit(1)
+for rel, digest in entries:
+    print("freeze sha {} {}".format(digest, rel))
+PYFREEZE
+)"; then
+    log "freeze-integrity gate FAILED -- refusing the eval leg (fail-closed): ${out}"
+    return 1
+  fi
+  while IFS= read -r line; do
+    log "${line}"
+  done <<< "${out}"
+  log "freeze-integrity gate OK: $(printf '%s\n' "${out}" | grep -c '^freeze sha ' || true) files verified against the freeze manifest"
+  return 0
+}
+
 # ---------------- dry run ----------------
 if [[ $DRY_RUN == 1 ]]; then
   say "DRY_RUN — no /exec calls, no state writes. Plan:"
@@ -265,6 +439,13 @@ if [[ $DRY_RUN == 1 ]]; then
 fi
 
 # ---------------- main flow ----------------
+# Test seam (SAPO_EVAL_LIB_ONLY=1, see the env block at the top): every helper
+# above is now defined, so stop BEFORE the first box probe. Default 0 = the real
+# main flow, unchanged.
+if [[ "${SAPO_EVAL_LIB_ONLY:-0}" == "1" ]]; then
+  return 0 2>/dev/null || exit 0
+fi
+
 log "asi2_loop_eval start (daemon=${DAEMON_BASE} remote=${REMOTE_ROOT} state=${EVAL_STATE_FILE})"
 
 # ---- step 1a: newest NAS checkpoint ----
@@ -341,11 +522,24 @@ else
   exit 0
 fi
 
+# ---- step 1d: the checkpoint's state identity (B-107) ----
+# ONE definition, used by every state read and write below. `$TS` stays the
+# leg's SHORT name and is still what the box-side artifact paths are built from
+# (/tmp/reeval_<ts>.json, adapter_delta_<ts>.json, the on-box marker names) —
+# those are the leg's own files and must keep their existing names.
+STATE_KEY="$(checkpoint_identity "$ADAPTER")"
+log "state key: ${STATE_KEY:-<none>} (leg short name ${TS:-<none>})"
+
 # ---- step 2: already evaluated? ----
-ST=$(state_get "$TS")
+# FAIL-CLOSED: only THIS checkpoint's own identity counts as a verdict. A key
+# that does not match (a legacy bare step number, another run's checkpoint, a
+# path written by an older tree) leaves it PENDING and the leg re-runs. Never
+# widen this to "any entry that looks like it might be this one": an unmatched
+# key suppressing a leg is a silent coverage gap, the worse failure of the two.
+ST=$(state_get "$STATE_KEY")
 if [[ "$ST" == "done" || "$ST" == "inert" ]]; then
   say "ALREADY_EVALUATED ${TS}"
-  log "local state file already marks ${TS} as ${ST}"
+  log "local state file already marks ${STATE_KEY} as ${ST} (leg short name ${TS})"
   exit 0
 fi
 if ! MARKER_OUT=$(exec_remote "for f in ${REMOTE_ROOT}/outputs/reeval_latest_${TS}.json ${REMOTE_ROOT}/outputs/grpo-27b-selfeval-${TS}/reeval_*.json; do if [ -f \"\$f\" ]; then echo \"\$f\"; break; fi; done"); then
@@ -354,10 +548,15 @@ if ! MARKER_OUT=$(exec_remote "for f in ${REMOTE_ROOT}/outputs/reeval_latest_${T
 fi
 MARKER_OUT=$(printf '%s' "$MARKER_OUT" | head -1 | tr -d '[:space:]')
 if [[ -n "$MARKER_OUT" ]]; then
+  if marker_is_for_checkpoint "$MARKER_OUT" "$ADAPTER"; then
   say "ALREADY_EVALUATED ${TS}"
   log "on-box marker found: ${MARKER_OUT}; backfilling local state"
-  update_state "$TS" "done" "marker-found" "${MARKER_OUT}" "$ADAPTER" "null" '{"source": "on-box-marker"}'
+  update_state "$STATE_KEY" "done" "marker-found" "${MARKER_OUT}" "$ADAPTER" "null" '{"source": "on-box-marker"}'
   exit 0
+  fi
+  # B-229: the marker is not a verdict for THIS checkpoint -- evaluate it.
+  say "STALE_MARKER $TS"
+  log "on-box marker $MARKER_OUT predates $ADAPTER -- not a verdict for this checkpoint; evaluating"
 fi
 
 # checkpoint completeness (adapter_config.json + at least one safetensors)
@@ -380,7 +579,7 @@ if ! PIDSTATE=$(exec_remote "if [ -f /tmp/asi2_loop_precheck_${TS}.pid ] && kill
 fi
 if [[ "$PIDSTATE" == *RUNNING* && "$PIDSTATE" != *NOT_RUNNING* ]]; then
   say "PRECHECK_RUNNING ${TS}"
-  update_state "$TS" "pending" "precheck-running" "" "$ADAPTER" "null"
+  update_state "$STATE_KEY" "pending" "precheck-running" "" "$ADAPTER" "null"
   exit 0
 fi
 exec_remote "rm -f /tmp/asi2_loop_precheck_${TS}.pid /tmp/asi2_loop_precheck_${TS}.log" >/dev/null 2>&1 || true
@@ -634,7 +833,7 @@ if [[ "$PIDSTATE" != *PID_OK* ]]; then
   exit 1
 fi
 log "precheck launched (pid=$(printf '%s' "$LAUNCH_OUT" | grep -o 'PRE_PID=[0-9]*' | head -1 | cut -d= -f2 || true)); polling up to ${PRECHECK_WAIT_SECONDS}s"
-update_state "$TS" "pending" "precheck-running" "" "$ADAPTER" "null"
+update_state "$STATE_KEY" "pending" "precheck-running" "" "$ADAPTER" "null"
 
 # ---- step 3d: wait for the precheck result ----
 if ! poll_for_file "${REMOTE_ROOT}/outputs/adapter_delta_${TS}.json" "$PRECHECK_WAIT_SECONDS" "$PRECHECK_POLL_INTERVAL" "precheck"; then
@@ -674,7 +873,7 @@ log "precheck result: verdict=${PRECHECK_VERDICT} max_abs_diff=${PRECHECK_MAX_DI
 if [[ "$PRECHECK_VERDICT" == "inert" ]]; then
   say "INERT ${TS} (max_abs_diff=${PRECHECK_MAX_DIFF})"
   log "adapter delta is PROVABLY zero (verdict=${PRECHECK_VERDICT}) — the only case that skips the rubric eval"
-  update_state "$TS" "inert" "adapter_delta_zero" "" "$ADAPTER" "$PRECHECK_MAX_DIFF" "{\"precheck_phase\": \"${PRECHECK_PHASE}\", \"verdict\": \"${PRECHECK_VERDICT}\"}"
+  update_state "$STATE_KEY" "inert" "adapter_delta_zero" "" "$ADAPTER" "$PRECHECK_MAX_DIFF" "{\"precheck_phase\": \"${PRECHECK_PHASE}\", \"verdict\": \"${PRECHECK_VERDICT}\"}"
   exit 0
 fi
 if [[ "$PRECHECK_VERDICT" == "inert_at_precision" ]]; then
@@ -686,13 +885,36 @@ if [[ "$PRECHECK_VERDICT" == "unknown" ]]; then
 fi
 
 # ---- step 4: rubric eval on NPUs (hours) ----
+# C-0036: take the asi2-eval box lease BEFORE the dispatch decision -- the
+# per-ts pid checks only catch re-entry for the SAME checkpoint, so without
+# the lease, launchers carrying different checkpoints double-fire 18-task
+# NPU legs at ASI2. A busy lease = another dispatcher is mid-leg: skip this
+# cycle (the watchdog retries) rather than queue a second NPU leg.
+if ! asi2_eval_lock_acquire; then
+  say "EVAL_LOCK_BUSY ${TS}"
+  log "asi2-eval lease held elsewhere (${EVAL_LOCK_FILE}) -- skipping this cycle"
+  exit 0
+fi
+# the lease must never outlive this shell: release on every exit path below
+trap 'asi2_eval_lock_release; rm -rf "${PRECHECK_LOCAL_DIR-}"' EXIT
+
+# ---- freeze-integrity sha gate (C-0048, finishing bounced C-0028) ----
+# Refuse BEFORE firing the leg: a drifted holdout/scorer must burn zero box
+# budget, not a serialized NPU leg plus a poll window (the box-side driver
+# check runs only after dispatch). The EXIT trap above releases the lease on
+# this path.
+if ! asi2_eval_freeze_gate; then
+  say "FREEZE_GATE_REFUSED ${TS}"
+  exit 1
+fi
+
 if ! PIDSTATE=$(exec_remote "if [ -f /tmp/reeval_${TS}.pid ] && kill -0 \$(cat /tmp/reeval_${TS}.pid) 2>/dev/null; then echo RUNNING; else echo NOT_RUNNING; fi"); then
   printf '%s\n' "${PIDSTATE:-AUTH_DOWN}"
   exit 2
 fi
 if [[ "$PIDSTATE" == *RUNNING* && "$PIDSTATE" != *NOT_RUNNING* ]]; then
   say "EVAL_RUNNING ${TS}"
-  update_state "$TS" "pending" "eval-running" "" "$ADAPTER" "$PRECHECK_MAX_DIFF"
+  update_state "$STATE_KEY" "pending" "eval-running" "" "$ADAPTER" "$PRECHECK_MAX_DIFF"
   exit 0
 fi
 exec_remote "rm -f /tmp/reeval_${TS}.pid /tmp/reeval_${TS}.log" >/dev/null 2>&1 || true
@@ -714,7 +936,14 @@ if [[ "$PIDSTATE" != *PID_OK* ]]; then
   exit 1
 fi
 log "rubric eval launched (pid=$(printf '%s' "$LAUNCH_OUT" | grep -o 'EVAL_PID=[0-9]*' | head -1 | cut -d= -f2 || true)); polling up to ${EVAL_WAIT_SECONDS}s"
-update_state "$TS" "pending" "eval-running" "" "$ADAPTER" "$PRECHECK_MAX_DIFF"
+update_state "$STATE_KEY" "pending" "eval-running" "" "$ADAPTER" "$PRECHECK_MAX_DIFF"
+
+# dispatch complete (box pid confirmed, state recorded): the lease covers the
+# DISPATCH window, not the multi-hour leg -- the holder is this short-lived
+# shell, and the box-side /tmp/reeval_<ts>.pid check + EVAL_RUNNING keyword
+# guard the leg itself. Release so the next dispatcher can fire its leg.
+asi2_eval_lock_release
+log "asi2-eval lease released after dispatch"
 
 if ! poll_for_file "${REMOTE_ROOT}/outputs/reeval_latest_${TS}.json" "$EVAL_WAIT_SECONDS" "$EVAL_POLL_INTERVAL" "rubric-eval"; then
   say "EVAL_PENDING ${TS}"
@@ -731,7 +960,7 @@ fi
 SUMMARY_JSON=$(printf '%s' "$SUMMARY_JSON" | tr -d '[:space:]')
 if [[ -z "$SUMMARY_JSON" ]] || ! printf '%s' "$SUMMARY_JSON" | python3 -c 'import json, sys; json.load(sys.stdin)' >/dev/null 2>&1; then
   say "EVAL_OUTPUT_INVALID ${TS}"
-  update_state "$TS" "error" "eval-output-unparseable" "${REMOTE_ROOT}/outputs/reeval_latest_${TS}.json" "$ADAPTER" "$PRECHECK_MAX_DIFF"
+  update_state "$STATE_KEY" "error" "eval-output-unparseable" "${REMOTE_ROOT}/outputs/reeval_latest_${TS}.json" "$ADAPTER" "$PRECHECK_MAX_DIFF"
   exit 1
 fi
 
@@ -756,6 +985,6 @@ say "  duration_sec:    ${DUR}"
 say "  max_abs_diff (precheck): ${PRECHECK_MAX_DIFF}"
 say "  => ${VVERDICT}"
 say "EVAL_DONE ${TS} ${VVERDICT}"
-update_state "$TS" "done" "$VVERDICT" "${REMOTE_ROOT}/outputs/reeval_latest_${TS}.json" "$ADAPTER" "$PRECHECK_MAX_DIFF" "$SUMMARY_JSON"
+update_state "$STATE_KEY" "done" "$VVERDICT" "${REMOTE_ROOT}/outputs/reeval_latest_${TS}.json" "$ADAPTER" "$PRECHECK_MAX_DIFF" "$SUMMARY_JSON"
 log "state updated in ${EVAL_STATE_FILE}"
 exit 0

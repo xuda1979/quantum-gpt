@@ -4,6 +4,7 @@
   "domain": "quantum",
   "category": "quantum_ml",
   "framework": "pennylane",
+  "task_prompt": "Use PennyLane with a two-qubit feature map: L2-normalize each four-feature vector (leaving the zero vector unchanged), apply RY(pi*x0) on wire 0, RY(pi*x1) on wire 1, CNOT 0->1, RY(pi*x2) on wire 0, and RY(pi*x3) on wire 1. Define kernel_value as |<psi(x1)|psi(x2)>|**2 and kernel_matrix by pairwise evaluation. Train full-batch kernel logistic regression and predict class 1 when sigmoid(K @ alpha) >= 0.5. iris_2class_subset returns a seed-deterministic balanced, separable dataset with shape (20, 4) and 20 binary labels. run_pipeline builds the 20x20 training kernel, trains the classifier, and returns {'accuracy': a float, 'n': 20}.",
   "candidate_file": "candidate.py",
   "test_file": "tests.py"
 }

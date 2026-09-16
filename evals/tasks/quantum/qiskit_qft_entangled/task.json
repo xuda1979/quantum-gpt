@@ -4,6 +4,7 @@
   "domain": "quantum",
   "category": "algorithm_implementation",
   "framework": "qiskit",
+  "task_prompt": "Use Qiskit computational-basis statevector indexing. ghz_circuit prepares (|0...0> + |1...1>)/sqrt(2). qft_circuit implements the forward n-qubit QFT without final swaps. ghz_then_qft_circuit composes those circuits and ghz_then_qft_statevector returns its statevector. For n=3, the amplitude at integer basis index k is (1 + exp(2*pi*i*7*k/8))/4. amplitude_histogram uses zero-padded n-bit keys and includes exactly the amplitudes whose absolute value is greater than tol.",
   "candidate_file": "candidate.py",
   "test_file": "tests.py"
 }

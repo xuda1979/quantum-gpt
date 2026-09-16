@@ -13,7 +13,7 @@ def _load(candidate_path: str):
 def _close_vec(a, b, tol=1e-9):
     if len(a) != len(b):
         return False
-    return all(abs(x - y) < tol for x, y in zip(a, b))
+    return all(abs(x - y) < tol for x, y in zip(a, b, strict=False))
 
 
 def run_tests(candidate_path: str) -> dict:
@@ -32,7 +32,7 @@ def run_tests(candidate_path: str) -> dict:
     if len(us3) != 8:
         failures.append(f"uniform_superposition(3) length={len(us3)}, expected 8")
     elif not all(math.isclose(a, 1.0 / math.sqrt(8), abs_tol=1e-9) for a in us3):
-        failures.append(f"uniform_superposition(3) amplitudes wrong")
+        failures.append("uniform_superposition(3) amplitudes wrong")
 
     # --- oracle ---
     # Oracle flips the sign of the marked state.
@@ -93,11 +93,12 @@ def run_tests(candidate_path: str) -> dict:
 
     # Normalization check
     if result3:
-        norm = sum(a ** 2 for a in result3)
+        norm = sum(a**2 for a in result3)
         if not math.isclose(norm, 1.0, abs_tol=1e-6):
             failures.append(f"grover_search(3) not normalized: sum|a|^2={norm}")
 
     return {
         "passed": not failures,
-        "details": failures or ["Grover oracle and diffusion simulation correct for all test cases"],
+        "details": failures
+        or ["Grover oracle and diffusion simulation correct for all test cases"],
     }
