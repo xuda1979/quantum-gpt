@@ -555,6 +555,64 @@ def _per_task_ok(v, n_target):
     return True
 
 
+def _freeze_module():
+    """C-0031: lazy import of the canonical freeze-manifest module."""
+    import sys
+
+    repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    if repo_root not in sys.path:
+        sys.path.insert(0, repo_root)
+    from evals.runner import holdout_freeze as fz
+
+    return fz
+
+
+def _canonical_sha_manifest(fz=None):
+    """C-0031: the canonical freeze manifest as {repo_relpath: sha256}.
+    Raises on a missing/malformed/empty manifest."""
+    fz = fz or _freeze_module()
+    repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    return dict(fz.load_manifest(os.path.join(repo_root, fz.MANIFEST_RELPATH)))
+
+
+def sha_pin_violation(verdict, manifest=None):
+    """C-0031: NAMED sha-pin violation for a verdict, or None when its
+    embedded holdout/scorer sha256 pins match the canonical freeze
+    manifest (evals/benchmarks/sapo_promotion_holdout_v1_18.sha256).
+    Fail-closed: missing pins, missing manifest coverage, a drifted sha,
+    or an unreadable manifest each reject with a distinct named
+    violation, so verdicts banked under a pre-pin scorer (the Sep 8-9
+    outputs/ verdicts) can never satisfy the done-check."""
+    if not isinstance(verdict, dict):
+        return "verdict_not_an_object"
+    pins = verdict.get("scorer_shas")
+    if not isinstance(pins, dict) or not pins:
+        return "scorer_sha_pins_missing"
+    hold = verdict.get("holdout_sha256")
+    if not isinstance(hold, str) or not hold:
+        return "holdout_sha_pin_missing"
+    try:
+        fz = _freeze_module()
+        entries = dict(manifest) if manifest is not None else _canonical_sha_manifest(fz)
+    except Exception:
+        return "canonical_manifest_unreadable"
+    want_hold = entries.get(fz.BENCH_RELPATH)
+    if not want_hold:
+        return "canonical_manifest_lacks_holdout"
+    if str(hold).lower() != want_hold:
+        return "holdout_sha_mismatch"
+    for rel in fz.SCORER_CHAIN:
+        want = entries.get(rel)
+        if not want:
+            return "canonical_manifest_lacks_scorer:" + rel
+        got = pins.get(rel)
+        if not isinstance(got, str) or not got:
+            return "scorer_sha_pin_missing:" + rel
+        if str(got).lower() != want:
+            return "scorer_sha_mismatch:" + rel
+    return None
+
+
 def goal_done(goal, verdicts):
     """18/18 achieved = a fail-closed TWO-LEG verdict shows 18/18 +
     beats_base.
@@ -570,6 +628,10 @@ def goal_done(goal, verdicts):
         different runner_mechanism; missing identity fails closed)
       - a well-formed per_task map covering the target task count; when
         both legs embed per_task maps they must agree per task
+      - (C-0031) holdout_sha256 + scorer_shas pins that match the
+        canonical freeze manifest; sha-unpinned or scorer-drifted
+        verdicts are non-canonical and fail closed with a named
+        violation (sha_pin_violation)
 
     Fail-closed: absent/bad evidence -> False (loop keeps running).
     """
@@ -578,6 +640,10 @@ def goal_done(goal, verdicts):
         n_target = int(target.split("/", 1)[0])
     except ValueError:
         return False, None
+    try:
+        manifest = _canonical_sha_manifest()
+    except Exception:
+        manifest = {}  # C-0031 fail closed: unreadable manifest rejects all
     for v in verdicts:
         if not isinstance(v, dict):
             continue
@@ -607,6 +673,10 @@ def goal_done(goal, verdicts):
         if not distinct:
             continue
         if not _per_task_ok(v, n_target):
+            continue
+        if sha_pin_violation(v, manifest=manifest) is not None:
+            # C-0031: sha-unpinned / scorer-drifted verdict is
+            # non-canonical; it can never retire the goal.
             continue
         return True, v.get("_file")
     return False, None

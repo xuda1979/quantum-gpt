@@ -85,6 +85,13 @@ CRON_MARK = "qgh.py tick"
 MAX_LIVE_AGENTS = 6
 TICK_LOCK = os.path.join(STATE, "locks", "tick.lock")
 TICK_STALE_SEC = 1800  # a tick holding the lock >30min is wedged -> break it
+API_ERROR_SIGNATURES = (
+    "API Error: Unable to connect to API",
+    "Not logged in",
+    "Please run /login",
+    "Connection error",
+    "rate limit",
+)
 
 
 # ----------------------------------------------------------------------------- helpers
@@ -539,14 +546,21 @@ def _reap():
         reaped += 1
         outcome = "stalled-killed" if stalled else None
         verdict, tail = harvest_log(a.get("log"))
+        try:
+            text = open(a.get("log"), encoding="utf-8", errors="replace").read()
+        except OSError:
+            text = ""
         # ENVIRONMENTAL = pid DEAD + produced NOTHING (spawn/credential/API
         # failure) -> never burns the card's bounce budget. A worker that was
         # ALIVE past its deadline with no output is a HUNG worker, not an API
         # outage: it takes the normal bounce path and never trips backoff.
         body = [ln for ln in tail if not ln.startswith("===== dispatch")]
+        # API-down signature: claude prints an API error as its final output —
+        # non-empty body but still an outage, never a card fault.
+        api_error = verdict is None and any(sig in text for sig in API_ERROR_SIGNATURES)
         environmental = (
-            not alive and verdict is None and len(body) == 0 and not stalled
-        )  # a stalled worker ran and hung: NOT an outage
+            (not alive and verdict is None and len(body) == 0) or api_error
+        ) and not stalled
         if outcome is None:
             if not alive:
                 outcome = "dead"

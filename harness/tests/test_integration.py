@@ -196,9 +196,23 @@ class TestLifecycle(unittest.TestCase):
         self.assertEqual(H.find_card(q, c["id"])["status"], "bounced")
 
 
+def canonical_sha_pins():
+    """C-0031: the composer verdict shape pins the frozen holdout bench +
+    scorer chain to the canonical committed manifest (5c36b1d)."""
+    root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    manifest = {}
+    with open(os.path.join(root, "evals/benchmarks/sapo_promotion_holdout_v1_18.sha256")) as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith("#"):
+                sha, rel = line.split(None, 1)
+                manifest[rel.strip()] = sha
+    return manifest["evals/benchmarks/sapo_promotion_holdout_v1_18.txt"], manifest
+
+
 def compliant_verdict():
-    # Composer-shaped two-leg verdict (C-0020): the only shape that can
-    # satisfy the done-check.
+    # Composer-shaped two-leg verdict (C-0020 + C-0031 sha pins): the only
+    # shape that can satisfy the done-check.
     per_task = dict(
         ("task_" + str(i).zfill(2), dict(adapter_pass=True, base_pass=False)) for i in range(18)
     )
@@ -211,6 +225,18 @@ def compliant_verdict():
         adapter_probe_differs_marker=True,
         independent_second_leg=True,
         scorer_version="holdout-scorer-1.2.0",
+        holdout_sha256=canonical_sha_pins()[0],
+        scorer_shas={
+            rel: sha
+            for rel, sha in canonical_sha_pins()[1].items()
+            if rel
+            in (
+                "evals/runner/single_candidate_eval.py",
+                "scripts/run_asi2_base_adapter_rubric_eval.py",
+                "evals/runner/candidate_sanitize.py",
+                "harness/beats_base.py",
+            )
+        },
         leg1=dict(
             ref="outputs/leg1.json",
             runner_mechanism="parallel-3-slice",
@@ -456,3 +482,24 @@ class TestBriefHeartbeat(unittest.TestCase):
         self.assertIn("harness/state/agents/C-TEST.progress", b)
         self.assertIn("HEARTBEAT", b)
         self.assertIn("STALLED", b)
+
+
+class TestApiErrorClassification(unittest.TestCase):
+    def test_api_error_output_is_environmental_never_strike(self):
+        os.makedirs(os.path.join(qgh.STATE, "agents"), exist_ok=True)
+        qgh.save_json(os.path.join(qgh.STATE, "QUEUE.json"), {"cards": [], "seq": 0})
+        qgh.save_json(os.path.join(qgh.STATE, "FLEET.json"), {"agents": []})
+        qgh.save_json(
+            os.path.join(qgh.STATE, "OPS.json"),
+            {"consecutive_spawn_failures": 0, "backoff_until_utc": None},
+        )
+        c = seed_card()
+        entry, log, proc = running_agent(c, "echo 'API Error: Unable to connect to API'\n")
+        wait_exit(proc)
+        qgh._reap()
+        q = qgh.load_queue(qgh.STATE)
+        card = H.find_card(q, c["id"])
+        self.assertEqual(card["status"], "ready")
+        self.assertEqual(card["bounce_count"], 0, "API outage must not strike the card")
+        ops = H.load_ops(qgh.STATE)
+        self.assertEqual(ops["consecutive_spawn_failures"], 1)

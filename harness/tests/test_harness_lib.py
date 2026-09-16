@@ -116,11 +116,26 @@ class TestBrief(unittest.TestCase):
         self.assertIn("25 min", b)
 
 
+_REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+if _REPO_ROOT not in sys.path:
+    sys.path.insert(0, _REPO_ROOT)
+
+
+def canonical_sha_pins():
+    """C-0031: the composer verdict shape pins the frozen holdout bench +
+    scorer chain to the canonical committed manifest (5c36b1d)."""
+    from evals.runner import holdout_freeze as fz
+
+    manifest = dict(fz.load_manifest(os.path.join(_REPO_ROOT, fz.MANIFEST_RELPATH)))
+    return manifest[fz.BENCH_RELPATH], dict((rel, manifest[rel]) for rel in fz.SCORER_CHAIN)
+
+
 def compliant_verdict(**over):
     # Composer-shaped two-leg verdict (scripts/holdout_verdict.py output):
     # both legs embedded with markers + identity, agreed per_task map, and
     # a scorer_version tag. Same box, distinct runner mechanisms (matches
     # the composer: leg1 parallel-3-slice, leg2 sequential-single-slice).
+    hold_sha, scorer_shas = canonical_sha_pins()
     per_task = dict(
         ("task_" + str(i).zfill(2), dict(adapter_pass=True, base_pass=False)) for i in range(18)
     )
@@ -133,6 +148,8 @@ def compliant_verdict(**over):
         adapter_probe_differs_marker=True,
         independent_second_leg=True,
         scorer_version="holdout-scorer-1.2.0",
+        holdout_sha256=hold_sha,
+        scorer_shas=scorer_shas,
         leg1=dict(
             ref="outputs/leg1.json",
             runner_mechanism="parallel-3-slice",
@@ -248,6 +265,60 @@ class TestDoneCheckTwoLeg(unittest.TestCase):
         bad[0]["per_task"]["task_00"] = dict(adapter_pass=1, base_pass=False)
         done, _ = H.goal_done(self.goal, bad)
         self.assertFalse(done)
+
+
+class TestDoneCheckShaPin(unittest.TestCase):
+    # C-0031: a verdict retires the goal ONLY when its embedded
+    # holdout/scorer sha256 pins match the canonical freeze manifest
+    # (5c36b1d). Verdicts banked under a pre-pin scorer (all three in
+    # outputs/ predate the pin) fail closed with a NAMED violation.
+
+    def setUp(self):
+        self.goal = dict(target_pass="18/18")
+
+    def test_verdict_without_sha_pins_rejected_named(self):
+        v = compliant_verdict()
+        del v["holdout_sha256"]
+        del v["scorer_shas"]
+        done, _ = H.goal_done(self.goal, [v])
+        self.assertFalse(done)
+        self.assertEqual(H.sha_pin_violation(v), "scorer_sha_pins_missing")
+
+    def test_drifted_scorer_sha_rejected_named(self):
+        v = compliant_verdict()
+        v["scorer_shas"]["harness/beats_base.py"] = "0" * 64
+        done, _ = H.goal_done(self.goal, [v])
+        self.assertFalse(done)
+        self.assertEqual(H.sha_pin_violation(v), "scorer_sha_mismatch:harness/beats_base.py")
+
+    def test_missing_one_scorer_pin_rejected_named(self):
+        v = compliant_verdict()
+        del v["scorer_shas"]["evals/runner/single_candidate_eval.py"]
+        done, _ = H.goal_done(self.goal, [v])
+        self.assertFalse(done)
+        self.assertEqual(
+            H.sha_pin_violation(v), "scorer_sha_pin_missing:evals/runner/single_candidate_eval.py"
+        )
+
+    def test_drifted_holdout_sha_rejected_named(self):
+        v = compliant_verdict()
+        v["holdout_sha256"] = "1" * 64
+        done, _ = H.goal_done(self.goal, [v])
+        self.assertFalse(done)
+        self.assertEqual(H.sha_pin_violation(v), "holdout_sha_mismatch")
+
+    def test_missing_holdout_sha_rejected_named(self):
+        v = compliant_verdict()
+        del v["holdout_sha256"]
+        done, _ = H.goal_done(self.goal, [v])
+        self.assertFalse(done)
+        self.assertEqual(H.sha_pin_violation(v), "holdout_sha_pin_missing")
+
+    def test_manifest_pins_satisfy_done(self):
+        # Control: the pinned composer shape still retires the goal.
+        done, f = H.goal_done(self.goal, [compliant_verdict()])
+        self.assertTrue(done)
+        self.assertEqual(f, "verdict_step000100.json")
 
 
 class TestState(unittest.TestCase):

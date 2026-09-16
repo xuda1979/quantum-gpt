@@ -108,3 +108,30 @@ def run_all(state_dir, health_fn=None, trainer_exec=None, now=None):
             rec["liveness"] = p["liveness"]
         save_json(os.path.join(out_dir, f"{name}.json"), rec)
     return payloads
+
+
+def box_exec(port, cmd, timeout=90):
+    """Real exec transport: POST to the box daemon /exec API (body key: command)."""
+    payload = json.dumps(dict(command=cmd)).encode()
+    req = urllib.request.Request(
+        "http://127.0.0.1:%d/exec" % port,
+        data=payload,
+        headers=dict([("Content-Type", "application/json")]),
+    )
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        d = json.loads(resp.read().decode("utf-8", "replace"))
+    out = d.get("output", d)
+    if isinstance(out, dict):
+        out = out.get("output", "")
+    return str(out)
+
+
+if __name__ == "__main__":
+    # CLI runner so any tick/agent can refresh the standup RESOURCES probes:
+    #   /usr/bin/python3 harness/resource_probes.py
+    repo = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    state = os.environ.get("QGH_STATE_DIR") or os.path.join(repo, "harness", "state")
+    payloads = run_all(state, trainer_exec=box_exec)
+    for name in sorted(payloads):
+        p = payloads[name]
+        print("{} {} {}".format(name, p.get("status"), p.get("summary")))
