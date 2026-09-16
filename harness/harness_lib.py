@@ -237,7 +237,7 @@ def requeue_card(queue, card_id):
     if not matches:
         return False, f"no such card: {card_id}"
     if len(matches) > 1:
-        return False, ("ambiguous card id %s: %d queue entries" % (card_id, len(matches)))
+        return False, (f"ambiguous card id {card_id}: {len(matches)} queue entries")
     c = matches[0]
     if c["status"] != "bounced":
         return False, (
@@ -248,7 +248,7 @@ def requeue_card(queue, card_id):
     c["claimed_utc"] = None
     c["deadline_utc"] = None
     c["requeued_utc"] = now_iso()
-    return True, ("requeued bounced->ready (bounce_count=%d preserved)" % c.get("bounce_count", 0))
+    return True, (f"requeued bounced->ready (bounce_count={c.get('bounce_count', 0)} preserved)")
 
 
 # ----------------------------------------------------------------------------- fleet

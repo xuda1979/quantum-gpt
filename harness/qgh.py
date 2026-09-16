@@ -304,7 +304,7 @@ def cmd_card_requeue(args):
     save_queue(STATE, queue)
     for r in refused:
         print("REFUSED " + r)
-    print("requeued %d card(s), refused %d" % (len(requeued), len(refused)))
+    print(f"requeued {len(requeued)} card(s), refused {len(refused)}")
     if refused:
         sys.exit(1)  # fail closed: a refusal must never look like success
 
