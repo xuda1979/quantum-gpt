@@ -556,6 +556,26 @@ class TestDispatchDeadlineIntegrity(unittest.TestCase):
 
         class FakeProc:
             pid = os.getpid()
+            args = []
+            returncode = 0
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *exc):
+                return False
+
+            def communicate(self, *a, **k):
+                return b"", b""
+
+            def kill(self):
+                pass
+
+            def wait(self, *a, **k):
+                return 0
+
+            def poll(self):
+                return None
 
         real_popen = qgh.subprocess.Popen
         qgh.subprocess.Popen = lambda *a, **k: FakeProc()
@@ -682,3 +702,49 @@ class TestAutoPlanIdempotent(unittest.TestCase):
             if c["lane"] == "planner" and c["title"].startswith("Queue nearly empty")
         )
         self.assertEqual(n, 1, "auto_plan must be idempotent while one is live")
+
+
+class TestPidReuseSafety(unittest.TestCase):
+    """pid_alive lies across macOS pid reuse: a fleet entry whose recorded
+    process identity (lstart) no longer matches must be treated DEAD, and the
+    reaper must NEVER kill the unrelated process that now owns the pid."""
+
+    def setUp(self):
+        import shutil
+
+        for sub in ("agents", "briefs", "locks", "standup", "probes"):
+            p = os.path.join(qgh.STATE, sub)
+            shutil.rmtree(p, ignore_errors=True)
+            os.makedirs(p, exist_ok=True)
+        qgh.save_json(os.path.join(qgh.STATE, "QUEUE.json"), {"cards": [], "seq": 0})
+        qgh.save_json(os.path.join(qgh.STATE, "FLEET.json"), {"agents": []})
+        qgh.save_json(
+            os.path.join(qgh.STATE, "OPS.json"),
+            {"consecutive_spawn_failures": 0, "backoff_until_utc": None},
+        )
+
+    def test_reaped_pid_reuse_does_not_kill_current_owner(self):
+        # an innocent LONG-LIVED process (this test itself) holds the pid
+        victim = os.getpid()
+        c = seed_card(budget_min=30)
+        entry, log, proc = running_agent(c, "sleep 300\n")  # real worker
+        real_worker_pid = proc.pid
+        fleet = qgh.load_fleet(qgh.STATE)
+        for a in fleet["agents"]:
+            if a["card"] == c["id"]:
+                a["pid"] = victim  # simulate pid reuse
+                a["lstart"] = "Wed Dec 31 1999 23:59:59 1999"  # stale identity
+        qgh.save_fleet(qgh.STATE, fleet)
+        qgh._reap()
+        self.assertTrue(H.pid_alive(victim), "reaper must not kill the pid's NEW owner")
+        q = qgh.load_queue(qgh.STATE)
+        card = H.find_card(q, c["id"])
+        self.assertIn(
+            card["status"],
+            ("ready", "bounced"),
+            "entry with mismatched identity must be treated dead",
+        )
+        try:
+            os.killpg(real_worker_pid, 15)
+        except ProcessLookupError:
+            pass

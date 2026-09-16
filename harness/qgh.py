@@ -467,6 +467,7 @@ def spawn_worker(goal, queue, card, dep_results):
         pass  # telemetry must never unwind a completed spawn
     entry = {
         "pid": pid,
+        "lstart": H.process_lstart(pid),
         "card": card["id"],
         "lane": card["lane"],
         "brief": brief_path,
@@ -562,6 +563,15 @@ def _reap():
             continue
         card = find_card(queue, a.get("card"))
         alive = pid_alive(a.get("pid"))
+        # PID-REUSE GUARD: a recorded lstart that no longer matches means the
+        # original worker is gone and an unrelated process owns the pid.
+        # Treat as DEAD (harvest only) -- never kill the new owner.
+        recorded_lstart = a.get("lstart")
+        if alive and recorded_lstart:
+            current = H.process_lstart(a.get("pid"))
+            if current != recorded_lstart:
+                event(STATE, "pid_reuse_detected", {"card": a.get("card"), "pid": a.get("pid")})
+                alive = False  # harvest path; kill branches are skipped
         # Corrupt-deadline guard: deadline predating the entry's own start is
         # a lost-update artifact -- recompute from start + budget, never use it.
         if a.get("deadline_utc") and a.get("started_utc"):

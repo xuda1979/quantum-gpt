@@ -287,6 +287,22 @@ def pid_alive(pid):
     return True
 
 
+def process_lstart(pid):
+    """Process start-time identity string, or "" if the process is gone.
+
+    pids are recycled by macOS/BSD: pid_alive(pid) alone cannot distinguish
+    'the worker we spawned' from 'an unrelated process that reused the pid'.
+    Comparing the recorded lstart closes that hole.
+    """
+    try:
+        out = subprocess.run(
+            ["ps", "-o", "lstart=", "-p", str(int(pid))], capture_output=True, text=True, timeout=5
+        )
+        return out.stdout.strip()
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return ""
+
+
 def kill_pid(pid):
     """TERM then KILL; process-group first (workers run in their own session)."""
     try:
@@ -906,9 +922,25 @@ def render_standup(goal, queue, fleet, tick_no, verdicts=None, probes=None, stat
         L.append("")
         L.append("### LATEST VERDICTS (fail-closed eval)")
         for v in verdicts[:3]:
+            # C-0050: annotate each listed verdict with goal_done
+            # eligibility so a legacy sha-unpinned verdict (which can
+            # never retire the goal) is not mistaken for goal progress.
+            done, _src = goal_done(goal, [v])
+            if done:
+                mark = "goal_done=YES"
+            else:
+                vio = sha_pin_violation(v)
+                if vio:
+                    mark = f"goal_done=NO (sha_pin_violation: {vio})"
+                else:
+                    mark = "goal_done=NO (criteria-unmet)"
             L.append(
-                "- {}: pass_adapter={} beats_base={} (base {})".format(
-                    v.get("_file"), v.get("pass_adapter"), v.get("beats_base"), v.get("pass_base")
+                "- {}: pass_adapter={} beats_base={} (base {}) | {}".format(
+                    v.get("_file"),
+                    v.get("pass_adapter"),
+                    v.get("beats_base"),
+                    v.get("pass_base"),
+                    mark,
                 )
             )
     if probes:
