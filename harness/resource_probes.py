@@ -114,7 +114,7 @@ def box_exec(port, cmd, timeout=90):
     """Real exec transport: POST to the box daemon /exec API (body key: command)."""
     payload = json.dumps(dict(command=cmd)).encode()
     req = urllib.request.Request(
-        "http://127.0.0.1:%d/exec" % port,
+        f"http://127.0.0.1:{port}/exec",
         data=payload,
         headers=dict([("Content-Type", "application/json")]),
     )
