@@ -59,7 +59,11 @@ def probe_daemon(name, port, health_fn=None):
     if not ready:
         return {"status": "unknown", "summary": "UNKNOWN (daemon reachable, ready=false)"}
     summary = f"READY /health ready=true pid={pid}" if pid else "READY /health ready=true"
-    return {"status": "ready", "summary": summary}
+    out = dict(status="ready", summary=summary)
+    # positive liveness term (C-0030): the pid the daemon reported over the
+    # wire; without one, the observed 200+ready=true is the positive term.
+    out["liveness"] = dict(term="health_pid", pid=pid) if pid else dict(term="health_200_ready")
+    return out
 
 
 def probe_trainer(port, exec_fn=None):

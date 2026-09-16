@@ -98,6 +98,61 @@ class TestPositiveLiveness(unittest.TestCase):
         self.assertEqual(p["liveness"]["pid"], 12345)
 
 
+class TestRealTransportFire(unittest.TestCase):
+    # C-0030 acceptance: the fire must be REAL - a genuinely closed port probed
+    # through the default urllib transport, not an injected exception.
+    def test_real_dead_port_induced_fire(self):
+        import socket
+
+        s = socket.socket()
+        s.bind(("127.0.0.1", 0))
+        port = s.getsockname()[1]
+        s.close()  # port is now dead: nothing listens
+        p = RP.probe_daemon("asi1", port)  # default health_fn = real urllib
+        self.assertEqual(p["status"], "unknown")
+        self.assertIn("UNKNOWN", p["summary"])
+        self.assertNotIn("dead", json.dumps(p).lower())
+        self.assertNotIn("ready", p["status"])
+
+    def test_healthy_daemon_carries_positive_liveness_term(self):
+        import threading
+        from http.server import BaseHTTPRequestHandler, HTTPServer
+
+        class H(BaseHTTPRequestHandler):
+            def do_GET(self):
+                payload = json.dumps(dict(ready=True, pid=4242)).encode()
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(payload)))
+                self.end_headers()
+                self.wfile.write(payload)
+
+            def log_message(self, *args):
+                pass
+
+        srv = HTTPServer(("127.0.0.1", 0), H)
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+        try:
+            p = RP.probe_daemon("asi1", srv.server_address[1])
+            self.assertEqual(p["status"], "ready")
+            # positive liveness term: the pid the daemon itself reported
+            self.assertEqual(p["liveness"], dict(term="health_pid", pid=4242))
+        finally:
+            srv.shutdown()
+
+    def test_runall_durable_file_carries_liveness_term(self):
+        d = tempfile.mkdtemp(prefix="qgh-probe-live-")
+        body = chr(123) + '"ready": true, "pid": 31337' + chr(125)
+
+        def health(port, timeout=6):
+            return dict(code=200, body=body)
+
+        RP.run_all(d, health_fn=health, trainer_exec=_fake_exec("1 1 x"))
+        for name in ("asi1", "asi2", "asi3"):
+            data = json.load(open(os.path.join(d, "probes", name + ".json")))
+            self.assertEqual(data["liveness"], dict(term="health_pid", pid=31337), name)
+
+
 class TestDurableStateFiles(unittest.TestCase):
     def test_write_all_lands_files_and_renderer_reads_them(self):
         d = tempfile.mkdtemp(prefix="qgh-probe-test-")

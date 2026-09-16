@@ -36,6 +36,7 @@ import os
 import subprocess
 import sys
 import time
+from datetime import datetime, timedelta, timezone
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import harness_lib as H  # noqa: E402
@@ -67,6 +68,7 @@ from harness_lib import (  # noqa: E402
     ready_cards,
     release_card,
     render_standup,
+    requeue_card,
     rotate_log,
     running_count,
     save_fleet,
@@ -282,6 +284,31 @@ def cmd_card(args):
     print(card["id"])
 
 
+def cmd_card_requeue(args):
+    """C-0032: explicit bounced->ready requeue; the dep-deadlock exit."""
+    queue = load_queue(STATE)
+    requeued, refused = [], []
+    for cid in args.ids:
+        ok, reason = requeue_card(queue, cid)
+        if ok:
+            requeued.append(cid)
+            card = find_card(queue, cid)
+            event(
+                STATE,
+                "card_requeued",
+                dict(card=cid, bounce_count=card.get("bounce_count", 0), by="manual"),
+            )
+            print(f"REQUEUED {cid} {reason}")
+        else:
+            refused.append(f"{cid}: {reason}")
+    save_queue(STATE, queue)
+    for r in refused:
+        print("REFUSED " + r)
+    print("requeued %d card(s), refused %d" % (len(requeued), len(refused)))
+    if refused:
+        sys.exit(1)  # fail closed: a refusal must never look like success
+
+
 def cmd_queue(_args):
     queue = load_queue(STATE)
     rows = sorted(queue["cards"], key=lambda c: (c["priority"], c["created_utc"]))
@@ -414,6 +441,12 @@ def spawn_worker(goal, queue, card, dep_results):
         env=env,
         start_new_session=True,
     )
+    # Deadline derives from THIS process's clock, never from the card dict:
+    # a lost-update race must not resurrect a stale (past) deadline that the
+    # reaper would read as overrun and use to kill a healthy worker.
+    deadline_utc = (
+        datetime.now(timezone.utc) + timedelta(minutes=int(card["budget_min"]))
+    ).strftime("%Y-%m-%dT%H:%M:%SZ")
     pid = proc.pid
     card["claimed_by"] = str(pid)
     # Atomic claim: the claimed_by=<pid> stamp hits disk HERE, in the spawn
@@ -439,7 +472,8 @@ def spawn_worker(goal, queue, card, dep_results):
         "brief": brief_path,
         "log": log_path,
         "started_utc": now_iso(),
-        "deadline_utc": card["deadline_utc"],
+        "deadline_utc": deadline_utc,
+        "budget_min": card["budget_min"],
         "status": "running",
     }
     event(
@@ -528,6 +562,20 @@ def _reap():
             continue
         card = find_card(queue, a.get("card"))
         alive = pid_alive(a.get("pid"))
+        # Corrupt-deadline guard: deadline predating the entry's own start is
+        # a lost-update artifact -- recompute from start + budget, never use it.
+        if a.get("deadline_utc") and a.get("started_utc"):
+            if a["deadline_utc"] < a["started_utc"]:
+                budget = int(a.get("budget_min") or (card["budget_min"] if card else 30))
+                base = datetime.strptime(a["started_utc"], "%Y-%m-%dT%H:%M:%SZ")
+                fixed = (base + timedelta(minutes=budget)).strftime("%Y-%m-%dT%H:%M:%SZ")
+                event(
+                    STATE,
+                    "corrupt_deadline_fixed",
+                    {"card": a.get("card"), "was": a["deadline_utc"], "now": fixed},
+                )
+                a["deadline_utc"] = fixed
+                save_fleet(STATE, fleet)
         over = (age_min(a.get("deadline_utc")) or 0) >= 0
         # STALL check FIRST: an alive, not-overdue worker with a stale heartbeat
         # must not be skipped by the alive-and-not-over continue below (the
@@ -644,7 +692,11 @@ def _reap():
             _rmtree(os.path.join(STATE, "locks", "agent-{}.lock".format(a.get("card"))))
     # dead cards that exhausted retries
     for c in queue["cards"]:
-        if c["status"] == "ready" and c.get("bounce_count", 0) > 2:
+        if (
+            c["status"] == "ready"
+            and c.get("bounce_count", 0) > 2
+            and not c.get("requeued_utc")  # C-0032: an explicit requeue survives
+        ):
             c["status"] = "dead"
             event(STATE, "card_dead", {"card": c["id"], "title": c["title"]})
     save_queue(STATE, queue)
@@ -1002,6 +1054,9 @@ def main():
     )
     ca.add_argument("--dep", action="append")
     ca.set_defaults(func=cmd_card)
+    cr = cp.add_parser("requeue")
+    cr.add_argument("ids", nargs="+", metavar="C-XXXX")
+    cr.set_defaults(func=cmd_card_requeue)
 
     p = sub.add_parser("dispatch")
     p.add_argument("--lane", default=None)

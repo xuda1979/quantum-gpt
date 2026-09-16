@@ -25,7 +25,12 @@ def make_card(**kw):
 
 
 def seed_card(**kw):
+    # ids must never collide with leftover per-card artifacts (progress/log/lock)
+    # from earlier tests: keep the seq high and unique for the whole run.
     q = qgh.load_queue(qgh.STATE)
+    if q.get("seq", 0) < 9000:
+        q["seq"] = 9000
+        qgh.save_queue(qgh.STATE, q)
     c = H.add_card(
         q,
         H.new_card(
@@ -99,8 +104,12 @@ WAIT_BLOCKED = "echo 'RESULT: BLOCKED missing inputs'\n"
 
 class TestLifecycle(unittest.TestCase):
     def setUp(self):
+        import shutil
+
         for sub in ("agents", "briefs", "locks", "standup", "probes"):
-            os.makedirs(os.path.join(qgh.STATE, sub), exist_ok=True)
+            p = os.path.join(qgh.STATE, sub)
+            shutil.rmtree(p, ignore_errors=True)
+            os.makedirs(p, exist_ok=True)
         # fresh queue/fleet/ops per test
         qgh.save_json(os.path.join(qgh.STATE, "QUEUE.json"), {"cards": [], "seq": 0})
         qgh.save_json(os.path.join(qgh.STATE, "FLEET.json"), {"agents": []})
@@ -306,8 +315,12 @@ if __name__ == "__main__":
 
 class TestWipLimits(unittest.TestCase):
     def setUp(self):
+        import shutil
+
         for sub in ("agents", "briefs", "locks", "standup", "probes"):
-            os.makedirs(os.path.join(qgh.STATE, sub), exist_ok=True)
+            p = os.path.join(qgh.STATE, sub)
+            shutil.rmtree(p, ignore_errors=True)
+            os.makedirs(p, exist_ok=True)
         qgh.save_json(os.path.join(qgh.STATE, "QUEUE.json"), {"cards": [], "seq": 0})
         qgh.save_json(os.path.join(qgh.STATE, "FLEET.json"), {"agents": []})
         qgh.save_json(
@@ -392,8 +405,12 @@ class TestStaleTickLock(unittest.TestCase):
 
 class TestGlobalPriorityDispatch(unittest.TestCase):
     def setUp(self):
+        import shutil
+
         for sub in ("agents", "briefs", "locks", "standup", "probes"):
-            os.makedirs(os.path.join(qgh.STATE, sub), exist_ok=True)
+            p = os.path.join(qgh.STATE, sub)
+            shutil.rmtree(p, ignore_errors=True)
+            os.makedirs(p, exist_ok=True)
         qgh.save_json(os.path.join(qgh.STATE, "QUEUE.json"), {"cards": [], "seq": 0})
         qgh.save_json(os.path.join(qgh.STATE, "FLEET.json"), {"agents": []})
         qgh.save_json(
@@ -435,8 +452,12 @@ class TestGlobalPriorityDispatch(unittest.TestCase):
 
 class TestStallDetection(unittest.TestCase):
     def setUp(self):
+        import shutil
+
         for sub in ("agents", "briefs", "locks", "standup", "probes"):
-            os.makedirs(os.path.join(qgh.STATE, sub), exist_ok=True)
+            p = os.path.join(qgh.STATE, sub)
+            shutil.rmtree(p, ignore_errors=True)
+            os.makedirs(p, exist_ok=True)
         qgh.save_json(os.path.join(qgh.STATE, "QUEUE.json"), {"cards": [], "seq": 0})
         qgh.save_json(os.path.join(qgh.STATE, "FLEET.json"), {"agents": []})
         qgh.save_json(
@@ -503,3 +524,69 @@ class TestApiErrorClassification(unittest.TestCase):
         self.assertEqual(card["bounce_count"], 0, "API outage must not strike the card")
         ops = H.load_ops(qgh.STATE)
         self.assertEqual(ops["consecutive_spawn_failures"], 1)
+
+
+class TestDispatchDeadlineIntegrity(unittest.TestCase):
+    """A fleet entry's deadline must NEVER predate its own start (live finding:
+    re-dispatch under a lost-update race resurrected a stale card deadline and
+    the reaper then overrun-killed healthy workers)."""
+
+    def setUp(self):
+        import shutil
+
+        for sub in ("agents", "briefs", "locks", "standup", "probes"):
+            p = os.path.join(qgh.STATE, sub)
+            shutil.rmtree(p, ignore_errors=True)
+            os.makedirs(p, exist_ok=True)
+        qgh.save_json(os.path.join(qgh.STATE, "QUEUE.json"), {"cards": [], "seq": 0})
+        qgh.save_json(os.path.join(qgh.STATE, "FLEET.json"), {"agents": []})
+        qgh.save_json(
+            os.path.join(qgh.STATE, "OPS.json"),
+            {"consecutive_spawn_failures": 0, "backoff_until_utc": None},
+        )
+
+    def test_entry_deadline_always_after_start_even_with_stale_claim(self):
+        c = seed_card(budget_min=30)
+        # simulate the race: the card's deadline field is stale (lost update)
+        q = qgh.load_queue(qgh.STATE)
+        card = H.find_card(q, c["id"])
+        card["claimed_utc"] = "2026-09-16T10:00:00Z"
+        card["deadline_utc"] = "2026-09-16T10:30:00Z"  # far in the past
+        qgh.save_queue(qgh.STATE, q)
+
+        class FakeProc:
+            pid = os.getpid()
+
+        real_popen = qgh.subprocess.Popen
+        qgh.subprocess.Popen = lambda *a, **k: FakeProc()
+        try:
+            entry = qgh.spawn_worker(qgh.load_goal(qgh.STATE), q, card, [])
+        finally:
+            qgh.subprocess.Popen = real_popen
+            import shutil
+
+            shutil.rmtree(
+                os.path.join(qgh.STATE, "locks", "agent-{}.lock".format(c["id"])),
+                ignore_errors=True,
+            )
+        self.assertIsNotNone(entry)
+        self.assertGreater(
+            entry["deadline_utc"],
+            entry["started_utc"],
+            "spawn_worker must derive the deadline from its own clock",
+        )
+        self.assertEqual(entry["budget_min"], 30)
+
+    def test_reap_neutralizes_corrupt_deadline_entries(self):
+        c = seed_card(budget_min=30)
+        running_agent(c, "sleep 30\n", budget_min=30)
+        fleet = qgh.load_fleet(qgh.STATE)
+        for a in fleet["agents"]:
+            if a["card"] == c["id"]:
+                a["deadline_utc"] = "2026-09-16T10:00:00Z"  # corrupt: predates start
+        qgh.save_fleet(qgh.STATE, fleet)
+        qgh._reap()  # must not kill the healthy worker for a corrupt deadline
+        alive_worker = H.pid_alive(fleet["agents"][0]["pid"])
+        self.assertTrue(alive_worker, "corrupt deadline must not overrun-kill a live worker")
+        proc_pid = fleet["agents"][0]["pid"]
+        os.killpg(proc_pid, 15)  # cleanup

@@ -220,6 +220,37 @@ def release_card(card, status, result, reason=None):
             card["deadline_utc"] = None
 
 
+def requeue_card(queue, card_id):
+    """C-0032: the ONLY exit from a bounced-board deadlock. A 3rd-strike
+    bounce is terminal in release_card and _deps_satisfied only passes on
+    dep status=="done", so ready cards gated on a bounced dep are
+    undispatchable forever, and the planner mints an identical idle card
+    every tick. This flips bounced->ready as an explicit operator action:
+    bounce_count is PRESERVED (never laundered), claim fields are cleared,
+    and a requeued_utc stamp exempts the card from the reaper's
+    exhausted-retries tripwire (ready + bounce_count>2 -> dead) -- without
+    the stamp the next tick would convert the requeue into an
+    unrecoverable dead card. Fail-closed: refuses anything that is not a
+    single, unambiguous, bounced card. Returns (ok, reason).
+    """
+    matches = [c for c in queue["cards"] if c["id"] == card_id]
+    if not matches:
+        return False, f"no such card: {card_id}"
+    if len(matches) > 1:
+        return False, ("ambiguous card id %s: %d queue entries" % (card_id, len(matches)))
+    c = matches[0]
+    if c["status"] != "bounced":
+        return False, (
+            "card {} status is {!r}, not bounced: requeue refused".format(card_id, c["status"])
+        )
+    c["status"] = "ready"
+    c["claimed_by"] = None
+    c["claimed_utc"] = None
+    c["deadline_utc"] = None
+    c["requeued_utc"] = now_iso()
+    return True, ("requeued bounced->ready (bounce_count=%d preserved)" % c.get("bounce_count", 0))
+
+
 # ----------------------------------------------------------------------------- fleet
 def load_fleet(state_dir):
     return load_json(os.path.join(state_dir, "FLEET.json"), {"agents": []})
