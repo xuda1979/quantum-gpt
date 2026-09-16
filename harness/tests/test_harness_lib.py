@@ -116,22 +116,137 @@ class TestBrief(unittest.TestCase):
         self.assertIn("25 min", b)
 
 
+def compliant_verdict(**over):
+    # Composer-shaped two-leg verdict (scripts/holdout_verdict.py output):
+    # both legs embedded with markers + identity, agreed per_task map, and
+    # a scorer_version tag. Same box, distinct runner mechanisms (matches
+    # the composer: leg1 parallel-3-slice, leg2 sequential-single-slice).
+    per_task = dict(
+        ("task_" + str(i).zfill(2), dict(adapter_pass=True, base_pass=False)) for i in range(18)
+    )
+    v = dict(
+        pass_adapter="18/18",
+        pass_base="1/18",
+        beats_base=True,
+        goal_target="18/18",
+        adapter_applied_marker=True,
+        adapter_probe_differs_marker=True,
+        independent_second_leg=True,
+        scorer_version="holdout-scorer-1.2.0",
+        leg1=dict(
+            ref="outputs/leg1.json",
+            runner_mechanism="parallel-3-slice",
+            box="ASI2",
+            markers=dict(adapter_applied=True, adapter_probe_differs=True),
+        ),
+        leg2=dict(
+            ref="outputs/leg2.json",
+            runner_mechanism="sequential-single-slice",
+            box="ASI2",
+            markers=dict(adapter_applied=True, adapter_probe_differs=True),
+        ),
+        per_task=per_task,
+        _file="verdict_step000100.json",
+    )
+    v.update(over)
+    return v
+
+
 class TestDoneCheck(unittest.TestCase):
     def test_done_requires_18_of_18_and_beats_base(self):
-        goal = {"target_pass": "18/18"}
-        v = [{"pass_adapter": "3/18", "beats_base": True, "_file": "a.json"}]
+        goal = dict(target_pass="18/18")
+        v = [dict(pass_adapter="3/18", beats_base=True, _file="a.json")]
         done, _ = H.goal_done(goal, v)
         self.assertFalse(done)
-        v2 = [{"pass_adapter": "18/18", "beats_base": True, "_file": "b.json"}]
-        done, f = H.goal_done(goal, v2)
-        self.assertTrue(done)
-        self.assertEqual(f, "b.json")
-        v3 = [{"pass_adapter": "18/18", "beats_base": False, "_file": "c.json"}]
+        v3 = [dict(pass_adapter="18/18", beats_base=False, _file="c.json")]
         done, _ = H.goal_done(goal, v3)
         self.assertFalse(done)
 
     def test_done_fails_closed_on_empty(self):
-        done, _ = H.goal_done({"target_pass": "18/18"}, [])
+        done, _ = H.goal_done(dict(target_pass="18/18"), [])
+        self.assertFalse(done)
+
+
+class TestDoneCheckTwoLeg(unittest.TestCase):
+    # C-0020: a single-leg or untagged verdict can no longer retire the
+    # goal. done_criteria 2 (probe-differs marker) and 3 (independent
+    # second leg) are BOTH enforced by goal_done, fail-closed.
+
+    def setUp(self):
+        self.goal = dict(target_pass="18/18")
+
+    def test_bare_single_verdict_cannot_retire_goal(self):
+        v = [dict(pass_adapter="18/18", beats_base=True, _file="b.json")]
+        done, _ = H.goal_done(self.goal, v)
+        self.assertFalse(done)
+
+    def test_leg1_only_verdict_cannot_retire_goal(self):
+        # 18/18 + beats_base + leg1, but NO probe-differs marker, NO leg2.
+        v = [compliant_verdict()]
+        del v[0]["leg2"]
+        v[0]["adapter_probe_differs_marker"] = None
+        done, _ = H.goal_done(self.goal, v)
+        self.assertFalse(done)
+
+    def test_compliant_two_leg_verdict_satisfies_done(self):
+        done, f = H.goal_done(self.goal, [compliant_verdict()])
+        self.assertTrue(done)
+        self.assertEqual(f, "verdict_step000100.json")
+
+    def test_scorer_version_tag_required(self):
+        # Pre-sanitize verdicts (no scorer_version) never satisfy done.
+        done, _ = H.goal_done(self.goal, [compliant_verdict(scorer_version="")])
+        self.assertFalse(done)
+        untagged = [compliant_verdict()]
+        del untagged[0]["scorer_version"]
+        done, _ = H.goal_done(self.goal, untagged)
+        self.assertFalse(done)
+
+    def test_probe_differs_marker_required_on_both_legs(self):
+        v = [compliant_verdict()]
+        v[0]["leg2"]["markers"]["adapter_probe_differs"] = False
+        done, _ = H.goal_done(self.goal, v)
+        self.assertFalse(done)
+        v2 = [compliant_verdict()]
+        del v2[0]["leg1"]["markers"]["adapter_probe_differs"]
+        done, _ = H.goal_done(self.goal, v2)
+        self.assertFalse(done)
+
+    def test_leg_identity_must_differ(self):
+        # Same box AND same runner mechanism is not an independent 2nd leg.
+        same = [compliant_verdict()]
+        same[0]["leg2"]["runner_mechanism"] = same[0]["leg1"]["runner_mechanism"]
+        done, _ = H.goal_done(self.goal, same)
+        self.assertFalse(done)
+        # No identity on a leg: independence unprovable -> fail closed.
+        blind = [compliant_verdict()]
+        del blind[0]["leg2"]["runner_mechanism"]
+        del blind[0]["leg2"]["box"]
+        done, _ = H.goal_done(self.goal, blind)
+        self.assertFalse(done)
+
+    def test_per_task_agreement_enforced_between_legs(self):
+        disagree = [compliant_verdict()]
+        disagree[0]["leg1"]["per_task"] = dict(disagree[0]["per_task"])
+        pt2 = dict((k, dict(rec)) for k, rec in disagree[0]["per_task"].items())
+        pt2["task_00"] = dict(adapter_pass=False, base_pass=False)
+        disagree[0]["leg2"]["per_task"] = pt2
+        done, _ = H.goal_done(self.goal, disagree)
+        self.assertFalse(done)
+        agree = [compliant_verdict()]
+        agree[0]["leg1"]["per_task"] = dict(agree[0]["per_task"])
+        agree[0]["leg2"]["per_task"] = dict(agree[0]["per_task"])
+        done, _ = H.goal_done(self.goal, agree)
+        self.assertTrue(done)
+
+    def test_per_task_must_cover_target_and_be_wellformed(self):
+        short = [compliant_verdict()]
+        del short[0]["per_task"]["task_17"]
+        done, _ = H.goal_done(self.goal, short)
+        self.assertFalse(done)
+        bad = [compliant_verdict()]
+        bad[0]["per_task"]["task_00"] = dict(adapter_pass=1, base_pass=False)
+        done, _ = H.goal_done(self.goal, bad)
         self.assertFalse(done)
 
 

@@ -280,6 +280,91 @@ def kill_pid(pid):
         return False
 
 
+# ----------------------------------------------------------------------------- locks
+# C-0022: the eval box (ASI2) is a SHARED resource -- 4 concurrent cards launch
+# 18-task holdout legs at it and the launcher (scripts/asi2_loop_eval.sh) has
+# only a per-ts pid check, so two legs with different ts both fire: interleaved
+# writes, double-loaded NPU. Convention: a leg acquires
+# harness/state/locks/asi2-eval.lock (this helper) before launching and
+# releases it when its dispatch completes.
+LOCK_STALE_S = 1800  # 30 min: a lease older than this is a crashed holder
+
+
+def _lock_takeover_allowed(path, stale_s):
+    """Takeover iff the holder pid is dead or the lease is stale.
+
+    Unparseable + young -> refuse (a concurrent creator may be mid-write);
+    unparseable + old -> takeover (torn write from a dead process).
+    Fail-closed: any doubt while the lease is young refuses.
+    """
+
+    def _mtime_age():
+        try:
+            return (time.time() - os.path.getmtime(path)) > stale_s
+        except OSError:
+            return False
+
+    try:
+        with open(path, encoding="utf-8") as f:
+            tok = json.load(f)
+    except (OSError, ValueError):
+        return _mtime_age()
+    if not isinstance(tok, dict):
+        return _mtime_age()
+    pid = tok.get("pid")
+    if isinstance(pid, int) and pid > 0 and not pid_alive(pid):
+        return True
+    age_min_val = age_min(tok.get("ts"))
+    if age_min_val is None:  # corrupt ts: fall back to file mtime
+        return _mtime_age()
+    return (age_min_val * 60.0) > stale_s
+
+
+def acquire_lock(path, stale_s=LOCK_STALE_S):
+    """Take an exclusive lock file (O_EXCL create). Returns the owner token
+    dict, or None when a fresh lease held by a live pid exists (refuse --
+    never steal). A stale lease or a dead holder pid is taken over so a
+    crashed leg cannot wedge the box forever."""
+    d = os.path.dirname(path)
+    if d:
+        os.makedirs(d, exist_ok=True)
+    tok = dict(pid=os.getpid(), ts=now_iso())
+    for _ in range(2):  # retry once after a takeover remove
+        try:
+            fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o644)
+        except FileExistsError:
+            if not _lock_takeover_allowed(path, stale_s):
+                return None
+            try:
+                os.unlink(path)
+            except OSError:
+                return None  # lost the takeover race
+            continue
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            json.dump(tok, f)
+        return tok
+    return None
+
+
+def release_lock(path, token):
+    """Remove the lock iff it is still the caller's own lease (pid+ts match).
+    A foreign or absent token -> False and the lock is left alone."""
+    try:
+        with open(path, encoding="utf-8") as f:
+            cur = json.load(f)
+    except (OSError, ValueError):
+        return False
+    if not isinstance(cur, dict) or not isinstance(token, dict):
+        return False
+    if cur.get("pid") != token.get("pid") or cur.get("ts") != token.get("ts"):
+        return False
+    try:
+        os.unlink(path)
+    except OSError:
+        return False
+    return True
+
+
 RESULT_RE = re.compile(r"^RESULT:\s*(DONE|PARTIAL|BLOCKED)\b", re.MULTILINE)
 
 
@@ -370,6 +455,9 @@ RULES:
 - TDD: RED test first, smallest fix, GREEN + touched suites. A fix without a test is rejected.
 - Touch ONLY what this card needs. Shared dirs (training/ scripts/ configs/ evals/) need
   a lock: create harness/state/locks/<file>.lock before editing, remove it when green.
+- Shared compute: eval legs at the ASI2 box are serialized. Acquire
+  harness/state/locks/asi2-eval.lock via harness_lib.acquire_lock BEFORE
+  launching a leg; release it (release_lock) when the leg dispatch completes.
 - Never mark DONE on another agent's unverified claim. Never fabricate a measurement.
 - Unknown/unmeasured = say so. Fail closed, always.
 {deps}
@@ -431,18 +519,96 @@ def scan_verdicts(repo_root, limit=12):
     return verdicts
 
 
+def _leg_probe_differs(leg):
+    """Probe-differs evidence on one leg, from either marker shape."""
+    if not isinstance(leg, dict):
+        return False
+    if leg.get("adapter_probe_differs_marker") is True:
+        return True
+    markers = leg.get("markers")
+    return isinstance(markers, dict) and bool(markers.get("adapter_probe_differs"))
+
+
+def _per_task_ok(v, n_target):
+    """The agreed per-task map must be well-formed and cover the target
+    task count; when both legs embed their own per_task maps they must
+    agree (cross-leg per-task pass agreement enforced here, not only at
+    compose time); asymmetric leg evidence fails closed."""
+    pt = v.get("per_task")
+    if not isinstance(pt, dict) or len(pt) != n_target:
+        return False
+    for rec in pt.values():
+        if not isinstance(rec, dict):
+            return False
+        if not isinstance(rec.get("adapter_pass"), bool):
+            return False
+        if not isinstance(rec.get("base_pass"), bool):
+            return False
+    leg1 = v.get("leg1")
+    leg2 = v.get("leg2")
+    has1 = isinstance(leg1, dict) and "per_task" in leg1
+    has2 = isinstance(leg2, dict) and "per_task" in leg2
+    if has1 != has2:
+        return False
+    if has1 and leg1.get("per_task") != leg2.get("per_task"):
+        return False
+    return True
+
+
 def goal_done(goal, verdicts):
-    """18/18 achieved = a fail-closed verdict shows 18/18 + beats_base.
+    """18/18 achieved = a fail-closed TWO-LEG verdict shows 18/18 +
+    beats_base.
+
+    C-0020: a single optimistic leg can no longer retire the goal. A
+    verdict counts only when it carries ALL of:
+      - pass_adapter == target and beats_base is True
+      - a truthy scorer_version tag (pre-sanitize verdicts can never
+        satisfy the done-check)
+      - adapter_applied_marker not False and adapter_probe_differs_marker
+        truthy at top level AND on BOTH legs
+      - leg1 + leg2 with distinct leg identity (different box or a
+        different runner_mechanism; missing identity fails closed)
+      - a well-formed per_task map covering the target task count; when
+        both legs embed per_task maps they must agree per task
 
     Fail-closed: absent/bad evidence -> False (loop keeps running).
     """
-    target = goal.get("target_pass", "18/18")
+    target = str(goal.get("target_pass", "18/18"))
+    try:
+        n_target = int(target.split("/", 1)[0])
+    except ValueError:
+        return False, None
     for v in verdicts:
-        pa = str(v.get("pass_adapter", ""))
-        bb = v.get("beats_base")
-        markers_ok = v.get("adapter_applied_marker") is not False
-        if pa == target and bb is True and markers_ok:
-            return True, v.get("_file")
+        if not isinstance(v, dict):
+            continue
+        if str(v.get("pass_adapter", "")) != target:
+            continue
+        if v.get("beats_base") is not True:
+            continue
+        if not v.get("scorer_version"):
+            continue
+        if v.get("adapter_applied_marker") is False:
+            continue
+        if not v.get("adapter_probe_differs_marker"):
+            continue
+        leg1 = v.get("leg1")
+        leg2 = v.get("leg2")
+        if not isinstance(leg1, dict) or not isinstance(leg2, dict):
+            continue
+        if not (_leg_probe_differs(leg1) and _leg_probe_differs(leg2)):
+            continue
+        box1 = leg1.get("box") or None
+        box2 = leg2.get("box") or None
+        mech1 = leg1.get("runner_mechanism") or None
+        mech2 = leg2.get("runner_mechanism") or None
+        distinct = (box1 is not None and box2 is not None and box1 != box2) or (
+            mech1 is not None and mech2 is not None and mech1 != mech2
+        )
+        if not distinct:
+            continue
+        if not _per_task_ok(v, n_target):
+            continue
+        return True, v.get("_file")
     return False, None
 
 

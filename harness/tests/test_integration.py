@@ -196,6 +196,37 @@ class TestLifecycle(unittest.TestCase):
         self.assertEqual(H.find_card(q, c["id"])["status"], "bounced")
 
 
+def compliant_verdict():
+    # Composer-shaped two-leg verdict (C-0020): the only shape that can
+    # satisfy the done-check.
+    per_task = dict(
+        ("task_" + str(i).zfill(2), dict(adapter_pass=True, base_pass=False)) for i in range(18)
+    )
+    return dict(
+        pass_adapter="18/18",
+        pass_base="1/18",
+        beats_base=True,
+        goal_target="18/18",
+        adapter_applied_marker=True,
+        adapter_probe_differs_marker=True,
+        independent_second_leg=True,
+        scorer_version="holdout-scorer-1.2.0",
+        leg1=dict(
+            ref="outputs/leg1.json",
+            runner_mechanism="parallel-3-slice",
+            box="ASI2",
+            markers=dict(adapter_applied=True, adapter_probe_differs=True),
+        ),
+        leg2=dict(
+            ref="outputs/leg2.json",
+            runner_mechanism="sequential-single-slice",
+            box="ASI2",
+            markers=dict(adapter_applied=True, adapter_probe_differs=True),
+        ),
+        per_task=per_task,
+    )
+
+
 class TestDoneCheckCli(unittest.TestCase):
     def test_exit_codes(self):
         tmp_repo = tempfile.mkdtemp()
@@ -206,7 +237,17 @@ class TestDoneCheckCli(unittest.TestCase):
             with self.assertRaises(SystemExit) as ctx:
                 qgh.cmd_done_check(None)
             self.assertEqual(ctx.exception.code, 1)  # OPEN: not achieved
-            v = {"pass_adapter": "18/18", "beats_base": True}
+            # C-0020: leg1-only 18/18 verdict (no probe-differs, no leg2)
+            # must NOT retire the goal -> exit 1.
+            v = compliant_verdict()
+            del v["leg2"]
+            v["adapter_probe_differs_marker"] = None
+            with open(os.path.join(tmp_repo, "outputs", "verdict_leg1.json"), "w") as f:
+                json.dump(v, f)
+            with self.assertRaises(SystemExit) as ctx:
+                qgh.cmd_done_check(None)
+            self.assertEqual(ctx.exception.code, 1)  # leg1-only: NOT achieved
+            v = compliant_verdict()
             with open(os.path.join(tmp_repo, "outputs", "verdict_final.json"), "w") as f:
                 json.dump(v, f)
             with self.assertRaises(SystemExit) as ctx:
@@ -255,7 +296,7 @@ class TestWipLimits(unittest.TestCase):
             seed_card(title=f"e{i}", lane="evaluator")
         spawned = {"n": 0}
 
-        def fake_spawn(goal, card, dep_results):
+        def fake_spawn(goal, queue, card, dep_results):
             spawned["n"] += 1
             return {
                 "pid": os.getpid(),
@@ -340,7 +381,7 @@ class TestGlobalPriorityDispatch(unittest.TestCase):
         high = seed_card(title="verify deploy", lane="deploy-integrity", priority=0)
         order = []
 
-        def fake_spawn(goal, card, dep_results):
+        def fake_spawn(goal, queue, card, dep_results):
             order.append(card["id"])
             return {
                 "pid": os.getpid(),

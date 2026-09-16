@@ -313,15 +313,80 @@ def worker_command():
     return ["/bin/bash", "-c", f"{srcs} exec '{CLAUDE}' --print"]
 
 
-def spawn_worker(goal, card, dep_results):
-    """Spawn one headless claude worker for a card. Returns fleet entry or None."""
+def dispatch_target_ok(queue, card, lanes=None, claim_in_progress=False):
+    """Fail-closed preflight for dispatch: refuse when the target card is
+    missing from the queue, resolves to a DIFFERENT card (duplicate-id
+    collision, the C-0021 incident), is not claimable (dead/closed/running),
+    is lane-mismatched, or is claimed_by a live pid."""
+    resolved = find_card(queue, card.get("id"))
+    if resolved is None:
+        return False, f"card missing from queue: {card.get('id')}"
+    if resolved is not card:
+        return False, (
+            f"duplicate card id {card.get('id')}: resolves to a different card "
+            f"(status={resolved.get('status')}, claimed_by={resolved.get('claimed_by')})"
+        )
+    if sum(1 for c in queue["cards"] if c.get("id") == card.get("id")) > 1:
+        # an ambiguous id can deliver two workers onto one card (C-0021)
+        return False, f"duplicate card id {card.get('id')}: id is ambiguous in queue"
+    if claim_in_progress and card.get("claimed_by") == "dispatching":
+        pass  # our own claim, stamped by cmd_dispatch while holding this lock
+    elif card.get("status") != "ready":
+        return False, f"card status is {card.get('status')!r}, not ready: {card.get('id')}"
+    if lanes is not None and card.get("lane") not in lanes:
+        return False, f"lane mismatch: {card.get('lane')!r} not in {sorted(lanes)}"
+    claimed_by = card.get("claimed_by")
+    if claimed_by and pid_alive(claimed_by):
+        return False, f"card claimed by live pid {claimed_by}: {card.get('id')}"
+    return True, "ok"
+
+
+def planner_topup_needed(queue, min_ready=2):
+    """Idle top-up gate for _reap: mint a planner card only when the queue is
+    GENUINELY idle. The <2 trigger counts CLAIMABLE cards only (ready_cards:
+    unclaimed + deps satisfied). A saturated board -- few claimable cards but
+    ready cards dep-blocked on a RUNNING dep -- is work in flight, not
+    idleness, and must NOT mint (the C-0021 measured bug: three planner cards
+    minted in 30 min while C-0010/C-0015/C-0016 waited on running deps). A
+    blocker that is terminally dead will never unblock the board: that IS a
+    management failure and must mint."""
+    if len(ready_cards(queue)) >= min_ready:
+        return False
+    for c in queue["cards"]:
+        if c["status"] != "ready":
+            continue
+        for dep_id in c["deps"]:
+            dep = find_card(queue, dep_id)
+            if dep is not None and dep["status"] == "running":
+                return False
+    return True
+
+
+def spawn_worker(goal, queue, card, dep_results):
+    """Spawn one headless claude worker for a card. Returns fleet entry or None.
+
+    Fail-closed and atomic: the target is re-validated under the dispatch
+    lock, the brief file must exist and be non-empty BEFORE spawn, and
+    claimed_by=<pid> is durably saved to QUEUE.json in the same code path as
+    the spawn -- a crash after spawn can never leave the card re-dispatchable.
+    """
     lock = os.path.join(STATE, "locks", "agent-{}.lock".format(card["id"]))
     if acquire_lock(lock) is None:
         return None  # already dispatched
+    ok, why = dispatch_target_ok(queue, card, claim_in_progress=True)
+    if not ok:
+        release_lock(lock)
+        try:
+            event(STATE, "dispatch_refused", {"card": card.get("id"), "why": why[:200]})
+        except Exception:
+            pass
+        return None
     brief = compose_brief(goal, card, dep_results)
     brief_path = os.path.join(STATE, "briefs", "{}.md".format(card["id"]))
     with open(brief_path, "w", encoding="utf-8") as f:
         f.write(brief)
+    if not (os.path.exists(brief_path) and os.path.getsize(brief_path) > 0):
+        raise RuntimeError(f"brief write failed for {card['id']}")
     log_path = os.path.join(STATE, "agents", "{}.log".format(card["id"]))
     with open(log_path, "a", encoding="utf-8") as f:
         f.write(f"\n===== dispatch {now_iso()} =====\n")
@@ -344,6 +409,22 @@ def spawn_worker(goal, card, dep_results):
     )
     pid = proc.pid
     card["claimed_by"] = str(pid)
+    # Atomic claim: the claimed_by=<pid> stamp hits disk HERE, in the spawn
+    # code path -- not at the end of cmd_dispatch, which a crash can miss.
+    save_queue(STATE, queue)
+    try:
+        event(
+            STATE,
+            "dispatched",
+            {
+                "card": card["id"],
+                "lane": card["lane"],
+                "pid": pid,
+                "budget_min": card["budget_min"],
+            },
+        )
+    except Exception:
+        pass  # telemetry must never unwind a completed spawn
     entry = {
         "pid": pid,
         "card": card["id"],
@@ -388,6 +469,11 @@ def cmd_dispatch(args):
         if not candidates:
             break
         card = candidates[0]
+        ok, why = dispatch_target_ok(queue, card, lanes=lanes)
+        if not ok:
+            # fail closed: never claim or spawn against a bad target
+            event(STATE, "dispatch_refused", {"card": card.get("id"), "why": why[:200]})
+            break
         deps = [
             (d["id"], d["title"], d.get("result"))
             for d in (find_card(queue, x) for x in card["deps"])
@@ -397,12 +483,13 @@ def cmd_dispatch(args):
         if claimed is None:
             break
         try:
-            entry = spawn_worker(goal, card, deps)
+            entry = spawn_worker(goal, queue, card, deps)
         except Exception as exc:  # spawn must never crash the tick
             entry = None
             event(STATE, "spawn_error", {"card": card["id"], "err": str(exc)[:200]})
         if entry is None:
-            # lock race: someone else dispatched; revert claim
+            # lock race or refused target: spawn_worker raises only BEFORE the
+            # durable spawn, so no worker can be running -- revert is safe
             card["status"] = "ready"
             card["claimed_by"] = None
             break
@@ -548,9 +635,10 @@ def _reap():
             event(STATE, "card_dead", {"card": c["id"], "title": c["title"]})
     save_queue(STATE, queue)
     save_fleet(STATE, fleet)
-    # planner top-up: if queue has <2 ready cards, ask the planner to decompose
-    ready_all = ready_cards(queue)
-    if len(ready_all) < 2 and running_count(queue, "planner") == 0:
+    # planner top-up: only when the queue is GENUINELY idle -- the <2 trigger
+    # counts CLAIMABLE cards and a saturated board (dep-blocked on running
+    # deps) must not mint (C-0021)
+    if planner_topup_needed(queue) and running_count(queue, "planner") == 0:
         _auto_plan(goal)
     return reaped
 
