@@ -487,13 +487,63 @@ def spawn_worker(goal, queue, card, dep_results):
 
 BOX_BOUND_LANES = ("evaluator", "trainer-ops", "deploy-integrity")
 TRANSPORT_WEDGE_MARK = "exec_wedged"
+# A box probe older than this is treated as stale at dispatch-decision time
+# and re-measured live. Below the measured normal probe agent cadence; chosen
+# well above a transient probe hiccup so a healthy agent's probes are never
+# re-measured (the live /health is cheap, but we only pay it when stale).
+PROBE_STALE_S = 3600
 
 
-def transport_wedged():
-    """True iff the freshest asi3 probe reports an exec wedge. Fail-open for
-    MISSING probes (never dispatched against an unmeasured box anyway) but
-    STALE wedge evidence still holds the gate (absence of news ≠ recovery)."""
-    p = os.path.join(STATE, "probes", "asi3.json")
+def _box_probe_age_s(state_dir):
+    """Age (seconds) of the on-disk asi3 probe, or None if missing/illegible."""
+    try:
+        data = load_json(os.path.join(state_dir, "probes", "asi3.json"))
+        ts = data.get("ts")
+        if not ts:
+            return None
+        t = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+        return (datetime.now(timezone.utc) - t).total_seconds()
+    except Exception:
+        return None
+
+
+def _refresh_box_probe_best_effort(state_dir):
+    """Re-measure the box daemon probes (asi1/asi2/asi3) from live /health.
+
+    A dead probe AGENT leaves a STALE 'exec_wedged' asi3 probe on disk; without
+    a live re-measure the transport gate would hold box-bound lanes forever
+    (measured outage 2026-09-17: 5h+ stall while asi3 had rebooted and asi1/2
+    were healthy). This does a read-only, health-only probe of each daemon —
+    no exec echo, never raises — and re-writes the probe files so the gate and
+    the standup both see current reality. On refresh failure the existing file
+    is left untouched (fail-safe: stale wedge evidence still holds)."""
+    try:
+        import resource_probes as RP
+        from harness_lib import now_iso, save_json
+
+        out_dir = os.path.join(state_dir, "probes")
+        os.makedirs(out_dir, exist_ok=True)
+        for name, port in RP.DAEMON_PORTS.items():
+            p = RP.probe_daemon(name, port)  # health-only, read-only
+            rec = {"ts": now_iso(), "status": p.get("status"), "summary": p.get("summary")}
+            if "liveness" in p:
+                rec["liveness"] = p["liveness"]
+            save_json(os.path.join(out_dir, f"{name}.json"), rec)
+    except Exception:
+        pass  # probe refresh must never break dispatch
+
+
+def transport_wedged(state_dir=None):
+    """True iff asi3 is CURRENTLY exec-wedged. Fail-open for MISSING probes
+    (never dispatched against an unmeasured box anyway). A STALE probe is
+    re-measured live before deciding, so a dead probe agent cannot hold box
+    lanes forever after the box has actually recovered; if the box is still
+    wedged, the fresh probe says so and the gate still holds (fail-safe)."""
+    sd = state_dir or STATE
+    age = _box_probe_age_s(sd)
+    if age is None or age > PROBE_STALE_S:
+        _refresh_box_probe_best_effort(sd)
+    p = os.path.join(sd, "probes", "asi3.json")
     data = load_json(p)
     if not data:
         return False

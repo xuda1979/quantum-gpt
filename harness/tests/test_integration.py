@@ -866,3 +866,65 @@ class TestTransportGate(unittest.TestCase):
         finally:
             qgh.spawn_worker = real
         self.assertEqual(len(order), 1, "box lanes must dispatch once transport is ready")
+
+    def test_stale_wedged_probe_does_not_block_after_recovery(self):
+        """RED regression, measured outage 2026-09-17: a probe AGENT that dies
+        leaves a STALE 'exec_wedged' asi3 probe on disk. The gate read that
+        stale file verbatim, so box-bound lanes were held for 5h+ even though
+        asi3 had rebooted and asi1/asi2 were healthy. At dispatch-decision
+        time a stale/missing probe must be re-measured live; a box that has
+        recovered (fresh probe ready) must NOT remain gated.
+
+        This test drives dispatch with a stale wedged probe on disk but a
+        mocked live re-probe now reporting ready, and asserts evaluator
+        (box-bound) DOES dispatch.
+        """
+        seed_card(title="eval leg", lane="evaluator")
+        stale_ts = (H.datetime.utcnow() - H.timedelta(hours=3)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        H.save_json(
+            os.path.join(qgh.STATE, "probes", "asi3.json"),
+            {
+                "ts": stale_ts,
+                "status": "unknown",
+                "summary": "UNKNOWN (ready-but-exec_wedged: busyAgeMs=30000)",
+            },
+        )
+        order = []
+
+        def fake_spawn(goal, queue, card, dep_results):
+            order.append(card["id"])
+            return {
+                "pid": os.getpid(),
+                "card": card["id"],
+                "lane": card["lane"],
+                "brief": "x",
+                "log": "x",
+                "started_utc": H.now_iso(),
+                "deadline_utc": (H.datetime.utcnow() + H.timedelta(minutes=5)).strftime(
+                    "%Y-%m-%dT%H:%M:%SZ"
+                ),
+                "status": "running",
+            }
+
+        real_refresh = qgh._refresh_box_probe_best_effort
+        real_spawn = qgh.spawn_worker
+
+        def fake_refresh(sd):
+            # live re-measure: the box has rebooted and is NOT wedged now
+            H.save_json(
+                os.path.join(sd, "probes", "asi3.json"),
+                {
+                    "ts": H.now_iso(),
+                    "status": "ready",
+                    "summary": "READY /health ready=true pid=999",
+                },
+            )
+
+        qgh._refresh_box_probe_best_effort = fake_refresh
+        qgh.spawn_worker = fake_spawn
+        try:
+            qgh.cmd_dispatch(type("A", (), {"lane": None})())
+        finally:
+            qgh._refresh_box_probe_best_effort = real_refresh
+            qgh.spawn_worker = real_spawn
+        self.assertEqual(len(order), 1, "recovered box must not stay gated by a stale wedged probe")
