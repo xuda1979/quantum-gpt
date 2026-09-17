@@ -46,6 +46,73 @@ if str(ROOT) not in sys.path:
 
 from training.compat import strict_zip as _strict_zip  # noqa: E402
 
+# Per-step repair-sidecar auto-relaunch (root cause of run 20260913T233607Z:
+# the sidecar died at launch, the per-step guard DETECTED it and printed the
+# relaunch hint every step but never executed it, repair_queue.jsonl starved,
+# converted_total==0 -> all_fail_without_repair breaker killed the leg).
+SIDE_CAR_RELAUNCH_SCRIPT = Path("scripts") / "sapo_ensure_repair_sidecar.sh"
+SIDE_CAR_RELAUNCH_TIMEOUT_S = 60
+
+
+def _maybe_repair_sidecar_relaunch(
+    sidecar_status: dict,
+    sidecar_alarm_state: dict,
+    output_dir,
+    *,
+    runner=None,
+    script_path=None,
+) -> bool:
+    """Invoke the idempotent sidecar relauncher ONCE PER DEAD-EPISODE.
+
+    Dedup mirrors the alarm-state dedup already used for the alarm print:
+    consecutive dead steps attempt at most one relaunch; a RECOVERY clears
+    the episode so a re-DEAD fires again. Never raises: a relaunch failure
+    must not kill the trainer (log LOUD and continue).
+    Returns True iff a relaunch was actually attempted this call.
+    """
+    if not sidecar_status.get("alarm"):
+        # Recovered/healthy: clear the dead-episode dedup.
+        sidecar_alarm_state["relaunch_attempted"] = False
+        return False
+    if sidecar_alarm_state.get("relaunch_attempted"):
+        return False
+    if runner is None:
+        runner = subprocess.run
+    path = Path(script_path) if script_path is not None else ROOT / SIDE_CAR_RELAUNCH_SCRIPT
+    if not path.exists():
+        print(
+            "[SIDECAR_RELAUNCH_SKIPPED] relauncher missing: %s - relaunch the "
+            "sidecar manually via: bash scripts/sapo_ensure_repair_sidecar.sh %s"
+            % (path, output_dir),
+            flush=True,
+        )
+        return False
+    argv = ["bash", str(path), str(output_dir)]
+    # Explicit, cwd-independent logdir (defect 6): sidecar_liveness derives the
+    # heartbeat log from the logs/sapo_27b_ai convention, but the ensure
+    # script's own default resolved against ITS cwd -- a trainer running from
+    # any other cwd made liveness probe a nonexistent log -> relaunch churn.
+    runner_env = dict(os.environ)
+    runner_env["REPAIR_LOGDIR"] = str(ROOT / "logs" / "sapo_27b_ai")
+    sidecar_alarm_state["relaunch_attempted"] = True
+    try:
+        proc = runner(argv, timeout=SIDE_CAR_RELAUNCH_TIMEOUT_S, env=runner_env)
+        print(
+            "[SIDECAR_RELAUNCH] attempted repair-sidecar relaunch: %s rc=%s"
+            % (" ".join(argv), getattr(proc, "returncode", "?")),
+            flush=True,
+        )
+        return True
+    except Exception as exc:  # noqa: BLE001 - relaunch must never crash training
+        print(
+            "[SIDECAR_RELAUNCH_FAILED] argv=%s error=%r - continuing training; "
+            "relaunch the sidecar manually via: bash scripts/"
+            "sapo_ensure_repair_sidecar.sh %s" % (" ".join(argv), exc, output_dir),
+            flush=True,
+        )
+        return False
+
+
 # ruff: noqa: UP038  # (X | Y) isinstance is py3.10-only; py3.9 .venv gate
 from training.generation import (  # noqa: E402
     _CODE_FENCE_OPEN_RE,  # noqa: F401  # deliberate re-export, pinned by test_generation_module_extraction
@@ -54,8 +121,10 @@ from training.generation import (  # noqa: E402
     build_batched_prompt_inputs,
     build_generation_diagnostics,
     configured_eos_token_ids,
+    configured_suppress_token_ids,
     extract_code,
     has_closed_code_fence,  # noqa: F401  # deliberate re-export, pinned by test_generation_module_extraction
+    rollout_suppress_logits_processor,
     truncate_at_closing_fence,
 )
 from training.grpo_utils import (  # noqa: E402
@@ -80,6 +149,7 @@ from training.grpo_utils import (  # noqa: E402
     build_judge_diagnostics_record,
     build_mixture_weights,
     build_reward_breakdown,
+    candidate_advantage_dispersion,
     chunked_log_probs_and_entropy,
     count_repair_conversions,
     estimate_detail_budget,
@@ -136,7 +206,7 @@ RESUME_STATE_FILENAME = "resume_state.json"
 RESUME_STATE_VERSION = 1
 
 
-def parse_args() -> argparse.Namespace:
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--model-name", required=True)
     p.add_argument(
@@ -371,6 +441,16 @@ def parse_args() -> argparse.Namespace:
         help="Penalty weight for invented non-stdlib imports on single-file tasks.",
     )
     p.add_argument(
+        "--crash-progress-credit",
+        action="store_true",
+        default=False,
+        help="B-232 (2026-09-14): a candidate that crashed AFTER producing "
+        "numeric evidence earns graded credit capped at 0.3 (strictly below "
+        "the 0.5 near-miss band) instead of hard 0. Default off preserves the "
+        "pinned crash contract; enable when groups sit at hard 0 and the LOO "
+        "advantage collapses (all-fail flat-skip).",
+    )
+    p.add_argument(
         "--brevity-target-lines",
         type=int,
         default=40,
@@ -455,8 +535,29 @@ def parse_args() -> argparse.Namespace:
     p.add_argument(
         "--trust-region-min-lr",
         type=float,
-        default=1e-6,
+        default=5e-6,
         help="Minimum learning rate retained by repeated scale_lr trust-region violations.",
+    )
+    p.add_argument(
+        "--trust-region-max-violations",
+        type=int,
+        default=6,
+        help="B-224 guard (2026-09-14): when the cumulative post-update "
+        "trust-region violation count reaches this many, fire a "
+        "trust_region_bleed_alarm + recommend-stop instead of silently "
+        "halving the LR forever. A sustained false-violation loop (measured "
+        "live: LR 2.5e-05 -> 1/16 over ~12 steps) must halt the run and "
+        "surface for diagnosis, not drain the LR to an inert 1/16.",
+    )
+    p.add_argument(
+        "--trust-region-dump",
+        action="store_true",
+        default=False,
+        help="B-224 instrumenter (2026-09-14): on a trust-region violation, "
+        "dump per-candidate post_token_count (train-kept) / old_token_count "
+        "(rollout full) / old mean / post mean / alignment mode to "
+        "<output>/trust_region_dump.jsonl so the false-violation mechanism "
+        "can be root-caused from a live step without a code change.",
     )
     p.add_argument(
         "--trust-region-on-violation",
@@ -464,6 +565,15 @@ def parse_args() -> argparse.Namespace:
         default="reject",
         help="'reject' restores the pre-update parameters and optimizer state; "
         "'scale_lr' keeps the update but halves the learning rate.",
+    )
+    p.add_argument(
+        "--trust-region-resume-fresh",
+        action="store_true",
+        default=False,
+        help="B-224 (2026-09-14): on a soft-resume, do NOT replay the snapshot's "
+        "halved optimizer LR and violation count. After a bleed alarm the false "
+        "ladder must not be re-entered: the run starts at --lr with count 0. "
+        "Default off preserves in-family resume semantics.",
     )
     p.add_argument(
         "--advantage-mode",
@@ -512,9 +622,11 @@ def parse_args() -> argparse.Namespace:
     )
     p.add_argument(
         "--repair-converted-jsonl",
-        default=None,
+        default=os.environ.get("REPAIR_CONVERTED_JSONL"),
         help="Optional JSONL written by the repair SFT/DPO stage recording verified "
-        "conversions; used by the all-fail-without-repair circuit breaker.",
+        "conversions; used by the all-fail-without-repair circuit breaker. "
+        "Defaults to $REPAIR_CONVERTED_JSONL, then "
+        "<output-dir>/repair_stage/repair_converted.jsonl.",
     )
     # Guardian alarm 8 (2026-08-26): repair-sidecar liveness guard. Runs 11/12
     # stopped via all_fail_without_repair because the sidecar died SILENTLY at
@@ -789,7 +901,7 @@ def parse_args() -> argparse.Namespace:
         default=7200,
         help="Save adapter checkpoint to disk every N seconds (0 = only at end).",
     )
-    return p.parse_args()
+    return p.parse_args(argv)
 
 
 def load_requested_task_ids(path: str | None) -> set[str] | None:
@@ -869,6 +981,7 @@ def discover_tasks(
     allowed_domains: set[str] | None = None,
 ) -> list[dict]:
     tasks = []
+    found_ids: set[str] = set()
     for domain_dir in sorted(tasks_dir.iterdir()):
         if not domain_dir.is_dir():
             continue
@@ -886,7 +999,21 @@ def discover_tasks(
                     continue
                 if allowed_domains is not None and domain not in allowed_domains:
                     continue
+                found_ids.add(task_id)
                 tasks.append({"meta": meta, "task_dir": task_dir, "tests_py": tests_py})
+    if requested_task_ids is not None:
+        # 2026-09-01 (bug-hunter mechanism 7, required_files gate): a
+        # REQUESTED task id with no discoverable files (missing dir, missing
+        # task.json/tests.py) was silently dropped — the manifest said "train
+        # on these N tasks" and the trainer trained on N-k with no signal.
+        # Fail-closed listing the missing ids.
+        missing = sorted(requested_task_ids - found_ids)
+        if missing:
+            raise ValueError(
+                "Requested task ids missing from tasks dir "
+                f"({tasks_dir}): {', '.join(missing)} — refusing to start with "
+                "a silently shrunk training set"
+            )
     return tasks
 
 
@@ -965,11 +1092,22 @@ def build_task_runtime_context(task: dict, *, detail_budget_cap: int) -> dict[st
     allowed_import_roots = [
         root.strip() for root in raw_allowed_import_roots if isinstance(root, str) and root.strip()
     ]
-    # Distilled quantum questions intentionally require external framework
-    # imports, while their generated metadata historically left the allowlist
-    # empty. Penalizing qiskit/cirq/pennylane as invented modules pushes the
-    # policy away from the very APIs the task requests.
-    if str(meta.get("category", "")).startswith("distill_v3"):
+    # Quantum questions intentionally require external framework imports, while
+    # their generated metadata historically left the allowlist empty. Penalizing
+    # qiskit/cirq/pennylane as invented modules pushes the policy away from the
+    # very APIs the task requests.
+    #
+    # B-205 (tick #445): this gate used to key on category == "distill_v3" alone.
+    # The live RL family (quantum_rl_v2_*, 56 tasks) declares
+    # category="algorithm_implementation" with domain="quantum" and no allowlist
+    # of its own, so the merge never fired, only stdlib roots were permitted, and
+    # import_hygiene scored 0.0 for EVERY candidate -- including a flawless one --
+    # making 0.05 of reward mass structurally unearnable. `domain` is the field
+    # that actually expresses the requirement, so key on it as well.
+    if (
+        str(meta.get("category", "")).startswith("distill_v3")
+        or str(meta.get("domain", "")) == "quantum"
+    ):
         allowed_import_roots = sorted(set(allowed_import_roots) | DISTILL_QUANTUM_IMPORT_ROOTS)
     candidate_files = meta.get("candidate_files")
     if candidate_files is None and candidate_file:
@@ -1038,10 +1176,19 @@ def build_prompt(task: dict, research_methods: list[Any] | None = None) -> str:
 
 
 SYSTEM_PROMPT = (
-    "You are a careful quantum-computing coding assistant. Produce concise, correct, "
-    "maintainable Python. Return code only. Do not include Markdown fences, prose, "
-    "explanations, tests, examples, or demo code. Stop immediately after the final "
-    "required Python statement."
+    # 2026-09-14: the previous wording ("Return code only. ... Stop immediately after the
+    # final required Python statement.") made the policy emit <|im_end|> as its FIRST
+    # token on the real 526-token GRPO prompt (n=1, ids=[248046]) -- every rollout
+    # collapsed to 1 token and every step skipped (Mode B). Bisect on the frozen
+    # trainer prompt (same weights/adapter/greedy/max_new_tokens, prompt the only
+    # variable): FULL 526 -> n=1 EOS; -Output-contract 469 -> n=1; -Task-id/Domain 504
+    # -> n=3; BARE task_prompt 194 -> n=1; dropping ONLY the stop sentence 517 -> n=4;
+    # dropping ONLY "Return code only" 522 -> n=3; this wording 520 -> n=1 first_is_end
+    # False with real code ("import numpy as np / from qiskit import QuantumCircui...").
+    # The restrictive "code only / stop immediately" framing is the suppressor, not the
+    # task wrapper.
+    "You are a careful coding assistant focused on correctness, clear reasoning, "
+    "and maintainable Python code. Return only the final code."
 )
 
 
@@ -1216,17 +1363,22 @@ TASK CONTEXT:
 {task_context}
 
 Output ONLY a JSON object:
-{{"correctness": 0.0-1.0, "runnability": 0.0-1.0, "result_correctness": 0.0-1.0, "efficiency": 0.0-1.0, "quality": 0.0-1.0, "evidence": "one line"}}"""
+{{"correctness_of_intent": 0.0-1.0, "result_correctness": 0.0-1.0, "completeness": 0.0-1.0, "api_correctness": 0.0-1.0, "syntax_validity": 0.0-1.0, "runnability": 0.0-1.0, "parameterization": 0.0-1.0, "numerical_reasoning": 0.0-1.0, "structure_and_naming": 0.0-1.0, "efficiency": 0.0-1.0, "evidence": "one line"}}"""
 
 
-COMPREHENSIVE_BATCH_JUDGE_PROMPT = """You are a strict code evaluator. There are {n} candidate solutions (Candidate 1..{n}) to the same task. Score ALL {n} candidates TOGETHER, comparing them against each other, on five dimensions, each a float 0.0-1.0. Use the executable evidence per candidate as the authoritative anchor — do not contradict it: a candidate whose tests pass must not be scored below one whose tests fail on the executable dimensions.
+COMPREHENSIVE_BATCH_JUDGE_PROMPT = """You are a strict code evaluator. There are {n} candidate solutions (Candidate 1..{n}) to the same task. Score ALL {n} candidates TOGETHER, comparing them against each other, on TEN fine-grained dimensions, each a float 0.0-1.0. Fine granularity is ESSENTIAL: candidates differ in small ways and your scores must separate them (identical scores across candidates are a scoring failure). Use the executable evidence per candidate as the authoritative anchor — do not contradict it: a candidate whose tests pass must not be scored below one whose tests fail on the executable dimensions. Each candidate's EXECUTABLE EVIDENCE (authoritative) block overrides any impression formed from the code alone.
 
-Dimensions (per candidate) — score EACH dimension INDEPENDENTLY from its own evidence; a failing test suite must NOT zero the other dimensions:
-- correctness: does the algorithm's logic produce the right result (0.0 if its tests fail)?
-- runnability: would the code execute without syntax/import/runtime errors? If EXECUTABLE EVIDENCE shows the code parsed/ran at all, this is ABOVE 0.0 even when tests fail.
-- result_correctness: do the actual outputs match the expected values?
-- efficiency: is runtime / circuit depth / gate count / resource use reasonable?
-- quality: is the code well-structured, readable, and maintainable? Judge the code AS CODE, independent of whether tests passed.
+Dimensions (per candidate) — score EACH INDEPENDENTLY from its own evidence; a failing test suite must NOT zero unrelated dimensions:
+- correctness_of_intent: does the algorithm logic match the task intent?
+- result_correctness: do outputs match expected values (evidence-anchored)?
+- completeness: all required functions/classes/flows present?
+- api_correctness: correct framework API usage (qiskit/cirq/pennylane/stim)?
+- syntax_validity: parses without syntax errors?
+- runnability: executes without import/runtime errors? Evidence shows any execution => ABOVE 0.0.
+- parameterization: correct parameters, scales, qubit counts?
+- numerical_reasoning: amplitudes/angles/counts arithmetically right?
+- structure_and_naming: clean structure, meaningful names?
+- efficiency: circuit depth/gate count/resource use reasonable?
 
 The candidates ARE RELATIVE to each other: distribute the dimension scores so the ranking reflects genuine comparative quality across the 8 candidates, not an independent per-candidate guess.
 
@@ -1237,7 +1389,7 @@ TASK CONTEXT:
 {task_context}
 
 Output ONLY a JSON object of the form:
-{{"candidate_1": {{"correctness": 0.0-1.0, "runnability": 0.0-1.0, "result_correctness": 0.0-1.0, "efficiency": 0.0-1.0, "quality": 0.0-1.0}}, ..., "candidate_{n}": {{...}} }}
+{{"candidate_1": {{"correctness_of_intent": 0.0-1.0, "result_correctness": 0.0-1.0, "completeness": 0.0-1.0, "api_correctness": 0.0-1.0, "syntax_validity": 0.0-1.0, "runnability": 0.0-1.0, "parameterization": 0.0-1.0, "numerical_reasoning": 0.0-1.0, "structure_and_naming": 0.0-1.0, "efficiency": 0.0-1.0}}, ..., "candidate_{n}": {{...}} }}
 No other text."""
 
 
@@ -1364,10 +1516,20 @@ def _parse_model_batch_dim_scores(text: str, n: int) -> dict[int, dict[str, floa
         return None
     if not isinstance(data, dict):
         return None
+    # B-037: digit-normalized candidate key lookup (candidate1/Candidate 1/…)
+    key_by_num: dict[int, Any] = {}
+    for k_key, v_val in data.items():
+        m_key = re.search(r"(\d+)", str(k_key))
+        if m_key and isinstance(v_val, dict):
+            key_by_num.setdefault(int(m_key.group(1)), v_val)
     scores: dict[int, dict[str, float | None]] = {}
     for i in range(1, n + 1):
         cell: dict[str, float | None] = {}
-        raw = data.get(f"candidate_{i}")
+        # B-037 (2026-09-03): dp4 sometimes keys candidates as "candidate1",
+        # "Candidate 1", "candidate_01" — exact-key-only lookups silently
+        # produced all-None groups (judge-absent with no diagnostic). Digit-
+        # normalized fallback lookup below.
+        raw = data.get(f"candidate_{i}", key_by_num.get(i))
         if isinstance(raw, dict):
             for dim in MODEL_JUDGE_DIMENSIONS:
                 v = raw.get(dim)
@@ -1697,6 +1859,181 @@ def _model_batch_dim_scores(
     return _unpermute_batch_scores(_parse_model_batch_dim_scores(response_text, n=n), perm)
 
 
+# 2026-09-08 (s28 dark-step root-cause): structured diagnostic of the most
+# recent dp4 batch-judge attempt. Bare-None failures left the 3-attempt retry
+# blind and dark steps (s3, s28) unexplainable from the run log alone. The
+# caller loud dp4_judge_failed line embeds this; a succeeding call clears it.
+_last_dp4_judge_diag = None
+
+
+def _set_last_dp4_judge_diag(diag):
+    global _last_dp4_judge_diag
+    _last_dp4_judge_diag = diag
+
+
+def get_last_dp4_judge_diag():
+    """Structured diagnostic of the LAST dp4 judge attempt (None on success).
+
+    Keys: reason (transport_error / bad_json_body / error_body /
+    no_json_object / no_candidate_keys), reply_head (first 400 chars of the
+    raw reply or reply text), error (exception text for transport errors).
+    """
+    return _last_dp4_judge_diag
+
+
+def _dp4_client_timeout_s() -> float:
+    """Client-side socket deadline for one dp4 judge round-trip.
+
+    2026-09-08 (dark-step s3 root-cause CORRECTION, run 094427Z): the fixed
+    310.0s deadline was the judge-absent mechanism - the box translator is
+    healthy (judge log: all success:true, latency 3-72s, retries 1, no
+    errors), so any 4/4-null step means the TRAINER's own round-trip gave
+    up. The deadline is now env-tunable (JUDGE_DP4_CLIENT_TIMEOUT_S) so an
+    operator can cover a slow dp4 tail without touching the manifest or
+    redeploying; the default stays 310.0 (byte-compatible with the R22 B5
+    timeout chain: trainer 310 > bridge 290 > watcher 250).
+    """
+    raw = os.environ.get("JUDGE_DP4_CLIENT_TIMEOUT_S", "")
+    try:
+        value = float(raw)
+    except (TypeError, ValueError):
+        return 310.0
+    return value if value > 0.0 else 310.0
+
+
+def _dp4_trailing_grace_s() -> float:
+    """Grace deadline for recovering a trailing (slow-but-successful) judge.
+
+    Default 150s: the observed translator success tail is 3-72s, so 150s
+    covers the tail plus a fresh replacement round-trip while keeping the
+    total client wait (310 + 150) below the ~415s/step training cadence.
+    Env: JUDGE_DP4_TRAILING_GRACE_S (0 disables the recovery -> the old
+    fail-fast behavior).
+    """
+    raw = os.environ.get("JUDGE_DP4_TRAILING_GRACE_S", "")
+    try:
+        value = float(raw)
+    except (TypeError, ValueError):
+        return 150.0
+    return value if value >= 0.0 else 150.0
+
+
+def _dp4_trailing_poll_s() -> float:
+    """Poll cadence for the trailing-judge recovery (default 15s)."""
+    raw = os.environ.get("JUDGE_DP4_TRAILING_POLL_S", "")
+    try:
+        value = float(raw)
+    except (TypeError, ValueError):
+        return 15.0
+    return value if value > 0.0 else 15.0
+
+
+def _is_timeout_exception(exc: BaseException) -> bool:
+    """True when exc is a client-side TIMEOUT (as opposed to any other
+    transport failure). Only timeouts qualify for the trailing-judge
+    recovery - every other exception must fail fast-closed exactly as
+    before (py3.9-safe: socket.timeout is not yet TimeoutError there)."""
+    import socket
+
+    if isinstance(exc, (socket.timeout, TimeoutError)):
+        return True
+    reason = getattr(exc, "reason", None)
+    return isinstance(reason, (socket.timeout, TimeoutError))
+
+
+def _dp4_trailing_judge_recovery(
+    codes: Sequence[str],
+    evidences: Sequence[str],
+    task: dict,
+    *,
+    endpoint: str,
+    model: str,
+    max_tokens: int,
+    temperature: float,
+    timeout_s: float,
+) -> dict[int, dict[str, float | None]] | None:
+    """Recover a TRAILING judge response after a client-side timeout.
+
+    2026-09-08 (dark-step class extinction, run 094427Z step 3): the box
+    translator at :56238 is HEALTHY (judge log: all success:true, latency
+    3-72s, retries 1, last_error null), yet the trainer recorded
+    judge_reward=null for 4/4 candidates - the drop was the TRAINER's own
+    judge client: a slow-but-successful dp4 response landing after the
+    client socket deadline was discarded (one shot, except -> None) and
+    the B-046 retry loop only re-paid a BRAND-NEW request, never waiting
+    for the trailing result.
+
+    Within the JUDGE_DP4_TRAILING_GRACE_S deadline this re-issues the same
+    comparative prompt with a short socket budget and parses any response
+    that lands (2026-09-03 direct-dp4 opener rules preserved). Returns the
+    un-permuted per-candidate scores, or None once the grace deadline
+    expires (fail-closed: judge-absent, NEVER a fabricated score).
+    """
+    import time as _time
+    import urllib.request
+
+    grace_s = _dp4_trailing_grace_s()
+    poll_s = _dp4_trailing_poll_s()
+    short_timeout = max(1.0, min(timeout_s, 90.0))
+    if grace_s <= 0.0:
+        return None
+    rng = random.Random()
+    candidates_text, perm = _render_batch_judge_candidates(codes, evidences, rng=rng)
+    task_desc = task.get("meta", {}).get(
+        "description",
+        task.get("meta", {}).get("name", str(task.get("task_dir", task.get("task_id", "unknown")))),
+    )
+    payload = {
+        "model": model,
+        "max_tokens": max_tokens,
+        "temperature": temperature,
+        "messages": [
+            {
+                "role": "user",
+                "content": COMPREHENSIVE_BATCH_JUDGE_PROMPT.format(
+                    n=len(codes), candidates=candidates_text, task_context=task_desc
+                ),
+            }
+        ],
+    }
+    url = endpoint.rstrip("/") + "/v1/messages"
+    api_key = os.environ.get("HUANXIN_DP4_API_KEY", "test")
+    if endpoint.startswith(("http://127.0.0.1", "http://localhost")):
+        opener = urllib.request.build_opener(urllib.request.ProxyHandler(dict()))
+    else:
+        opener = urllib.request.build_opener()
+    deadline = _time.monotonic() + grace_s
+    while _time.monotonic() < deadline:
+        _time.sleep(poll_s)
+        req = urllib.request.Request(
+            url,
+            data=json.dumps(payload).encode(),
+            headers={
+                "Content-Type": "application/json",
+                "x-api-key": api_key,
+                "anthropic-version": "2023-06-01",
+            },
+        )
+        try:
+            with opener.open(req, timeout=short_timeout) as resp:
+                body = json.loads(resp.read().decode())
+        except Exception:
+            continue
+        if not isinstance(body, dict):
+            continue
+        text = None
+        for block in body.get("content") or []:
+            if isinstance(block, dict) and block.get("type") == "text":
+                text = block.get("text")
+                break
+        if not text:
+            continue
+        parsed = _unpermute_batch_scores(_parse_model_batch_dim_scores(text, n=len(codes)), perm)
+        if parsed is not None:
+            return parsed
+    return None
+
+
 def _model_batch_dim_scores_dp4(
     codes: Sequence[str],
     evidences: Sequence[str],
@@ -1706,7 +2043,7 @@ def _model_batch_dim_scores_dp4(
     model: str = "dp4",
     max_tokens: int = 4096,
     temperature: float = 0.0,
-    timeout_s: float = 310.0,
+    timeout_s: float | None = None,
 ) -> dict[int, dict[str, float | None]] | None:
     """Batch COMPARATIVE judge via the Huanxin dp4 (deepseek-v4-flash) model.
 
@@ -1731,6 +2068,16 @@ def _model_batch_dim_scores_dp4(
     key via env when required.
     """
     import urllib.request
+
+    def _dp4_fail(reason, reply_head="", error=""):
+        # 2026-09-08 (s28 dark-step root-cause): a bare None made the
+        # caller 3-attempt retry BLIND and the dp4_judge_failed record
+        # carried zero evidence - dark steps were unexplainable from the
+        # run log alone. Structured diagnostic + persisted reply head;
+        # still fail-closed (never a fabricated 0).
+        head = (reply_head or "")[:400]
+        _set_last_dp4_judge_diag(dict(reason=reason, reply_head=head, error=error))
+        return None
 
     n = len(codes)
     if n <= 0:
@@ -1771,17 +2118,51 @@ def _model_batch_dim_scores_dp4(
             "anthropic-version": "2023-06-01",
         },
     )
+    # 2026-09-08 (dark-step s3 root-cause CORRECTION, run 094427Z): resolve
+    # the client deadline (env JUDGE_DP4_CLIENT_TIMEOUT_S, default 310 - the
+    # R22 B5 trainer link of the timeout chain) instead of the hardcoded
+    # literal; None -> resolved here so legacy callers are unaffected.
+    if timeout_s is None:
+        timeout_s = _dp4_client_timeout_s()
     try:
-        # 2026-08-27 (judge bridge): the box's env http_proxy (squid) 403s
-        # localhost — the dp4 endpoint is the box-local bridge (or a trusted
-        # proxy), so this client must NEVER route through the env proxy.
-        opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+        # 2026-09-03 (B-043 direct-dp4): the box CAN reach the dp4
+        # subscription through its squid proxy (JWT deployed at /root/.dp4_jwt,
+        # verified 200 "BOX_DP4_OK"). Route via the env proxy when the
+        # endpoint is the real dp4 URL; bypass only for the local bridge.
+        if endpoint.startswith(("http://127.0.0.1", "http://localhost")):
+            opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+        else:
+            opener = urllib.request.build_opener()
         with opener.open(req, timeout=timeout_s) as resp:
-            body = json.loads(resp.read().decode())
-    except Exception:
-        return None
+            raw = resp.read().decode()
+    except Exception as exc:
+        # 2026-09-08 (dark-step class extinction): a slow-but-SUCCESSFUL
+        # judge (translator tail 3-72s, dp4 nominal ~200s) used to be
+        # dropped here as judge-absent - the step-3 4/4-null mechanism.
+        # On a client-side TIMEOUT ONLY, recover the trailing judge within
+        # the grace deadline before failing closed. Every other transport
+        # failure fails fast-closed exactly as before.
+        if _is_timeout_exception(exc):
+            recovered = _dp4_trailing_judge_recovery(
+                codes,
+                evidences,
+                task,
+                endpoint=endpoint,
+                model=model,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                timeout_s=float(timeout_s),
+            )
+            if recovered is not None:
+                _set_last_dp4_judge_diag(None)
+                return recovered
+        return _dp4_fail("transport_error", error=type(exc).__name__ + ": " + str(exc))
+    try:
+        body = json.loads(raw)
+    except (json.JSONDecodeError, ValueError):
+        return _dp4_fail("bad_json_body", reply_head=raw)
     if not isinstance(body, dict):
-        return None
+        return _dp4_fail("bad_json_body", reply_head=raw)
     # Anthropic Messages shape: {"content": [{"type":"text","text": "..."}]}
     text = None
     for block in body.get("content") or []:
@@ -1789,12 +2170,20 @@ def _model_batch_dim_scores_dp4(
             text = block.get("text")
             break
     if not text:
-        return None
+        return _dp4_fail("error_body", reply_head=raw)
     # Position-bias: the candidates were presented to the judge in RANDOMIZED
     # order, so the parsed POSITION-keyed scores are un-permuted back to the
     # original candidate indices — presentation order never leaks into the
     # training loop (2026-09-01 JUDGE-BRIDGE audit RED).
-    return _unpermute_batch_scores(_parse_model_batch_dim_scores(text, n=n), perm)
+    parsed = _parse_model_batch_dim_scores(text, n=n)
+    if parsed is None:
+        # B-037 family: keep the reply TEXT for post-mortem, and say WHY:
+        # prose-only reply = no_json_object; JSON present but no candidate
+        # key matched = no_candidate_keys.
+        reason = "no_json_object" if not _extract_json_object(text) else "no_candidate_keys"
+        return _dp4_fail(reason, reply_head=text)
+    _set_last_dp4_judge_diag(None)
+    return _unpermute_batch_scores(parsed, perm)
 
 
 def _parse_self_eval_score(text: str) -> float:
@@ -1889,6 +2278,7 @@ def evaluate_candidate(
         import_hygiene_weight=args.reward_import_hygiene_weight,
         single_file_expected=bool(task.get("single_file_expected", False)),
         allowed_import_roots=task.get("allowed_import_roots", []),
+        crash_progress_credit=bool(getattr(args, "crash_progress_credit", False)),
     )
     reward["details"] = result.get("details", []) if isinstance(result, dict) else []
     if bool(result.get("security_violation")):
@@ -2057,6 +2447,19 @@ def _run_harness_subprocess(
             json.dumps(task.get("meta", {}) or {}, ensure_ascii=False), encoding="utf-8"
         )
         timeout = int(getattr(args, "harness_timeout_seconds", 300) or 300)
+        # 2026-09-13 (fork-deadlock class, live): when qiskit Aer / the circuit
+        # simulator is imported in this (already fresh) eval subprocess and then
+        # a worker forks, the child inherits a qiskit/Rust-owned lock and hangs at
+        # 0% CPU in futex_wait / hrtimer_nanosleep (observed: 8 workers, 12+ min,
+        # zero progress on group-size=8 step). Two controls, both on this
+        # subprocess only, keep the eval bounded without touching the NPU trainer:
+        #  (a) cap BLAS/OMP thread pools so backend parallelism cannot wedge, and
+        #  (b) force child workers (if any) to the `spawn` start method so they
+        #      re-import state fresh instead of inheriting a locked parent.
+        _env = dict(os.environ)
+        _env.setdefault("OMP_NUM_THREADS", "1")
+        _env.setdefault("OPENBLAS_NUM_THREADS", "1")
+        _env.setdefault("MKL_NUM_THREADS", "1")
         try:
             completed = subprocess.run(
                 [
@@ -2071,6 +2474,7 @@ def _run_harness_subprocess(
                     "--meta",
                     str(meta_path),
                 ],
+                env=_env,
                 capture_output=True,
                 text=True,
                 timeout=timeout,
@@ -2165,6 +2569,11 @@ def _self_repair_failing_candidate(
         # 2026-08-25 (generation-efficiency): same stop contract as the
         # rollout path — closing fence or first EOS, cap only as backstop.
         stop_ids = configured_eos_token_ids(model, backend.text_backend)
+        # 2026-09-11: same BOS/PAD-in-EOS guard as the rollout path — a repair
+        # completion that dies on the sequence-start marker is not a repair.
+        repair_suppress_ids = configured_suppress_token_ids(
+            model, backend.text_backend, stop_eos_ids=stop_ids
+        )
         with torch.no_grad():
             outputs = model.generate(
                 **inputs,
@@ -2178,6 +2587,7 @@ def _self_repair_failing_candidate(
                 # broad except, so self-repair silently never repaired.
                 return_dict_in_generate=True,
                 eos_token_id=sorted(stop_ids) if stop_ids else None,
+                logits_processor=rollout_suppress_logits_processor(repair_suppress_ids),
                 stopping_criteria=StoppingCriteriaList(
                     [
                         StopAfterClosedCodeFence(
@@ -2379,6 +2789,16 @@ def generate_group(
     # (60-110 min/step). The closing-fence criterion below is the primary
     # stopper; EOS and max-new-tokens are the backstops.
     stop_eos_ids = configured_eos_token_ids(model, backend.text_backend)
+    # 2026-09-11 (Qwen3.8-27B GRPO no-progress root cause): Qwen3.8's
+    # generation_config declares 248044 as BOS + PAD + a second EOS, so the
+    # stop union made the sequence-start/pad marker a legal rollout end — every
+    # candidate died after 2-4 tokens (all rewards 0, 7/7 steps skipped). The
+    # id is suppressed during decode (never sampled) while the genuine chat EOS
+    # 248046 stays in the stop set; the helper returns an EMPTY set unless at
+    # least one real EOS remains, so generation can never lose its stop.
+    suppress_token_ids = configured_suppress_token_ids(
+        model, backend.text_backend, stop_eos_ids=stop_eos_ids
+    )
 
     raw_responses = []
     completion_token_ids: list[torch.Tensor] = []
@@ -2429,13 +2849,21 @@ def generate_group(
                 prompt_text = backend.text_backend.decode(prompt_text_ids, skip_special_tokens=True)
                 if greedy_n2 > 0:
                     greedy_texts = _client.generate_batch(
-                        prompt_text, greedy_n2, int(effective_max_new_tokens), 0.0
+                        prompt_text,
+                        greedy_n2,
+                        int(effective_max_new_tokens),
+                        0.0,
+                        suppress_token_ids=sorted(suppress_token_ids),
                     )
                 else:
                     greedy_texts = []
                 if sampled_n2 > 0:
                     sampled_texts = _client.generate_batch(
-                        prompt_text, sampled_n2, int(effective_max_new_tokens), effective_temp
+                        prompt_text,
+                        sampled_n2,
+                        int(effective_max_new_tokens),
+                        effective_temp,
+                        suppress_token_ids=sorted(suppress_token_ids),
                     )
                 else:
                     sampled_texts = []
@@ -2499,6 +2927,7 @@ def generate_group(
                     return_dict_in_generate=True,
                     output_scores=False,
                     eos_token_id=sorted(stop_eos_ids) if stop_eos_ids else None,
+                    logits_processor=rollout_suppress_logits_processor(suppress_token_ids),
                     stopping_criteria=StoppingCriteriaList(
                         [StopAfterClosedCodeFence(backend.text_backend, prompt_length=prompt_len)]
                     ),
@@ -2520,6 +2949,11 @@ def generate_group(
                     return_dict_in_generate=True,
                     output_scores=False,
                     eos_token_id=sorted(stop_eos_ids) if stop_eos_ids else None,
+                    # 2026-09-11 (BOS/PAD-in-EOS root cause): SuppressTokensLogitsProcessor
+                    # runs for BOTH greedy and sampled decode (checked in the pinned
+                    # transformers 4.57.6 _get_logits_processor), and the stop set keeps
+                    # at least one real EOS — so this cannot run away.
+                    logits_processor=rollout_suppress_logits_processor(suppress_token_ids),
                     stopping_criteria=StoppingCriteriaList(
                         [StopAfterClosedCodeFence(backend.text_backend, prompt_length=prompt_len)]
                     ),
@@ -2973,10 +3407,20 @@ def observe_and_evaluate_breakers(
     repair_queued: bool,
     repair_converted_jsonl: str | None,
     all_fail: bool,
+    completion_token_lengths: list[int] | None = None,
+    eos_termination_rate: float | None = None,
+    truncation_rate: float | None = None,
+    fence_termination_rate: float | None = None,
 ) -> list[dict[str, Any]]:
-    """Feed one step's facts to the circuit-breaker monitor and close a window.
+    """Feed one step's facts to the circuit-breaker monitor and evaluate rules.
 
     Returns newly tripped breaker events (see ``CircuitBreakerState.evaluate``).
+
+    ``completion_token_lengths`` and ``eos_termination_rate`` are the generation
+    diagnostics the caller already holds; they feed the B-125 response-length
+    collapse floor, which is evaluated on EVERY step (not only on a window
+    boundary) because an immediate-EOS collapse is conclusive within a handful
+    of steps. Omitting them leaves every pre-existing rule unchanged.
     """
     breaker.observe_step(
         step=step,
@@ -2987,6 +3431,10 @@ def observe_and_evaluate_breakers(
         repair_queued=repair_queued,
         repair_converted=count_repair_conversions(repair_converted_jsonl),
         all_fail_share=1.0 if all_fail else 0.0,
+        completion_token_lengths=completion_token_lengths,
+        eos_termination_rate=eos_termination_rate,
+        truncation_rate=truncation_rate,
+        fence_termination_rate=fence_termination_rate,
     )
     return breaker.evaluate(step=step)
 
@@ -3117,6 +3565,24 @@ def alarm_degenerate_policy(
 # repair-routing fires on any flat all-fail regardless of policy health.
 QUARANTINE_GATE_COLLAPSE_MAX_TOKENS: int = 8
 
+# 2026-09-11 (algorithm lane, run-20260909T104517Z warm-continue post-mortem):
+# the entropy clause was unbounded in completion length, so a
+# LONG-but-low-entropy group was quarantined exactly like a 1-token EOS
+# collapse. Evidence from the live step records: step 2 sampled entropy_mean
+# 0.00158 with completion_token_lengths [2048, 2048, 302, 2048],
+# cap_run_with_fence_opener_rate 0.5 and extracted_code_chars
+# [6211, 6211, 884, 6336] — i.e. real (if rambling) code bodies, not
+# evidence-free 1-token stubs. Because quarantine skips the reward pass, the
+# synthesized zero rewards forced ``update_signal_magnitude`` to 0.0 and the
+# step landed in the ``low_reward_signal`` skip: 97 of 100 steps ran with
+# lr 0.0 and seq_kl 0.0, so the policy could never leave the state that kept
+# re-triggering the gate. Low entropy is only a collapse signature while the
+# completions are too short to carry evidence; this bound sits between the
+# stub bound (8) and the shortest evidence-bearing completion observed in the
+# live runs (142 tokens at run-20260909 step 18; 256 in the parent run
+# 20260908T094427Z).
+QUARANTINE_GATE_ENTROPY_MAX_TOKENS: int = 64
+
 
 def quarantine_gate_active(
     *,
@@ -3124,14 +3590,22 @@ def quarantine_gate_active(
     entropy_mean: float | None,
     completion_token_lengths: list[int] | None,
     collapse_max_tokens: int = QUARANTINE_GATE_COLLAPSE_MAX_TOKENS,
+    entropy_max_tokens: int = QUARANTINE_GATE_ENTROPY_MAX_TOKENS,
 ) -> bool:
     """True when this step shows a policy-collapse signature — quarantine and
     repair-routing must be suppressed.
 
     Engages on ANY of:
     - the 3-step degenerate alarm (r10) fired on this step;
-    - entropy below the degenerate floor (0.05) — the confident-wrong
-      single-mode collapse (run-6 step 25: entropy 0.0136);
+    - entropy below the degenerate floor (0.05) AND an all-short group
+      (every completion below ``entropy_max_tokens``, 64) — the
+      confident-wrong single-mode collapse (run-6 step 25: entropy 0.0136 on
+      [1,1,1,1]). The length bound is load-bearing: a long completion is
+      evidence-bearing, so a low-entropy-but-long group must run its reward
+      pass instead of being quarantined (2026-09-11, run-20260909: entropy
+      0.00158 with 302-2048-token completions and 6211-char code bodies;
+      unbounded, this clause froze 97/100 steps at lr 0.0 — see the constant's
+      post-mortem comment);
     - a stub-collapse group: EVERY completion shorter than 8 tokens (the
       near-EOS-collapse class even at non-tiny entropy).
 
@@ -3141,7 +3615,12 @@ def quarantine_gate_active(
     """
     if degenerate_policy_alarm:
         return True
-    if entropy_mean is not None and float(entropy_mean) < DEGENERATE_POLICY_ENTROPY_MAX:
+    if (
+        entropy_mean is not None
+        and float(entropy_mean) < DEGENERATE_POLICY_ENTROPY_MAX
+        and completion_token_lengths
+        and max(int(length) for length in completion_token_lengths) < int(entropy_max_tokens)
+    ):
         return True
     if completion_token_lengths and max(int(length) for length in completion_token_lengths) < int(
         collapse_max_tokens
@@ -3483,14 +3962,23 @@ def restore_router_state(router: FrontierRouter, state: Mapping[str, Any]) -> No
     router.state = restored
 
 
-def restore_trust_region_state(optimizer: Any, state: Mapping[str, Any]) -> int:
+def restore_trust_region_state(
+    optimizer: Any, state: Mapping[str, Any], resume_fresh: bool = False
+) -> int:
     """Restore the trust-region violation count and the scaled optimizer LR.
 
     The LR has been halved in place by scale_lr on every violation; restoring
     it continues the halving ladder instead of resetting to the base LR and
     replaying the violations. Returns the restored violation count (0 when the
     snapshot carries none).
+
+    B-224: with resume_fresh=True the snapshot's ladder is NOT replayed — the
+    optimizer keeps the caller's --lr and the count resets to 0. After a
+    bleed alarm the halving was driven by the false-violation loop, so a
+    relaunch must not inherit it.
     """
+    if resume_fresh:
+        return 0
     trust = state.get("trust_region") or {}
     try:
         count = max(0, int(trust.get("violation_count", 0)))
@@ -3841,6 +4329,30 @@ def enrich_rollout_rewards_with_sapo_terms(
 
 EVAL_RESULTS_FILENAME = "eval_results.jsonl"
 
+# 2026-09-01 (bug-hunter mechanism 6): the row schema carries an explicit
+# version. A field added/removed WITHOUT a deliberate bump of
+# EVAL_RESULTS_SCHEMA_VERSION fails the schema pin in
+# tests/test_grpo_trainer_eval_results.py (the judge-dims omission class:
+# "brevity" was added on 2026-08-27 with no signal to downstream
+# exact-mode consumers, which silently recomposed without it).
+EVAL_RESULTS_SCHEMA_VERSION = 1
+EVAL_RESULTS_ROW_FIELDS = frozenset(
+    {
+        "schema_version",
+        "step",
+        "index",
+        "passed",
+        "details",
+        "detail_budget",
+        "code_hash",
+        "syntax",
+        "interface",
+        "verifier",
+        "brevity",
+        "import_hygiene",
+    }
+)
+
 
 def build_eval_result_row(
     *,
@@ -3857,11 +4369,15 @@ def build_eval_result_row(
     row end-to-end (its --harness-results exact mode recomputes shaped/verifier
     from ``passed``/``details``/``detail_budget``) and candidates can be
     re-scored offline instead of being dropped after the temp-dir eval.
-    Fields: {step, index, passed, details, detail_budget, code_hash, syntax,
-    interface, verifier, brevity, import_hygiene}. ``code`` is the extracted
-    candidate that was scored; ``code_hash`` is its sha256.
+    Fields: {schema_version, step, index, passed, details, detail_budget,
+    code_hash, syntax, interface, verifier, brevity, import_hygiene}.
+    ``code`` is the extracted candidate that was scored; ``code_hash`` is its
+    sha256. ``schema_version`` (2026-09-01) is pinned first: streaming
+    readers can gate on it and any field add/remove without a version bump
+    fails the schema test.
     """
     return {
+        "schema_version": EVAL_RESULTS_SCHEMA_VERSION,
         "step": int(step),
         "index": int(index),
         "passed": bool(entry.get("passed", False)),
@@ -4289,13 +4805,26 @@ def build_launch_config(args: argparse.Namespace) -> dict[str, Any]:
 
 
 def write_json_atomic(path: Path, payload: dict[str, Any]) -> None:
+    """Write ``payload`` to ``path`` atomically (temp file + rename).
+
+    A failed write (serialization error, ENOSPC, fsync failure) must not
+    leave the ``.{name}.tmp`` staging file behind — disk hygiene: the
+    resume-state writer runs on every checkpoint, so leaked stages would
+    accumulate unbounded across a long run.
+    """
     tmp = path.with_name(f".{path.name}.tmp")
-    with tmp.open("w", encoding="utf-8") as handle:
-        json.dump(payload, handle, indent=2, ensure_ascii=False, default=str)
-        handle.write("\n")
-        handle.flush()
-        os.fsync(handle.fileno())
-    tmp.replace(path)
+    try:
+        with tmp.open("w", encoding="utf-8") as handle:
+            json.dump(payload, handle, indent=2, ensure_ascii=False, default=str)
+            handle.write("\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        tmp.replace(path)
+    finally:
+        # No-op after a successful replace (the stage no longer exists);
+        # removes the partial stage on any failure.
+        if tmp.exists():
+            tmp.unlink(missing_ok=True)
 
 
 def peft_checkpoint_complete(path: Path) -> bool:
@@ -4369,6 +4898,103 @@ def _atomic_save_adapter_dir(save_model: Any, text_preprocessor: Any, adapter_di
             shutil.rmtree(temp_dir, ignore_errors=True)
 
 
+def _sweep_stale_atomic_save_temps(output_dir: Path) -> int:
+    """Remove stale atomic-save staging dirs left by a hard-KILLed previous
+    run in the same output dir (B-030).
+
+    The atomic saves stage to ``.{name}.tmp-{pid}-{hash}`` dirs and rename
+    into place, cleaning the stage in ``finally``. But the final-save path
+    (``termination_save``) runs the cleanup INSIDE the SIGTERM handler; the
+    launcher's KILL escalation lands mid-save before the ``finally``
+    completes, so the ``.adapter.tmp-*`` (live-adapter path) and
+    ``.step_*_adapter.tmp-*`` (step-checkpoint path) staging dirs leak
+    (~300MB partial writes each). Swept on launch so each run starts
+    disk-clean and no partial writes accumulate across run-terminations.
+
+    Only matches the exact atomic-save staging pattern (``.`` prefix +
+    name + ``.tmp-`` + pid + ``-`` + hash). NEVER touches a complete
+    ``adapter/``, ``step_NNNNNN_adapter/``, or any non-staging output.
+    Returns the number of stale entries removed (0 when clean).
+    """
+    output_dir = Path(output_dir)
+    removed = 0
+    for name in list(output_dir.iterdir()):
+        n = name.name
+        is_adapter_stage = n.startswith(".adapter.tmp-")
+        is_step_adapter_stage = ".step_" in n and "_adapter.tmp-" in n
+        # `write_json_atomic` stages FILES as `.{name}.tmp` (resume_state,
+        # launch_config, ...). That shape is disjoint from the
+        # `.{name}.tmp-{pid}-{hash}` dirs above, so it used to slip past this
+        # sweep and accumulate forever. Reclaim it only when its published
+        # target is absent (a `.tmp` alongside a live target is not stale).
+        is_json_stage = (
+            len(n) > 5
+            and name.is_file()
+            and n.startswith(".")
+            and n.endswith(".tmp")
+            and not (output_dir / n[1 : -len(".tmp")]).exists()
+        )
+        # Never sweep a raw `.tmp-*` entry that isn't the atomic-save pattern
+        # (lenient guard against unrelated hidden temp files).
+        if n.startswith(".tmp-"):
+            continue
+        if not (is_adapter_stage or is_step_adapter_stage or is_json_stage):
+            continue
+        if name.is_dir():
+            shutil.rmtree(name, ignore_errors=True)
+        else:
+            name.unlink(missing_ok=True)
+        removed += 1
+    return removed
+
+
+def _sweep_stale_kernel_meta_temps(root: Path | None = None, retries: int = 2) -> int:
+    """Remove stale CANN/Ascend ``kernel_meta/kernel_meta_temp_*`` temp dirs
+    left behind by previous runs (B-023).
+
+    The box's Ascend/CANN runtime creates ``kernel_meta/kernel_meta_temp_*``
+    temp dirs during training and tries to remove them at teardown, but the
+    recursive ``rm -rf`` frequently FAILS with ``Directory not empty`` (a
+    race / NFS-hold during CANN kernel-manager teardown). The failed cleanup
+    leaves non-empty ``kernel_meta_temp_*`` dirs that accumulate across run
+    histories (disk-leak risk, benign to training).
+
+    On launch (new process, previous CANN processes dead) those stale temp
+    dirs are safe to remove. The sweep retries the removal a few times with a
+    brief sleep — the ``Directory not empty`` is transient, and a fresh
+    launch generally has no active CANN writer on these paths.
+
+    Only matches the exact ``kernel_meta_temp_*`` prefix under
+    ``<root>/kernel_meta/``. NEVER touches the ``kernel_meta`` dir itself or
+    any other kernel_meta content (e.g. a kernel cache). Returns the number
+    of stale entries removed (0 when clean / no kernel_meta dir).
+    """
+    root = Path(root or Path.cwd())
+    km_dir = root / "kernel_meta"
+    if not km_dir.is_dir():
+        return 0
+    removed = 0
+    for entry in list(km_dir.iterdir()):
+        if not entry.name.startswith("kernel_meta_temp_"):
+            continue
+        for attempt in range(max(1, retries + 1)):
+            try:
+                if entry.is_dir() and not entry.is_symlink():
+                    shutil.rmtree(entry)
+                elif entry.exists():
+                    entry.unlink()
+                removed += 1
+                break
+            except OSError:
+                if attempt < retries:
+                    time.sleep(1)
+                # On the final retry the OSError is swallowed — the stale
+                # entry is left for the NEXT launch to sweep again (the
+                # CANN teardown race is transient; a later process usually
+                # can remove it).
+    return removed
+
+
 def termination_save(
     model: Any,
     text_preprocessor: Any,
@@ -4396,11 +5022,24 @@ def termination_save(
     ``resume_state`` (soft-resume, 2026-08-25): when provided, the snapshot
     is written atomically as ``<output_dir>/resume_state.json`` so the next
     launch with ``--resume-state`` continues the exact curriculum/router/temp/
-    trust-region/repair state. The payload's ``step`` is the LAST COMPLETED
-    step (not the in-flight boundary the adapter dir is named after).
+    trust-region/repair state. The payload's ``step`` MUST match the
+    checkpoint dir step — the F2 in-flight boundary (2026-08-26 code-review;
+    bug-hunter mechanism 8 enforcement): a payload lagging the dir silently
+    replays/skips an update boundary on the next launch (the SIGTERM
+    coherence class). During model load (step=None) no dir is written and
+    the payload (if any) carries the last completed step.
     """
     if rank != 0 or model is None:
         return None
+    if resume_state is not None and step is not None:
+        payload_step = int(resume_state.get("step", -1))
+        if payload_step != int(step):
+            raise ValueError(
+                f"resume_state.step {payload_step} != checkpoint dir step {int(step)} — "
+                "the payload must match the step_NNNNNN_adapter boundary being "
+                "written (F2 in-flight-boundary contract); refusing an incoherent "
+                "soft-resume snapshot"
+            )
     save_model = model.module if distributed else model
     if step is not None:
         ckpt_dir = Path(output_dir) / f"step_{int(step):06d}_adapter"
@@ -4539,6 +5178,9 @@ def _run_dp4_batch_judge(
         endpoint=endpoint,
         model=getattr(args, "judge_dp4_model", "dp4") or "dp4",
         max_tokens=int(getattr(args, "judge_dp4_max_tokens", 4096) or 4096),
+        # timeout_s is intentionally NOT pinned here: the client resolves
+        # None -> _dp4_client_timeout_s() so the deadline lives in exactly
+        # one place (2026-09-08 dark-step s3 class extinction).
     )
 
 
@@ -4593,6 +5235,40 @@ def validate_batch_judge_config(args: argparse.Namespace) -> None:
         )
 
 
+def validate_reward_judge_wiring(args: argparse.Namespace) -> None:
+    """Fail-closed guard for a configured-but-DARK judge mass (B-219, 2026-09-14).
+
+    Measured live: a run trained for hours with ``judge_reward = None`` and an
+    EMPTY ``judge_dim_scores`` map on 8/8 candidates while its launch config
+    echoed ``judge: 0.10``. The two wirings are independent --
+    ``--reward-judge-mass`` DEFAULTS to 0.10 while BOTH scorers default OFF --
+    so a silently-dark weighted term was the DEFAULT launch shape. The policy
+    optimized a reward whose documented composition was not the reward it saw.
+
+    Either scorer satisfies this guard: the per-candidate frozen judge
+    (``--model-judge-enabled`` WITH a ``--judge-model-path``) or the dp4 batch
+    comparative judge (``--batch-comparative-judge``; its endpoint requirement
+    is enforced by validate_batch_judge_config). A run that wants NO judge term
+    must say so with ``--reward-judge-mass 0`` -- the dark default is refused,
+    not warned.
+    """
+    mass = float(getattr(args, "reward_judge_mass", 0.0) or 0.0)
+    if mass <= 0.0:
+        return
+    per_candidate = bool(getattr(args, "model_judge_enabled", False)) and bool(
+        getattr(args, "judge_model_path", None)
+    )
+    if per_candidate or bool(getattr(args, "batch_comparative_judge", False)):
+        return
+    raise SystemExit(
+        f"B-219 fail-closed: --reward-judge-mass {mass} is configured but NO judge "
+        "scorer is wired -- the term would earn 0.0 every step while the launch "
+        "config advertises it (the silent-darkness defect). Enable a scorer "
+        "(--model-judge-enabled + --judge-model-path, or --batch-comparative-judge) "
+        "or set --reward-judge-mass 0."
+    )
+
+
 def main() -> int:
     # The trainer's stdout is redirected to the run log; block buffering would
     # swallow every phase marker if the container is killed mid-stall. Line-buffer
@@ -4613,6 +5289,9 @@ def main() -> int:
     # comparative judge is enabled, the dp4 endpoint is mandatory — fail-closed,
     # never the (removed) in-process self-judge fallback.
     validate_batch_judge_config(args)
+    # B-219: a configured judge mass with no scorer behind it used to start
+    # silently dark -- refuse it before any load happens.
+    validate_reward_judge_wiring(args)
     if args.max_adaptive_new_tokens is None:
         args.max_adaptive_new_tokens = args.max_new_tokens
     if args.max_adaptive_new_tokens < args.max_new_tokens:
@@ -4666,6 +5345,12 @@ def main() -> int:
         if args.repair_sidecar_log
         else default_sidecar_log_path(output_dir)
     )
+    # cwd-independent probe (defect 6): a cwd-relative default (logs/sapo_27b_ai
+    # /...) must resolve against the REPO ROOT, matching the explicit
+    # REPAIR_LOGDIR the relauncher passes -- else any non-root cwd probes a
+    # nonexistent log and churns relaunches.
+    if not sidecar_log.is_absolute():
+        sidecar_log = ROOT / sidecar_log
     sidecar_alarm_state: dict[str, Any] = {"was_alive": None, "alarm_count": 0}
     _boot_sidecar = check_sidecar_liveness(
         sidecar_pidfile,
@@ -4827,6 +5512,28 @@ def main() -> int:
         metrics_path.unlink(missing_ok=True)
         run_config_path.unlink(missing_ok=True)
         launch_config_path.unlink(missing_ok=True)
+        # B-030: a hard-KILLed previous run leaks .adapter.tmp-* /
+        # .step_*_adapter.tmp-* staging dirs (the atomic-save `finally`
+        # cleanup runs inside the SIGTERM handler before the launcher's KILL
+        # escalation). Sweep them on launch so each run starts disk-clean.
+        _n_stale = _sweep_stale_atomic_save_temps(output_dir)
+        if _n_stale:
+            print(
+                f"[cleanup] swept {_n_stale} stale atomic-save staging dir(s) "
+                f"from {output_dir} (B-030 hard-KILL leak)",
+                flush=True,
+            )
+        # B-023: the box's CANN/Ascend runtime leaves non-empty
+        # kernel_meta/kernel_meta_temp_* dirs behind (its recursive rm fails
+        # with 'Directory not empty' at teardown). Sweep them on launch so
+        # kernel_meta accumulation is bounded across run histories.
+        _n_km = _sweep_stale_kernel_meta_temps()
+        if _n_km:
+            print(
+                f"[cleanup] swept {_n_km} stale kernel_meta/kernel_meta_temp_* "
+                f"dir(s) from {Path.cwd()} (B-023 CANN teardown leak)",
+                flush=True,
+            )
         launch_config = build_launch_config(args)
         write_json_atomic(launch_config_path, launch_config)
         print(
@@ -5247,6 +5954,11 @@ def main() -> int:
         if args.repair_queue_path
         else output_dir / "repair_queue.jsonl"
     )
+    if not args.repair_converted_jsonl:
+        # Flag > $REPAIR_CONVERTED_JSONL (launcher-pinned) > run-dir default.
+        # Without this the all-fail-without-repair breaker reads 0 conversions
+        # forever even while the sidecar converts.
+        args.repair_converted_jsonl = str(output_dir / "repair_stage" / "repair_converted.jsonl")
     recent_frontier: list[str] = []
     total_probes = 0
     if resume_state_payload is not None:
@@ -5312,7 +6024,11 @@ def main() -> int:
     # LR in place without any log line or record field). On a soft-resume the
     # count AND the scaled optimizer LR continue from the paused run.
     trust_region_violation_count = (
-        restore_trust_region_state(optimizer, resume_state_payload)
+        restore_trust_region_state(
+            optimizer,
+            resume_state_payload,
+            resume_fresh=bool(getattr(args, "trust_region_resume_fresh", False)),
+        )
         if resume_state_payload is not None
         else 0
     )
@@ -5752,7 +6468,20 @@ def main() -> int:
             # from the frozen model-judge machinery (dp4 is an HTTP judge).
             (getattr(args, "judge_dp4_endpoint", "") or "").strip()
             batch_weights = batch_dp4_judge_weights(args, judge_weights if judge_enabled else None)
-            batch_scores = _run_dp4_batch_judge(args, batch_codes, batch_evidences, task)
+            # B-046 (2026-09-04, user directive "scoring errors must be retried
+            # twice"): a single transient dp4/transport failure must not cost a
+            # judged step. Retry the whole batch judge up to 2 extra times;
+            # success is a non-None parse whose cells are not all-None.
+            batch_scores = None
+            for _dp4_attempt in range(1 + 2):
+                batch_scores = _run_dp4_batch_judge(args, batch_codes, batch_evidences, task)
+                if batch_scores is not None and any(
+                    any(v is not None for v in (cell or {}).values())
+                    for cell in batch_scores.values()
+                ):
+                    break
+                if _dp4_attempt < 2:
+                    time.sleep(5.0 * (_dp4_attempt + 1))
             if batch_scores is None:
                 # 2026-08-27 (critical review C2): judge-absent must be LOUD —
                 # a silent None meant w_J=0 with no operator-visible signal.
@@ -5763,6 +6492,27 @@ def main() -> int:
                             "step": step,
                             "task": task["task_id"],
                             "reason": "no_scores_from_dp4",
+                            "diag": get_last_dp4_judge_diag(),
+                        }
+                    ),
+                    flush=True,
+                )
+            if (
+                batch_scores is not None
+                and batch_scores
+                and all(
+                    all(v is None for v in (cell or {}).values()) for cell in batch_scores.values()
+                )
+            ):
+                # B-037: all-None cells = reply decoded but no candidate key
+                # matched — make it LOUD (was a silent judge-absent).
+                print(
+                    json.dumps(
+                        {
+                            "stage": "batch_judge_all_dims_none",
+                            "step": step,
+                            "task": task["task_id"],
+                            "hint": "judge reply decoded but no candidate key matched",
                         }
                     ),
                     flush=True,
@@ -5883,6 +6633,9 @@ def main() -> int:
         # (degenerate_alarm/quarantine_suppressed computed BEFORE the reward
         # pass — see the r10/T1a block above the eval loop)
         pass_rate = float(pass_rewards.mean().item())
+        # B-245: keep the curriculum's compression strength in step with the
+        # policy's actual yield (weight() reads this on the NEXT sampling step).
+        curriculum.global_pass_rate = pass_rate
         probe = router.probe_record(
             task["task_id"],
             step,
@@ -5943,6 +6696,12 @@ def main() -> int:
             advantage_mode=args.advantage_mode,
             signal_stats=signal_stats,
             loo_advantage_rms=loo_advantage_rms,
+            # 2026-09-02 flat-advantage fix: a magnitude from ONE outlier
+            # candidate (7/8 identical rewards -> 2 distinct advantage values)
+            # is noise, not group signal — gate it off like any flat group
+            # (resume-3 step-26 RED class).
+            advantages=advantages,
+            pass_rate=pass_rate,
         )
 
         repair_queued = False
@@ -5979,6 +6738,7 @@ def main() -> int:
             "advantage_scale": advantage_scale,
             "loo_advantage_rms": loo_advantage_rms,
             "loo_advantage_mean_abs": loo_advantage_mean_abs,
+            "advantage_dispersion": candidate_advantage_dispersion(advantages),
             "update_signal_magnitude": update_signal_magnitude,
             "update_signal_kind": update_signal_kind,
             "update_signal_threshold": float(args.min_reward_std),
@@ -6029,6 +6789,9 @@ def main() -> int:
             max_log_age_seconds=args.repair_sidecar_max_log_age,
         )
         step_ctx["sidecar_alive"] = _sidecar["alive"]
+        step_ctx["sidecar_relaunch_attempted"] = _maybe_repair_sidecar_relaunch(
+            _sidecar, sidecar_alarm_state, output_dir
+        )
         if _sidecar["alarm"]:
             sidecar_alarm_state["alarm_count"] += 1
             state_changed = sidecar_alarm_state["was_alive"] is not False
@@ -6125,6 +6888,10 @@ def main() -> int:
                 repair_queued=repair_queued,
                 repair_converted_jsonl=args.repair_converted_jsonl,
                 all_fail=all_fail,
+                completion_token_lengths=generation_diagnostics["completion_token_lengths"],
+                eos_termination_rate=generation_diagnostics["eos_termination_rate"],
+                truncation_rate=generation_diagnostics.get("truncation_rate"),
+                fence_termination_rate=generation_diagnostics.get("fence_termination_rate"),
             )
             emit_step_record(
                 rank=rank,
@@ -6154,6 +6921,10 @@ def main() -> int:
                 repair_queued=repair_queued,
                 repair_converted_jsonl=args.repair_converted_jsonl,
                 all_fail=all_fail,
+                completion_token_lengths=generation_diagnostics["completion_token_lengths"],
+                eos_termination_rate=generation_diagnostics["eos_termination_rate"],
+                truncation_rate=generation_diagnostics.get("truncation_rate"),
+                fence_termination_rate=generation_diagnostics.get("fence_termination_rate"),
             )
             emit_step_record(
                 rank=rank,
@@ -6188,6 +6959,10 @@ def main() -> int:
                 repair_queued=repair_queued,
                 repair_converted_jsonl=args.repair_converted_jsonl,
                 all_fail=all_fail,
+                completion_token_lengths=generation_diagnostics["completion_token_lengths"],
+                eos_termination_rate=generation_diagnostics["eos_termination_rate"],
+                truncation_rate=generation_diagnostics.get("truncation_rate"),
+                fence_termination_rate=generation_diagnostics.get("fence_termination_rate"),
             )
             emit_step_record(
                 rank=rank,
@@ -6435,6 +7210,10 @@ def main() -> int:
                     repair_queued=repair_queued,
                     repair_converted_jsonl=args.repair_converted_jsonl,
                     all_fail=all_fail,
+                    completion_token_lengths=generation_diagnostics["completion_token_lengths"],
+                    eos_termination_rate=generation_diagnostics["eos_termination_rate"],
+                    truncation_rate=generation_diagnostics.get("truncation_rate"),
+                    fence_termination_rate=generation_diagnostics.get("fence_termination_rate"),
                 )
                 emit_step_record(
                     rank=rank,
@@ -6701,6 +7480,10 @@ def main() -> int:
                     repair_queued=repair_queued,
                     repair_converted_jsonl=args.repair_converted_jsonl,
                     all_fail=all_fail,
+                    completion_token_lengths=generation_diagnostics["completion_token_lengths"],
+                    eos_termination_rate=generation_diagnostics["eos_termination_rate"],
+                    truncation_rate=generation_diagnostics.get("truncation_rate"),
+                    fence_termination_rate=generation_diagnostics.get("fence_termination_rate"),
                 )
                 emit_step_record(
                     rank=rank,
@@ -6756,6 +7539,10 @@ def main() -> int:
                     repair_queued=repair_queued,
                     repair_converted_jsonl=args.repair_converted_jsonl,
                     all_fail=all_fail,
+                    completion_token_lengths=generation_diagnostics["completion_token_lengths"],
+                    eos_termination_rate=generation_diagnostics["eos_termination_rate"],
+                    truncation_rate=generation_diagnostics.get("truncation_rate"),
+                    fence_termination_rate=generation_diagnostics.get("fence_termination_rate"),
                 )
                 emit_step_record(
                     rank=rank,
@@ -6827,12 +7614,23 @@ def main() -> int:
         ratio_after_update = 0.0
         clip_fraction_after_update = 0.0
         seq_kl_after = 0.0
+        # B-224 instrumenter: persisted per-candidate post-vs-old data (empty
+        # when trust region is disabled / no candidates entered the check).
+        trust_region_per_candidate_rows: list[dict[str, Any]] | None = None
         if args.trust_region_enabled and saved_params is not None and last_normalized_old_log_probs:
             active_model.eval()
             with torch.no_grad():
                 post_log_probs: list[torch.Tensor] = []
-                for raw_response, completion_ids in _strict_zip(
-                    raw_responses, rollout_completion_token_ids
+                # B-224 instrumenter (2026-09-14, tick #456 ADDENDUM 2): the
+                # post-update probe was observed to disagree with the in-train
+                # per-candidate seq_kl by ~250x on the SAME prefix, but the
+                # per-candidate post values were locals and never persisted, so
+                # no banked step was diagnosable. Persist the per-candidate
+                # post-vs-old data in the step record (default ON) so the next
+                # violating step can be diffed numerically.
+                trust_per_candidate_rows: list[dict[str, Any]] = []
+                for idx, (raw_response, completion_ids) in enumerate(
+                    _strict_zip(raw_responses, rollout_completion_token_ids)
                 ):
                     post_log_prob, post_token_count = compute_completion_log_prob(
                         active_model,
@@ -6847,10 +7645,42 @@ def main() -> int:
                         prompt_token_ids=rollout_prompt_token_ids,
                         prompt_attention_mask=rollout_prompt_attention_mask,
                         completion_token_ids=completion_ids,
+                        # B-212 (2026-09-14): the train pass caps the sequence at
+                        # train_pass_max_seq_length (the 2026-08-25 OOM fix), and the
+                        # baseline this block differences against
+                        # (last_normalized_old_log_probs) is aligned to that kept
+                        # PREFIX. Without the same cap here this pass means over a
+                        # different token set, so a train-pass-truncated candidate
+                        # reports a spurious violation and scale_lr halves the LR on
+                        # an unchanged policy (measured live: 2.5e-05 -> 1.25e-05 ->
+                        # 6.25e-06 across two false violations).
+                        train_seq_cap=train_pass_seq_cap,
                     )
                     if post_token_count.item() > 0:
-                        post_log_probs.append(post_log_prob / post_token_count.clamp_min(1))
+                        post_mean = post_log_prob / post_token_count.clamp_min(1)
+                        post_log_probs.append(post_mean)
+                        per_candidate_row: dict[str, Any] = {
+                            "idx": idx,
+                            "old_token_count": int(old_token_counts[idx].item()),
+                            "post_token_count": int(post_token_count.item()),
+                            "old_mean": float(
+                                (old_log_probs[idx] / old_token_counts[idx].clamp_min(1)).item()
+                            ),
+                            "post_mean": float(post_mean.item()),
+                            "delta": float(
+                                (
+                                    post_mean
+                                    - old_log_probs[idx] / old_token_counts[idx].clamp_min(1)
+                                ).item()
+                            ),
+                        }
+                        trust_per_candidate_rows.append(per_candidate_row)
+            trust_region_per_candidate_rows = trust_per_candidate_rows
             if post_log_probs:
+                # B-224 (count-mismatch refuted, bugqueue ADDENDUM 2): the old
+                # side stays last_normalized_old_log_probs (aligned prefix for
+                # SAPO via B-212; full mean otherwise) exactly as the B-212
+                # behavior — do NOT change the basis on a refuted hypothesis.
                 trust_stats = sequence_ratio_stats(
                     torch.stack(post_log_probs),
                     torch.stack(last_normalized_old_log_probs),
@@ -6883,6 +7713,37 @@ def main() -> int:
                         # Audit #2: scale_lr halved the LR in place with no log
                         # line and no record field — 10 violations silently took
                         # the LR from 2e-5 to ~2e-8.
+                        # B-224 instrumenter: per-candidate post-vs-old data was
+                        # a local and never persisted, so no banked step was
+                        # diagnosable (bugqueue ADDENDUM 2). Persist it: default
+                        # it rides the step record; when --trust-region-dump is
+                        # set also append the raw per-candidate rows to
+                        # trust_region_dump.jsonl for numeric diffing.
+                        if getattr(args, "trust_region_dump", False):
+                            try:
+                                dump_path = output_dir / "trust_region_dump.jsonl"
+                                with open(dump_path, "a", encoding="utf-8") as _df:
+                                    _df.write(
+                                        json.dumps(
+                                            {
+                                                "step": step,
+                                                "rows": trust_per_candidate_rows,
+                                            },
+                                            ensure_ascii=False,
+                                        )
+                                        + "\n"
+                                    )
+                            except Exception as _e:  # never let instrumentation kill the run
+                                print(
+                                    json.dumps(
+                                        {
+                                            "stage": "trust_region_dump_error",
+                                            "step": step,
+                                            "error": str(_e),
+                                        }
+                                    ),
+                                    flush=True,
+                                )
                         print(
                             json.dumps(
                                 {
@@ -6894,11 +7755,47 @@ def main() -> int:
                                     "count": trust_region_violation_count,
                                     "seq_kl_after": seq_kl_after,
                                     "clip_fraction_after_update": clip_fraction_after_update,
+                                    "n_compared": len(trust_per_candidate_rows),
                                 },
                                 ensure_ascii=False,
                             ),
                             flush=True,
                         )
+
+        # B-224 guard (2026-09-14): a sustained false-violation loop silently
+        # halves the LR on every violation (measured live 2.5e-05 -> 1.5625e-06,
+        # 1/16, over ~12 steps with no monitor-side stop). Once the cumulative
+        # violation count reaches --trust-region-max-violations, fire a
+        # recommend-stop alarm so the run surfaces for diagnosis instead of
+        # draining to an inert LR.
+        trust_region_max_violations = int(getattr(args, "trust_region_max_violations", 6))
+        trust_region_bleed_alarm = bool(
+            trust_region_violation_count > 0
+            and trust_region_max_violations > 0
+            and trust_region_violation_count >= trust_region_max_violations
+        )
+        if trust_region_bleed_alarm and rank == 0:
+            print(
+                json.dumps(
+                    {
+                        "stage": "trust_region_bleed_alarm",
+                        "step": step,
+                        "recommend_stop": True,
+                        "count": trust_region_violation_count,
+                        "lr": float(optimizer.param_groups[0]["lr"]),
+                        "max_violations": trust_region_max_violations,
+                        "message": (
+                            "trust-region violation count hit "
+                            f"{trust_region_violation_count} >= {trust_region_max_violations}; "
+                            "LR is bleeding. Halt + diagnose (check for spurious "
+                            "post-update KL / token-set mismatch), do not keep "
+                            "halving."
+                        ),
+                    },
+                    ensure_ascii=False,
+                ),
+                flush=True,
+            )
 
         clip_fraction = (
             float(gspo_stats.get("clip_total_fraction", 0.0)) if gspo_stats is not None else 0.0
@@ -6965,6 +7862,10 @@ def main() -> int:
             repair_queued=repair_queued,
             repair_converted_jsonl=args.repair_converted_jsonl,
             all_fail=all_fail,
+            completion_token_lengths=generation_diagnostics["completion_token_lengths"],
+            eos_termination_rate=generation_diagnostics["eos_termination_rate"],
+            truncation_rate=generation_diagnostics.get("truncation_rate"),
+            fence_termination_rate=generation_diagnostics.get("fence_termination_rate"),
         )
         # Audit #1: mean_response_length/truncation_rate (and the trust-region
         # fields below) used to be mutated into the returned record AFTER
@@ -7009,6 +7910,8 @@ def main() -> int:
             lora_b_max_delta=lora_b_max_delta,
             zero_change_alarm=zero_change_alarm,
             zero_change_recommend_stop=zero_change_alarm,
+            trust_region_bleed_alarm=trust_region_bleed_alarm,
+            trust_region_per_candidate=trust_region_per_candidate_rows,
             kl_beta=float(kl_state.beta) if kl_state is not None else None,
             dr_pair_mined=bool(dr_pair_info.get("dr_pair_mined")) if dr_pair_info else None,
             dr_pair_reward_gap=float(dr_pair_info.get("dr_pair_reward_gap", 0.0))

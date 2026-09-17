@@ -15,6 +15,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from training.compat import strict_zip  # py3.9-safe pairing (never zip(strict=))
+
 try:
     import torch
     from peft import LoraConfig, get_peft_model
@@ -1075,7 +1077,7 @@ def main() -> None:
         variance = sum((reward - mean_reward) ** 2 for reward in rewards) / max(1, len(rewards))
         std = max(variance**0.5, 1e-4)
         losses = []
-        for answer, reward in zip(candidates, rewards, strict=False):
+        for answer, reward in strict_zip(candidates, rewards):
             advantage = max(-2.0, min(2.0, (reward - mean_reward) / std))
             full_text = model_prompt + answer
             full = tokenizer(

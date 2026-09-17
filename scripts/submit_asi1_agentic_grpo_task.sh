@@ -174,8 +174,8 @@ import sys
 root = pathlib.Path(root_dir)
 wheel_root = "/tmp/asi1-agentic-wheelhouse"
 wheel_names = [
-    "accelerate-1.4.0-py3-none-any.whl",
-    "peft-0.14.0-py3-none-any.whl",
+    "accelerate-1.13.0-py3-none-any.whl",
+    "peft-0.19.1-py3-none-any.whl",
 ]
 commands = [
     "set -euo pipefail",
@@ -205,7 +205,7 @@ for wheel_name in wheel_names:
     commands.append(f"python3 -m zipfile -t {shlex.quote(wheel_output)}")
 commands.extend(
     [
-        f"python3 -m pip install --no-cache-dir --no-input --no-index --find-links {shlex.quote(wheel_root + '/tools/wheels')} accelerate==1.4.0 peft==0.14.0",
+        f"python3 -m pip install --no-cache-dir --no-input --no-index --find-links {shlex.quote(wheel_root + '/tools/wheels')} accelerate==1.13.0 peft==0.19.1",
         "python3 -c \"import accelerate; import peft; print('accelerate=' + accelerate.__version__); print('peft=' + peft.__version__)\"",
         f"export ASI1_AGENTIC_TASK_MODEL_NAME={shlex.quote(model_name)}",
         f"export ASI1_AGENTIC_TASK_BENCHMARK_FILE={shlex.quote(benchmark_file)}",
@@ -634,7 +634,7 @@ if bootstrap_wheelhouse:
             "ls -l tools/wheels",
             (
                 "python3 -m pip install --no-cache-dir --no-input --no-index "
-                "--find-links tools/wheels accelerate==1.4.0 peft==0.14.0"
+                "--find-links tools/wheels accelerate==1.13.0 peft==0.19.1"
             ),
             (
                 "python3 -c \"import accelerate; import peft; "
@@ -704,7 +704,7 @@ if bootstrap_wheelhouse == "1":
         "test -d tools/wheels && "
         "ls -l tools/wheels && "
         "python3 -m pip install --no-cache-dir --no-input --no-index "
-        "--find-links tools/wheels accelerate==1.4.0 peft==0.14.0 && "
+        "--find-links tools/wheels accelerate==1.13.0 peft==0.19.1 && "
         "python3 -c \"import accelerate; import peft; "
         "print('accelerate=' + accelerate.__version__); "
         "print('peft=' + peft.__version__)\""

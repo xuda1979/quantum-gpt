@@ -9,6 +9,7 @@ from collections import Counter
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Any
 
@@ -25,12 +26,21 @@ from training.compat import strict_zip
 # against executable anchors and start at zero reward weight.
 # ---------------------------------------------------------------------------
 
+# 2026-09-04 (user directive: fine-grained rubric): the 5 coarse dims produced
+# near-identical candidate scores (no dispersion -> no gradient). 10 fine dims
+# anchored to observable evidence separate last-mile failures (plausible code
+# failing only on outputs/params) from gross failures.
 MODEL_JUDGE_DIMENSIONS = (
-    "correctness",
-    "runnability",
+    "correctness_of_intent",
     "result_correctness",
+    "completeness",
+    "api_correctness",
+    "syntax_validity",
+    "runnability",
+    "parameterization",
+    "numerical_reasoning",
+    "structure_and_naming",
     "efficiency",
-    "quality",
 )
 MAX_MODEL_JUDGE_WEIGHT = 0.05
 MODEL_JUDGE_CALIBRATION_AUC = 0.85
@@ -378,16 +388,22 @@ def build_grpo_step_record(
     lora_b_max_delta: float | None = None,
     zero_change_alarm: bool | None = None,
     zero_change_recommend_stop: bool | None = None,
+    trust_region_bleed_alarm: bool | None = None,
+    trust_region_per_candidate: list[dict[str, Any]] | None = None,
 ) -> dict[str, float | int | bool | str]:
+    # 2026-09-01 (bug-hunter fuzz RED): step/mean_reward/task_prob were
+    # written through UNTYPED — a junk value (e.g. step="junk") silently
+    # landed in grpo_step_metrics.jsonl and crashed downstream consumers
+    # (int(r.get("step")) in the reward auditor). Fail-fast here instead.
     record: dict[str, float | int | bool | str] = {
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),
-        "step": step,
+        "step": int(step),
         "task": task_name,
         "domain": domain,
-        "mean_reward": mean_reward,
+        "mean_reward": float(mean_reward),
         "reward_std": float(signal_stats["reward_std"]),
         "reward_signal_std": float(signal_stats["signal_std"]),
-        "curriculum_prob": task_prob,
+        "curriculum_prob": float(task_prob),
         "task_ema_reward": float(task_state["ema_reward"]),
         "task_seen": int(task_state["seen"]),
     }
@@ -547,6 +563,10 @@ def build_grpo_step_record(
         record["zero_change_alarm"] = bool(zero_change_alarm)
     if zero_change_recommend_stop is not None:
         record["zero_change_recommend_stop"] = bool(zero_change_recommend_stop)
+    if trust_region_bleed_alarm is not None:
+        record["trust_region_bleed_alarm"] = bool(trust_region_bleed_alarm)
+    if trust_region_per_candidate is not None:
+        record["trust_region_per_candidate"] = list(dict(r) for r in trust_region_per_candidate)
     return record
 
 
@@ -776,7 +796,14 @@ def interface_match_score(required_interface: list[str], candidate_interface: li
     candidate_names = {_extract_symbol_name(line) for line in candidate_interface}
 
     exact_overlap = len(required_exact & candidate_exact) / max(1, len(required_exact))
-    name_overlap = len(required_names & candidate_names) / max(1, len(required_names))
+    name_overlaps = [
+        max(
+            SequenceMatcher(None, required_name, candidate_name).ratio()
+            for candidate_name in candidate_names
+        )
+        for required_name in required_names
+    ]
+    name_overlap = sum(name_overlaps) / max(1, len(name_overlaps))
     return 0.5 * exact_overlap + 0.5 * name_overlap
 
 
@@ -911,6 +938,9 @@ _DETAIL_SKIP_KEYS = frozenset(
 
 _PROGRESS_FLOOR = 0.1
 _PROGRESS_CAP = 0.9
+# B-232 (2026-09-14): crash-with-evidence credit cap, strictly below the 0.5
+# clean near-miss band so ordering crash < near-miss < pass always holds.
+_CRASH_RUNG_CAP = 0.3
 
 
 def _progress_for_pair(
@@ -1120,17 +1150,25 @@ def _detail_progress(line: str) -> float:
     return best
 
 
-def shaped_reward_from_details(passed: bool, details: list[str]) -> float:
+def shaped_reward_from_details(
+    passed: bool, details: list[str], crash_progress_credit: bool = False
+) -> float:
     """Continuous partial credit from the harness detail strings.
 
     passed -> 1.0. Otherwise -> min(0.9, 0.5 + 0.5 * progress) where
     ``progress`` is the best per-line numeric closeness to the pass
     threshold; 0.0 when no numeric evidence exists or the candidate crashed.
+
+    B-232: with ``crash_progress_credit`` the numeric evidence a candidate
+    printed BEFORE the runtime failure still earns graded credit, capped at
+    _CRASH_RUNG_CAP (0.3) -- strictly below the 0.5 clean near-miss band.
+    Default OFF preserves the pinned contract (a crash is never a near miss);
+    turn it on when whole groups sit at hard 0 and the LOO advantage
+    collapses (measured live 2026-09-14: all_fail 14/14 steps,
+    train_pass_truncation_rate 0.375).
     """
     if passed:
         return 1.0
-    if _has_runtime_failure(details):
-        return 0.0  # a crash is never a near miss
     progress = 0.0
     for detail in details or []:
         if not isinstance(detail, str):
@@ -1138,6 +1176,10 @@ def shaped_reward_from_details(passed: bool, details: list[str]) -> float:
         if not detail.strip():
             continue
         progress = max(progress, _detail_progress(detail))
+    if _has_runtime_failure(details):
+        if crash_progress_credit and progress > 0.0:
+            return min(_CRASH_RUNG_CAP, _CRASH_RUNG_CAP * progress)
+        return 0.0  # a crash is never a near miss (default contract)
     if progress <= 0.0:
         return 0.0
     return min(_PROGRESS_CAP, 0.5 + 0.5 * progress)
@@ -1239,6 +1281,69 @@ def import_hygiene_score(
     return max(0.0, 1.0 - violations / max(1, len(imported_roots)))
 
 
+def _recover_parseable_code_block(code: str) -> str | None:
+    """B-238 (2026-09-15): recover a parseable python block from a fenceless
+    extraction.
+
+    ``extract_code`` falls back to the WHOLE response when no code fence is
+    recognized, so prose around a real program makes ``ast.parse`` fail and
+    the candidate was scored exactly 0.0 (run 20260913T233607Z: 28 of 112
+    candidates) even though a verifiable block was present. This helper strips
+    standalone fence lines and finds the LONGEST parseable python span
+    (whole text, then line-prefix/suffix scans for prose before/after the
+    code). It returns None when nothing parseable exists -- prose alone never
+    earns reward, which is the reward-hacking guard.
+    """
+    text = "\n".join(
+        line for line in code.splitlines() if not line.strip().startswith("```")
+    ).strip()
+    if not text:
+        return None
+    try:
+        ast.parse(text)
+        return text
+    except Exception:
+        pass
+    lines = text.splitlines()
+    best: str | None = None
+    limit = min(len(lines), 80)
+
+    def _is_real_block(candidate: str) -> bool:
+        # B-242: a recovered block must contain a REAL definition. A bare
+        # "pass" (or any trivial fragment) parses but is not a program --
+        # crediting it let unparseable candidates harvest syntax+verifier
+        # reward (guard: no_unparseable_code_as_partial_progress).
+        try:
+            tree = ast.parse(candidate)
+        except Exception:
+            return False
+        return any(
+            isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
+            for node in tree.body
+        )
+
+    # Suffix scan: leading prose ("Here is my solution...") before the code.
+    for start in range(1, limit):
+        candidate = "\n".join(lines[start:]).strip()
+        if not candidate:
+            continue
+        if not _is_real_block(candidate):
+            continue
+        best = candidate
+        break
+    # Prefix scan: trailing prose after the code (longest prefix wins).
+    for end in range(limit, 0, -1):
+        candidate = "\n".join(lines[:end]).strip()
+        if not candidate:
+            continue
+        if not _is_real_block(candidate):
+            continue
+        if best is None or len(candidate) > len(best):
+            best = candidate
+        break
+    return best
+
+
 def build_reward_breakdown(
     *,
     code: str,
@@ -1254,16 +1359,26 @@ def build_reward_breakdown(
     import_hygiene_weight: float = 0.0,
     single_file_expected: bool = False,
     allowed_import_roots: list[str] | None = None,
+    crash_progress_credit: bool = False,
 ) -> dict[str, float | int | bool]:
     syntax_ok = False
+    scored_code = code
+    recovered_block = False
     if code.strip():
         try:
             ast.parse(code)
             syntax_ok = True
         except Exception:
-            syntax_ok = False
+            # B-238: a MISSING FENCE alone must not zero the candidate. If the
+            # extraction still contains a parseable python block, score the
+            # components on that block. Unparseable code recovers nothing.
+            recovered = _recover_parseable_code_block(code)
+            if recovered is not None:
+                scored_code = recovered
+                syntax_ok = True
+                recovered_block = True
 
-    candidate_interface = summarize_python_interface(code) if syntax_ok else []
+    candidate_interface = summarize_python_interface(scored_code) if syntax_ok else []
     interface_reward = (
         interface_match_score(required_interface, candidate_interface) if syntax_ok else 0.0
     )
@@ -1276,18 +1391,38 @@ def build_reward_breakdown(
         1.0 if passed else max(0.0, 1.0 - min(failure_count, capped_budget) / capped_budget)
     )
     if not passed and _has_runtime_failure(details):
-        verifier_reward = 0.0
+        if syntax_ok and verifier_reward > 0.0:
+            # B-237 (2026-09-15): REAL EXECUTED evidence survives a runtime
+            # marker -- a parseable candidate that ran and printed numerics
+            # keeps its verifier credit despite a late TypeError
+            # (run 20260913T233607Z: 18 near-miss candidates pinned at 0).
+            # Marker-count-only "evidence" (unparseable/empty code) does NOT
+            # survive. B-232: with crash_progress_credit the sub-near-miss
+            # crash rung cap still applies.
+            if crash_progress_credit or recovered_block:
+                # B-238: a fence-recovered block keeps its evidence CAPPED at
+                # the crash rung even without crash_progress_credit -- the
+                # harness executed the raw extraction, not the recovered block.
+                verifier_reward = min(verifier_reward, _CRASH_RUNG_CAP)
+        else:
+            verifier_reward = (
+                min(verifier_reward, _CRASH_RUNG_CAP) if crash_progress_credit else 0.0
+            )
     # Binary pass stays in the metrics (pass_rate); the REWARD the policy sees
     # is the continuous ``shaped_reward`` (1.0 on pass, partial credit on
     # near-misses) — with pass rate ~ 0 the binary gives the group NO
     # advantage variation, hence no gradient (the GSPO/SAPO failure mode).
     pass_reward = 1.0 if passed else 0.0
-    shaped_reward = shaped_reward_from_details(passed, details)
+    shaped_reward = shaped_reward_from_details(
+        passed, details, crash_progress_credit=crash_progress_credit
+    )
     syntax_reward = 1.0 if syntax_ok else 0.0
-    brevity_score = brevity_reward(code, target_lines=brevity_target_lines) if syntax_ok else 0.0
+    brevity_score = (
+        brevity_reward(scored_code, target_lines=brevity_target_lines) if syntax_ok else 0.0
+    )
     import_hygiene = (
         import_hygiene_score(
-            code,
+            scored_code,
             single_file_expected=single_file_expected,
             allowed_import_roots=allowed_import_roots,
         )
@@ -1335,6 +1470,14 @@ class TaskCurriculum:
     min_weight: float = 0.05
     quantum_priority: float = 1.5
     uncertainty_bonus: float = 0.35
+    # B-245 (2026-09-15): the difficulty term is an anti-curriculum when the
+    # policy's global pass rate collapses -- all-fail groups contribute zero
+    # gradient, so over-sampling the hardest tasks wastes the largest rollout
+    # slice. The trainer sets global_pass_rate once per step; weight()
+    # compresses difficulty toward 0.5 with strength gamma (0.5 floor, 1.0 at
+    # pass 0.5, i.e. the old math unchanged at healthy yield).
+    global_pass_rate: float = 0.0
+    difficulty_gamma_floor: float = 0.5
     state: dict[str, dict[str, float]] = field(default_factory=dict)
 
     def get_state(self, task_id: str) -> dict[str, float]:
@@ -1349,6 +1492,17 @@ class TaskCurriculum:
         ema_reward = float(current["ema_reward"])
         seen = float(current["seen"])
         difficulty = max(0.05, 1.0 - ema_reward)
+        # B-245: pass-rate-adaptive compression. gamma is the binary pass-rate
+        # variance 4p(1-p) clamped to [gamma_floor, 1]; at p=0.05 the 0.5
+        # floor caps the old hard:easy ratio near 3.4:1 instead of ~19:1.
+        gamma = min(
+            1.0,
+            max(
+                self.difficulty_gamma_floor,
+                4.0 * self.global_pass_rate * (1.0 - self.global_pass_rate),
+            ),
+        )
+        difficulty = 0.5 + gamma * (difficulty - 0.5)
         uncertainty = self.uncertainty_bonus / math.sqrt(seen + 1.0)
         domain_scale = self.quantum_priority if domain == "quantum" else 1.0
         return max(self.min_weight, domain_scale * (difficulty + uncertainty))
@@ -2043,11 +2197,41 @@ def reward_signal_stats(
     return result
 
 
+def candidate_advantage_dispersion(advantages) -> float:
+    """Fraction of candidates whose advantage differs from the modal value.
+
+    The 2026-09-02 flat-advantage class (resume-3 step 26): 7/8 rewards
+    identical + 1 outlier produce a LARGE advantage RMS (gate passes) while
+    the group carries only one bit of information — every identical reward
+    maps to one shared advantage value, so the gradient is a single-candidate
+    artifact, not group learning. Dispersion counts candidates that carry a
+    DISTINCT advantage: 8 distinct values -> 1.0; 7 identical + 1 outlier ->
+    2/8 distinct... by modal accounting 1 - 7/8 = 0.125? No: the modal value
+    is the shared one (count 7), so dispersion = 1 - 7/8 = 0.125 < 0.5 -> the
+    gate below rejects the group. A healthy spread (step-9 geometry, most
+    candidates distinct) -> dispersion >= 0.5 -> update proceeds.
+    """
+    tensor = advantages if hasattr(advantages, "tolist") else None
+    vals = tensor.detach().float().tolist() if tensor is not None else list(advantages)
+    n = len(vals)
+    if n <= 1:
+        return 0.0
+    counts: dict[float, int] = {}
+    for v in vals:
+        key = round(float(v), 6)
+        counts[key] = counts.get(key, 0) + 1
+    modal = max(counts.values())
+    return 1.0 - (modal / float(n))
+
+
 def policy_update_signal_magnitude(
     *,
     advantage_mode: str,
     signal_stats: Mapping[str, float],
     loo_advantage_rms: float | None,
+    advantages=None,
+    min_candidate_dispersion: float = 0.5,
+    pass_rate: float | None = None,
 ) -> tuple[float, str]:
     """Select the signal magnitude used by the flat-group update gate.
 
@@ -2055,9 +2239,30 @@ def policy_update_signal_magnitude(
     contribution to total reward. Canonical LOO mode therefore gates on the
     RMS of the final clipped advantages that actually enter SAPO. The
     ``group_std`` ablation retains its historical max-component statistic.
+
+    2026-09-02 (flat-advantage class fix): when the final advantages are
+    supplied, a group whose advantages are dominated by ONE outlier candidate
+    (candidate_advantage_dispersion < min_candidate_dispersion) reports
+    magnitude 0.0 under kind ``"flat_candidate_dispersion"`` — a magnitude
+    from a single candidate is noise, not group learning signal. Callers that
+    do not pass advantages keep the legacy RMS contract (byte-identical).
+
+    2026-09-02 LIVE refinement (r23 step-2/step-4 evidence): a group with a
+    PASS/FAIL BOUNDARY (0 < pass_rate < 1) always carries real signal even
+    when most candidates share one reward value — the boundary advantage is
+    what SAPO amplifies (step-4's lone pass had LOO advantage +1.43). The
+    dead class is only the FLAT-IN-CLASS group: few distinct values AND no
+    pass boundary (pass_rate 0.0 or 1.0 — e.g. s26's 7 identical fails + 1
+    outlier fail). Gating now requires BOTH conditions.
     """
     if advantage_mode == "loo":
         magnitude = 0.0 if loo_advantage_rms is None else float(loo_advantage_rms)
+        if advantages is not None:
+            dispersion = candidate_advantage_dispersion(advantages)
+            if dispersion < float(min_candidate_dispersion):
+                has_boundary = pass_rate is not None and 0.0 < float(pass_rate) < 1.0
+                if not has_boundary:
+                    return 0.0, "flat_candidate_dispersion"
         return max(0.0, magnitude), "loo_advantage_rms"
     return max(0.0, float(signal_stats.get("signal_std", 0.0))), "reward_signal_std"
 
@@ -2137,12 +2342,30 @@ class AdaptiveTemperatureState:
     step_size: float = 0.15
     max_temp: float = 1.4
     consecutive_low_signal_skips: int = 0
+    # 2026-09-16 (93%-all-fail signal starvation): the flat-reward deadlock
+    # class is NOT a few skips — runs sit at reward_std<min for dozens of
+    # steps. The plain linear slope (base*(1+step*count), capped) is too slow
+    # to diversify out of a LONG deadlock gate. acceleration_after+rate add a
+    # compounding term only once the deadlock is sustained (count past
+    # acceleration_after), so short non-trend skips keep the old linear shape
+    # while a long all-fail regime ramps to diversity faster.
+    acceleration_after: int = 6
+    acceleration_rate: float = 0.18
 
     _LOW_SIGNAL_REASON: str = "low_reward_signal"
 
     def current_temp_at_count(self, count: int) -> float:
-        """Return the escalated temperature for a given consecutive-skip count."""
-        raw = self.base_temp * (1.0 + self.step_size * count)
+        """Return the escalated temperature for a given consecutive-skip count.
+
+        Linear for small counts; once the deadlock is sustained (count past
+        ``acceleration_after``) a compounding term ramps faster to max_temp so
+        a long flat-reward/all-fail regime diversifies enough to find a pass.
+        Always capped at max_temp.
+        """
+        linear = self.base_temp * (1.0 + self.step_size * count)
+        sustained = max(0, count - self.acceleration_after)
+        # compounding multiplier grows 1.0 -> (1+rate)^sustained past the gate
+        raw = linear * ((1.0 + self.acceleration_rate) ** sustained)
         return min(raw, self.max_temp)
 
     def current_temp(self) -> float:
@@ -2643,6 +2866,19 @@ def build_mixture_weights(
     _accumulate(effective_targeted, targeted)
     _accumulate(effective_neighbor, neighbor)
     _accumulate(effective_replay, replay)
+    # B-245 (2026-09-15): quarantined tasks were hard-zeroed, so a REPAIR_SFT
+    # route was a life sentence -- the router never re-probed them. A small
+    # residual slice (mirror of the effective_replay floor) lets an isolated
+    # quarantined task be re-probed and re-routed when OTHER work exists.
+    # CRITICAL: only assign residual when non-quarantined work is present --
+    # if the WHOLE pool is quarantine-only, assigning residual would normalize
+    # to ~uniform and silently disable the `no_trainable_tasks` end-of-life
+    # breaker (grpo_trainer.py all_tasks_quarantined_or_zero_weight, run-6 death
+    # path, guarded by test_grpo_trainer_breakers.py). Quarantine-*-only still
+    # returns all-zero weights so the breaker fires and the run ends (a fresh,
+    # warm-continued leg with fixes is the recovery, not spinning on dead data).
+    if quarantined and (targeted or replay):
+        _accumulate(0.05, quarantined)
     total = sum(weights_map.values())
     if total <= 0.0:
         # Every task is quarantined/repair-only. Returning uniform weights here
@@ -2703,6 +2939,48 @@ def sequence_ratio_stats(
         ),
         "seq_kl_after": float(seq_kl.item()),
     }
+
+
+def align_old_baseline_to_train_prefix(
+    *,
+    old_seq_log_prob: torch.Tensor,
+    old_token_count: int,
+    train_token_count: int,
+    old_token_lps: torch.Tensor | None = None,
+) -> torch.Tensor | None:
+    """OLD-policy normalized baseline aligned to the SAME token set a
+    truncated train pass / trust-region re-encode will compare against.
+
+    B-224: the train pass (2026-08-25 OOM fix) caps each candidate at
+    ``train_pass_max_seq_length``, keeping the first ``train_token_count``
+    completion tokens. The post-optimizer trust-region check re-encodes the
+    CURRENT policy under the same cap. If the OLD side were represented as the
+    full-completion mean (``old_seq_log_prob / old_token_count``) while the
+    current side is a prefix mean, an UNCHANGED policy would report a large
+    seq-KL purely from the token-count mismatch -> spurious violation ->
+    ``scale_lr`` halves the LR forever (measured live 2.5e-05 -> 1/16).
+
+    This helper returns the OLD-policy MEAN over the same kept prefix the
+    update used:
+      * no truncation (train == old): full-mean ``old_seq_log_prob/count``
+      * truncation (train < old):         prefix mean over the kept tokens,
+        which requires the rollout per-token log-probs (``old_token_lps``).
+    Returns None when truncation occurred but per-token lps are unavailable,
+    signalling the caller to SKIP that candidate in the trust check (never
+    false-violate on an unalignable baseline).
+    """
+    if int(train_token_count) >= int(old_token_count):
+        d = float(old_token_count)
+        if d <= 0.0:
+            return None
+        return (old_seq_log_prob / old_token_count).reshape(())
+    # truncation: need per-token lps aligned to the kept prefix
+    if old_token_lps is None or int(train_token_count) <= 0:
+        return None
+    kept = old_token_lps[: int(train_token_count)]
+    if kept.numel() == 0:
+        return None
+    return kept.mean()
 
 
 def old_sampled_kl(
@@ -2993,15 +3271,19 @@ class RunningMAD:
         values_np = values.detach().float()
         mean = float(values_np.mean().item())
         mad = float((values_np - mean).abs().mean().item())
-        if mad <= 0.0:
-            # Flat group: no dispersion evidence (all LOO advantages ~0). Do
-            # NOT move the running scale — the old fallback (1.0) pulled the
-            # EMA toward 1.0 with weight (1-decay) per flat group, turning
+        if mad <= 0.0 or not math.isfinite(mad) or not math.isfinite(mean):
+            # Flat OR non-finite group: no valid dispersion evidence. Do NOT
+            # move the running scale — the old fallback (1.0) pulled the EMA
+            # toward 1.0 with weight (1-decay) per flat group, turning
             # shared_mad into a no-op in flat-heavy runs (2026-08-24: run
             # sapo-27b-ai-20260824T075223 kept adv_scale ~0.97-0.99 across
             # 10 steps while true signal-group MAD was ~0.3 -> the intended
             # ~3x advantage amplification never engaged). Flat batches also
             # carry no evidence for the first-batch initialization.
+            # 2026-09-01 (PROPERTY-FUZZ lane RED): a single NaN/Inf batch made
+            # _mad permanently nan (scale -> nan via max(nan, 1e-8) == nan),
+            # defeating the 'scale >= 1e-8 always' no-div-by-zero contract and
+            # never recovering. NaN carries no dispersion evidence either.
             return self._mad
         if self._count == 0:
             self._mean = mean
@@ -3100,6 +3382,20 @@ def count_repair_conversions(path: Path | None | str) -> int:
     return count
 
 
+# k-of-n tolerance for the absolute-entropy-collapse window (V2, 2026-09-11).
+# The window condition was originally `all(e <= floor)`, which a couple of
+# isolated entropy spikes anywhere in the 10-step window disable entirely.
+# Measured by the analysis lane against 18 box runs with >=3 windows: under
+# strict all(), two genuine collapses NEVER tripped despite window medians of
+# 0.010-0.030 - outputs/sapo-27b-ai-20260908T080802Z (87 steps) and
+# outputs/sapo-27b-ai-20260908T083829Z (66 steps). Requiring 8 of the 10-step
+# window at or below the floor catches leg5 at step 20 (was 30) and 090346Z at
+# step 20, with no observed false positive across those 18 runs. Capped at the
+# observed step count so a short window (unit harnesses use window_size=4)
+# keeps the original all() behaviour instead of becoming untrippable.
+ENTROPY_ABSOLUTE_COLLAPSE_MIN_STEPS = 8
+
+
 @dataclass
 class CircuitBreakerState:
     """Per-window circuit breakers for FV-GSPO (see design §Monitoring).
@@ -3119,6 +3415,80 @@ class CircuitBreakerState:
     entropy_collapse_ratio: float = 0.5
     frontier_yield_collapse_ratio: float = 0.5
     holdout_drop_limit_pp: float = 3.0
+    # Absolute collapse floor. The ratio rules above compare against a baseline
+    # calibrated from the run's FIRST baseline_steps, so a policy that is
+    # already collapsed at step 1 becomes its own baseline and can never trip
+    # them. This floor depends on no baseline: a window whose every step is
+    # all-fail with entropy at or below the floor is collapsed regardless of
+    # provenance. 0.05 matches DEGENERATE_POLICY entropy territory; it is far
+    # below any observed healthy run (2.0-6.0).
+    entropy_absolute_floor: float = 0.05
+    # Response-length collapse floor (B-125, 2026-09-11). The entropy rules
+    # above answer an entropy question, and a policy that has stopped SPEAKING
+    # asks a different one: run sapo-27b-ai-20260911T043237Z emitted 2-4 tokens
+    # at eos_termination_rate 1.0 for six consecutive all-fail steps while
+    # entropy_mean sat at 0.80-4.39, i.e. 16x-88x ABOVE entropy_absolute_floor.
+    # No entropy-keyed rule can fire on that. This floor keys on the generation
+    # LENGTH instead: a group whose median completion is at or below
+    # response_length_absolute_floor tokens (against a 2048-token budget) with
+    # every candidate failing is NOT a hard task, it is a policy that emits EOS
+    # immediately. 12 is the measured ceiling of the collapsed band (the live
+    # run's per-step medians are 3.5 / 78 / 5 / 12 / 4 / 3), and it sits an
+    # order of magnitude below a genuine attempt on the same task (the same
+    # warm-start adapter at the same temperature emits 637-1903 tokens).
+    response_length_absolute_floor: int = 12
+    # Number of recent landed steps the response-collapse alarm looks back over,
+    # and how many of them must carry the collapse signature. Deliberately NOT
+    # window_size (10) x required_windows (2) = 20: the live run is provably dead
+    # by step 3, and waiting for a window boundary to say what step 1 already
+    # showed is the latency that let leg5 spend its whole budget at pass 0.000.
+    #
+    # B-143 (2026-09-13): this was an UNBROKEN-run requirement, and a flapping
+    # policy walked straight through it. Run sapo-27b-ai-20260913T112337Z landed
+    # six steps carrying the signature on five of them, but step 4 emitted a
+    # 14-token median (floor is 12) and reset the counter, so the streak reached
+    # only 2 and NOTHING tripped while the optimizer never stepped. Collapse is
+    # therefore expressed as a RATE over the last
+    # response_collapse_consecutive_steps landed steps - the name is kept so
+    # callers and the frozen B-125 tests keep their contract - with the trip
+    # additionally requiring that the CURRENT step is collapsed, so a policy that
+    # recovers stops alarming instead of tripping on its own history.
+    response_collapse_consecutive_steps: int = 3
+    # How many of the recent steps must carry the signature, and how far back to
+    # look. The two are deliberately DIFFERENT numbers: min < span is what buys
+    # tolerance for an occasional longer utterance, and span - min + 1 is the
+    # longest gap the rule forgives.
+    #
+    # 3 of the last 4 is the measured sweet spot, and the measurement is what
+    # chose it over 2 of 4. Both live shapes trip: the frozen case (every step
+    # collapsed) at step 3, and the flapping case - signature on steps 3, 5 and
+    # 6 of sapo-27b-ai-20260913T112337Z - at step 6, where the unbroken rule
+    # reached only 2 and never fired. What 2 of 4 would additionally have caught
+    # is a two-step blip followed by normal long completions, and that is a bad
+    # START, not a policy that has stopped speaking; a rule that stops a healthy
+    # run for it has traded a blind spot for a false alarm, which is the same
+    # cost. The long-completion control (637-1903 tokens) scores 0 of 4 at every
+    # step under either value.
+    response_collapse_lookback_steps: int = 4
+    response_collapse_min_steps: int = 3
+    # An immediate-EOS collapse terminates nearly every candidate, so the
+    # termination rate is the corroborating signal that separates "the policy
+    # stopped speaking" from "the task is hard" (the live run: 0.75-1.0, while
+    # the same adapter's long-completion control sits at 0.125).
+    response_eos_termination_limit: float = 0.6
+    # Truncation-pinned collapse floor (B-166, 2026-09-13). The response-length
+    # rule above answers "the policy went SILENT"; run
+    # sapo-27b-ai-20260913T143447Z asked the opposite question: the policy never
+    # terminated AT ALL. Every completion was cut off at the 256-token rollout
+    # budget (completion_token_lengths [256]x8, stop_reason "truncated" on all
+    # 24 generations), so truncation_rate was 1.0 while fence_termination_rate
+    # and eos_termination_rate were both 0.0 - median 256 and eos 0.0, i.e. the
+    # exact two conjuncts the B-125 rule needs are the two it misses on. No
+    # entropy-keyed rule sees it either (entropy 0.133-0.468, 2.7x-9x ABOVE the
+    # 0.05 floor, and window-gated past step 20). 0.95 leaves a little slack for
+    # one candidate of eight landing at the cap while still being far above the
+    # partial-truncation negative (run ...T151737Z step 1: 0.625).
+    truncation_pinned_rate_floor: float = 0.95
 
     def __post_init__(self) -> None:
         self._step_facts: list[dict[str, Any]] = []
@@ -3131,6 +3501,14 @@ class CircuitBreakerState:
         self._holdout_history: list[float] = []
         self._replay_history: list[float] = []
         self._window_count: int = 0
+        # B-125 response-length collapse: consecutive-step counter and a log
+        # throttle so a dead run is loud once and then periodically, never
+        # silent and never a per-step flood.
+        self._response_collapse_streak: int = 0
+        self._response_collapse_logged_at: int = 0
+        # B-166 truncation-pinned collapse: same shape as the B-125 pair above.
+        self._truncation_pinned_streak: int = 0
+        self._truncation_pinned_logged_at: int = 0
 
     # -- external eval feeds (used by the monitoring loop / eval gate) --
     def report_holdout_pass1(self, value: float) -> None:
@@ -3150,7 +3528,28 @@ class CircuitBreakerState:
         repair_queued: bool,
         repair_converted: int,
         all_fail_share: float,
+        completion_token_lengths: list[int] | None = None,
+        eos_termination_rate: float | None = None,
+        truncation_rate: float | None = None,
+        fence_termination_rate: float | None = None,
     ) -> None:
+        """Record one landed step's facts.
+
+        ``completion_token_lengths`` and ``eos_termination_rate`` are the
+        generation diagnostics the trainer already carries in its step context;
+        they are optional so that callers which do not generate (unit harnesses,
+        the replayed-fact path) keep their existing behaviour. When absent, the
+        response-collapse rule simply cannot fire for that step - it never
+        invents a length.
+        """
+        median_tokens: float | None = None
+        if completion_token_lengths:
+            ordered = sorted(int(v) for v in completion_token_lengths)
+            mid = len(ordered) // 2
+            if len(ordered) % 2:
+                median_tokens = float(ordered[mid])
+            else:
+                median_tokens = (ordered[mid - 1] + ordered[mid]) / 2.0
         self._step_facts.append(
             {
                 "step": step,
@@ -3161,6 +3560,14 @@ class CircuitBreakerState:
                 "repair_queued": repair_queued,
                 "repair_converted": repair_converted,
                 "all_fail_share": float(all_fail_share),
+                "median_completion_tokens": median_tokens,
+                "eos_termination_rate": (
+                    None if eos_termination_rate is None else float(eos_termination_rate)
+                ),
+                "truncation_rate": (None if truncation_rate is None else float(truncation_rate)),
+                "fence_termination_rate": (
+                    None if fence_termination_rate is None else float(fence_termination_rate)
+                ),
             }
         )
 
@@ -3170,8 +3577,15 @@ class CircuitBreakerState:
         Returns newly tripped breakers as events; callers should append them to
         step metrics. Trips are idempotent within a run (a breaker trips once).
         """
+        # B-125: the response-length floor is evaluated on EVERY landed step,
+        # not only on a window boundary. A rule whose whole point is "do not
+        # wait ten steps to say what step 1 already showed" cannot itself be
+        # gated behind window_size x required_windows.
+        response_events = self._evaluate_response_collapse(step=step)
+        response_events.extend(self._evaluate_truncation_pinned_collapse(step=step))
+
         if step <= 0 or step % self.window_size != 0:
-            return []
+            return response_events
         window = self._step_facts[-self.window_size :]
         if len(window) < self.window_size:
             return []
@@ -3215,6 +3629,22 @@ class CircuitBreakerState:
             )
         violations["entropy_collapse"] = entropy_collapse
 
+        # Absolute-floor collapse: no baseline, no repair-queue dependency. The
+        # window is k-of-n (k = ENTROPY_ABSOLUTE_COLLAPSE_MIN_STEPS, capped at
+        # the observed step count) rather than all(): a lone spike above the
+        # floor must not disable a window that is otherwise collapsed. The
+        # 0.40 all-fail condition and the floor itself are unchanged.
+        window_entropies = [f["entropy"] for f in window if f["entropy"] is not None]
+        min_steps_at_floor = min(ENTROPY_ABSOLUTE_COLLAPSE_MIN_STEPS, len(window_entropies))
+        violations["entropy_absolute_collapse"] = (
+            bool(window_entropies)
+            and (
+                sum(1 for e in window_entropies if e <= self.entropy_absolute_floor)
+                >= min_steps_at_floor
+            )
+            and all(f["all_fail_share"] > self.all_fail_share_limit for f in window)
+        )
+
         all_fail_mean = sum(f["all_fail_share"] for f in window) / self.window_size
         queue_grew = any(f["repair_queued"] for f in window)
         converted_total = max(f["repair_converted"] for f in window)
@@ -3231,15 +3661,14 @@ class CircuitBreakerState:
             violations["replay_regression"] = (prev - current) * 100.0 > self.holdout_drop_limit_pp
 
         self._window_count += 1
-        newly_tripped: list[dict[str, Any]] = []
+        newly_tripped: list[dict[str, Any]] = list(response_events)
         for rule, violated in violations.items():
             if violated:
                 self._consecutive[rule] = self._consecutive.get(rule, 0) + 1
             else:
                 self._consecutive[rule] = 0
-            if self._consecutive[rule] >= self.required_windows and rule not in {
-                t.get("breaker") for t in self.tripped
-            }:
+            already = {t.get("breaker") for t in self.tripped}
+            if self._consecutive[rule] >= self.required_windows and rule not in already:
                 event = {
                     "event": "circuit_breaker_trip",
                     "breaker": rule,
@@ -3252,6 +3681,163 @@ class CircuitBreakerState:
                 newly_tripped.append(event)
         return newly_tripped
 
+    def _step_is_response_collapsed(self, fact: dict[str, Any]) -> bool:
+        """True when one step carries the immediate-EOS collapse signature.
+
+        Requires ALL of: a median completion at or below the absolute length
+        floor, an eos_termination_rate at or above the immediate-EOS limit, and
+        an all-fail group. The conjunction is what keeps this a collapse
+        detector rather than a task-difficulty detector: a hard task whose
+        candidates run long and fail is NOT this failure mode (see the
+        false-positive test), and a policy that terminates immediately while
+        some candidate happens to pass is not dead either.
+        """
+        if fact.get("median_completion_tokens") is None:
+            return False
+        if fact["median_completion_tokens"] > self.response_length_absolute_floor:
+            return False
+        eos = fact.get("eos_termination_rate")
+        if eos is None or eos < self.response_eos_termination_limit:
+            return False
+        return float(fact.get("all_fail_share", 0.0)) > self.all_fail_share_limit
+
+    def _step_is_truncation_pinned(self, fact: dict[str, Any]) -> bool:
+        """True when one step is pinned against the rollout budget.
+
+        The signature is a policy that never terminates: a truncation_rate at or
+        above the floor, with BOTH termination instruments reading exactly zero
+        (nothing closed a code fence, nothing sampled EOS), across an all-fail
+        group. It is the mirror image of ``_step_is_response_collapsed`` - that
+        one needs every candidate to STOP, this one needs none of them to.
+
+        Any instrument that is None makes this UNKNOWN, not zero: a missing
+        fence_termination_rate must never be read as "no fence was ever closed",
+        which would manufacture the signature out of an unmeasured step.
+        """
+        truncation = fact.get("truncation_rate")
+        if truncation is None or truncation < self.truncation_pinned_rate_floor:
+            return False
+        fence = fact.get("fence_termination_rate")
+        if fence is None or fence > 0.0:
+            return False
+        eos = fact.get("eos_termination_rate")
+        if eos is None or eos > 0.0:
+            return False
+        return float(fact.get("all_fail_share", 0.0)) > self.all_fail_share_limit
+
+    def _evaluate_truncation_pinned_collapse(self, *, step: int) -> list[dict[str, Any]]:
+        """Per-step (NOT window-gated) truncation-pinned collapse rule.
+
+        B-166. Runs on every landed step for the same reason B-125 does: the
+        run is conclusively pinned by step 1, and the whole entropy-keyed family
+        cannot fire before step 20 (and cannot fire at all here - entropies are
+        above the absolute floor).
+
+        Unlike the B-143 rate form, this counts CONSECUTIVE steps: a
+        truncation-pinned step is a configuration fact about the run (a rollout
+        budget too small to close a fence), not per-step noise, so a rate that
+        forgives a gap would under-trigger on exactly the run it exists for. The
+        current step must itself be pinned, so a policy that starts closing
+        fences stops alarming. Trips at most once per run, like every breaker.
+        """
+        if self._truncation_pinned_logged_at:
+            return []
+        if not self._step_facts:
+            return []
+        if not self._step_is_truncation_pinned(self._step_facts[-1]):
+            self._truncation_pinned_streak = 0
+            return []
+        streak = 0
+        for fact in reversed(self._step_facts[-self.response_collapse_lookback_steps :]):
+            if not self._step_is_truncation_pinned(fact):
+                break
+            streak += 1
+        self._truncation_pinned_streak = streak
+        if streak < self.response_collapse_min_steps:
+            return []
+        event = {
+            "event": "circuit_breaker_trip",
+            "breaker": "truncation_pinned_no_pass",
+            "step": step,
+            "window": self._window_count,
+            "streak": streak,
+            "message": (
+                "no candidate can finish: "
+                + str(streak)
+                + " consecutive all-fail steps at truncation_rate >= "
+                + str(self.truncation_pinned_rate_floor)
+                + " with fence_termination_rate 0.0 and eos_termination_rate "
+                "0.0 - the rollout budget cuts every generation off, so pass "
+                "rate is pinned at 0 by the budget rather than by the task"
+            ),
+        }
+        self.tripped.append(event)
+        self.events.append(event)
+        self._truncation_pinned_logged_at = step
+        return [event]
+
+    def _evaluate_response_collapse(self, *, step: int) -> list[dict[str, Any]]:
+        """Per-step (NOT window-gated) absolute response-length collapse rule.
+
+        B-125. Runs on every landed step because the failure it detects is
+        already conclusive after a handful of steps, and because the entropy
+        rules - which are the whole existing family - cannot see it at all.
+        Trips at most once per run, like every other breaker.
+
+        B-143. The signature is counted as a RATE over the last
+        ``response_collapse_consecutive_steps`` landed steps, not as an unbroken
+        run: a policy that is collapsed on most steps with an occasional longer
+        utterance is still a policy that has stopped working, and the unbroken
+        form let exactly that run defer the alarm indefinitely.
+
+        The current step must itself carry the signature. Trips are once-per-run
+        and latched, so this is not a defence against a latch - it is what stops
+        a policy that collapsed briefly and then recovered from being tripped by
+        its own stale history once enough long steps have been evicted.
+        """
+        if self._response_collapse_logged_at:
+            return []
+        if not self._step_facts:
+            return []
+        if not self._step_is_response_collapsed(self._step_facts[-1]):
+            self._response_collapse_streak = 0
+            return []
+        lookback = self._step_facts[-self.response_collapse_lookback_steps :]
+        self._response_collapse_streak = sum(
+            1 for fact in lookback if self._step_is_response_collapsed(fact)
+        )
+        if self._response_collapse_streak < self.response_collapse_min_steps:
+            return []
+        window = lookback
+        event = {
+            "event": "circuit_breaker_trip",
+            "breaker": "response_length_absolute_collapse",
+            "step": step,
+            "window": self._window_count,
+            "streak": self._response_collapse_streak,
+            "message": (
+                "policy has stopped speaking: "
+                + str(self._response_collapse_streak)
+                + " of the last "
+                + str(len(window))
+                + " all-fail steps carry a median completion at or "
+                "below "
+                + str(self.response_length_absolute_floor)
+                + " tokens and eos_termination_rate at or above "
+                + str(self.response_eos_termination_limit)
+                + " - a response-length collapse, invisible to every "
+                "entropy-keyed rule"
+            ),
+        }
+        self.tripped.append(event)
+        self.events.append(event)
+        self._response_collapse_logged_at = step
+        return [event]
+
+    def describe_event(self, event: dict[str, Any], *, window: list[dict[str, Any]]) -> str:
+        """Public describer for an emitted event (window-boundary or per-step)."""
+        return self._describe(str(event.get("breaker", "")), window=window)
+
     def _describe(self, rule: str, *, window: list[dict[str, Any]]) -> str:
         if rule == "non_finite":
             return "non-finite loss or gradient persists across windows"
@@ -3261,6 +3847,26 @@ class CircuitBreakerState:
             return "generation entropy collapses while frontier yield decreases"
         if rule == "all_fail_without_repair":
             return "all-fail rollout share exceeds 40% without repair conversion"
+        if rule == "response_length_absolute_collapse":
+            return (
+                "the policy has stopped speaking: consecutive all-fail steps "
+                "whose median completion is at or below the absolute length "
+                "floor with an immediate-EOS termination rate - a "
+                "response-length collapse, invisible to every entropy-keyed rule"
+            )
+        if rule == "truncation_pinned_no_pass":
+            return (
+                "no candidate can finish: consecutive all-fail steps whose "
+                "truncation rate is at or above the pinned floor while both "
+                "fence and eos termination rates are exactly zero - a rollout "
+                "budget too small to close, invisible to every entropy-keyed rule"
+            )
+        if rule == "entropy_absolute_collapse":
+            return (
+                "generation entropy is at or below the absolute floor with an "
+                "all-fail window: a collapse inherited from the warm-start "
+                "checkpoint, invisible to the baseline-relative rules"
+            )
         if rule == "holdout_regression":
             return "held-out pass@1 drops by more than 3 percentage points"
         if rule == "replay_regression":
@@ -3279,4 +3885,5 @@ class CircuitBreakerState:
             "tripped": list(self.tripped),
             "consecutive": dict(self._consecutive),
             "entropy_baseline": self._entropy_baseline,
+            "response_collapse_streak": self._response_collapse_streak,
         }
