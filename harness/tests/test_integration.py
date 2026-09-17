@@ -928,3 +928,54 @@ class TestTransportGate(unittest.TestCase):
             qgh._refresh_box_probe_best_effort = real_refresh
             qgh.spawn_worker = real_spawn
         self.assertEqual(len(order), 1, "recovered box must not stay gated by a stale wedged probe")
+
+    def test_gate_stays_failsafe_when_probe_refresh_fails(self):
+        """The stale-probe refresh is best-effort and NEVER opens the gate on a
+        refresh failure: if the live re-measure cannot confirm recovery (e.g.
+        the boxes are unreachable), the pre-existing wedge evidence must keep
+        box-bound lanes held so we never dispatch against a box we couldn't
+        verify. Refresh failure => hold; only confirmed recovery clears."""
+        seed_card(title="eval leg", lane="evaluator")
+        stale_ts = (H.datetime.utcnow() - H.timedelta(hours=3)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        H.save_json(
+            os.path.join(qgh.STATE, "probes", "asi3.json"),
+            {
+                "ts": stale_ts,
+                "status": "unknown",
+                "summary": "UNKNOWN (ready-but-exec_wedged: busyAgeMs=30000)",
+            },
+        )
+        order = []
+
+        def fake_spawn(goal, queue, card, dep_results):
+            order.append(card["id"])
+            return {
+                "pid": os.getpid(),
+                "card": card["id"],
+                "lane": card["lane"],
+                "brief": "x",
+                "log": "x",
+                "started_utc": H.now_iso(),
+                "deadline_utc": (H.datetime.utcnow() + H.timedelta(minutes=5)).strftime(
+                    "%Y-%m-%dT%H:%M:%SZ"
+                ),
+                "status": "running",
+            }
+
+        real_refresh = qgh._refresh_box_probe_best_effort
+        real_spawn = qgh.spawn_worker
+
+        def failing_refresh(sd):
+            raise RuntimeError("boxes unreachable")
+
+        qgh._refresh_box_probe_best_effort = failing_refresh
+        qgh.spawn_worker = fake_spawn
+        try:
+            qgh.cmd_dispatch(type("A", (), {"lane": None})())
+        finally:
+            qgh._refresh_box_probe_best_effort = real_refresh
+            qgh.spawn_worker = real_spawn
+        q = qgh.load_queue(qgh.STATE)
+        dispatched_lanes = {c["lane"] for c in q["cards"] if c["status"] == "running"}
+        self.assertNotIn("evaluator", dispatched_lanes, "refresh failure must not open the gate")
+        self.assertEqual(order, [])

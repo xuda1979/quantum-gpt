@@ -541,8 +541,18 @@ def transport_wedged(state_dir=None):
     wedged, the fresh probe says so and the gate still holds (fail-safe)."""
     sd = state_dir or STATE
     age = _box_probe_age_s(sd)
-    if age is None or age > PROBE_STALE_S:
-        _refresh_box_probe_best_effort(sd)
+    # Refresh ONLY when a probe file EXISTS and is stale — so a dead probe
+    # agent's stale wedge evidence is re-measured live (the fixed case). A
+    # MISSING probe is left untouched and fails open (original behavior: no
+    # refresh, no side effect, never dispatch against an unmeasured box
+    # either way). Refresh helper never raises, but the gate is safety
+    # critical and must never crash dispatch: on any raise fall back to the
+    # on-disk file (a stale wedged probe then keeps the gate held).
+    if age is not None and age > PROBE_STALE_S:
+        try:
+            _refresh_box_probe_best_effort(sd)
+        except Exception:
+            pass
     p = os.path.join(sd, "probes", "asi3.json")
     data = load_json(p)
     if not data:
