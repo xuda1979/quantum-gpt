@@ -1,0 +1,9 @@
+{
+  "id": "quantum_rl_v2_qft_matrix_5q",
+  "name": "5-qubit QFT matrix construction",
+  "domain": "quantum",
+  "category": "algorithm_implementation",
+  "task_prompt": "Construct the 5-qubit QFT matrix directly from omega**(j*k)/sqrt(N) and also by multiplying embedded H, controlled-phase, and SWAP matrices in a declared endian convention. Align global phase, compare both matrices, verify unitarity and inverse round trip, and test the image of basis state |1>. Provide only complete executable Python code. Do not use remote services. Seed random generators, print the requested quantities, and include robust self-tests rather than relying on visual inspection.",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

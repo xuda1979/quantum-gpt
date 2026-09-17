@@ -1,0 +1,9 @@
+{
+  "id": "quantum_rl_v2_qml_jacobian_rx_ry",
+  "name": "PennyLane RX/RY QNode Jacobian at (a,b)=(1.0,2.0) three ways",
+  "domain": "quantum",
+  "category": "quantum_ml",
+  "task_prompt": "Define a two-parameter PennyLane QNode applying RX(a), RY(b), and returning the vector (<X>,<Z>). At (a,b)=(1.0,2.0), compute qml.jacobian, a manual parameter-shift Jacobian for each parameter, and a central finite-difference Jacobian. Use trainable pennylane.numpy arrays, print all derivatives, and assert pairwise agreement within 1e-7. Output code only as a self-contained Python program. Use documented public APIs, require no cloud credentials, make stochastic behavior reproducible, and include executable checks with justified tolerances.",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

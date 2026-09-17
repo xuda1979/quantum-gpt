@@ -1,0 +1,9 @@
+{
+  "id": "quantum_rl_v2_walk_cycle16_7step",
+  "name": "Coined quantum walk: 7 steps on a cycle of 16 positions in Cirq",
+  "domain": "quantum",
+  "category": "algorithm_implementation",
+  "task_prompt": "Implement a 7-step coined quantum walk on a cycle of 16 positions in Cirq using one coin qubit and 4 position qubits. Represent the controlled modular shift by a validated permutation MatrixGate with a clearly defined tensor-bit order, compute the exact position marginal, and cross-check it against a separately constructed NumPy step matrix. Assert both distributions are normalized and agree within 1e-12. Respond with a single runnable Python file and no prose outside the code. The program must be CPU-runnable, deterministic where practical, and fail loudly through assertions when a requested property is not met.",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

@@ -1,0 +1,9 @@
+{
+  "id": "quantum_rl_v6_gapfill_circuit_construct_measure",
+  "name": "Circuit construct and measure drill (no-fence exemplar)",
+  "domain": "quantum",
+  "category": "wave6_no_fence_gapfill",
+  "task_prompt": "Respond with a single runnable Python file using only numpy and the standard library. Define every required function with the EXACT names given; a missing or misnamed entry point fails immediately. Include assert-based self-tests that fail loudly, print nothing on success, and use no randomness or remote services. CRITICAL OUTPUT CONTRACT: output the complete Python file directly with NO markdown code fences and NO prose. Your response is saved verbatim as a .py file and executed; a leading markdown code fence is a guaranteed SyntaxError. Budget your output to be one complete file within the response: never truncate mid-statement. Implement a compact simulate-and-measure drill using only numpy: apply_fixed_gates_and_measure(amplitudes, gate_names) starts from a normalized input statevector of length 2**n, applies the gate sequence in order where the supported gates are H (Hadamard on every qubit, cyclic boundary), X (bit-flip on every qubit), and Z (phase flip on every qubit), then returns the full probability vector abs(amplitudes) squared after normalization at the end. Assert H on [1, 0] gives [0.5, 0.5], X on [1, 0] gives [0, 1], Z on [1, 1]/sqrt(2) gives [0.5, 0.5], and that a gate sequence containing an unsupported gate name raises ValueError.",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

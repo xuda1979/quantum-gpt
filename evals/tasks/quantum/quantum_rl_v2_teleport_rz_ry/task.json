@@ -1,0 +1,9 @@
+{
+  "id": "quantum_rl_v2_teleport_rz_ry",
+  "name": "Quantum teleportation of RZ(0.8)RY(1.1)|0> in Qiskit",
+  "domain": "quantum",
+  "category": "algorithm_implementation",
+  "task_prompt": "Teleport the state RZ(0.8)RY(1.1)|0> in Qiskit. Prepare it using RY(1.1) then RZ(0.8). Use mid-circuit measurements into two distinct classical registers and QuantumCircuit.if_test corrections, then measure the receiver in the Z basis after the appropriate basis-change gates (none for Z). Run on AerSimulator with 12000 shots and seed_simulator=1234, and compare the receiver expectation with 0.453596121426 within a statistically justified tolerance. State the correction mapping in code comments and assert the verification passes. Provide only complete executable Python code. Do not use remote services. Seed random generators, print the requested quantities, and include robust self-tests rather than relying on visual inspection.",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

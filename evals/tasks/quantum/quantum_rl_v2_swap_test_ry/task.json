@@ -1,0 +1,9 @@
+{
+  "id": "quantum_rl_v2_swap_test_ry",
+  "name": "SWAP test overlap estimation",
+  "domain": "quantum",
+  "category": "algorithm_implementation",
+  "task_prompt": "Implement a Qiskit SWAP test for |psi>=RY(0.4)|0> and |phi>=RY(1.7)|0>. Use StatevectorSampler with 20000 shots and seed 31415, estimate |<psi|phi>|^2 from the ancilla-zero frequency, compare with cos^2((0.4-1.7)/2), print both, and assert absolute error below 0.025. Output code only as a self-contained Python program. Use documented public APIs, require no cloud credentials, make stochastic behavior reproducible, and include executable checks with justified tolerances.",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

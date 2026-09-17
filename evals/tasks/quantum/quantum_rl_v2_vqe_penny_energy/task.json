@@ -1,0 +1,9 @@
+{
+  "id": "quantum_rl_v2_vqe_penny_energy",
+  "name": "PennyLane VQE two-qubit Heisenberg-style energy",
+  "domain": "quantum",
+  "category": "quantum_ml",
+  "task_prompt": "Implement exact-state VQE in PennyLane for H=0.5*Z0Z1+0.8*X0+0.8*X1+0.2*Z0. Use a three-layer trainable RY-CNOT ansatz, AdamOptimizer with deterministic initialization and at least six restarts, compare the best energy with an independently assembled NumPy matrix eigensolution, print the trajectory, and assert the variational bound is respected within 1e-8 and the final error is below 1e-4. Return only one complete Python script with no Markdown fences. It must run locally without network access, use fixed seeds whenever randomness is involved, print concise results, and assert every required invariant.",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

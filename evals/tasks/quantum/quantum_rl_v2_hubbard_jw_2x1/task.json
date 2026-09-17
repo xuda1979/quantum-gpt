@@ -1,0 +1,9 @@
+{
+  "id": "quantum_rl_v2_hubbard_jw_2x1",
+  "name": "2x1 spinful Fermi-Hubbard JW spectrum",
+  "domain": "quantum",
+  "category": "algorithm_implementation",
+  "task_prompt": "Create a 2 by 1 spinful Fermi-Hubbard Hamiltonian with tunneling=1.0, onsite interaction=2.0, zero chemical potential, and periodic=False using OpenFermion. Jordan-Wigner transform it, construct the sparse matrix with an explicit qubit count, compute the lowest eigenvalue and normalized ground state, and verify the energy by direct expectation. Also construct total particle number, print its expectation and variance, and assert Hermiticity and a near-zero eigenpair residual. Respond with a single runnable Python file and no prose outside the code. The program must be CPU-runnable, deterministic where practical, and fail loudly through assertions when a requested property is not met.",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

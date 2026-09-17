@@ -1,0 +1,9 @@
+{
+  "id": "quantum_rl_v2_bitflip_code_ancilla",
+  "name": "Three-qubit bit-flip code with ancilla syndromes",
+  "domain": "quantum",
+  "category": "quantum_error_correction",
+  "task_prompt": "Implement the three-qubit bit-flip code in Qiskit. Encode an arbitrary logical state RY(0.83)|0>, inject X on data qubit 1, extract the two Z-parity syndromes into ancillas, measure the ancillas, apply the correction with if_test, coherently decode, and estimate logical X and Z by running separate seeded circuits. Assert both expectations match the unencoded state within 0.04, and include a truth-table test for all four syndrome patterns. Output code only as a self-contained Python program. Use documented public APIs, require no cloud credentials, make stochastic behavior reproducible, and include executable checks with justified tolerances.",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

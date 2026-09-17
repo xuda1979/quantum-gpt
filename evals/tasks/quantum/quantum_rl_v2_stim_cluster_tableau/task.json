@@ -1,0 +1,9 @@
+{
+  "id": "quantum_rl_v2_stim_cluster_tableau",
+  "name": "Stim 4-qubit cluster state tableau stabilizers",
+  "domain": "quantum",
+  "category": "algorithm_implementation",
+  "task_prompt": "Build a 4-qubit linear cluster Clifford circuit in Stim with no measurements. Obtain stim.Tableau.from_circuit(circuit), list its stabilizers through the public tableau API, and verify expected generators by checking that each generator leaves the tableau state invariant. Append the inverse tableau as a circuit and assert the combined tableau is identity. Keep Pauli-string sign and qubit-order conventions explicit. Respond with a single runnable Python file and no prose outside the code. The program must be CPU-runnable, deterministic where practical, and fail loudly through assertions when a requested property is not met.",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

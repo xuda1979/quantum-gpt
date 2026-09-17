@@ -1,0 +1,117 @@
+import importlib.util
+
+import numpy as np
+
+
+def _load(candidate_path: str):
+    spec = importlib.util.spec_from_file_location("candidate", candidate_path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
+def run_tests(candidate_path: str) -> dict:
+    module = _load(candidate_path)
+    failures: list[str] = []
+    steps = 7
+
+    # --- shift permutation matrix: valid permutation, correct mapping ---
+    perm = None
+    try:
+        perm = np.asarray(module.shift_permutation(), dtype=complex)
+    except Exception as e:  # noqa: BLE001
+        failures.append(f"shift_permutation raised: {e}")
+    if perm is not None:
+        if perm.shape != (32, 32):
+            failures.append(f"permutation_shape={perm.shape}, expected 32x32")
+        else:
+            rows = np.sum(np.abs(perm), axis=1)
+            cols = np.sum(np.abs(perm), axis=0)
+            bad_rows = int(np.sum(np.abs(rows - 1.0) > 1e-9))
+            bad_cols = int(np.sum(np.abs(cols - 1.0) > 1e-9))
+            if bad_rows != 0 or bad_cols != 0:
+                failures.append(
+                    f"permutation_bad_rows={bad_rows} bad_cols={bad_cols}, " "expected 0 0"
+                )
+            # spot-check the conditional +1/-1 mapping in the declared
+            # (coin, pos) basis order
+            for coin in (0, 1):
+                for pos in (0, 5, 15):
+                    src = coin * 16 + pos
+                    dst = coin * 16 + ((pos + 1) % 16 if coin == 0 else (pos - 1) % 16)
+                    if abs(complex(perm[dst, src]) - 1.0) > 1e-9:
+                        failures.append(
+                            f"shift_mapping[coin={coin},pos={pos}]="
+                            f"{complex(perm[dst, src])}, expected 1.000000"
+                        )
+
+    # --- numpy step matrix agrees with the shift/coin construction ---
+    step = None
+    try:
+        step = np.asarray(module.numpy_step_matrix(), dtype=complex)
+        if step.shape != (32, 32):
+            failures.append(f"step_shape={step.shape}, expected 32x32")
+        else:
+            # S * (H x I) must equal shift @ kron(H, I)
+            h = np.array([[1, 1], [1, -1]], dtype=complex) / np.sqrt(2.0)
+            expected_step = perm @ np.kron(h, np.eye(16, dtype=complex))
+            diff = float(np.max(np.abs(step - expected_step)))
+            if diff > 1e-12:
+                failures.append(f"step_matrix_diff={diff:.3e}, expected <= 1.0e-12")
+    except Exception as e:  # noqa: BLE001
+        failures.append(f"numpy_step_matrix raised: {e}")
+
+    # --- exact position marginal: normalized, nonnegative, spread ---
+    marginal = None
+    try:
+        marginal = np.asarray(module.position_marginal(steps), dtype=float)
+    except Exception as e:  # noqa: BLE001
+        failures.append(f"position_marginal raised: {e}")
+    if marginal is not None:
+        if marginal.shape != (16,):
+            failures.append(f"marginal_shape={marginal.shape}, expected 16")
+        else:
+            if np.any(marginal < -1e-9):
+                failures.append(f"negative_mass={float(np.min(marginal)):.9f}, expected >= 0.0")
+            total = float(np.sum(marginal))
+            if abs(total - 1.0) > 1e-9:
+                failures.append(f"marginal_total={total:.9f}, expected 1.000000000")
+            support = int(np.sum(marginal > 1e-9))
+            if support < 5:
+                failures.append(f"marginal_support={support}, expected >= 5")
+
+    # --- independent numpy cross-check within 1e-12 ---
+    numpy_ref = None
+    try:
+        numpy_ref = np.asarray(module.numpy_marginal(steps), dtype=float)
+    except Exception as e:  # noqa: BLE001
+        failures.append(f"numpy_marginal raised: {e}")
+    if marginal is not None and numpy_ref is not None:
+        if numpy_ref.shape == marginal.shape:
+            max_diff = float(np.max(np.abs(marginal - numpy_ref)))
+            if max_diff > 1e-12:
+                failures.append(f"crosscheck_max_diff={max_diff:.3e}, expected <= 1.0e-12")
+        else:
+            failures.append(f"numpy_marginal_shape={numpy_ref.shape}, expected 16")
+
+    # --- end-to-end run object ---
+    try:
+        result = module.run_walk(steps=steps)
+        if result.get("max_diff", 1.0) > 1e-12:
+            failures.append(f"run_max_diff={result.get('max_diff')}, expected <= 1.0e-12")
+        if abs(float(result.get("marginal_normalized", 0.0)) - 1.0) > 1e-9:
+            failures.append(
+                f"run_normalized={result.get('marginal_normalized')}, " "expected 1.000000000"
+            )
+    except Exception as e:  # noqa: BLE001
+        failures.append(f"run_walk raised: {e}")
+
+    return {
+        "passed": not failures,
+        "details": failures
+        or [
+            "7-step coined walk on cycle 16: permutation validated, cirq vs "
+            "numpy marginals agree within 1e-12, normalized and spread",
+        ],
+    }

@@ -1,0 +1,9 @@
+{
+  "id": "quantum_rl_v4_gapfill_amplitude_damping_kraus",
+  "name": "Amplitude damping channel with exact API contract",
+  "domain": "quantum",
+  "category": "open_quantum_systems",
+  "task_prompt": "Using NumPy only, implement the one-qubit amplitude-damping channel with damping parameter gamma=0.12. The Kraus operators are K0 with entries (1,1)=1, (2,2)=sqrt(1-gamma), and K1 with entries (1,2)=sqrt(gamma). Required API (the grader imports these exact attributes; a missing or misnamed entry point fails the task immediately): kraus(gamma) -> list [K0, K1] as numpy arrays; apply(rho, ks) -> sum of K rho K^dagger over ks; purity(rho) -> tr(rho^2) as float; excited_state_survival(t, gamma) -> exp(-gamma*t) as float; run_checks(gamma, t, seed) -> dict with keys ks_ok (float max deviation of sum K^dagger K from identity), rho1_00 (top-left entry of channel applied to |1><1|), purity_before, purity_after. The channel applied to |1><1| must have diagonal (1-gamma, gamma); its purity equals (1-gamma)^2 + gamma^2. Verify completeness to 1e-12. A seeded mixed state must show a purity drop with trace preserved. Respond with a single runnable Python file and no prose outside the code. The program must be CPU-runnable, deterministic, and fail loudly through assertions.",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

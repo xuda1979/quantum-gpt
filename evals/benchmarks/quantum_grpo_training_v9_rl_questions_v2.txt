@@ -1,0 +1,79 @@
+# SAPO RL training from quantum_rl_questions_v2.jsonl: waves 1-6 gap-fill lineage = 56 tasks.
+# source=quantum_rl_questions_v2.jsonl sha256=c2eebd37f2ac920aec04126cb656deb62a93ee8cebbcdb055befc0690cbcd68e
+# task_contract_sha256=605d0a6e9ebdd0d32af12e2554f05b862b21b2053a079d880f588c44e7958d14
+# targeted=56 deterministic=0 semantic=0
+# required_import_roots=
+# reference_execution_verified=true runs=3
+# Wave 1 (2026-08-31): frozen-holdout competence classes (partial
+# trace/entropy, Shor, Trotter, depolarizing, VQE, QAOA landscape,
+# Bell basis, QFT, stabilizers/tableau, error-correcting codes).
+# Wave 2/3 (2026-08-31): teleportation, Grover oracles, quantum walks,
+# QPE variants, amplitude estimation, QML classifier, readout
+# mitigation, measurement helper, GHZ/MABK witnesses, ZNE, Hubbard
+# Jordan-Wigner, Heisenberg/TFIM Trotter, QFT matrix/repair,
+# StatePreparation, SWAP test.
+# Wave 2 extension (2026-08-31): QML kernel matrix R3, RX/RY
+# Jacobian, x1>0 variational classifier, binary A-G stabilizer
+# tableau, 6-qubit graph state, phase-flip channel Kraus, Grover
+# 5-qubit Qiskit variant, canonical amplitude estimation RY(0.6).
+# Each task_prompt is the verbatim quantum_rl_questions_v2.jsonl
+# question text; all instances disjoint between waves and from the
+# frozen holdout sapo_promotion_holdout_v1_18.txt (read-only).
+# braket/tket jsonl questions deferred (no local SDK); PyMatching
+# decoding questions skipped (stochastic/fragile).
+quantum_rl_v2_ry_cx_entropy
+quantum_rl_v2_w_state_entropy
+quantum_rl_v2_shor_order_finding
+quantum_rl_v2_trotter_suzuki_1qubit
+quantum_rl_v2_depolarizing_kraus
+quantum_rl_v2_depolarizing_bell_mixed
+quantum_rl_v2_vqe_penny_energy
+quantum_rl_v2_qaoa_p2_maxcut
+quantum_rl_v2_bell_chsh
+quantum_rl_v2_phase_encode_decode
+quantum_rl_v2_stim_cluster_tableau
+quantum_rl_v2_bitflip_code_ancilla
+quantum_rl_v2_teleport_rz_ry
+quantum_rl_v2_grover_cirq_1000
+quantum_rl_v2_walk_cycle16_7step
+quantum_rl_v2_walk_cycle4_3step
+quantum_rl_v2_qml_classifier_x0x1
+quantum_rl_v2_readout_mitigation
+quantum_rl_v2_qpe_cirq_0125
+quantum_rl_v2_measure_helper_5q
+quantum_rl_v2_chsh_phiplus_estimator
+quantum_rl_v2_grover_qiskit_101
+quantum_rl_v2_amplitude_estimation
+quantum_rl_v2_qpe_qiskit_0375
+quantum_rl_v2_ghz_mabk_witness
+quantum_rl_v2_ghz_mabk_4party
+quantum_rl_v2_zne_richardson_zz
+quantum_rl_v2_hubbard_jw_2x1
+quantum_rl_v2_hubbard_jw_3x1
+quantum_rl_v2_heisenberg_trotter_3q
+quantum_rl_v2_tfim_trotter_3q
+quantum_rl_v2_qft_matrix_5q
+quantum_rl_v2_qft_repair_2q
+quantum_rl_v2_stateprep_amplitudes
+quantum_rl_v2_stateprep_2q
+quantum_rl_v2_swap_test_ry
+quantum_rl_v2_amplitude_estimation_ry
+quantum_rl_v2_binary_stabilizer_tableau
+quantum_rl_v2_graph_state_stabilizers_6q
+quantum_rl_v2_grover_qiskit_10111
+quantum_rl_v2_phase_flip_channel_kraus
+quantum_rl_v2_qml_jacobian_rx_ry
+quantum_rl_v2_qml_kernel_ring_r3
+quantum_rl_v2_qml_vc_sign_x1
+quantum_rl_v4_gapfill_gate_alias_registry
+quantum_rl_v4_gapfill_amplitude_damping_kraus
+quantum_rl_v4_gapfill_ghz_mabk_witness
+quantum_rl_v4_gapfill_phase_roundtrip
+quantum_rl_v5_gapfill_gate_alias_sequence
+quantum_rl_v5_gapfill_channel_damping_fidelity
+quantum_rl_v5_gapfill_register_phase_roundtrip
+quantum_rl_v5_gapfill_alias_phase_drill
+quantum_rl_v6_gapfill_bare_file_gate_norm
+quantum_rl_v6_gapfill_statevector_fidelity_check
+quantum_rl_v6_gapfill_circuit_construct_measure
+quantum_rl_v6_gapfill_compact_phase_roundtrip

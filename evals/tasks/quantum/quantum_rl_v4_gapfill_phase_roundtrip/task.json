@@ -1,0 +1,9 @@
+{
+  "id": "quantum_rl_v4_gapfill_phase_roundtrip",
+  "name": "Bitstring-to-phase register roundtrip with exact API contract",
+  "domain": "quantum",
+  "category": "interface_contract",
+  "task_prompt": "Using NumPy only, implement the phase-encoding roundtrip used in phase estimation: map an n-bit string to a phase and back. Required API (the grader imports these exact attributes; a missing or misnamed entry point fails the task immediately): bits_to_phase(bits) -> float in [0,1) where bits is a string like '101' interpreted as the binary fraction 0.b1b2...bn; phase_to_bits(phase, n) -> n-character string of 0/1 recovering the binary fraction to n bits; phase_grid(n) -> sorted list of the 2^n representable phases; roundtrip_error(bits) -> float absolute error of phase_to_bits(bits_to_phase(bits), len(bits)) vs the original bits; register_diag(n) -> dict with keys n_bits, n_phases, spacing, max_roundtrip_error. The mapping is phase = sum b_k / 2^k; phase_to_bits rounds to the nearest grid point (ties to even). Every representable n-bit string must roundtrip exactly (error 0.0). Respond with a single runnable Python file and no prose outside the code. The program must be CPU-runnable, deterministic, and fail loudly through assertions.",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

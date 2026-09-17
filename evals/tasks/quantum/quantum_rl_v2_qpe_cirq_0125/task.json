@@ -1,0 +1,9 @@
+{
+  "id": "quantum_rl_v2_qpe_cirq_0125",
+  "name": "Quantum phase estimation in Cirq (U=ZPow 0.125)",
+  "domain": "quantum",
+  "category": "algorithm_implementation",
+  "task_prompt": "Implement quantum phase estimation in Cirq with 3 counting qubits for U=ZPowGate(exponent=2*0.125) on eigenstate |1>. Apply controlled powers in a documented significance order, implement inverse QFT manually, sample 4096 repetitions with a fixed simulator seed, decode the measurement bitstring, and assert the dominant phase estimate is 0.125 within 1/2**3. Return only one complete Python script with no Markdown fences. It must run locally without network access, use fixed seeds whenever randomness is involved, print concise results, and assert every required invariant.",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

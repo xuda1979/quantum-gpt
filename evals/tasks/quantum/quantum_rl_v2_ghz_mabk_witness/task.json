@@ -1,0 +1,9 @@
+{
+  "id": "quantum_rl_v2_ghz_mabk_witness",
+  "name": "3-qubit GHZ MABK entanglement witness",
+  "domain": "quantum",
+  "category": "algorithm_implementation",
+  "task_prompt": "Prepare a 3-qubit GHZ state and use StatevectorEstimator to evaluate XXX, XYY, YXY, and YYX, then compute M=XXX-XYY-YXY-YYX and assert M=4 within numerical precision. Output code only as a self-contained Python program. Use documented public APIs, require no cloud credentials, make stochastic behavior reproducible, and include executable checks with justified tolerances.",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

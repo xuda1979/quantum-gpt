@@ -1,0 +1,9 @@
+{
+  "id": "quantum_rl_v2_tfim_trotter_3q",
+  "name": "TFIM 3-qubit S2 Trotter evolution",
+  "domain": "quantum",
+  "category": "algorithm_implementation",
+  "task_prompt": "Simulate time t=0.8 for the 3-qubit open-boundary tfim Hamiltonian H=-0.7*sum_i Z_i Z_(i+1)-0.5*sum_i X_i, starting from the exact computational-basis state |010> when displayed in q_(n-1)...q_0 order. Implement a palindromic symmetric second-order product formula over the explicitly listed Pauli terms with 10 steps, construct the same Hamiltonian matrix independently with NumPy/SciPy, compare final-state fidelity and <Z0> with exact expm evolution, and assert fidelity exceeds 0.995. Return only one complete Python script with no Markdown fences. It must run locally without network access, use fixed seeds whenever randomness is involved, print concise results, and assert every required invariant.",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

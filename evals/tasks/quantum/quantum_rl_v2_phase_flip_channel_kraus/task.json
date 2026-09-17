@@ -1,0 +1,9 @@
+{
+  "id": "quantum_rl_v2_phase_flip_channel_kraus",
+  "name": "Phase-flip channel Kraus operators in NumPy/SciPy, p=0.18",
+  "domain": "quantum",
+  "category": "quantum_error_correction",
+  "task_prompt": "Using NumPy and SciPy only, construct Kraus operators for the one-qubit channel 'phase_flip' with parameter p=0.18, using the explicit convention E(rho)=(1-p)rho+p*ZrhoZ. Verify sum K^dagger K=I, apply the channel to |+><+| and a seeded random mixed state, and implement purity, trace distance, and squared Uhlmann fidelity with stable Hermitian eigendecompositions. Assert outputs are Hermitian positive semidefinite with unit trace and that fidelity remains in [0,1]. Respond with a single runnable Python file and no prose outside the code. The program must be CPU-runnable, deterministic where practical, and fail loudly through assertions when a requested property is not met.",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

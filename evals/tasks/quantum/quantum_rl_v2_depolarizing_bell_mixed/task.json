@@ -1,0 +1,9 @@
+{
+  "id": "quantum_rl_v2_depolarizing_bell_mixed",
+  "name": "PennyLane depolarizing channel on Bell state (mixed)",
+  "domain": "quantum",
+  "category": "algorithm_implementation",
+  "task_prompt": "On PennyLane default.mixed, prepare a Bell state and apply qml.DepolarizingChannel(0.03) to qubit 0. Return the full density matrix, compute trace, eigenvalues, purity, and fidelity with |Phi+> using independent NumPy formulas, and evaluate <ZZ>. Also create a separate finite-shot QNode with 20000 shots and a fixed device seed, estimate <ZZ>, and assert it agrees with the analytic mixed-state value within 0.04. Return only one complete Python script with no Markdown fences. It must run locally without network access, use fixed seeds whenever randomness is involved, print concise results, and assert every required invariant.",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

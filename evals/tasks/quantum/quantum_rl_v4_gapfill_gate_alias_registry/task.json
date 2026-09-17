@@ -1,0 +1,9 @@
+{
+  "id": "quantum_rl_v4_gapfill_gate_alias_registry",
+  "name": "Gate alias registry with canonical lookup (Required API contract)",
+  "domain": "quantum",
+  "category": "api_normalization",
+  "task_prompt": "Implement a gate-name normalization registry in plain Python plus NumPy. Maintain a module-level dict REGISTRY mapping lowercase aliases to canonical gate names. Seed it with the entries: h->h, hadamard->h, x->x, pauli_x->x, cx->cx, cnot->cx, ccx->ccx, toffoli->ccx, s->s, z->z. Required API (the grader imports these exact attributes; a missing or misnamed entry point fails the task immediately): normalize(name) -> str raising KeyError for unknown names; lookup(name) -> str aliasing to normalize; aliases() -> sorted list of all alias keys; canonicals() -> sorted list of distinct canonical names; register(alias, canonical) -> None adding a new alias at runtime; stats() -> dict with keys n_aliases and n_canonicals. Respond with a single runnable Python file and no prose outside the code. The program must be CPU-runnable, deterministic, and fail loudly through assertions.",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

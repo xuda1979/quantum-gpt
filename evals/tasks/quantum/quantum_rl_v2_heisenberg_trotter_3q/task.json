@@ -1,0 +1,9 @@
+{
+  "id": "quantum_rl_v2_heisenberg_trotter_3q",
+  "name": "Heisenberg 3-qubit S2 Trotter evolution",
+  "domain": "quantum",
+  "category": "algorithm_implementation",
+  "task_prompt": "Simulate time t=0.55 for the 3-qubit open-boundary heisenberg Hamiltonian H=0.6*sum_i (X_i X_(i+1)+Y_i Y_(i+1)+Z_i Z_(i+1))+1.1*sum_i Z_i, starting from the exact computational-basis state |010> when displayed in q_(n-1)...q_0 order. Implement a palindromic symmetric second-order product formula over the explicitly listed Pauli terms with 20 steps, construct the same Hamiltonian matrix independently with NumPy/SciPy, compare final-state fidelity and <Z0> with exact expm evolution, and assert fidelity exceeds 0.995. Provide only complete executable Python code. Do not use remote services. Seed random generators, print the requested quantities, and include robust self-tests rather than relying on visual inspection.",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

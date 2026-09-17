@@ -1,0 +1,9 @@
+{
+  "id": "quantum_rl_v2_qft_repair_2q",
+  "name": "Repair 2-qubit QFT implementation",
+  "domain": "quantum",
+  "category": "algorithm_implementation",
+  "task_prompt": "Repair a hand-written 2-qubit QFT implementation that uses the wrong controlled-phase sign, omits final swaps, and confuses little-endian basis indices with displayed bitstrings. Implement both a circuit-style statevector routine and an independent dense DFT reference under one documented convention. Test every computational basis state, verify unitarity, verify forward followed by inverse is identity up to global phase, and include a regression test that would fail if swaps or phase signs are wrong. Return only one complete Python script with no Markdown fences. It must run locally without network access, use fixed seeds whenever randomness is involved, print concise results, and assert every required invariant.",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

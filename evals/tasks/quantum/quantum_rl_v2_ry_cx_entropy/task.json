@@ -1,0 +1,9 @@
+{
+  "id": "quantum_rl_v2_ry_cx_entropy",
+  "name": "RY-CX two-qubit reduced von Neumann entropy",
+  "domain": "quantum",
+  "category": "algorithm_implementation",
+  "task_prompt": "Prepare RY(1.1) on qubit 0 followed by CX(0,1). Using qiskit.quantum_info only, compute the two-qubit Statevector, trace out qubit 1, and calculate the base-2 von Neumann entropy of qubit 0. Independently evaluate h2(sin^2(theta/2)), handle zero logarithms safely, print both values, and assert agreement within 1e-12. Respond with a single runnable Python file and no prose outside the code. The program must be CPU-runnable, deterministic where practical, and fail loudly through assertions when a requested property is not met.",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

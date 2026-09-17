@@ -1,0 +1,9 @@
+{
+  "id": "quantum_rl_v2_shor_order_finding",
+  "name": "Shor order finding N=15 base 8 with 6 counting qubits",
+  "domain": "quantum",
+  "category": "algorithm_implementation",
+  "task_prompt": "Implement the order-finding core of Shor's algorithm for N=15 and base a=8 using 6 counting qubits and a 4-qubit work register initialized to |1>. Build each controlled multiplication by a^(2^k) mod 15 as a reversible permutation UnitaryGate that maps x<15 to a^(2^k)*x mod 15 and leaves |15> fixed, apply inverse QFT, sample with a fixed seed, recover candidate periods with Fraction.limit_denominator(15), validate a^r mod 15=1, and print nontrivial factors obtained from gcd(a^(r/2)±1,15). Assert factors 3 and 5 are recovered from at least one high-probability outcome. Provide only complete executable Python code. Do not use remote services. Seed random generators, print the requested quantities, and include robust self-tests rather than relying on visual inspection.",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

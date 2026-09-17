@@ -1,0 +1,9 @@
+{
+  "id": "quantum_rl_v5_gapfill_channel_damping_fidelity",
+  "name": "Depolarizing + amplitude-damping channels with fidelity (exact holdout API)",
+  "domain": "quantum",
+  "category": "algorithm_implementation",
+  "task_prompt": "Respond with a single runnable Python file using only numpy and the standard library. Define every required function with the EXACT names given; a missing or misnamed entry point fails immediately. Include assert-based self-tests that fail loudly, print nothing on success, and use no randomness or remote services. Implement a depolarizing-plus-amplitude-damping channel suite for a single qubit with dense 2x2 lists: depolarizing_channel(rho, p) returning (1-p)*rho + p*I/2, amplitude_damping_channel(rho, gamma) via the Kraus pair K0 = [[1, 0], [0, sqrt(1-gamma)]], K1 = [[0, sqrt(gamma)], [0, 0]] applied as K0 rho K0^dag + K1 rho K1^dag, and channel_fidelity(rho, sigma) = Tr(rho sigma) + 2*sqrt(det(rho)*det(sigma)). Assert amplitude_damping_channel of |1> at gamma 0 stays |1><1| and at gamma 1 becomes |0><0|, channel_fidelity(rho, rho) = 1, and channel_fidelity(|0>, |1>) = 0, all within 1e-9.",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}
