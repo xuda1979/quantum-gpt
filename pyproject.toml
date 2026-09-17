@@ -29,7 +29,9 @@ ignore = [
   "E501",   # line length handled by formatter
   "B008",   # function call in default arg (used for dataclass defaults)
   "B904",   # raise from in except — enable later, noisy now
-  "UP007",  # Optional[X] vs X | None — keep py3.10 compat readable
+  "UP007",  # Optional[X] vs X | None — keep py3.9 runtime compat readable
+  "UP038",  # isinstance(x, A | B) is py3.10+; canonical runtime venv is py3.9
+    # (canary: tests::test_training_has_no_runtime_union_isinstance)
 ]
 
 [tool.ruff.lint.per-file-ignores]

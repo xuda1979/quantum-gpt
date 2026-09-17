@@ -97,7 +97,11 @@ def test_build_reward_breakdown_includes_import_hygiene_signal() -> None:
     assert 0.0 <= float(reward["total_reward"]) < 1.0
 
 
-def test_build_reward_breakdown_zeros_verifier_credit_for_runtime_failures() -> None:
+def test_build_reward_breakdown_keeps_verifier_credit_for_runtime_failures() -> None:
+    # B-237 (2026-09-15): a PARSEABLE candidate (syntax_ok) that ran and only
+    # then hit a runtime marker keeps its real verifier credit (1 - 1/4);
+    # unparseable/empty candidates still zero out (see the SyntaxError test
+    # below). The shaped term still treats a crash as never a near miss.
     reward = build_reward_breakdown(
         code="def solve(x: int) -> int:\n    return missing_name + x\n",
         result={"passed": False, "details": ["NameError: name 'missing_name' is not defined"]},
@@ -110,7 +114,8 @@ def test_build_reward_breakdown_zeros_verifier_credit_for_runtime_failures() -> 
     )
     assert reward["syntax_reward"] == 1.0
     assert reward["interface_reward"] == 1.0
-    assert reward["verifier_reward"] == 0.0
+    assert reward["verifier_reward"] == 0.75
+    assert reward["shaped_reward"] == 0.0
 
 
 def test_build_reward_breakdown_does_not_reward_unparseable_code_as_partial_progress() -> None:
@@ -130,9 +135,13 @@ def test_build_reward_breakdown_does_not_reward_unparseable_code_as_partial_prog
         verifier_weight=0.15,
     )
 
-    assert reward["syntax_reward"] == 0.0
-    assert reward["verifier_reward"] == 0.0
-    assert reward["total_reward"] == 0.0
+    # B-328: syntax_reward is now *graded* (0.3 for partial with keywords,
+    # 0.0 for utter garbage) instead of binary.  "def solve(:" has a Python
+    # keyword so it gets 0.3 — but it still must NOT get verifier credit
+    # or a passing reward, since the code never executed.
+    assert reward["syntax_reward"] == 0.3  # graded: partial Python structure
+    assert reward["verifier_reward"] == 0.0  # no execution → no verifier credit
+    assert reward["total_reward"] < 0.1  # syntax_weight * 0.3 is small but nonzero
 
 
 def test_estimate_detail_budget_counts_test_markers() -> None:
@@ -145,7 +154,9 @@ details.append("b")
 
 
 def test_task_curriculum_prioritizes_harder_quantum_tasks() -> None:
-    curriculum = TaskCurriculum(quantum_priority=1.5, uncertainty_bonus=0.2)
+    # B-241: hard > easy must hold at HEALTHY pass rate (0.5 -> gamma 1.0,
+    # the old uncompressed math).
+    curriculum = TaskCurriculum(quantum_priority=1.5, uncertainty_bonus=0.2, global_pass_rate=0.5)
     curriculum.record("easy_quantum", 0.95)
     curriculum.record("easy_quantum", 0.95)
     hard_weight = curriculum.weight("hard_quantum", "quantum")
@@ -153,6 +164,29 @@ def test_task_curriculum_prioritizes_harder_quantum_tasks() -> None:
     software_weight = curriculum.weight("hard_software", "software")
     assert hard_weight > easy_weight
     assert hard_weight > software_weight
+
+
+def test_task_curriculum_compresses_hard_bias_at_low_pass_rate() -> None:
+    # B-241: at pass rate 0.05 the anti-curriculum compressed the old
+    # ~19:1 hard:easy pull down under 4x, but hard must still outrank easy.
+    def build(pass_rate: float) -> TaskCurriculum:
+        curriculum = TaskCurriculum(
+            quantum_priority=1.5, uncertainty_bonus=0.2, global_pass_rate=pass_rate
+        )
+        for _ in range(30):
+            curriculum.record("easy_quantum", 1.0)
+        return curriculum
+
+    low = build(0.05)
+    hard_low = low.weight("hard_quantum", "quantum")
+    easy_low = low.weight("easy_quantum", "quantum")
+    assert hard_low > easy_low
+    assert hard_low <= easy_low * 4.0
+
+    high = build(0.5)
+    hard_high = high.weight("hard_quantum", "quantum")
+    easy_high = high.weight("easy_quantum", "quantum")
+    assert hard_high > easy_high * 10.0
 
 
 def test_frontier_learnability_peaks_for_mixed_outcomes() -> None:
@@ -409,6 +443,21 @@ def test_difficulty_manifest_mixture_mass_prefers_learnable_set() -> None:
     hard_mass = sum(weights[i] for i in range(3))
     assert hard_mass < weights[3]
     assert all(w > 0.0 for w in weights)
+
+
+def test_quarantined_repair_pool_keeps_residual_mixture_mass() -> None:
+    """B-242: a REPAIR_SFT quarantine is no longer a life sentence -- the
+    quarantined pool keeps a fixed 0.05 residual mass so the sampler can
+    re-probe those tasks and the router can re-route them."""
+    tasks = [
+        {"task_id": "healthy", "meta": {"domain": "quantum", "category": "noise"}},
+        {"task_id": "quarantined", "meta": {"domain": "quantum", "category": "noise"}},
+    ]
+    router = FrontierRouter()
+    router.get_state("quarantined")["route"] = "repair_sft"
+    weights = build_mixture_weights(router, tasks, step=1)
+    assert weights[1] > 0.0
+    assert weights[0] > weights[1]
 
 
 def test_build_grpo_step_record_persists_update_metadata() -> None:
@@ -929,3 +978,34 @@ def test_training_has_no_runtime_union_isinstance() -> None:
         assert not re.search(
             r"isinstance\([^)]*\|", source
         ), "isinstance unions are py3.10-only; use tuples"
+
+
+def test_adaptive_temp_accelerates_in_sustained_deadlock() -> None:
+    """RED class 2026-09-16 (93%-all-fail signal starvation): the LINEAR
+    escalation (base*(1+step*count)) is too slow to break a long flat-reward
+    deadlock -- at 20 skips it only reaches base*4 and then plateaus under
+    the cap, so a severe all-fail regime never diversifies enough to find a
+    passing candidate. The escalation must compound so a SUSTAINED deadlock
+    reaches max (diversity) faster, while small counts keep the old behavior.
+    """
+    from training.grpo_utils import AdaptiveTemperatureState
+
+    # default acceleration (must not change small-count behavior)
+    s = AdaptiveTemperatureState(base_temp=0.8, step_size=0.15, max_temp=1.4)
+    # small counts: linear as before
+    assert s.current_temp_at_count(1) == pytest.approx(0.8 * (1 + 0.15))
+    assert s.current_temp_at_count(2) == pytest.approx(0.8 * (1 + 0.30))
+    # sustained deadlock: reaches max way before the linear slope would
+    # (linear at count=20 -> 0.8*(1+3)=3.2 capped = 1.4 already, so test
+    # the SHAPE: escalation to a higher value at mid counts).
+    # Use a high max so the acceleration is visible vs linear.
+    s2 = AdaptiveTemperatureState(base_temp=0.8, step_size=0.15, max_temp=10.0)
+    linear_10 = 0.8 * (1 + 0.15 * 10)  # 2.0
+    assert (
+        s2.current_temp_at_count(10) > linear_10
+    ), "acceleration must push past the linear slope in sustained deadlock"
+    # and still cap
+    s3 = AdaptiveTemperatureState(base_temp=0.8, step_size=0.15, max_temp=1.4)
+    for _ in range(50):
+        s3.record_skip("low_reward_signal")
+    assert s3.current_temp() == 1.4

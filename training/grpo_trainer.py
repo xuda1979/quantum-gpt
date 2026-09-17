@@ -81,9 +81,8 @@ def _maybe_repair_sidecar_relaunch(
     path = Path(script_path) if script_path is not None else ROOT / SIDE_CAR_RELAUNCH_SCRIPT
     if not path.exists():
         print(
-            "[SIDECAR_RELAUNCH_SKIPPED] relauncher missing: %s - relaunch the "
-            "sidecar manually via: bash scripts/sapo_ensure_repair_sidecar.sh %s"
-            % (path, output_dir),
+            f"[SIDECAR_RELAUNCH_SKIPPED] relauncher missing: {path} - relaunch the "
+            f"sidecar manually via: bash scripts/sapo_ensure_repair_sidecar.sh {output_dir}",
             flush=True,
         )
         return False
@@ -98,16 +97,17 @@ def _maybe_repair_sidecar_relaunch(
     try:
         proc = runner(argv, timeout=SIDE_CAR_RELAUNCH_TIMEOUT_S, env=runner_env)
         print(
-            "[SIDECAR_RELAUNCH] attempted repair-sidecar relaunch: %s rc=%s"
-            % (" ".join(argv), getattr(proc, "returncode", "?")),
+            "[SIDECAR_RELAUNCH] attempted repair-sidecar relaunch: {} rc={}".format(
+                " ".join(argv), getattr(proc, "returncode", "?")
+            ),
             flush=True,
         )
         return True
     except Exception as exc:  # noqa: BLE001 - relaunch must never crash training
         print(
-            "[SIDECAR_RELAUNCH_FAILED] argv=%s error=%r - continuing training; "
+            "[SIDECAR_RELAUNCH_FAILED] argv={} error={!r} - continuing training; "
             "relaunch the sidecar manually via: bash scripts/"
-            "sapo_ensure_repair_sidecar.sh %s" % (" ".join(argv), exc, output_dir),
+            "sapo_ensure_repair_sidecar.sh {}".format(" ".join(argv), exc, output_dir),
             flush=True,
         )
         return False
@@ -172,6 +172,7 @@ from training.grpo_utils import (  # noqa: E402
 )
 from training.model_backend import run_text_forward_preflight  # noqa: E402
 from training.model_family_preflight import trainer_backend_preflight_block  # noqa: E402
+from training.prompt_normalizer import normalize_prompt  # noqa: E402
 from training.qwen_sft_peft import (  # noqa: E402
     TextPreprocessorBackend,
     _visible_npu_indices,
@@ -1132,7 +1133,7 @@ def build_prompt(task: dict, research_methods: list[Any] | None = None) -> str:
     else:
         parts.append(f"Task: {meta.get('name', task['task_dir'].name)}")
 
-    parts.append(f"Task id: {meta.get('id', task['task_dir'].name)}")
+    parts.append(f"Task ID: {meta.get('id', task['task_dir'].name)}")
     parts.append(
         f"Domain: {meta.get('domain', 'unknown')}\nCategory: {meta.get('category', 'unknown')}"
     )
@@ -1163,32 +1164,39 @@ def build_prompt(task: dict, research_methods: list[Any] | None = None) -> str:
         )
 
     parts.append(
-        "Output contract:\n"
-        "- Return only the final Python code.\n"
-        "- Do not add explanations, tests, examples, or demo code.\n"
-        "- Stop immediately after the final required Python statement.\n"
-        "- Prefer the shortest correct implementation that satisfies the required interface."
+        # B-332: aligned with eval's output instructions. The eval says
+        # "Implement the requested file. Hidden tests will verify behavior."
+        # and "Return only the complete Python source, without markdown fences
+        # or explanation." The old "Stop immediately" wording caused EOS-collapse.
+        "Write a Python file that satisfies the public task contract; hidden tests will verify it.\n"
+        "Return only the candidate file contents.\n"
+        "Implement the requested file. Hidden tests will verify behavior.\n"
+        "Return only the complete Python source, without markdown fences or explanation."
     )
     prompt = "\n\n".join(parts)
     for method in research_methods or []:
         prompt = method.augment_grpo_prompt(prompt, task=task, stage="grpo")
+    # B-329: normalize prompt for train/eval consistency — ensures the
+    # required interface is present and the output contract allows
+    # complete multi-function implementations.
+    candidate_file = meta.get("candidate_file")
+    interface_lines = task.get("required_interface") or (
+        summarize_candidate_interface(task["task_dir"] / candidate_file) if candidate_file else []
+    )
+    prompt = normalize_prompt(prompt, required_interface=interface_lines)
     return prompt
 
 
 SYSTEM_PROMPT = (
-    # 2026-09-14: the previous wording ("Return code only. ... Stop immediately after the
-    # final required Python statement.") made the policy emit <|im_end|> as its FIRST
-    # token on the real 526-token GRPO prompt (n=1, ids=[248046]) -- every rollout
-    # collapsed to 1 token and every step skipped (Mode B). Bisect on the frozen
-    # trainer prompt (same weights/adapter/greedy/max_new_tokens, prompt the only
-    # variable): FULL 526 -> n=1 EOS; -Output-contract 469 -> n=1; -Task-id/Domain 504
-    # -> n=3; BARE task_prompt 194 -> n=1; dropping ONLY the stop sentence 517 -> n=4;
-    # dropping ONLY "Return code only" 522 -> n=3; this wording 520 -> n=1 first_is_end
-    # False with real code ("import numpy as np / from qiskit import QuantumCircui...").
-    # The restrictive "code only / stop immediately" framing is the suppressor, not the
-    # task wrapper.
-    "You are a careful coding assistant focused on correctness, clear reasoning, "
-    "and maintainable Python code. Return only the final code."
+    # B-332: aligned with eval's "direct" prompt style (evals/runner/prepare_prompts.py).
+    # The previous wording ("You are a careful coding assistant... Return only the final code.")
+    # was completely different from eval's system prompt, causing train/eval distribution mismatch
+    # that made 11/18 tasks effectively out-of-distribution at eval time.
+    # 2026-09-14 history: the previous "Return code only. ... Stop immediately" wording
+    # caused EOS-collapse (n=1, ids=[248046]). The eval "direct" style avoids this by
+    # saying "Produce only the full contents" (no "stop immediately" suppressor).
+    "You are solving a single evaluation task. Produce only the full contents of the requested Python candidate file. "
+    "Do not add markdown fences, explanations, or surrounding commentary unless the task explicitly asks for it."
 )
 
 

@@ -1344,6 +1344,82 @@ def _recover_parseable_code_block(code: str) -> str | None:
     return best
 
 
+def _graded_syntax_score(code: str) -> float:
+    """B-328: Graded syntax score to break all-syntax-error zero-gradient deadlock.
+
+    Returns a *graded* score instead of a binary 0/1 so that a group where
+    every candidate has a SyntaxError still carries dispersion:
+
+    - 1.0 : clean parse (ast.parse succeeds)
+    - 0.3 : recoverable / partial — has Python keywords (def/class/import)
+            but won't fully parse (e.g. unclosed paren, truncated body)
+    - 0.0 : utter garbage (no Python structure at all)
+
+    This creates LOO advantage variation even in all-fail groups, producing
+    a non-zero policy gradient instead of the zero-gradient deadlock.
+    """
+    if not code or not code.strip():
+        return 0.0
+    # Tier 1: clean parse -> 1.0
+    # Catch broad exceptions, not just SyntaxError: model output may contain
+    # null bytes (=> ValueError from ast.parse) or other non-parseable junk.
+    # Treating those as a failed parse lets the graded tiers below recover a
+    # 0.3/0.0 score instead of crashing the reward pipeline (B-328 RED).
+    try:
+        ast.parse(code)
+        return 1.0
+    except (SyntaxError, ValueError):
+        pass
+    # Tier 2: partial — has Python keywords/structure but won't fully parse
+    has_structure = False
+    try:
+        import io
+        import keyword
+        import tokenize
+
+        tokens = list(tokenize.tokenize(io.BytesIO(code.encode("utf-8", errors="ignore")).readline))
+        has_structure = any(t.type == tokenize.NAME and t.string in keyword.kwlist for t in tokens)
+    except Exception:
+        pass
+    if not has_structure:
+        stripped = code.strip()
+        for kw in ("def ", "class ", "import ", "from "):
+            if kw in stripped:
+                has_structure = True
+                break
+    if has_structure:
+        return 0.3
+    # Tier 3: garbage -> 0.0
+    return 0.0
+
+
+def _participation_epsilon(code: str) -> float:
+    """B-331: tiny differentiated participation signal for all-zero candidates.
+
+    Returns a small epsilon to break the zero-gradient dead zone when every
+    component reward is 0.0. The signal is differentiated so group LOO
+    advantages are not flat:
+
+    - 0.0  : empty or whitespace-only (no credit for producing nothing)
+    - 0.01 : non-empty output but no Python keywords (pure garbage)
+    - 0.02 : contains Python keywords (def/class/import/from) but unparseable
+
+    These values are deliberately tiny (well below the 0.3 tier-2 syntax
+    score and the 0.10 weight floor) so they never create false progress —
+    they only prevent all-flat groups from being queued to repair SFT
+    with zero gradient.
+    """
+    stripped = code.strip()
+    if not stripped:
+        return 0.0
+    # Check for Python keywords that indicate the model is at least trying
+    # to write code structure
+    has_keyword = any(kw in stripped for kw in ("def ", "class ", "import ", "from "))
+    if has_keyword:
+        return 0.02
+    return 0.01
+
+
 def build_reward_breakdown(
     *,
     code: str,
@@ -1416,7 +1492,10 @@ def build_reward_breakdown(
     shaped_reward = shaped_reward_from_details(
         passed, details, crash_progress_credit=crash_progress_credit
     )
-    syntax_reward = 1.0 if syntax_ok else 0.0
+    # B-328: graded syntax reward — 1.0 (clean), 0.3 (partial), 0.0 (garbage).
+    # Creates dispersion in all-syntax-error groups so LOO advantages are
+    # not all-zero and the policy still gets a gradient signal.
+    syntax_reward = 1.0 if syntax_ok else _graded_syntax_score(code)
     brevity_score = (
         brevity_reward(scored_code, target_lines=brevity_target_lines) if syntax_ok else 0.0
     )
@@ -1448,6 +1527,20 @@ def build_reward_breakdown(
         + brevity_weight * brevity_score
         + import_hygiene_weight * import_hygiene
     ) / max(weight_sum, 1e-8)
+
+    # B-331: participation reward — break the zero-gradient dead zone.
+    # When ALL components are zero (pure garbage, no structure, no near-miss),
+    # the candidate still produced output. Inject a tiny differentiated signal
+    # so the group's LOO advantages are not flat. The epsilon is:
+    #   - 0.0  : empty/whitespace-only (no participation credit for nothing)
+    #   - 0.01 : non-empty but no Python keywords (pure garbage)
+    #   - 0.02 : has Python keywords (def/class/import) but unparseable
+    # This is strictly below the 0.3 tier-2 from _graded_syntax_score, so
+    # it never creates false progress — it only prevents all-flat groups.
+    if total_reward == 0.0 and not passed:
+        participation = _participation_epsilon(code)
+        if participation > 0.0:
+            total_reward = participation
 
     return {
         "passed": passed,
