@@ -10,6 +10,7 @@ Usage:
   qgh queue                      render the priority queue
   qgh fleet                      render live agents
   qgh dispatch [--lane L]        spawn workers for top ready cards (per WIP limits)
+  qgh heartbeat C-XXXX MSG       append a worker heartbeat (sanctioned python route)
   qgh reap                       harvest finished/dead/overrun workers
   qgh tick                       THE MANAGER TICK: reconcile + dispatch + standup
   qgh standup                    render a fresh standup from structured state

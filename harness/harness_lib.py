@@ -160,12 +160,55 @@ def load_queue(state_dir):
 
 
 def save_queue(state_dir, queue):
-    save_json(os.path.join(state_dir, "QUEUE.json"), queue)
+    # C-9027 (3): identity (title+lane) is frozen per live id -- the
+    # C-9021 incident stood up fixer/"Split /health-ready..." under the
+    # id standup-27 had recorded as planner/"Queue nearly empty...".
+    # State fields (status/claims/deadlines) stay writable; new intent
+    # requires a NEW id. A missing/corrupt prior file skips the guard
+    # (first save).
+    path = os.path.join(state_dir, "QUEUE.json")
+    if os.path.exists(path):
+        disk = load_json(path, {"cards": [], "seq": 0})
+        mem = {c.get("id"): c for c in queue.get("cards", [])}
+        for c in disk.get("cards", []):
+            m = mem.get(c.get("id"))
+            if m is None:
+                continue
+            for field in ("title", "lane"):
+                if field in c and field in m and c[field] != m[field]:
+                    raise ValueError(
+                        f"refusing to mutate {field} of existing card {c.get('id')} under a "
+                        f"live id (disk {c.get(field)!r} != memory {m.get(field)!r}); new intent requires "
+                        "a new id"
+                    )
+    save_json(path, queue)
+
+
+# C-9027: statuses under which a card is open (same intent still live).
+OPEN_STATUSES = ("ready", "running", "blocked")
 
 
 def add_card(queue, card):
-    queue["seq"] = queue.get("seq", 0) + 1
+    # C-9027 (1): title-class dedupe -- an OPEN card with the same exact
+    # title is the same intent; minting a second one under a fresh id is
+    # the C-9021/C-9023 double-mint. Refusal is title-scoped, never
+    # lane-scoped: the incident card mutated lane planner->fixer under
+    # one id. New intent requires a new title (hence a new id).
+    title = card.get("title") or ""
+    for c in queue.get("cards", []):
+        if c.get("title") == title and c.get("status") in OPEN_STATUSES:
+            raise ValueError(
+                f"duplicate open card title {title!r} (same intent, live id {c.get('id')}); "
+                "new intent requires a new title+id"
+            )
+    queue["seq"] = int(queue.get("seq", 0)) + 1
     card["id"] = card["id"] or f"C-{queue['seq']:04d}"
+    # C-9027 (2): a stale on-disk seq (a lost update left seq=9020 while
+    # C-9021 existed) must never mint a colliding id -- bump to free.
+    ids = {c.get("id") for c in queue.get("cards", [])}
+    while card["id"] in ids:
+        queue["seq"] += 1
+        card["id"] = f"C-{queue['seq']:04d}"
     queue["cards"].append(card)
     return card
 
@@ -503,6 +546,9 @@ def release_lock(path, token):
 
 
 RESULT_RE = re.compile(r"^RESULT:\s*(DONE|PARTIAL|BLOCKED)\b", re.MULTILINE)
+# C-9048-A: a worker log carries one segment per dispatch
+# ("===== dispatch <ts> =====" separators).
+DISPATCH_SEG_RE = re.compile(r"^=====\s*dispatch\b.*=====\s*$", re.MULTILINE)
 
 
 def harvest_log(log_path):
@@ -514,7 +560,14 @@ def harvest_log(log_path):
         return None, []
     with open(log_path, encoding="utf-8", errors="replace") as f:
         text = f.read()
-    m = RESULT_RE.search(text)
+    # C-9048-A: scope the verdict to the LAST dispatch segment. An
+    # append-mode worker log accumulates one segment per dispatch
+    # ("===== dispatch <ts> ====="); a whole-file scan leaked the
+    # previous dispatch's verdict into a dispatch that produced none,
+    # defeating the environmental re-arm and burning bounce strikes
+    # with a lying reason.
+    segments = DISPATCH_SEG_RE.split(text)
+    m = RESULT_RE.search(segments[-1] if segments else text)
     tail = [ln for ln in text.strip().splitlines() if ln.strip()][-10:]
     return (m.group(1) if m else None), tail
 
