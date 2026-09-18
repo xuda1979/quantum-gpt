@@ -384,16 +384,38 @@ def dispatch_target_ok(queue, card, lanes=None, claim_in_progress=False):
     return True, "ok"
 
 
+def claimable_ready_count(queue):
+    """C-9114: count CLAIMABLE ready cards straight from QUEUE.json's cards
+    field (dict-format cards): status "ready" AND no dep whose status is
+    dead/bounced. A running or done dep is work in flight/complete -- the
+    card still counts (the board is not idle); only a TERMINAL dep means
+    the card can never become work, so it is excluded."""
+    n = 0
+    for c in queue["cards"]:
+        if c["status"] != "ready":
+            continue
+        stuck = False
+        for dep_id in c["deps"]:
+            dep = find_card(queue, dep_id)
+            if dep is not None and dep["status"] in ("dead", "bounced"):
+                stuck = True
+                break
+        if not stuck:
+            n += 1
+    return n
+
+
 def planner_topup_needed(queue, min_ready=2):
     """Idle top-up gate for _reap: mint a planner card only when the queue is
-    GENUINELY idle. The <2 trigger counts CLAIMABLE cards only (ready_cards:
-    unclaimed + deps satisfied). A saturated board -- few claimable cards but
-    ready cards dep-blocked on a RUNNING dep -- is work in flight, not
-    idleness, and must NOT mint (the C-0021 measured bug: three planner cards
-    minted in 30 min while C-0010/C-0015/C-0016 waited on running deps). A
-    blocker that is terminally dead will never unblock the board: that IS a
-    management failure and must mint."""
-    if len(ready_cards(queue)) >= min_ready:
+    GENUINELY idle. The trigger counts CLAIMABLE ready cards (claimable_
+    ready_count: ready + deps not terminally dead/bounced) and skips the
+    mint while any exist -- a saturated board is work in flight, not
+    idleness (the C-0021 measured bug: three planner cards minted in 30 min
+    while C-0010/C-0015/C-0016 waited on running deps; the C-9111 measured
+    bug: C-9111 minted on 25 ready + 6 running because one dead blocker
+    escalated UNGATED). A blocker that is terminally dead will never
+    unblock the board: that IS a management failure and must mint."""
+    if claimable_ready_count(queue) > 0:
         return False
     for c in queue["cards"]:
         if c["status"] != "ready":
