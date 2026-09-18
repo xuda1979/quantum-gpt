@@ -12,5 +12,8 @@ Set QGH_STATE_DIR explicitly to override (not used by CI or tests).
 import os
 import tempfile
 
-if not os.environ.get("QGH_STATE_DIR"):
+# The live state dir — NEVER trusted as a test state dir.
+_live_state = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "state")
+_inherited = os.environ.get("QGH_STATE_DIR")
+if not _inherited or os.path.realpath(_inherited) == os.path.realpath(_live_state):
     os.environ["QGH_STATE_DIR"] = tempfile.mkdtemp(prefix="qgh-pytest-state-")
