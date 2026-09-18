@@ -1,9 +1,9 @@
 {
   "card": "C-9108",
-  "conclusion": "FAIL-CLOSED: 0 slices, 18/18 task ids named missing; code+tests landed and GREEN, re-verified again by a FOURTH deploy-integrity worker 2026-09-19 03:30-03:55 CST (13/13 own pytest 19:31Z; --verify-only EXIT=1, n_slices=0, 18 ids named, zero transport calls, re-spliced fresh at verdict write). Slice LANDING blocked upstream: B-187 boot-restart loop RE-CONFIRMED LIVE this tick -- pid 87288 (7th in chain 57686->43132->51845->5566->78941->62376->87288) observed 'booting' at 03:33 CST then flipped to 'error' by first watch poll 03:33:34 CST with the exact B-187 signature (getShellVisitUrl code=170022, no terminal URL, WebSocket 404 wss://aihuanxin.cn/kunlun/null). The prior tick's extended-BOOTING UNKNOWN (62376, ~13min) is now RESOLVED as loop continuation: 87288 is its successor and flipped on the fast signature. /exec stat of c9003_base_slice0.json: TimeoutError 25.0s client-bound 03:39 CST (7/7 timeouts across sessions; timeout=UNKNOWN, box-side slice existence remains UNMEASURED, never DEAD). B-187 console fix USER-GATED; C-9029 launch on HOLD; landing synthetic slices forbidden (would poison C-9030 gate).",
+  "conclusion": "FAIL-CLOSED: 0 slices, 18/18 task ids named missing; code+tests landed and GREEN, re-verified by a FIFTH deploy-integrity worker 2026-09-19 05:04-05:20 CST (13/13 own pytest; --verify-only EXIT=1, n_slices=0, 18 ids named, zero transport calls; gate_verdict re-spliced fresh at verdict write). Slice LANDING blocked upstream: B-187 boot-restart loop RE-CONFIRMED LIVE an 8th consecutive pid -- pid 27778 watched flipping booting->error 05:14:21 CST (75s uptime) with the shell-terminal failure signature (getShellVisitUrl class, prior pids code=170022 / wss kunlun null 404). /exec stat of c9003_base_slice0.json: HTTPError 500 at 103.9s client-bound (daemon error-state refusal; box-side slice existence UNMEASURED, never DEAD). B-187 console fix USER-GATED; C-9029 launch on HOLD; landing synthetic slices forbidden (would poison C-9030 gate). Verifier itself is COMPLETE and re-verified; only the live pull awaits a healthy ASI2.",
   "gate_verdict": {
     "card": "C-9108",
-    "checked_utc": "2026-09-18T19:37:19Z",
+    "checked_utc": "2026-09-18T21:17:58Z",
     "duplicate_task_ids": [],
     "expected_tasks": 18,
     "missing_task_ids": [
@@ -34,7 +34,7 @@
     "unexpected_task_ids": [],
     "unparseable": []
   },
-  "generated_utc": "2026-09-18T19:37:19Z",
+  "generated_utc": "2026-09-18T21:17:58Z",
   "impl_state": {
     "commits": [
       "b10c90d verifier+9 tests RED->GREEN",
@@ -71,5 +71,13 @@
     "result": "TRANSPORT DOWN",
     "target": "http://127.0.0.1:19004/exec (ASI2)",
     "timeouts_total": 7
+  },
+  "worker5_verification": {
+    "b187_live_watch": "pid 27778 (8th in chain 57686->43132->51845->5566->78941->62376->87288->27778) observed booting 05:13:41 CST (up=35s, startupError=null) -> flipped error by 05:14:21 CST (up=75s) with startupError 'Shell terminal for ASI2 failed because the Huanxin shell end...' = fast B-187 signature, flip watched live",
+    "exec_probe": "stat c9003_base_slice0.json via /exec -> HTTPError 500 at 103.9s client-bound ~21:15Z (error-state daemon refusal, NOT a box-side stat; box-side slice existence UNMEASURED, transport UNAVAILABLE, never DEAD); 8th failed transport attempt across sessions",
+    "own_pytest": "13/13 GREEN (passed=13 failed=0 errors=0), ~21:13Z, current tree",
+    "verify_only_demo": "EXIT=1, n_slices=0, missing=18 named, zero transport calls, checked_utc=2026-09-18T21:17:58Z",
+    "window_cst": "2026-09-19 05:04-05:20",
+    "worker": "C-9108 deploy-integrity worker #5"
   }
 }
