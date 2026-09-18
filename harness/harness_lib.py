@@ -270,6 +270,34 @@ def release_card(card, status, result, reason=None):
             card["deadline_utc"] = None
 
 
+def bounce_reason(verdict, outcome, over):
+    """C-9048: truthful, contract-quoting reason for a bounced card.
+
+    Every reason this path emits must quote the literal expected RESULT line
+    so a re-dispatched worker succeeds first try, and must NEVER say
+    'no RESULT verdict' when a verdict WAS present (the recorded lie:
+    verdict PARTIAL present but reason said 'no RESULT verdict'). The
+    outcome (dead/overrun-killed/harvested/stalled-killed) is preserved so
+    the bounce is diagnosable, and the literal contract is always quoted.
+    """
+    literal = "RESULT: DONE|PARTIAL|BLOCKED"
+    parts = []
+    if outcome == "stalled-killed":
+        parts.append("stalled: heartbeat stale >20 min")
+    elif outcome == "overrun-killed" or over:
+        parts.append("overran deadline")
+    elif outcome == "dead":
+        parts.append("worker died")
+    elif outcome == "harvested":
+        parts.append("harvested at deadline")
+    if verdict:
+        parts.append(f"had {verdict} verdict")
+    else:
+        parts.append("no RESULT verdict")
+    parts.append(f"expected literal line '{literal}'")
+    return "; ".join(parts)
+
+
 def requeue_card(queue, card_id):
     """C-0032: the ONLY exit from a bounced-board deadlock. A 3rd-strike
     bounce is terminal in release_card and _deps_satisfied only passes on
@@ -902,6 +930,79 @@ def compute_metrics(state_dir, window_min=60):
         "avg_done_latency_min": round(sum(latencies) / len(latencies), 1) if latencies else None,
         "per_lane_done": per_lane,
     }
+
+
+# ----------------------------------------------------------------------------- progress
+def render_progress(goal, queue, fleet, tick_no, verdicts=None, probes=None):
+    """Concise, human-readable progress report published to repo root every
+    tick so the project's progress is VISIBLE (not buried in state/standup/).
+    The harness must self-report — a working loop that nobody can see is a
+    silent loop. Returns markdown text."""
+    from collections import Counter
+
+    statuses = Counter(c.get("status", "?") for c in queue["cards"])
+    live = [a for a in fleet["agents"] if a.get("status") == "running" and pid_alive(a.get("pid"))]
+    ready = [c for c in queue["cards"] if c.get("status") == "ready"]
+    # best verdict so far (progress toward 18/18)
+    best_pass, best_vf = 0, None
+    if verdicts:
+        for v in verdicts:
+            if not isinstance(v, dict):
+                continue
+            pa = v.get("pass_adapter")
+            # pass_adapter may be "3/18" (str) or 3 (int) or None
+            try:
+                pa_int = int(str(pa).split("/")[0]) if pa is not None else 0
+            except (ValueError, TypeError):
+                pa_int = 0
+            if pa_int > best_pass:
+                best_pass, best_vf = pa_int, v.get("_file", "?")
+    L = []
+    L.append("# PROGRESS — QG Goal Harness")
+    L.append("")
+    L.append(
+        f"_Auto-published every tick by `qgh.py tick`. Last update: {now_iso()} (tick #{tick_no})_"
+    )
+    L.append("")
+    L.append("## Goal")
+    L.append(f"**{goal.get('objective', '?')}**")
+    L.append(f"- status: **{goal.get('status', 'OPEN')}**")
+    L.append(f"- target: {goal.get('target_pass', '?')}")
+    L.append(
+        f"- best adapter eval so far: **{best_pass}/18**"
+        + (f" (verdict: {best_vf})" if best_vf else "")
+    )
+    L.append("")
+    L.append("## Queue")
+    total = len(queue["cards"])
+    L.append(
+        f"- {total} cards total: " + ", ".join(f"{k}={v}" for k, v in sorted(statuses.items()))
+    )
+    L.append(f"- {len(ready)} ready to dispatch, {len(live)} live workers")
+    L.append("")
+    L.append("## Live Workers")
+    if live:
+        L.append("| card | lane | pid |")
+        L.append("|---|---|---|")
+        for a in live:
+            L.append(f"| {a.get('card')} | {a.get('lane')} | {a.get('pid')} |")
+    else:
+        L.append("_No live workers (loop may be between ticks or halted)._")
+    L.append("")
+    L.append("## Resources")
+    if probes:
+        for name in ("asi1", "asi2", "asi3", "trainer"):
+            s = probes.get(name)
+            if s:
+                L.append(f"- {name}: {str(s)[:90]}")
+    L.append("")
+    done = statuses.get("done", 0)
+    bounced = statuses.get("bounced", 0)
+    L.append(f"## Throughput so far: {done} done, {bounced} bounced")
+    L.append("")
+    L.append("---")
+    L.append("_Full standup: `harness/state/standup/`. Events: `harness/state/EVENTS.jsonl`._")
+    return "\n".join(L) + "\n"
 
 
 # ----------------------------------------------------------------------------- standup

@@ -67,6 +67,7 @@ from harness_lib import (  # noqa: E402
     pid_alive,
     ready_cards,
     release_card,
+    render_progress,
     render_standup,
     requeue_card,
     rotate_log,
@@ -752,7 +753,21 @@ def _reap():
                     event(STATE, "gate_bounced", {"card": card["id"], "reason": reason})
         elif verdict == "BLOCKED":
             if card:
-                release_card(card, "bounced", tail[-1] if tail else "", "worker blocked")
+                if H.is_gate_skip_blocked(text):
+                    # C-9085: gate-SKIP BLOCKED = WAITING on the window
+                    # preflight gate, not a card fault -> requeue WITHOUT a
+                    # bounce strike; the release_card path burned bounce
+                    # budget here and drove the C-9029 dead-dep cascade.
+                    # requeued_utc (C-0032) keeps a >2-strike card exempt
+                    # from the exhausted-retries tripwire below.
+                    card["status"] = "ready"
+                    card["claimed_by"] = None
+                    card["claimed_utc"] = None
+                    card["deadline_utc"] = None
+                    card["requeued_utc"] = H.now_iso()
+                    event(STATE, "gate_skip_requeued", {"card": card["id"]})
+                else:
+                    release_card(card, "bounced", tail[-1] if tail else "", "worker blocked")
         elif verdict == "PARTIAL" and over:
             if card:
                 release_card(
@@ -973,6 +988,14 @@ def cmd_tick(_args):
         path = os.path.join(STATE, "standup", f"standup-{tick_no}.md")
         with open(path, "w", encoding="utf-8") as f:
             f.write(text + "\n")
+        # publish a concise progress report to the repo root so the project's
+        # progress is VISIBLE every tick (not buried in state/standup/)
+        try:
+            progress = render_progress(goal, queue, fleet, tick_no, verdicts, probes)
+            with open(os.path.join(REPO, "PROGRESS.md"), "w", encoding="utf-8") as f:
+                f.write(progress)
+        except Exception:
+            pass  # progress publish must never break a tick
         append_line(
             os.path.join(STATE, "STATUS.md"),
             f"- {now_iso()} tick#{tick_no} reaped={reaped} {dispatch_note}\n",
