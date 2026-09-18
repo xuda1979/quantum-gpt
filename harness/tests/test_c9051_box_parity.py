@@ -243,6 +243,37 @@ def test_main_writes_artifact_at_bound_schema(tmp_path):
     assert _check_c9051(art) is None
 
 
+def test_main_ceiling_value_override_is_not_read_as_path(tmp_path):
+    # The --help metavar "--ceiling CEILING" invites a bare number, but
+    # main() used the string as the ceiling-artifact PATH: "--ceiling 1536"
+    # raised ceiling_artifact_unreadable:FileNotFoundError and silently
+    # dropped the box-default-vs-ceiling comparison (2026-09-19 live
+    # re-verify trap). A bare integer is a ceiling VALUE; a path stays a
+    # path (the pinned semantics of the banking test above).
+    root = tmp_path
+    _ceiling_artifact(root)
+    snap = _snapshot(root)  # box runner default == fixture CEILING (2048)
+    out = root / "C-9051_parity.json"
+    rc = parity.main(
+        [
+            "--mac-root",
+            str(root),
+            "--snapshot-dir",
+            str(snap),
+            "--ceiling",
+            "1536",
+            "--out",
+            str(out),
+        ]
+    )
+    assert rc == 0
+    art = json.loads(out.read_text())
+    assert not any(d.startswith("ceiling_artifact_unreadable") for d in art["drift"]), art["drift"]
+    assert art["ceiling_max_new_tokens"] == 1536
+    # the VALUE actually gates: fixture box default 2048 exceeds it
+    assert any(d == "runner_default_mismatch:2048>1536" for d in art["drift"]), art["drift"]
+
+
 # --- Mac canonical side of the acceptance (2026-09-19 re-verification) ----
 # Acceptance: "max_new_tokens default equals the C-9038 ceiling" and
 # "composer emits scorer_shas + holdout_sha256 (grep evidence, not

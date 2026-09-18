@@ -73,7 +73,7 @@ def _runner_default(runner_text):
     return int(m.group(1))
 
 
-def check_parity(mac_root, snapshot_dir, ceiling_path):
+def check_parity(mac_root, snapshot_dir, ceiling_path, ceiling_override=None):
     """Measure the box snapshot; return the C-9051 artifact dict.
 
     Never raises on unmeasurable input: every gap becomes a named drift
@@ -88,7 +88,14 @@ def check_parity(mac_root, snapshot_dir, ceiling_path):
             box_bytes[rel] = p.read_bytes()
         else:
             drift.append("snapshot_missing:" + rel)
-    ceiling = _read_ceiling(ceiling_path, drift)
+    if ceiling_override is not None:
+        ceiling = (
+            ceiling_override if isinstance(ceiling_override, int) and ceiling_override > 0 else None
+        )
+        if ceiling is None:
+            drift.append("ceiling_override_invalid")
+    else:
+        ceiling = _read_ceiling(ceiling_path, drift)
 
     runner_text = None
     composer_text = None
@@ -212,13 +219,22 @@ def main(argv=None):
     ap = argparse.ArgumentParser(prog="c9051_box_parity")
     ap.add_argument("--mac-root", required=True)
     ap.add_argument("--snapshot-dir", required=True)
-    ap.add_argument("--ceiling", default=None)
+    ap.add_argument(
+        "--ceiling",
+        default=None,
+        metavar="CEILING_PATH_OR_INT",
+        help="ceiling-artifact path override, or a bare integer ceiling VALUE",
+    )
     ap.add_argument("--out", required=True)
     args = ap.parse_args(argv)
+    override = None
     ceiling = args.ceiling
+    if ceiling is not None and re.fullmatch(r"[0-9]+", ceiling):
+        override = int(ceiling)  # a bare number is a VALUE, never a path
+        ceiling = None
     if ceiling is None:
         ceiling = Path(args.mac_root) / DEFAULT_CEILING_PATH
-    artifact = check_parity(args.mac_root, args.snapshot_dir, ceiling)
+    artifact = check_parity(args.mac_root, args.snapshot_dir, ceiling, ceiling_override=override)
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(artifact, indent=1))
