@@ -1,116 +1,125 @@
 {
+ "card": "C-9108",
+ "conclusion": "FAIL-CLOSED: 0 slices, 18/18 task ids named missing; code+tests landed and GREEN, re-verified by a TENTH deploy-integrity worker 2026-09-19 06:00-06:05 CST (13/13 own pytest; --verify-only EXIT=1 fresh via subprocess, n_slices=0, 18 ids named, zero transport calls; gate_verdict re-spliced fresh at write). Slice LANDING blocked upstream: B-187 boot-restart loop RE-CONFIRMED LIVE on 16th pid 71631 (booting->error flip at up=65s, 170022 shell_endpoint_unavailable, wss kunlun/null WS404); /exec attempt #13 TimeoutError 30.5s client-bound, box-side UNMEASURED. Transport requires Huanxin console shell-endpoint fix - USER-GATED; C-9029 leg + C-9030 read remain HOLD.",
+ "gate_verdict": {
   "card": "C-9108",
-  "conclusion": "FAIL-CLOSED: 0 slices, 18/18 task ids named missing; code+tests landed and GREEN, re-verified by a SEVENTH deploy-integrity worker 2026-09-19 05:30-05:55 CST (13/13 own pytest; --verify-only EXIT=1 fresh via subprocess, n_slices=0, 18 ids named, zero transport calls; gate_verdict re-spliced fresh at write; one own pipe-artifact EXIT=0 self-caught and corrected before recording). Slice LANDING blocked upstream: B-187 boot-restart loop RE-CONFIRMED LIVE, pids 12th-13th (88191, 19734) watched through the full cycle; FIRST TIME the COMPLETE startup failure body captured: getShellVisitUrl code=170022 for env=ASI2 pod=dl-868c196fb82d3e0b8cfbbe826d8afd0a-r0-1ac3bdc9546d-0, frontend falls through to wss://aihuanxin.cn/kunlun/null -> WebSocket handshake 404, startupFailure.kind=shell_endpoint_unavailable, traceId 8bb34ca8-5479-4086-9d57-f7bc79f34aab. /exec stat: ConnectionRefused at 0.0s = daemon DOWN (10th failed attempt), box-side UNMEASURED (never DEAD). B-187 console fix USER-GATED; C-9029 launch on HOLD; landing synthetic slices forbidden (would poison C-9030 gate). Verifier itself is COMPLETE and re-verified; only the live pull awaits a healthy ASI2. Re-verified by an EIGHTH deploy-integrity worker 2026-09-19 05:44-05:53 CST: 13/13 GREEN, verify-only REAL_RC=1 (subprocess-measured), B-187 14th pid 61840 watched flipping booting->error at up=69s (170022), /exec attempt #11 timeout, zero transport; landing still BLOCKED USER-GATED (B-187 console fix) + C-9029 HOLD. Re-verified by a NINTH deploy-integrity worker 2026-09-19 05:50-05:58 CST: 13/13 GREEN, verify-only REAL_RC=1 (subprocess-measured, no pipe artifact), B-187 15th pid 45791 watched flipping booting->error at 05:53:32 CST (170022 shell-endpoint, same signature as pids 61840/19734/87288/27778) then dead by 05:54:32 CST; /exec attempt #12 TimeoutError 30.0s client-bound, zero transport; landing still BLOCKED USER-GATED (B-187 console fix) + C-9029 HOLD.",
-  "gate_verdict": {
-    "card": "C-9108",
-    "checked_utc": "2026-09-18T21:52:16Z",
-    "duplicate_task_ids": [],
-    "expected_tasks": 18,
-    "missing_task_ids": [
-      "quantum_binary_measurement_decoder",
-      "quantum_braket_bell_state",
-      "quantum_channel_depolarizing",
-      "quantum_cirq_qaoa_line",
-      "quantum_density_matrix_partial_trace",
-      "quantum_error_correction_shor_9qubit",
-      "quantum_gate_alias_normalization",
-      "quantum_ghz_state_witness",
-      "quantum_grover_oracle_diffusion",
-      "quantum_pennylane_qml_iris_classification",
-      "quantum_pennylane_vqe_h2",
-      "quantum_phase_estimation_circuit",
-      "quantum_phase_register_roundtrip",
-      "quantum_qaoa_maxcut",
-      "quantum_qiskit_qft_entangled",
-      "quantum_qiskit_stabilizer_5qubit_code",
-      "quantum_superdense_coding",
-      "quantum_trotterized_hamiltonian_evolution"
-    ],
-    "missing_truncation_field": [],
-    "n_slices": 0,
-    "n_tasks": 0,
-    "ok": false,
-    "slices": [],
-    "unexpected_task_ids": [],
-    "unparseable": []
+  "checked_utc": "2026-09-18T22:04:03Z",
+  "duplicate_task_ids": [],
+  "expected_tasks": 18,
+  "missing_task_ids": [
+   "quantum_binary_measurement_decoder",
+   "quantum_braket_bell_state",
+   "quantum_channel_depolarizing",
+   "quantum_cirq_qaoa_line",
+   "quantum_density_matrix_partial_trace",
+   "quantum_error_correction_shor_9qubit",
+   "quantum_gate_alias_normalization",
+   "quantum_ghz_state_witness",
+   "quantum_grover_oracle_diffusion",
+   "quantum_pennylane_qml_iris_classification",
+   "quantum_pennylane_vqe_h2",
+   "quantum_phase_estimation_circuit",
+   "quantum_phase_register_roundtrip",
+   "quantum_qaoa_maxcut",
+   "quantum_qiskit_qft_entangled",
+   "quantum_qiskit_stabilizer_5qubit_code",
+   "quantum_superdense_coding",
+   "quantum_trotterized_hamiltonian_evolution"
+  ],
+  "missing_truncation_field": [],
+  "n_slices": 0,
+  "n_tasks": 0,
+  "ok": false,
+  "slices": [],
+  "unexpected_task_ids": [],
+  "unparseable": []
+ },
+ "generated_utc": "2026-09-18T22:04:03Z",
+ "impl_state": {
+  "commits": [
+   "b10c90d verifier+9 tests RED->GREEN",
+   "ef4dd80 CLI+4 pinning tests, RED verified live first"
+  ],
+  "receipt": "intentionally ABSENT: zero slices landed, nothing verified. Do not treat this file as landed evidence of slices.",
+  "second_worker_verification": {
+   "exec_probe_booting_state": "stat c9003_base_slice0.json -> TimeoutError at 40.0s (client-bound), ~19:25Z (immediately before the 19:26:41Z verdict write)",
+   "health_probes": "pid 62376 startupState=booting on every probe 19:12Z through ~19:25Z (~13 min; probe gaps incl. one lost to a 120s shell timeout - no data, not a down-probe); never ready, never startupError, pid never changed",
+   "own_pytest": "13/13 GREEN (passed=13 failed=0 errors=0), 19:10Z",
+   "verify_only_demo": "EXIT=1, n_slices=0, missing=18 named, zero transport calls, checked_utc=19:14:15Z",
+   "window_cst": "2026-09-19 03:12-03:27",
+   "worker": "C-9108 deploy-integrity worker #2"
   },
-  "generated_utc": "2026-09-18T21:54:00Z",
-  "impl_state": {
-    "commits": [
-      "b10c90d verifier+9 tests RED->GREEN",
-      "ef4dd80 CLI+4 pinning tests, RED verified live first"
-    ],
-    "receipt": "intentionally ABSENT: zero slices landed, nothing verified. Do not treat this file as landed evidence of slices.",
-    "second_worker_verification": {
-      "exec_probe_booting_state": "stat c9003_base_slice0.json -> TimeoutError at 40.0s (client-bound), ~19:25Z (immediately before the 19:26:41Z verdict write)",
-      "health_probes": "pid 62376 startupState=booting on every probe 19:12Z through ~19:25Z (~13 min; probe gaps incl. one lost to a 120s shell timeout - no data, not a down-probe); never ready, never startupError, pid never changed",
-      "own_pytest": "13/13 GREEN (passed=13 failed=0 errors=0), 19:10Z",
-      "verify_only_demo": "EXIT=1, n_slices=0, missing=18 named, zero transport calls, checked_utc=19:14:15Z",
-      "window_cst": "2026-09-19 03:12-03:27",
-      "worker": "C-9108 deploy-integrity worker #2"
-    },
-    "tests": "13/13 GREEN re-verified 2026-09-19 03:31 CST by C-9108 deploy-integrity worker #4 in current tree (own pytest run: passed=13 failed=0 errors=0); git status porcelain clean for slice_transport.py, test file, and verdict at tick start",
-    "worker4_verification": {
-      "b187_live_watch": "pid 87288 booting at 03:33 CST (manual probe) -> error/170022 by 03:33:34 CST (first watch poll); flip watched live",
-      "exec_probe": "stat c9003_base_slice0.json -> TimeoutError 25.0s client-bound 03:39 CST (7/7 across sessions)",
-      "outputs_hygiene": "no slices, no receipt, no stray tmp in outputs/ (verdict file only)",
-      "own_pytest": "13/13 GREEN (passed=13 failed=0 errors=0), 19:31Z",
-      "verify_only_demo": "EXIT=1, n_slices=0, missing=18 named, zero transport calls; fresh gate verdict spliced at write",
-      "window_cst": "2026-09-19 03:30-03:55",
-      "worker": "C-9108 deploy-integrity worker #4"
-    }
-  },
-  "kind": "transport_verdict_FAIL_CLOSED",
-  "note": "Fail-closed means NOTHING lands until box-side C-9029 slices exist and transport answers. Landing requires: (1) ASI2 stable (B-187 console, USER-GATED), (2) C-9029 leg dispatched (resident HOLD), (3) pull via python3 -m harness.slice_transport.",
-  "transport_probe": {
-    "attempts_total": 12,
-    "exec_fresh": "stat c9003_base_slice0.json via /exec on error-state pid 45791 -> TimeoutError at 30.0s (client-bound) 2026-09-18T21:56Z; request never reached box, box-side slice existence UNMEASURED, never DEAD; 12th failed transport attempt",
-    "health_signature": "pid 45791 (15th in B-187 chain) watched LIVE: startupState=booting startupError=null 05:52:31-05:53:12 CST -> startupState=error flip at 05:53:32 CST, startupError getShellVisitUrl code=170022 shell endpoint (identical signature to pids 61840/19734/87288/27778) -> daemon DEAD (ConnectionRefused) by 05:54:32 CST; B-187 boot-restart loop CONTINUES",
-    "measured_utc": "2026-09-18T21:54:00Z",
-    "remote_path_sought": "/root/work/software/quantum-gpt/outputs/c9003_base_slice0.json",
-    "result": "FAIL-CLOSED no-transport (worker9)",
-    "target": "http://127.0.0.1:19004/exec (ASI2)",
-    "timeouts_total": 9
-  },
-  "worker5_verification": {
-    "b187_live_watch": "pid 27778 (8th in chain 57686->43132->51845->5566->78941->62376->87288->27778) observed booting 05:13:41 CST (up=35s, startupError=null) -> flipped error by 05:14:21 CST (up=75s) with startupError 'Shell terminal for ASI2 failed because the Huanxin shell end...' = fast B-187 signature, flip watched live",
-    "exec_probe": "stat c9003_base_slice0.json via /exec -> HTTPError 500 at 103.9s client-bound ~21:15Z (error-state daemon refusal, NOT a box-side stat; box-side slice existence UNMEASURED, transport UNAVAILABLE, never DEAD); 8th failed transport attempt across sessions",
-    "own_pytest": "13/13 GREEN (passed=13 failed=0 errors=0), ~21:13Z, current tree",
-    "verify_only_demo": "EXIT=1, n_slices=0, missing=18 named, zero transport calls, checked_utc=2026-09-18T21:17:58Z",
-    "window_cst": "2026-09-19 05:04-05:20",
-    "worker": "C-9108 deploy-integrity worker #5"
-  },
-  "worker6_verification": {
-    "b187_live_watch": "END-TO-END: 57618 dead (ConnectionRefused ~21:24Z) -> 75031 (10th) booting up=8s->60s, error flip at up=74s with Shell-terminal startupError signature, watched live -> dead again (ConnectionRefused ~21:26Z) -> 12281 (11th) respawning booting up=9s ~21:27Z",
-    "exec_probe": "stat c9003_base_slice0.json via /exec -> ConnectionRefused at 0.0s (daemon down); box-side UNMEASURED, never DEAD",
-    "own_pytest": "13/13 GREEN (passed=13 failed=0 errors=0), ~21:21Z, current tree",
-    "verify_only_demo": "EXIT=1, n_slices=0, missing=18 named, zero transport calls, checked_utc=2026-09-18T21:22:35Z. Note: a first EXIT=0 reading this tick was the worker-own pipe artifact (exit code of the parsing pipe, not the verifier); corrected by clean re-measurement — true verifier exit is 1",
-    "window_cst": "2026-09-19 05:20-05:40",
-    "worker": "C-9108 deploy-integrity worker #6"
-  },
-  "worker7_verification": {
-    "worker": "C-9108 deploy-integrity worker #7",
-    "window_cst": "2026-09-19 05:30-05:55",
-    "own_pytest": "13/13 GREEN (passed=13 failed=0 errors=0), ~21:32Z, current tree",
-    "verify_only_demo": "EXIT=1, n_slices=0, missing=18 named, zero transport calls, checked_utc=2026-09-18T21:38:05Z; a first EXIT=0 reading this tick was the worker-own pipe artifact (exit of tail, not the verifier), self-caught and corrected via subprocess re-measurement before any record was written",
-    "b187_live_watch": "pids 12th-13th watched live: 88191 booting up=36s startupError=null 21:33:35Z -> DEAD by 21:35:02Z (replaced by 19734 up=5s, flip window ~75-90s) -> 19734 flipped startupState=error at up=91s (21:36:31Z) with FULL error body CAPTURED first time end-to-end: getShellVisitUrl code=170022 (shell endpoint unavailable, startupFailure.kind=shell_endpoint_unavailable), frontend fell through to wss://aihuanxin.cn/kunlun/null -> WebSocket handshake 404; traceId 8bb34ca8-5479-4086-9d57-f7bc79f34aab; platform surface repeats dev-env reclaim/lock banner. Identical signature to pids 87288/27778",
-    "exec_probe": "stat /root/work/software/quantum-gpt/outputs/c9003_base_slice0.json via /exec -> ConnectionRefused at 0.0s 21:38:05Z (daemon 19734 dead post-flip); box-side slice existence UNMEASURED (never reached box), never DEAD; 10th failed transport attempt"
-  },
-  "worker8_verification": {
-    "worker": "eighth deploy-integrity worker",
-    "window_cst": "2026-09-19 05:44-05:53 CST",
-    "own_pytest": "harness/tests/test_c9108_slice_transport.py 13/13 passed (own run 05:45 CST)",
-    "verify_only_demo": "REAL_RC=1 measured via subprocess (no pipe artifact); fresh gate ok=False, n_slices=0, 18/18 task ids named missing, zero transport calls, checked_utc=2026-09-18T21:48:37Z",
-    "b187_live_watch": "pid 61840 14th in chain: booting(up29s)->error(up69s) flip watched 05:46:31->05:47:11 CST, getShellVisitUrl 170022; B-187 boot-restart loop CONTINUES",
-    "exec_probe": "11th attempt: POST /exec stat c9003_base_slice0.json -> TimeoutError ~20s; daemon error-state; box-side UNMEASURED, fail-closed"
-  },
-  "worker9_verification": {
-    "worker": "C-9108 deploy-integrity worker #9",
-    "window_cst": "2026-09-19 05:50-05:58",
-    "own_pytest": "harness/tests/test_c9108_slice_transport.py 13/13 passed (passed=13 failed=0 errors=0, own run ~21:51Z, current tree)",
-    "verify_only_demo": "REAL_RC=1 measured via subprocess (no pipe artifact); fresh gate ok=False, n_slices=0, 18/18 task ids named missing, zero transport calls, checked_utc=2026-09-18T21:52:16Z",
-    "b187_live_watch": "pid 45791 15th in chain watched end-to-end: booting(05:52:31)->error(05:53:32, getShellVisitUrl 170022 shell-terminal failure)->dead(05:54:32); flip cycle ~80-90s, loop CONTINUES, console fix USER-GATED",
-    "exec_probe": "12th attempt: POST /exec stat c9003_base_slice0.json -> TimeoutError 30.0s client-bound; error-state daemon; box-side UNMEASURED, fail-closed",
-    "outputs_hygiene": "no slices, no receipt, no stray tmp in outputs/ (verdict file only); verdict file git-clean at tick start"
+  "tests": "13/13 GREEN re-verified 2026-09-19 03:31 CST by C-9108 deploy-integrity worker #4 in current tree (own pytest run: passed=13 failed=0 errors=0); git status porcelain clean for slice_transport.py, test file, and verdict at tick start",
+  "worker4_verification": {
+   "b187_live_watch": "pid 87288 booting at 03:33 CST (manual probe) -> error/170022 by 03:33:34 CST (first watch poll); flip watched live",
+   "exec_probe": "stat c9003_base_slice0.json -> TimeoutError 25.0s client-bound 03:39 CST (7/7 across sessions)",
+   "outputs_hygiene": "no slices, no receipt, no stray tmp in outputs/ (verdict file only)",
+   "own_pytest": "13/13 GREEN (passed=13 failed=0 errors=0), 19:31Z",
+   "verify_only_demo": "EXIT=1, n_slices=0, missing=18 named, zero transport calls; fresh gate verdict spliced at write",
+   "window_cst": "2026-09-19 03:30-03:55",
+   "worker": "C-9108 deploy-integrity worker #4"
   }
+ },
+ "kind": "transport_verdict_FAIL_CLOSED",
+ "note": "Fail-closed means NOTHING lands until box-side C-9029 slices exist and transport answers. Landing requires: (1) ASI2 stable (B-187 console, USER-GATED), (2) C-9029 leg dispatched (resident HOLD), (3) pull via python3 -m harness.slice_transport.",
+ "transport_probe": {
+  "attempts_total": 12,
+  "exec_fresh": "stat c9003_base_slice0.json via /exec on error-state pid 45791 -> TimeoutError at 30.0s (client-bound) 2026-09-18T21:56Z; request never reached box, box-side slice existence UNMEASURED, never DEAD; 12th failed transport attempt",
+  "health_signature": "pid 45791 (15th in B-187 chain) watched LIVE: startupState=booting startupError=null 05:52:31-05:53:12 CST -> startupState=error flip at 05:53:32 CST, startupError getShellVisitUrl code=170022 shell endpoint (identical signature to pids 61840/19734/87288/27778) -> daemon DEAD (ConnectionRefused) by 05:54:32 CST; B-187 boot-restart loop CONTINUES",
+  "measured_utc": "2026-09-18T21:54:00Z",
+  "remote_path_sought": "/root/work/software/quantum-gpt/outputs/c9003_base_slice0.json",
+  "result": "FAIL-CLOSED no-transport (worker9)",
+  "target": "http://127.0.0.1:19004/exec (ASI2)",
+  "timeouts_total": 9
+ },
+ "worker5_verification": {
+  "b187_live_watch": "pid 27778 (8th in chain 57686->43132->51845->5566->78941->62376->87288->27778) observed booting 05:13:41 CST (up=35s, startupError=null) -> flipped error by 05:14:21 CST (up=75s) with startupError 'Shell terminal for ASI2 failed because the Huanxin shell end...' = fast B-187 signature, flip watched live",
+  "exec_probe": "stat c9003_base_slice0.json via /exec -> HTTPError 500 at 103.9s client-bound ~21:15Z (error-state daemon refusal, NOT a box-side stat; box-side slice existence UNMEASURED, transport UNAVAILABLE, never DEAD); 8th failed transport attempt across sessions",
+  "own_pytest": "13/13 GREEN (passed=13 failed=0 errors=0), ~21:13Z, current tree",
+  "verify_only_demo": "EXIT=1, n_slices=0, missing=18 named, zero transport calls, checked_utc=2026-09-18T21:17:58Z",
+  "window_cst": "2026-09-19 05:04-05:20",
+  "worker": "C-9108 deploy-integrity worker #5"
+ },
+ "worker6_verification": {
+  "b187_live_watch": "END-TO-END: 57618 dead (ConnectionRefused ~21:24Z) -> 75031 (10th) booting up=8s->60s, error flip at up=74s with Shell-terminal startupError signature, watched live -> dead again (ConnectionRefused ~21:26Z) -> 12281 (11th) respawning booting up=9s ~21:27Z",
+  "exec_probe": "stat c9003_base_slice0.json via /exec -> ConnectionRefused at 0.0s (daemon down); box-side UNMEASURED, never DEAD",
+  "own_pytest": "13/13 GREEN (passed=13 failed=0 errors=0), ~21:21Z, current tree",
+  "verify_only_demo": "EXIT=1, n_slices=0, missing=18 named, zero transport calls, checked_utc=2026-09-18T21:22:35Z. Note: a first EXIT=0 reading this tick was the worker-own pipe artifact (exit code of the parsing pipe, not the verifier); corrected by clean re-measurement — true verifier exit is 1",
+  "window_cst": "2026-09-19 05:20-05:40",
+  "worker": "C-9108 deploy-integrity worker #6"
+ },
+ "worker7_verification": {
+  "worker": "C-9108 deploy-integrity worker #7",
+  "window_cst": "2026-09-19 05:30-05:55",
+  "own_pytest": "13/13 GREEN (passed=13 failed=0 errors=0), ~21:32Z, current tree",
+  "verify_only_demo": "EXIT=1, n_slices=0, missing=18 named, zero transport calls, checked_utc=2026-09-18T21:38:05Z; a first EXIT=0 reading this tick was the worker-own pipe artifact (exit of tail, not the verifier), self-caught and corrected via subprocess re-measurement before any record was written",
+  "b187_live_watch": "pids 12th-13th watched live: 88191 booting up=36s startupError=null 21:33:35Z -> DEAD by 21:35:02Z (replaced by 19734 up=5s, flip window ~75-90s) -> 19734 flipped startupState=error at up=91s (21:36:31Z) with FULL error body CAPTURED first time end-to-end: getShellVisitUrl code=170022 (shell endpoint unavailable, startupFailure.kind=shell_endpoint_unavailable), frontend fell through to wss://aihuanxin.cn/kunlun/null -> WebSocket handshake 404; traceId 8bb34ca8-5479-4086-9d57-f7bc79f34aab; platform surface repeats dev-env reclaim/lock banner. Identical signature to pids 87288/27778",
+  "exec_probe": "stat /root/work/software/quantum-gpt/outputs/c9003_base_slice0.json via /exec -> ConnectionRefused at 0.0s 21:38:05Z (daemon 19734 dead post-flip); box-side slice existence UNMEASURED (never reached box), never DEAD; 10th failed transport attempt"
+ },
+ "worker8_verification": {
+  "worker": "eighth deploy-integrity worker",
+  "window_cst": "2026-09-19 05:44-05:53 CST",
+  "own_pytest": "harness/tests/test_c9108_slice_transport.py 13/13 passed (own run 05:45 CST)",
+  "verify_only_demo": "REAL_RC=1 measured via subprocess (no pipe artifact); fresh gate ok=False, n_slices=0, 18/18 task ids named missing, zero transport calls, checked_utc=2026-09-18T21:48:37Z",
+  "b187_live_watch": "pid 61840 14th in chain: booting(up29s)->error(up69s) flip watched 05:46:31->05:47:11 CST, getShellVisitUrl 170022; B-187 boot-restart loop CONTINUES",
+  "exec_probe": "11th attempt: POST /exec stat c9003_base_slice0.json -> TimeoutError ~20s; daemon error-state; box-side UNMEASURED, fail-closed"
+ },
+ "worker9_verification": {
+  "worker": "C-9108 deploy-integrity worker #9",
+  "window_cst": "2026-09-19 05:50-05:58",
+  "own_pytest": "harness/tests/test_c9108_slice_transport.py 13/13 passed (passed=13 failed=0 errors=0, own run ~21:51Z, current tree)",
+  "verify_only_demo": "REAL_RC=1 measured via subprocess (no pipe artifact); fresh gate ok=False, n_slices=0, 18/18 task ids named missing, zero transport calls, checked_utc=2026-09-18T21:52:16Z",
+  "b187_live_watch": "pid 45791 15th in chain watched end-to-end: booting(05:52:31)->error(05:53:32, getShellVisitUrl 170022 shell-terminal failure)->dead(05:54:32); flip cycle ~80-90s, loop CONTINUES, console fix USER-GATED",
+  "exec_probe": "12th attempt: POST /exec stat c9003_base_slice0.json -> TimeoutError 30.0s client-bound; error-state daemon; box-side UNMEASURED, fail-closed",
+  "outputs_hygiene": "no slices, no receipt, no stray tmp in outputs/ (verdict file only); verdict file git-clean at tick start"
+ },
+ "worker10_verification": {
+  "worker": "C-9108 deploy-integrity worker #10",
+  "window_cst": "2026-09-19 06:00-06:05",
+  "own_pytest": "harness/tests/test_c9108_slice_transport.py 13/13 passed (passed=13 failed=0 errors=0, own run 22:01Z, current tree)",
+  "verify_only_demo": "REAL_RC=1 measured via subprocess (no pipe artifact); fresh gate ok=False, n_slices=0, 18/18 task ids named missing, zero transport calls, checked_utc=2026-09-18T22:04:03Z",
+  "b187_live_watch": "pid 71631 16th in chain watched through flip: booting up=45s err=null (22:01:56Z) -> error up=65s (22:02:15Z), kind=shell_endpoint_unavailable code=170022 wss kunlun/null WS404 - same signature as pids 8-15; loop CONTINUES, console fix USER-GATED",
+  "exec_probe": "13th attempt: POST /exec stat c9003_base_slice0.json -> TimeoutError 30.5s client-bound; error-state daemon; box-side UNMEASURED, fail-closed",
+  "outputs_hygiene": "no slices, no receipt, no stray tmp in outputs/ (verdict file only)"
+ }
 }
