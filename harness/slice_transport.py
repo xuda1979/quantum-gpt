@@ -19,10 +19,12 @@ records sha256 + byte counts per slice, is updated in place, and makes
 re-runs idempotent: already-verified slices are skipped, not re-pulled.
 """
 
+import argparse
 import base64
 import hashlib
 import json
 import os
+import sys
 import time
 import urllib.request
 from pathlib import Path
@@ -31,6 +33,7 @@ RECEIPT_NAME = "c9108_base_slice_transport_receipt.json"
 TRUNCATION_FIELD = "output_chars"
 DEFAULT_CHUNK = 3000  # box_pull_ledger recipe chunk (boxfetch.py)
 SLICE_PREFIX = "c9003_base_slice"
+REMOTE_SLICE_STARTS = (0, 6, 12)  # launcher split: 6+6+6 = 18 (c9003_launch_base_leg)
 
 HARNESS_ROOT = Path(__file__).resolve().parent.parent
 
@@ -280,3 +283,66 @@ def pull_slice(port, remote_path, local_name, outputs_dir, chunk_size=DEFAULT_CH
         "bytes": len(data),
         "sha256": entry["sha256"],
     }
+
+
+def _load_expected_task_ids():
+    """Canonical frozen holdout ids; fail-closed in the operational path --
+    no synthetic fallback list (a wrong id list would mis-name missing
+    ids). Tests keep their own hermetic fallback."""
+    runner_dir = str(HARNESS_ROOT / "evals" / "runner")
+    if runner_dir not in sys.path:
+        sys.path.insert(0, runner_dir)
+    from holdout_freeze import bench_task_ids
+
+    return sorted(bench_task_ids())
+
+
+def main(argv=None):
+    """Operational entry (was library-only): idempotent chunked-b64 pull of
+    the three C-9029 launcher slices (starts 0/6/12, 6 tasks each), then
+    the fail-closed C-9030 pre-read gate. Exit 0 only on 18/18 verified;
+    1 = gate failed; 2 = canonical ids unavailable (fail closed).
+    --verify-only gates existing files and issues ZERO transport calls."""
+    ap = argparse.ArgumentParser(
+        prog="python3 -m harness.slice_transport",
+        description="C-9108 base-leg slice transport verifier",
+    )
+    ap.add_argument("--port", type=int, default=19004)
+    ap.add_argument("--outputs", default=str(HARNESS_ROOT / "outputs"))
+    ap.add_argument("--remote-root", default="/root/work/software/quantum-gpt/outputs")
+    ap.add_argument(
+        "--verify-only",
+        action="store_true",
+        help="gate files only; zero transport calls",
+    )
+    args = ap.parse_args(argv)
+    try:
+        expected_ids = _load_expected_task_ids()
+    except Exception as exc:
+        print(
+            json.dumps(
+                dict(
+                    card="C-9108",
+                    ok=False,
+                    error="canonical ids unavailable: " + repr(exc),
+                )
+            ),
+            flush=True,
+        )
+        return 2
+    if not args.verify_only:
+        for start in REMOTE_SLICE_STARTS:
+            res = pull_slice(
+                args.port,
+                args.remote_root.rstrip("/") + "/c9003_base_slice" + str(start) + ".json",
+                slice_local_name(start),
+                args.outputs,
+            )
+            print(json.dumps(res, sort_keys=True), flush=True)
+    verdict = verify_slices(args.outputs, expected_ids)
+    print(json.dumps(verdict, sort_keys=True), flush=True)
+    return 0 if verdict["ok"] else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

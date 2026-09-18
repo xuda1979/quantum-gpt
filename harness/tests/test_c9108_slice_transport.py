@@ -257,6 +257,81 @@ class TestC9108SliceTransport(unittest.TestCase):
             "receipt updated in place, never duplicated",
         )
 
+    def test_zero_slices_fail_closed_names_all_18(self):
+        verdict = slice_transport.verify_slices(self.out, expected_task_ids=EXPECTED_IDS)
+        self.assertFalse(verdict["ok"], "zero slices must fail closed")
+        self.assertEqual(verdict["n_slices"], 0)
+        self.assertEqual(
+            sorted(verdict["missing_task_ids"]),
+            EXPECTED_IDS,
+            "all 18 absent ids must be NAMED, not counted",
+        )
+
+    def test_disk_tampered_verified_slice_is_repulled_not_trusted(self):
+        boxdir = os.path.join(self.tmp, "box", "outputs")
+        os.makedirs(boxdir, exist_ok=True)
+        remote = os.path.join(boxdir, "c9003_base_slice0.json")
+        _write_slice(boxdir, "c9003_base_slice0.json", _slice_payload(EXPECTED_IDS))
+        remote_bytes = open(remote, "rb").read()
+        exec_run = self._fake_exec(dict([(remote, remote)]))
+        with mock.patch.object(slice_transport, "_exec_run", exec_run):
+            first = slice_transport.pull_slice(
+                PORT, remote, "c9003_base_slice0.json", outputs_dir=self.out, chunk_size=512
+            )
+        self.assertTrue(first["ok"])
+        local = os.path.join(self.out, "c9003_base_slice0.json")
+        payload = json.loads(open(local, encoding="utf-8").read())
+        payload["records"][0]["scores"]["overall"] = 99.0
+        _write_slice(self.out, "c9003_base_slice0.json", payload)
+        captured = []
+        exec_run2 = self._fake_exec(dict([(remote, remote)]), captured)
+        with mock.patch.object(slice_transport, "_exec_run", exec_run2):
+            second = slice_transport.pull_slice(
+                PORT, remote, "c9003_base_slice0.json", outputs_dir=self.out, chunk_size=512
+            )
+        self.assertFalse(
+            second["skipped"], "a receipt-sha-mismatched slice must be re-pulled, not trusted"
+        )
+        self.assertTrue(
+            any(c.startswith("dd if=") for c in captured), "re-pull must actually re-fetch"
+        )
+        self.assertEqual(open(local, "rb").read(), remote_bytes, "re-pull restores exact bytes")
+
+    def test_cli_pulls_all_slices_and_verifies_gate(self):
+        boxdir = os.path.join(self.tmp, "box", "outputs")
+        os.makedirs(boxdir, exist_ok=True)
+        remotes = dict()
+        for start in (0, 6, 12):
+            name = "c9003_base_slice" + str(start) + ".json"
+            remotes[os.path.join(boxdir, name)] = _write_slice(
+                boxdir, name, _slice_payload(EXPECTED_IDS[start : start + 6])
+            )
+        exec_run = self._fake_exec(remotes)
+        with mock.patch.object(slice_transport, "_exec_run", exec_run):
+            rc = slice_transport.main(
+                ["--port", str(PORT), "--outputs", self.out, "--remote-root", boxdir]
+            )
+        self.assertEqual(rc, 0, "complete 18/18 transport + gate must exit 0")
+        landed = sorted(p for p in os.listdir(self.out) if p.startswith("c9003_base_slice"))
+        self.assertEqual(
+            landed,
+            ["c9003_base_slice0.json", "c9003_base_slice12.json", "c9003_base_slice6.json"],
+            "slices must land under the exact C-9030 glob names",
+        )
+        receipt = slice_transport.read_receipt(self.out)
+        self.assertEqual(len(receipt["slices"]), 3, "one receipt entry per slice, in ONE receipt")
+        self.assertTrue(slice_transport.verify_slices(self.out, EXPECTED_IDS)["ok"])
+
+    def test_cli_verify_only_issues_zero_transport_calls_and_fails_closed(self):
+        _write_slice(self.out, "c9003_base_slice0.json", _slice_payload(EXPECTED_IDS[:6]))
+
+        def boobytrap(cmd_text, port=PORT):
+            raise AssertionError("verify-only must issue zero transport calls")
+
+        with mock.patch.object(slice_transport, "_exec_run", boobytrap):
+            rc = slice_transport.main(["--verify-only", "--outputs", self.out])
+        self.assertEqual(rc, 1, "6/18 under verify-only must fail closed with exit 1")
+
     def test_landed_name_matches_c9030_glob(self):
         # the C-9030 contract: outputs/c9003_base_slice*.json
         self.assertRegex(slice_transport.slice_local_name(0), r"^c9003_base_slice\d+\.json$")

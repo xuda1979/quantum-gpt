@@ -1,0 +1,58 @@
+{
+  "card": "C-9108",
+  "conclusion": "FAIL-CLOSED: 0 slices, 18/18 task ids named missing; C-9030 must not read base slices yet",
+  "gate_verdict": {
+    "card": "C-9108",
+    "checked_utc": "2026-09-18T16:38:59Z",
+    "duplicate_task_ids": [],
+    "expected_tasks": 18,
+    "missing_task_ids": [
+      "quantum_binary_measurement_decoder",
+      "quantum_braket_bell_state",
+      "quantum_channel_depolarizing",
+      "quantum_cirq_qaoa_line",
+      "quantum_density_matrix_partial_trace",
+      "quantum_error_correction_shor_9qubit",
+      "quantum_gate_alias_normalization",
+      "quantum_ghz_state_witness",
+      "quantum_grover_oracle_diffusion",
+      "quantum_pennylane_qml_iris_classification",
+      "quantum_pennylane_vqe_h2",
+      "quantum_phase_estimation_circuit",
+      "quantum_phase_register_roundtrip",
+      "quantum_qaoa_maxcut",
+      "quantum_qiskit_qft_entangled",
+      "quantum_qiskit_stabilizer_5qubit_code",
+      "quantum_superdense_coding",
+      "quantum_trotterized_hamiltonian_evolution"
+    ],
+    "missing_truncation_field": [],
+    "n_slices": 0,
+    "n_tasks": 0,
+    "ok": false,
+    "slices": [],
+    "unexpected_task_ids": [],
+    "unparseable": []
+  },
+  "generated_utc": "2026-09-18T16:38:59Z",
+  "kind": "transport_verdict_FAIL_CLOSED",
+  "note": "Receipt (c9108_base_slice_transport_receipt.json) intentionally ABSENT: zero slices landed, nothing verified. Do not treat this file as landed evidence of slices.",
+  "transport_probe": {
+    "attempts": 2,
+    "health": "ready=false startupState=error (Huanxin shell endpoint API returned no terminal URL, code=170022; B-187 platform-recycle signature)",
+    "reason": "exec channel never answered; C-9029 leg bounced 2026-09-18 20:1x CST and ASI2 not ready since, so box-side slices are not expected to exist",
+    "remote_paths_sought": [
+      "/root/work/software/quantum-gpt/outputs/c9003_base_slice0.json",
+      "/root/work/software/quantum-gpt/outputs/c9003_base_slice6.json",
+      "/root/work/software/quantum-gpt/outputs/c9003_base_slice12.json"
+    ],
+    "result": "TRANSPORT DOWN (fail-closed; timeout = UNKNOWN, never DEAD)",
+    "stat_attempted": false,
+    "target": "http://127.0.0.1:19004/exec (ASI2)",
+    "timeout_s_used": [
+      30,
+      45
+    ],
+    "timeouts": 2
+  }
+}
