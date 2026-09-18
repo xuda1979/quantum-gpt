@@ -165,6 +165,56 @@ def find_card(queue, card_id):
     return None
 
 
+def rearm_ghost_running_cards(queue, fleet, live_fn=None):
+    """C-9014: re-arm 'running' cards whose fleet agent is gone (ghost).
+
+    A card can land in status "running" with no LIVE fleet entry — e.g. the
+    event-log recovery flipped a card whose last event was `dispatched` (no
+    matching `reaped`) to running, but the worker process is already dead.
+    The harvest loop only reaps cards that HAVE a fleet agent row, so such a
+    ghost would run forever: the card is stuck "running", blocking its lane's
+    WIP, never re-dispatched.
+
+    This reconcile finds every card that is "running" but has no live fleet
+    agent (no running-status agent whose process is alive) and re-arms it:
+      status -> "ready", clear claimed_by/claimed_utc/deadline_utc, set
+      requeued_utc, bounce_count += 1 (environmental — a dead worker is not
+      the card's fault, so no strike). Terminal cards (done/bounced/dead/...)
+    are never touched. Returns the list of rearmed card ids (sorted-stable).
+
+    live_fn(agent) -> bool defaults to the real pid_alive check on the agent's
+    pid; tests inject a stub. An agent with no lstart, or whose lstart no
+    longer matches the recorded one (PID reuse), is treated as NOT live.
+    """
+    if live_fn is None:
+        live_fn = lambda a: pid_alive(a.get("pid"))  # noqa: E731
+
+    # index live fleet entries by card id
+    live_cards = set()
+    for a in fleet.get("agents", []):
+        if a.get("status") != "running":
+            continue
+        if live_fn(a):
+            live_cards.add(a.get("card"))
+
+    rearmed = []
+    for c in queue["cards"]:
+        if c.get("status") != "running":
+            continue
+        if c["id"] in live_cards:
+            continue  # has a live worker — genuinely running, leave it
+        # ghost: re-arm. Environmental — a dead/missing worker is not the
+        # card's fault, so do NOT strike (bounce_count unchanged): a ghost
+        # rearm must never push a healthy card toward the dead-card threshold.
+        c["status"] = "ready"
+        c["claimed_by"] = None
+        c["claimed_utc"] = None
+        c["deadline_utc"] = None
+        c["requeued_utc"] = now_iso()
+        rearmed.append(c["id"])
+    return rearmed
+
+
 def _deps_satisfied(queue, card):
     for dep in card["deps"]:
         d = find_card(queue, dep)
