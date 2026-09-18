@@ -1,9 +1,10 @@
 {
   "card": "C-9108",
-  "conclusion": "FAIL-CLOSED: 0 slices, 18/18 task ids named missing; C-9030 must not read base slices yet",
+  "conclusion": "FAIL-CLOSED: 0 slices, 18/18 task ids named missing; code+tests landed and GREEN, independently re-verified by a SECOND deploy-integrity worker 2026-09-19 03:12-03:31 CST (13/13 own pytest 19:10Z; --verify-only EXIT=1, n_slices=0, 18 ids named, zero transport calls 19:14:15Z). Slice LANDING blocked upstream: ASI2 pid 62376 (6th in chain 57686->43132->51845->5566->78941->62376) observed in extended BOOTING 19:12Z-19:25Z (~13 min) WITHOUT the prior 76s error-flip and WITHOUT reaching ready - a third state, neither the B-187 fast-loop signature nor a normal 4-5min boot; UNKNOWN, fail-closed. /exec stat during BOOTING: TimeoutError 40s client-bound ~19:25Z (6/6 timeouts across sessions; prior 5/5 were during ERROR state). B-187 console fix USER-GATED; C-9029 launch on HOLD; landing synthetic slices forbidden (would poison C-9030 gate)",
   "gate_verdict": {
     "card": "C-9108",
-    "checked_utc": "2026-09-18T16:38:59Z",
+    "checked_utc": "2026-09-18T19:14:15Z",
+    "cli": "python3 -m harness.slice_transport --verify-only (EXIT=1, zero transport calls)",
     "duplicate_task_ids": [],
     "expected_tasks": 18,
     "missing_task_ids": [
@@ -34,25 +35,33 @@
     "unexpected_task_ids": [],
     "unparseable": []
   },
-  "generated_utc": "2026-09-18T16:38:59Z",
+  "generated_utc": "2026-09-18T19:26:41Z",
+  "impl_state": {
+    "commits": [
+      "b10c90d verifier+9 tests RED->GREEN",
+      "ef4dd80 CLI+4 pinning tests, RED verified live first"
+    ],
+    "receipt": "intentionally ABSENT: zero slices landed, nothing verified. Do not treat this file as landed evidence of slices.",
+    "second_worker_verification": {
+      "exec_probe_booting_state": "stat c9003_base_slice0.json -> TimeoutError at 40.0s (client-bound), ~19:25Z (immediately before the 19:26:41Z verdict write)",
+      "health_probes": "pid 62376 startupState=booting on every probe 19:12Z through ~19:25Z (~13 min; probe gaps incl. one lost to a 120s shell timeout - no data, not a down-probe); never ready, never startupError, pid never changed",
+      "own_pytest": "13/13 GREEN (passed=13 failed=0 errors=0), 19:10Z",
+      "verify_only_demo": "EXIT=1, n_slices=0, missing=18 named, zero transport calls, checked_utc=19:14:15Z",
+      "window_cst": "2026-09-19 03:12-03:27",
+      "worker": "C-9108 deploy-integrity worker #2"
+    },
+    "tests": "13/13 GREEN re-verified 2026-09-19 03:08 CST by C-9108 deploy-integrity worker in current tree (own pytest run: passed=13 failed=0 errors=0); neighbors 23/23 GREEN (prior session); live fail-closed demo: --verify-only EXIT=1, n_slices=0, 18 missing ids named, zero transport calls (02:53 CST)"
+  },
   "kind": "transport_verdict_FAIL_CLOSED",
-  "note": "Receipt (c9108_base_slice_transport_receipt.json) intentionally ABSENT: zero slices landed, nothing verified. Do not treat this file as landed evidence of slices.",
+  "note": "Fail-closed means NOTHING lands until box-side C-9029 slices exist and transport answers. Landing requires: (1) ASI2 stable (B-187 console, USER-GATED), (2) C-9029 leg dispatched (resident HOLD), (3) pull via python3 -m harness.slice_transport.",
   "transport_probe": {
-    "attempts": 2,
-    "health": "ready=false startupState=error (Huanxin shell endpoint API returned no terminal URL, code=170022; B-187 platform-recycle signature)",
-    "reason": "exec channel never answered; C-9029 leg bounced 2026-09-18 20:1x CST and ASI2 not ready since, so box-side slices are not expected to exist",
-    "remote_paths_sought": [
-      "/root/work/software/quantum-gpt/outputs/c9003_base_slice0.json",
-      "/root/work/software/quantum-gpt/outputs/c9003_base_slice6.json",
-      "/root/work/software/quantum-gpt/outputs/c9003_base_slice12.json"
-    ],
-    "result": "TRANSPORT DOWN (fail-closed; timeout = UNKNOWN, never DEAD)",
-    "stat_attempted": false,
+    "attempts_total": 6,
+    "exec_fresh": "1/1 TimeoutError at 40.0s (client-bound) on stat of c9003_base_slice0.json at ~19:25Z during extended-BOOTING state - FIRST exec probe during BOOTING (prior 5/5 were during ERROR state); box-side slice existence remains UNMEASURED (timeout=UNKNOWN, never DEAD); 6/6 timeouts across sessions",
+    "health_signature": "6th pid observation: 62376 first seen booting 19:12Z, still booting startupState=booting ready=false startupError=null through ~19:25Z (~13 min) - OUTLIVES the 76s error-flip of pids 78941/5566 and EXCEEDS the documented 4-5min boot window; classification UNKNOWN (not the fast B-187 170022 loop on THIS pid, not ready either). Prior chain: 57686 -> 43132 -> 51845 -> 5566 (booting up62s, vanished) -> 78941 (booting->ERROR up76s, 170022 no-terminal-URL, watched live). B-187 platform-recycle console fix USER-GATED",
+    "measured_utc": "2026-09-18T19:26:41Z",
+    "remote_path_sought": "/root/work/software/quantum-gpt/outputs/c9003_base_slice0.json",
+    "result": "TRANSPORT DOWN",
     "target": "http://127.0.0.1:19004/exec (ASI2)",
-    "timeout_s_used": [
-      30,
-      45
-    ],
-    "timeouts": 2
+    "timeouts_total": 6
   }
 }
