@@ -94,14 +94,14 @@ LANES = (
 
 # Per-lane concurrency limits (WIP). I/O-bound lanes get 1; context-bound get more.
 WIP_LIMITS = {
-    "planner": 1,
-    "evaluator": 2,
-    "trainer-ops": 1,
-    "fixer": 2,
+    "planner": 2,
+    "evaluator": 3,
+    "trainer-ops": 2,
+    "fixer": 3,
     "reviewer": 2,
-    "qa-steward": 1,
-    "data-miner": 1,
-    "deploy-integrity": 1,
+    "qa-steward": 2,
+    "data-miner": 2,
+    "deploy-integrity": 2,
 }
 
 DEFAULT_BUDGET_MIN = 25

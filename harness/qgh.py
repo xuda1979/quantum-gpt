@@ -85,7 +85,7 @@ STATE = os.environ.get("QGH_STATE_DIR") or os.path.join(REPO, "harness", "state"
 QGH = os.path.join(REPO, "harness", "qgh.py")
 CLAUDE = os.environ.get("QGH_CLAUDE", "/Users/daxu/homebrew/bin/claude")
 CRON_MARK = "qgh.py tick"
-MAX_LIVE_AGENTS = 6
+MAX_LIVE_AGENTS = 10  # 5-10 agents working together; raised from 6 (2026-09-18)
 TICK_LOCK = os.path.join(STATE, "locks", "tick.lock")
 TICK_STALE_SEC = 1800  # a tick holding the lock >30min is wedged -> break it
 # A successful tick appends to STATUS.md; a CRASHING tick still touches

@@ -361,9 +361,9 @@ class TestWipLimits(unittest.TestCase):
         by_lane = {}
         for c in running:
             by_lane[c["lane"]] = by_lane.get(c["lane"], 0) + 1
-        self.assertEqual(by_lane.get("fixer"), 2)  # WIP_LIMITS fixer = 2
-        self.assertEqual(by_lane.get("evaluator"), 2)  # WIP_LIMITS evaluator = 2
-        self.assertEqual(len(running), 4)  # global cap respected
+        self.assertEqual(by_lane.get("fixer"), 3)  # WIP_LIMITS fixer = 3
+        self.assertEqual(by_lane.get("evaluator"), 3)  # WIP_LIMITS evaluator = 3
+        self.assertEqual(len(running), 6)  # global cap respected
 
 
 class TestStaleTickLock(unittest.TestCase):
@@ -470,6 +470,16 @@ class TestStallDetection(unittest.TestCase):
 
         c = seed_card()
         entry, log, proc = running_agent(c, "sleep 120\n")  # hangs
+        # C-9093: a GENUINE hang means this incarnation is itself old enough
+        # to have heartbeated and gone silent (started_utc past STALL_MIN too);
+        # a fresh start with an old mtime is a prior incarnation, not a stall.
+        fleet = qgh.load_fleet(qgh.STATE)
+        for a in fleet["agents"]:
+            if a["pid"] == entry["pid"]:
+                a["started_utc"] = (
+                    H.datetime.utcnow() - H.timedelta(minutes=H.STALL_MIN + 10)
+                ).strftime("%Y-%m-%dT%H:%M:%SZ")
+        qgh.save_fleet(qgh.STATE, fleet)
         hb = os.path.join(qgh.STATE, "agents", "{}.progress".format(c["id"]))
         with open(hb, "w") as f:
             f.write("started\n")
