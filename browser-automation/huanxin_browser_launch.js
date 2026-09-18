@@ -73,7 +73,12 @@ function buildCommonLaunchOptions(headless, profileDir) {
     ignoreHTTPSErrors: true,
     env: buildIsolatedBrowserEnv(profileDir),
     args: [
-      '--remote-debugging-port=9224',
+      // Each env's daemon is launched with HUANXIN_CDP_PORT (keeper sets
+      // ASI1=9224 ASI2=9225 ASI3=9226) for per-env Chrome isolation. This was
+      // previously HARDCODED to 9224, so ASI2/ASI3 Chrome also tried to bind
+      // ASI1's port -> port-in-use / 'browser has been closed' crash and envs
+      // could not stay up simultaneously. Use the env's port (fallback 9224).
+      `--remote-debugging-port=${process.env.HUANXIN_CDP_PORT || '9224'}`,
       '--remote-allow-origins=*',
       '--proxy-server=direct://',
       '--proxy-bypass-list=*',
