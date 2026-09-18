@@ -943,6 +943,9 @@ def render_progress(goal, queue, fleet, tick_no, verdicts=None, probes=None):
     statuses = Counter(c.get("status", "?") for c in queue["cards"])
     live = [a for a in fleet["agents"] if a.get("status") == "running" and pid_alive(a.get("pid"))]
     ready = [c for c in queue["cards"] if c.get("status") == "ready"]
+    bounced = [c for c in queue["cards"] if c.get("status") == "bounced"]
+    running_cards = [c for c in queue["cards"] if c.get("status") == "running"]
+    blocked = [c for c in queue["cards"] if c.get("status") == "blocked"]
     # best verdict so far (progress toward 18/18)
     best_pass, best_vf = 0, None
     if verdicts:
@@ -982,23 +985,93 @@ def render_progress(goal, queue, fleet, tick_no, verdicts=None, probes=None):
     L.append("")
     L.append("## Live Workers")
     if live:
-        L.append("| card | lane | pid |")
-        L.append("|---|---|---|")
+        L.append("| card | lane | pid | age_min | deadline_min |")
+        L.append("|---|---|---|---|---|")
         for a in live:
-            L.append(f"| {a.get('card')} | {a.get('lane')} | {a.get('pid')} |")
+            age = age_min(a.get("started_utc"))
+            dl = age_min(a.get("deadline_utc"))
+            L.append(
+                f"| {a.get('card')} | {a.get('lane')} | {a.get('pid')} | "
+                f"{age if age is not None else '?'} | {dl if dl is not None else '?'} |"
+            )
     else:
         L.append("_No live workers (loop may be between ticks or halted)._")
     L.append("")
     L.append("## Resources")
     if probes:
+        L.append("| resource | status |")
+        L.append("|---|---|")
         for name in ("asi1", "asi2", "asi3", "trainer"):
             s = probes.get(name)
             if s:
-                L.append(f"- {name}: {str(s)[:90]}")
+                L.append(f"| {name} | {str(s)[:100]} |")
     L.append("")
     done = statuses.get("done", 0)
-    bounced = statuses.get("bounced", 0)
-    L.append(f"## Throughput so far: {done} done, {bounced} bounced")
+    bounced_n = statuses.get("bounced", 0)
+    L.append(f"## Throughput so far: {done} done, {bounced_n} bounced")
+    L.append("")
+    # ---- Ready Cards table ----
+    L.append("## Ready to Dispatch")
+    if ready:
+        L.append("| card | lane | priority | title |")
+        L.append("|---|---|---|---|")
+        for c in sorted(ready, key=lambda c: c.get("priority", 9))[:20]:
+            L.append(
+                f"| {c['id']} | {c.get('lane', '?')} | P{c.get('priority', 9)} | "
+                f"{(c.get('title') or '')[:50]} |"
+            )
+    else:
+        L.append("_No ready cards (planner should decompose)._")
+    L.append("")
+    # ---- Running Cards table ----
+    L.append("## Running")
+    if running_cards:
+        L.append("| card | lane | title |")
+        L.append("|---|---|---|")
+        for c in running_cards:
+            L.append(f"| {c['id']} | {c.get('lane', '?')} | {(c.get('title') or '')[:50]} |")
+    else:
+        L.append("_No running cards._")
+    L.append("")
+    # ---- Bounced Cards table (failure signals) ----
+    L.append("## Bounced (failure signals)")
+    if bounced:
+        L.append("| card | lane | bounce_count | reason |")
+        L.append("|---|---|---|---|")
+        for c in sorted(bounced, key=lambda c: c.get("bounce_count", 0), reverse=True)[:15]:
+            L.append(
+                f"| {c['id']} | {c.get('lane', '?')} | {c.get('bounce_count', 0)} | "
+                f"{(c.get('bounce_reason') or '')[:60]} |"
+            )
+    else:
+        L.append("_No bounced cards._")
+    L.append("")
+    # ---- Blocked Cards table ----
+    L.append("## Blocked")
+    if blocked:
+        L.append("| card | lane | title |")
+        L.append("|---|---|---|")
+        for c in blocked:
+            L.append(f"| {c['id']} | {c.get('lane', '?')} | {(c.get('title') or '')[:50]} |")
+    else:
+        L.append("_No blocked cards._")
+    L.append("")
+    # ---- Verdicts table (eval progress toward 18/18) ----
+    L.append("## Eval Verdicts (progress toward 18/18)")
+    if verdicts:
+        L.append("| verdict | pass_adapter | beats_base | pass_base | superseded |")
+        L.append("|---|---|---|---|---|")
+        for v in verdicts:
+            if not isinstance(v, dict):
+                continue
+            vf = v.get("_file", "?")
+            pa = v.get("pass_adapter", "?")
+            bb = v.get("beats_base", "?")
+            pb = v.get("pass_base", "?")
+            sup = "YES" if v.get("superseded") else "no"
+            L.append(f"| {vf} | {pa} | {bb} | {pb} | {sup} |")
+    else:
+        L.append("_No verdicts yet._")
     L.append("")
     L.append("---")
     L.append("_Full standup: `harness/state/standup/`. Events: `harness/state/EVENTS.jsonl`._")
