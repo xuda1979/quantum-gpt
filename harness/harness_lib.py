@@ -470,7 +470,7 @@ def harvest_log(log_path):
 
     Fail-closed: no RESULT line -> verdict None (never guess done).
     """
-    if not os.path.exists(log_path):
+    if not log_path or not os.path.exists(log_path):
         return None, []
     with open(log_path, encoding="utf-8", errors="replace") as f:
         text = f.read()

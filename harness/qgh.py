@@ -87,6 +87,13 @@ CRON_MARK = "qgh.py tick"
 MAX_LIVE_AGENTS = 6
 TICK_LOCK = os.path.join(STATE, "locks", "tick.lock")
 TICK_STALE_SEC = 1800  # a tick holding the lock >30min is wedged -> break it
+# A successful tick appends to STATUS.md; a CRASHING tick still touches
+# tick.log (the launchd stdout redirect catches the traceback) but NOT
+# STATUS.md. So STATUS.md mtime is the true "loop is making progress"
+# signal, not tick.log. If no successful tick in this window, the loop is
+# effectively halted (measured 2026-09-18: 19h halt where tick.log looked
+# fresh but STATUS.md was stale) -> heal must detect and force recovery.
+SUCCESS_STALE_SEC = 2400  # 40 min = 4 missed 10-min ticks => halted
 API_ERROR_SIGNATURES = (
     "API Error: Unable to connect to API",
     "Not logged in",
@@ -689,7 +696,7 @@ def _reap():
         verdict, tail = harvest_log(a.get("log"))
         try:
             text = open(a.get("log"), encoding="utf-8", errors="replace").read()
-        except OSError:
+        except (OSError, TypeError):
             text = ""
         # ENVIRONMENTAL = pid DEAD + produced NOTHING (spawn/credential/API
         # failure) -> never burns the card's bounce budget. A worker that was
@@ -1250,6 +1257,18 @@ def cmd_doctor(_args):
         print("last tick: {} (age {:.0f}s)".format("RECENT" if age < 1800 else "STALE", age))
     else:
         print("last tick: NEVER")
+    # TRUE health signal: STATUS.md is only appended on a successful tick
+    # (a crashing tick still touches tick.log via the launchd redirect, so
+    # tick.log alone is a false-positive 'RECENT'). Report last success.
+    succ_age = _last_success_age_s()
+    if succ_age is None:
+        print("last success: NEVER")
+    else:
+        print(
+            "last success: {} (age {:.0f}s)".format(
+                "RECENT" if succ_age < SUCCESS_STALE_SEC else "HALTED", succ_age
+            )
+        )
     ld = os.path.expanduser(f"~/Library/LaunchAgents/{LAUNCHD_LABEL_TICK}.plist")
     print("launchd: %s" % ("INSTALLED" if os.path.exists(ld) else "MISSING"))
     queue = load_queue(STATE)
@@ -1270,8 +1289,33 @@ def cmd_watch(args):
         time.sleep(interval)
 
 
+def _last_success_age_s():
+    """Age (s) since the last SUCCESSFUL tick, via STATUS.md mtime.
+
+    A crashing tick touches tick.log (launchd stderr/stdout redirect) but
+    never appends to STATUS.md (that happens only after reap+dispatch). So
+    STATUS.md is the only reliable 'loop is progressing' signal. Returns
+    None if STATUS.md does not exist."""
+    p = os.path.join(STATE, "STATUS.md")
+    if not os.path.exists(p):
+        return None
+    try:
+        return time.time() - os.path.getmtime(p)
+    except OSError:
+        return None
+
+
 def cmd_heal(_args):
-    # break wedged tick lock, reinstall cron, tick now
+    # Self-monitoring heal: detect a true tick HALT (no successful tick in
+    # SUCCESS_STALE_SEC — e.g. every tick crashing in reap) and force recovery,
+    # not just a wedged tick lock. The 2026-09-18 19h halt had a fresh tick.log
+    # (crashes wrote tracebacks) but a stale STATUS.md, so the old heal — which
+    # only broke a tick lock — never noticed the loop was dead.
+    succ_age = _last_success_age_s()
+    halted = succ_age is not None and succ_age > SUCCESS_STALE_SEC
+    if halted:
+        event(STATE, "heal_halt_detected", {"last_success_age_s": int(succ_age)})
+    # break wedged tick lock
     if os.path.exists(TICK_LOCK):
         pid = load_json(TICK_LOCK + "/pid", 0) or 0
         if pid and pid_alive(pid):
@@ -1280,6 +1324,13 @@ def cmd_heal(_args):
                 kill_pid(pid)
         _rmtree(TICK_LOCK)
     self_spawn(["install-cron"])
+    # on a detected halt, clear zombie fleet BEFORE the tick so the fresh tick
+    # can dispatch (zombies count against WIP and block new workers). Then tick.
+    if halted:
+        try:
+            _reap()
+        except Exception as exc:
+            event(STATE, "heal_reap_failed", {"why": str(exc)[:200]})
     self_spawn(["tick"])
 
 
