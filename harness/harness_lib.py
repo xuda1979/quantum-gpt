@@ -72,6 +72,18 @@ def append_line(path, line):
         f.write(line.rstrip("\n") + "\n")
 
 
+def append_heartbeat(path, line):
+    """The ONLY sanctioned heartbeat write route (C-9073/C-9115): a python
+    open-append stamped with now_iso().
+
+    Gate-degraded sessions deny shell redirection (echo/tee >>) and the
+    Write tool at the permission layer, but this append survives (measured
+    live 2026-09-17/18); a worker heartbeating through shell redirection
+    goes heartbeat-silent and the reaper kills it as STALLED while it works.
+    """
+    append_line(path, f"{now_iso()} {line}")
+
+
 # ----------------------------------------------------------------------------- events
 def event(state_dir, kind, payload):
     append_line(
@@ -508,6 +520,29 @@ def harvest_log(log_path):
 
 
 # ----------------------------------------------------------------------------- gates
+# C-9085: explicit window-gate SKIP / WAITING markers (the C-9071 preflight
+# gate's own vocabulary: the window_gate_skip.json artifact name and the
+# "window-gate skip" prose forms). Tokens are deliberately narrow -- a bare
+# "SKIP" or "blocked" in a worker log must NEVER match, or plain BLOCKEDs
+# would silently stop bouncing.
+GATE_SKIP_MARKERS = (
+    "window_gate_skip",
+    "window-gate skip",
+    "window gate skip",
+)
+
+
+def is_gate_skip_blocked(text):
+    """True iff a worker BLOCKED result cites the window-gate SKIP marker.
+
+    C-9085: a worker that reports BLOCKED because the window preflight gate
+    said SKIP is WAITING on the window, not failing the card -- the reaper
+    must requeue it WITHOUT a bounce strike.
+    """
+    t = (text or "").lower()
+    return any(m in t for m in GATE_SKIP_MARKERS)
+
+
 def check_gate(gate, result_text):
     """Mechanical, evidence-based gate checks. Fail-closed: missing evidence = fail.
 
@@ -574,7 +609,7 @@ ACCEPTANCE (every item must hold to report DONE):
 GATES (mechanical, evidence required in your reply): {gates}
 BUDGET: {budget} min hard deadline — you will be stopped; report what you have by then.
 HEARTBEAT (mandatory): after every meaningful step run
-  echo "$(date -u +%FT%TZ) <one line of progress>" >> {hb}
+  python3 harness/qgh.py heartbeat {cid} "what you just did"   # heartbeat file: {hb}
 A worker whose heartbeat file goes stale >{stall} min is treated as STALLED and killed.
 RULES:
 - TDD: RED test first, smallest fix, GREEN + touched suites. A fix without a test is rejected.
@@ -738,6 +773,42 @@ def sha_pin_violation(verdict, manifest=None):
     return None
 
 
+def is_qwen38_27b_model(name):
+    """C-9119: does this id resolve to the GOAL's Qwen3.8-27B family?
+    Case-insensitive and path-tolerant: requires BOTH the "qwen3.8"
+    series token and the "27b" size token ("Qwen/Qwen3.8-27B",
+    "/models/qwen3.8-27b-instruct" pass; "Qwen/Qwen3.6-35B-A3B" --
+    what probe C-9004 says the box actually ships -- does not)."""
+    if not isinstance(name, str) or not name:
+        return False
+    lowered = name.lower()
+    return "qwen3.8" in lowered and "27b" in lowered
+
+
+def model_identity_violation(verdict):
+    """C-9119: None iff the verdict PROVES its checkpoint base model is
+    a Qwen3.8-27B family id (a PASS model_identity column with a truthy
+    sha256); otherwise a named model_identity_violation reason.
+    Fail-closed: a verdict with NO model_identity column -- every
+    pre-C-9119 banked verdict, e.g. s97/s26 -- is base_model_unproven
+    and can never retire THIS goal."""
+    mi = verdict.get("model_identity") if isinstance(verdict, dict) else None
+    if not isinstance(mi, dict):
+        return "model_identity_violation: base_model_unproven (verdict carries no model_identity column)"
+    if mi.get("status") != "PASS":
+        reason = mi.get("violation") or f"status={mi.get('status')}"
+        return f"model_identity_violation: {reason}"
+    if not is_qwen38_27b_model(mi.get("base_model")):
+        return (
+            f"model_identity_violation: base_model_mismatch ({mi.get('base_model')!r} is not "
+            "the Qwen3.8-27B family)"
+        )
+    sha = mi.get("sha256")
+    if not isinstance(sha, str) or not sha:
+        return "model_identity_violation: sha256_missing"
+    return None
+
+
 def goal_done(goal, verdicts):
     """18/18 achieved = a fail-closed TWO-LEG verdict shows 18/18 +
     beats_base.
@@ -802,6 +873,12 @@ def goal_done(goal, verdicts):
         if sha_pin_violation(v, manifest=manifest) is not None:
             # C-0031: sha-unpinned / scorer-drifted verdict is
             # non-canonical; it can never retire the goal.
+            continue
+        mvio = model_identity_violation(v)
+        if mvio is not None:
+            # C-9119: a verdict whose checkpoint base model is unproven
+            # or outside the Qwen3.8-27B family silently violates the
+            # GOAL's model field; it can never retire the goal.
             continue
         return True, v.get("_file")
     return False, None
@@ -1079,6 +1156,20 @@ def render_progress(goal, queue, fleet, tick_no, verdicts=None, probes=None):
 
 
 # ----------------------------------------------------------------------------- standup
+def dispatch_reason(card, by_id):
+    """C-9087: None iff the card is DISPATCHABLE (ready + deps-not-dead +
+    unclaimed); otherwise a short renderable reason, naming the dead dep.
+    Read-only over QUEUE.json -- no status transition."""
+    if card.get("status") != "ready":
+        return "not ready"
+    if card.get("claimed_by"):
+        return "claimed"
+    dead = [d for d in card.get("deps", []) if (by_id.get(d) or {}).get("status") == "dead"]
+    if dead:
+        return "dead dep: " + ",".join(dead)
+    return None
+
+
 def render_standup(goal, queue, fleet, tick_no, verdicts=None, probes=None, state_dir=None):
     L = []
     L.append(f"## HARNESS STANDUP #{tick_no} — {now_iso()}")
@@ -1086,18 +1177,24 @@ def render_standup(goal, queue, fleet, tick_no, verdicts=None, probes=None, stat
         "Objective: {} | status: {}".format(goal.get("objective", "?"), goal.get("status", "OPEN"))
     )
     L.append("")
+    by_id = {c.get("id"): c for c in queue["cards"]}
+    eff = sum(1 for c in queue["cards"] if dispatch_reason(c, by_id) is None)
     L.append("### QUEUE (top 12 ready/running by priority)")
-    L.append("| pri | id | lane | status | title | why |")
-    L.append("|---|---|---|---|---|---|")
+    L.append(f"EFFECTIVE-QUEUE: {eff} (ready+deps-not-dead+unclaimed)")
+    L.append("| pri | id | lane | status | disp | title | why |")
+    L.append("|---|---|---|---|---|---|---|")
     rows = [c for c in queue["cards"] if c["status"] in ("ready", "running", "blocked")]
     rows.sort(key=lambda c: (c["priority"], c["created_utc"]))
     for c in rows[:12]:
+        reason = dispatch_reason(c, by_id)
+        disp = "Y" if reason is None else f"N ({reason})"
         L.append(
-            "| P{} | {} | {} | {} | {} | {} |".format(
+            "| P{} | {} | {} | {} | {} | {} | {} |".format(
                 c["priority"],
                 c["id"],
                 c["lane"],
                 c["status"],
+                disp,
                 c["title"][:48],
                 (c["why"] or "")[:48],
             )
@@ -1154,8 +1251,12 @@ def render_standup(goal, queue, fleet, tick_no, verdicts=None, probes=None, stat
                 mark = "goal_done=YES"
             else:
                 vio = sha_pin_violation(v)
+                mvio = model_identity_violation(v)
                 if vio:
                     mark = f"goal_done=NO (sha_pin_violation: {vio})"
+                elif mvio:
+                    # C-9119: annotate model-inadmissible verdicts
+                    mark = f"goal_done=NO ({mvio})"
                 else:
                     mark = "goal_done=NO (criteria-unmet)"
             L.append(
