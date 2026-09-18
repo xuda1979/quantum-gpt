@@ -58,7 +58,7 @@ def parse_args() -> argparse.Namespace:
         help="benchmark file: one task id per line, '#' comments (default: 13-task training set)",
     )
     parser.add_argument("--device", default="npu")
-    parser.add_argument("--max-new-tokens", type=int, default=384)
+    parser.add_argument("--max-new-tokens", type=int, default=1536)
     parser.add_argument("--limit", type=int, default=0)
     # 2026-09-14 (parallel-eval speedup): slice the benchmark task list so
     # multiple independent workers -- each sharded over its OWN NPU subset --
@@ -232,8 +232,17 @@ def generate(model: Any, backend: Any, prompt: str, device: str, max_new_tokens:
             do_sample=False,
             pad_token_id=backend.text_backend.eos_token_id,
         )
-    return sanitize_code(
-        backend.text_backend.decode(output[0][prompt_len:], skip_special_tokens=True)
+    # C-9038: truncation evidence. Greedy generation stops at EOS; emitting
+    # the FULL max_new_tokens budget means the cap cut the completion
+    # (finish reason == "length"). Recorded per task so the scorer fails
+    # truncated outputs closed.
+    n_new = int(output.shape[1]) - int(prompt_len)
+    truncated = n_new >= max_new_tokens
+    return (
+        sanitize_code(
+            backend.text_backend.decode(output[0][prompt_len:], skip_special_tokens=True)
+        ),
+        truncated,
     )
 
 
@@ -417,8 +426,9 @@ def run_model(
         # only -- the pinned crash-class token -- and the leg continues
         # to the remaining tasks. Never a skip, never a pass.
         code = ""
+        truncated = None  # C-9038: unknown until generation returns
         try:
-            code = generate(model, backend, prompt, args.device, args.max_new_tokens)
+            code, truncated = generate(model, backend, prompt, args.device, args.max_new_tokens)
             candidate_path = args.output.parent / "candidates" / model_name / f"{meta['id']}.py"
             test_result = run_single_file_test(
                 task_dir, meta, code, candidate_path, args.harness_timeout
@@ -455,6 +465,7 @@ def run_model(
                 "details": test_result["details"],
                 "scores": scores,
                 "output_chars": len(code) if isinstance(code, str) else 0,
+                "truncated": truncated,
                 "reference_hidden": True,
                 "prompt_mode": "question-only",
             }

@@ -241,3 +241,41 @@ def test_main_writes_artifact_at_bound_schema(tmp_path):
     art = json.loads(out.read_text())
     assert art["artifact"] == "parity"
     assert _check_c9051(art) is None
+
+
+# --- Mac canonical side of the acceptance (2026-09-19 re-verification) ----
+# Acceptance: "max_new_tokens default equals the C-9038 ceiling" and
+# "composer emits scorer_shas + holdout_sha256 (grep evidence, not
+# claims)". The box mirrors the Mac canonical bytes, so the canonical
+# tree itself must satisfy both before any box fetch can reach PARITY-OK
+# (2026-09-19: canonical runner still defaulted 384 < ceiling 1536 while
+# the ceiling artifact proves 384 cannot reach 18/18 -- max passing
+# reference alone is 1087 tokens).
+
+
+def _live(rel):
+    p = ROOT / rel
+    assert p.is_file(), "missing canonical file: " + rel
+    return p.read_text()
+
+
+def test_mac_canonical_runner_default_equals_c9038_ceiling():
+    ceiling_doc = json.loads((ROOT / "harness/state/preflights/C-9038_ceiling.json").read_text())
+    assert ceiling_doc["artifact"] == "ceiling"
+    ceiling = ceiling_doc["max_new_tokens"]
+    assert isinstance(ceiling, int) and ceiling > 0
+    default = parity._runner_default(_live(parity.RUNNER_REL))
+    assert default is not None, "canonical runner has no --max-new-tokens default"
+    assert default == ceiling, (
+        "canonical runner default "
+        + str(default)
+        + " != C-9038 ceiling "
+        + str(ceiling)
+        + " (B-163: a bare/default box invocation burns the window at 384)"
+    )
+
+
+def test_mac_canonical_composer_emits_scorer_and_holdout_shas():
+    text = _live(parity.COMPOSER_REL)
+    assert "scorer_shas" in text, "canonical composer missing scorer_shas"
+    assert "holdout_sha256" in text, "canonical composer missing holdout_sha256"
