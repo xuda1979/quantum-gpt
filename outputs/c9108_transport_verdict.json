@@ -1,9 +1,9 @@
 {
   "card": "C-9108",
-  "conclusion": "FAIL-CLOSED: 0 slices, 18/18 task ids named missing; code+tests landed and GREEN, re-verified by a SEVENTH deploy-integrity worker 2026-09-19 05:30-05:55 CST (13/13 own pytest; --verify-only EXIT=1 fresh via subprocess, n_slices=0, 18 ids named, zero transport calls; gate_verdict re-spliced fresh at write; one own pipe-artifact EXIT=0 self-caught and corrected before recording). Slice LANDING blocked upstream: B-187 boot-restart loop RE-CONFIRMED LIVE, pids 12th-13th (88191, 19734) watched through the full cycle; FIRST TIME the COMPLETE startup failure body captured: getShellVisitUrl code=170022 for env=ASI2 pod=dl-868c196fb82d3e0b8cfbbe826d8afd0a-r0-1ac3bdc9546d-0, frontend falls through to wss://aihuanxin.cn/kunlun/null -> WebSocket handshake 404, startupFailure.kind=shell_endpoint_unavailable, traceId 8bb34ca8-5479-4086-9d57-f7bc79f34aab. /exec stat: ConnectionRefused at 0.0s = daemon DOWN (10th failed attempt), box-side UNMEASURED (never DEAD). B-187 console fix USER-GATED; C-9029 launch on HOLD; landing synthetic slices forbidden (would poison C-9030 gate). Verifier itself is COMPLETE and re-verified; only the live pull awaits a healthy ASI2.",
+  "conclusion": "FAIL-CLOSED: 0 slices, 18/18 task ids named missing; code+tests landed and GREEN, re-verified by a SEVENTH deploy-integrity worker 2026-09-19 05:30-05:55 CST (13/13 own pytest; --verify-only EXIT=1 fresh via subprocess, n_slices=0, 18 ids named, zero transport calls; gate_verdict re-spliced fresh at write; one own pipe-artifact EXIT=0 self-caught and corrected before recording). Slice LANDING blocked upstream: B-187 boot-restart loop RE-CONFIRMED LIVE, pids 12th-13th (88191, 19734) watched through the full cycle; FIRST TIME the COMPLETE startup failure body captured: getShellVisitUrl code=170022 for env=ASI2 pod=dl-868c196fb82d3e0b8cfbbe826d8afd0a-r0-1ac3bdc9546d-0, frontend falls through to wss://aihuanxin.cn/kunlun/null -> WebSocket handshake 404, startupFailure.kind=shell_endpoint_unavailable, traceId 8bb34ca8-5479-4086-9d57-f7bc79f34aab. /exec stat: ConnectionRefused at 0.0s = daemon DOWN (10th failed attempt), box-side UNMEASURED (never DEAD). B-187 console fix USER-GATED; C-9029 launch on HOLD; landing synthetic slices forbidden (would poison C-9030 gate). Verifier itself is COMPLETE and re-verified; only the live pull awaits a healthy ASI2. Re-verified by an EIGHTH deploy-integrity worker 2026-09-19 05:44-05:53 CST: 13/13 GREEN, verify-only REAL_RC=1 (subprocess-measured), B-187 14th pid 61840 watched flipping booting->error at up=69s (170022), /exec attempt #11 timeout, zero transport; landing still BLOCKED USER-GATED (B-187 console fix) + C-9029 HOLD.",
   "gate_verdict": {
     "card": "C-9108",
-    "checked_utc": "2026-09-18T21:38:05Z",
+    "checked_utc": "2026-09-18T21:48:37Z",
     "duplicate_task_ids": [],
     "expected_tasks": 18,
     "missing_task_ids": [
@@ -34,7 +34,7 @@
     "unexpected_task_ids": [],
     "unparseable": []
   },
-  "generated_utc": "2026-09-18T21:40:42Z",
+  "generated_utc": "2026-09-18T21:48:37Z",
   "impl_state": {
     "commits": [
       "b10c90d verifier+9 tests RED->GREEN",
@@ -63,14 +63,14 @@
   "kind": "transport_verdict_FAIL_CLOSED",
   "note": "Fail-closed means NOTHING lands until box-side C-9029 slices exist and transport answers. Landing requires: (1) ASI2 stable (B-187 console, USER-GATED), (2) C-9029 leg dispatched (resident HOLD), (3) pull via python3 -m harness.slice_transport.",
   "transport_probe": {
-    "attempts_total": 10,
-    "exec_fresh": "stat c9003_base_slice0.json via /exec -> ConnectionRefused at 0.0s ~21:38Z: daemon pid 19734 already DEAD post error-flip; box-side slice existence UNMEASURED (never reached box); 10th failed attempt (7 timeouts + 1 worker5 HTTP500 + 1 worker6 refusal + this refusal)",
-    "health_signature": "B-187 fast-loop re-confirmed LIVE, 12th-13th pids watched: 88191 booting up=36s -> dead <90s -> 19734 booting up=5s -> error flip at up=91s with shell-terminal 170022 signature (full body captured, wss://aihuanxin.cn/kunlun/null -> WS 404) -> ConnectionRefused (dead) by 21:38Z. Chain: 57686->43132->51845->5566->78941->62376->87288->27778->57618->75031->12281->88191->19734",
-    "measured_utc": "2026-09-18T21:38:06Z",
+    "attempts_total": 11,
+    "exec_fresh": "stat via /exec on pid 61840 post-error-flip -> TimeoutError at ~20s 2026-09-19T21:49Z; daemon in startupState=error; box-side slice existence UNMEASURED (request never reached box), never DEAD; 11th failed transport attempt",
+    "health_signature": "pid 61840 (14th in B-187 chain) watched LIVE: booting up=29s 05:46:31 CST -> up=49s 05:46:51 -> startupState=error flip at up=69s 05:47:11 CST, startupError getShellVisitUrl code=170022 shell endpoint (same signature as pids 19734/87288/27778); no recovery inside watch window",
+    "measured_utc": "2026-09-18T21:48:37Z",
     "remote_path_sought": "/root/work/software/quantum-gpt/outputs/c9003_base_slice0.json",
-    "result": "TRANSPORT DOWN",
+    "result": "FAIL-CLOSED no-transport (worker8)",
     "target": "http://127.0.0.1:19004/exec (ASI2)",
-    "timeouts_total": 7
+    "timeouts_total": 8
   },
   "worker5_verification": {
     "b187_live_watch": "pid 27778 (8th in chain 57686->43132->51845->5566->78941->62376->87288->27778) observed booting 05:13:41 CST (up=35s, startupError=null) -> flipped error by 05:14:21 CST (up=75s) with startupError 'Shell terminal for ASI2 failed because the Huanxin shell end...' = fast B-187 signature, flip watched live",
@@ -95,5 +95,13 @@
     "verify_only_demo": "EXIT=1, n_slices=0, missing=18 named, zero transport calls, checked_utc=2026-09-18T21:38:05Z; a first EXIT=0 reading this tick was the worker-own pipe artifact (exit of tail, not the verifier), self-caught and corrected via subprocess re-measurement before any record was written",
     "b187_live_watch": "pids 12th-13th watched live: 88191 booting up=36s startupError=null 21:33:35Z -> DEAD by 21:35:02Z (replaced by 19734 up=5s, flip window ~75-90s) -> 19734 flipped startupState=error at up=91s (21:36:31Z) with FULL error body CAPTURED first time end-to-end: getShellVisitUrl code=170022 (shell endpoint unavailable, startupFailure.kind=shell_endpoint_unavailable), frontend fell through to wss://aihuanxin.cn/kunlun/null -> WebSocket handshake 404; traceId 8bb34ca8-5479-4086-9d57-f7bc79f34aab; platform surface repeats dev-env reclaim/lock banner. Identical signature to pids 87288/27778",
     "exec_probe": "stat /root/work/software/quantum-gpt/outputs/c9003_base_slice0.json via /exec -> ConnectionRefused at 0.0s 21:38:05Z (daemon 19734 dead post-flip); box-side slice existence UNMEASURED (never reached box), never DEAD; 10th failed transport attempt"
+  },
+  "worker8_verification": {
+    "worker": "eighth deploy-integrity worker",
+    "window_cst": "2026-09-19 05:44-05:53 CST",
+    "own_pytest": "harness/tests/test_c9108_slice_transport.py 13/13 passed (own run 05:45 CST)",
+    "verify_only_demo": "REAL_RC=1 measured via subprocess (no pipe artifact); fresh gate ok=False, n_slices=0, 18/18 task ids named missing, zero transport calls, checked_utc=2026-09-18T21:48:37Z",
+    "b187_live_watch": "pid 61840 14th in chain: booting(up29s)->error(up69s) flip watched 05:46:31->05:47:11 CST, getShellVisitUrl 170022; B-187 boot-restart loop CONTINUES",
+    "exec_probe": "11th attempt: POST /exec stat c9003_base_slice0.json -> TimeoutError ~20s; daemon error-state; box-side UNMEASURED, fail-closed"
   }
 }
