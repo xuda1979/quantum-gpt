@@ -996,6 +996,28 @@ def cmd_tick(_args):
                 f.write(progress)
         except Exception:
             pass  # progress publish must never break a tick
+        # publish the comprehensive system dashboard (detailed tables for every
+        # component — DevOps observability: environments, agents, cards, verdicts)
+        try:
+            import json as _json
+            import urllib.request as _url
+
+            from dashboard import render_dashboard
+
+            env_health = {}
+            for _name, _port in (("ASI1", 20646), ("ASI2", 19004), ("ASI3", 20653)):
+                try:
+                    _r = _url.urlopen(f"http://127.0.0.1:{_port}/health", timeout=5)
+                    env_health[_name] = _json.loads(_r.read())
+                except Exception:
+                    env_health[_name] = None
+            dash = render_dashboard(
+                goal, queue, fleet, tick_no, verdicts, probes, env_health, STATE
+            )
+            with open(os.path.join(REPO, "DASHBOARD.md"), "w", encoding="utf-8") as f:
+                f.write(dash)
+        except Exception:
+            pass  # dashboard publish must never break a tick
         append_line(
             os.path.join(STATE, "STATUS.md"),
             f"- {now_iso()} tick#{tick_no} reaped={reaped} {dispatch_note}\n",
