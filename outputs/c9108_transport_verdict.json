@@ -1,9 +1,9 @@
 {
  "card": "C-9108",
- "conclusion": "VERDICT (worker28, 2026-09-19T02:38Z): transport leg of C-9108 RE-VERIFIED by 28TH independent worker, and NEW: B-187 FLIP PRESENT -- ASI2 platform recycle observed live. Mac-side daemon pid 22293 (stable workers 15-27) -> pid 41200 = node browser-automation/huanxin_browser_daemon.js --env ASI2 started Sat Sep 19 10:09:38 2026 CST (02:09:38Z, ~6 min after worker27's 02:03Z refresh), /health uptime counter reset (1375s at 02:32Z), commandCount reset 130->1. Fresh daemon READY and CLEAN: authDriftDetected=false, shellSurfaceReady=true, no auth-retry loop post-recycle. Battery 13/13 GREEN fresh standalone (bare python3). Verify-only gate REAL_RC=1 ok:false: 0 slices, 18/18 task ids NAMED, 0 dup/unparseable/missing-truncation. Live pull LIVE_RC=1 on the NEW daemon: 3/3 slices rejected fail-closed carrying REAL box-side stat error text (No such file or directory), nothing landed. POSITIVE CONTROL on the NEW daemon: /health commandCount 1->4 delta +3 EXACT = my 3 stat execs; lastCommand echoed MY OWN slice12 stat verbatim = answering daemon IS executing daemon. Box re-stat MEASURED 02:33:54Z (no clock skew): 405 outputs entries UNCHANGED ACROSS THE RECYCLE + 0 c9003 tree-wide (find) + 0 c9029 anywhere + 0 vllm/launch/serve procs (bracketed) + load 22.62 (elevated vs worker27's 13.46, post-boot churn) = the recycle dispatched NOTHING: C-9029 still never dispatched, never produced outputs. Mac landed NOTHING (0 slices, no receipt, 0 tmp strays pre AND post). C-9108 verifier itself DONE-what-can: slice LANDING BLOCKED upstream on C-9029 dispatch (USER-GO; resident tick-1250 USER GO RECEIVED claim STILL UNCORROBORATED).",
+ "conclusion": "VERDICT (worker29, 2026-09-19T04:33Z): transport leg of C-9108 RE-VERIFIED by 29TH independent worker; NEW FACT #1: SECOND ASI2 platform recycle today -- daemon pid 41200 (worker28, boot 02:09:38Z) -> pid 75585, /health uptime 1440s at 04:31:14Z baseline => boot ~04:07:14Z (12:07 CST, ~2h after recycle #1); commandCount reset to 1 (lastCommand 'echo EXEC_TEST_FRESH' from another prober); READY, authDriftDetected=false. B-187 boot-restart-loop signature CONTINUES (two recycles in one day), and STILL ZERO DISPATCH: box outputs 405 entries UNCHANGED ACROSS BOTH RECYCLES, tree-wide find c9003_base_slice* EMPTY, find *c9029* EMPTY, load 12.09 (calm) = C-9029 never dispatched, never produced outputs. Battery 13/13 GREEN fresh -- RUN UNDER /usr/bin/python3 3.9 (labeled): host env break measured this tick -- brew swapped openssl@3 (3.6.4) at 12:20 CST under the Aug-23-built python@3.14 extmods, so dlopen of _ssl/_hashlib now SIGKILLs every NEW homebrew python3.14 process (reproduced: import ssl/hashlib/urllib.request rc=137; /usr/bin/python3 imports ssl fine). This test file is stdlib-only with hermetic id fallback => 3.9 run is sound for it; FLEET-WIDE implication: every bare-python3 suite importing ssl/hashlib on this Mac is dying right now; qgh.py heartbeat path unaffected (no crypto imports). Verify-only gate REAL_RC=1 ok:false 04:29:10Z: 0 slices, 18/18 ids NAMED, 0 dup/unparseable/missing-truncation. Live pull LIVE_RC=1 8.7s on daemon 75585: 3/3 slices rejected fail-closed carrying REAL box-side stat text (stat: cannot statx ... No such file or directory); nothing landed (0 slices, no receipt, 0 tmp strays pre+post). POSITIVE CONTROL: /health commandCount 1->4 delta +3 EXACT = my 3 stat execs; lastCommand echoed MY OWN slice12 stat verbatim = answering daemon IS executing daemon. CAVEAT (honest): my box proc-probe line was malformed by unquoted pipes (grep -E split at |), so NO bracketed proc-probe claim this tick; decisive no-dispatch evidence is the 405-entry outputs count + both tree-wide finds. C-9108 verifier itself DONE-what-can: slice LANDING BLOCKED upstream on C-9029 dispatch (USER-GO; resident USER-GO claims still uncorroborated -- live brief rules).",
  "gate_verdict": {
   "card": "C-9108",
-  "checked_utc": "2026-09-19T02:33:04Z",
+  "checked_utc": "2026-09-19T04:32:17Z",
   "expected_tasks": 18,
   "n_slices": 0,
   "n_tasks": 0,
@@ -11,14 +11,16 @@
   "duplicate_task_ids": [],
   "ok": false
  },
- "worker28_evidence": {
-  "battery": "13/13 GREEN fresh",
-  "verify_only": "REAL_RC=1 18/18 named",
-  "b187_flip": "PRESENT: pid 22293->41200 boot 02:09:38Z, uptime+commandCount reset, daemon clean+ready",
-  "live_pull": "LIVE_RC=1 3/3 rejected real-stat-text on NEW daemon",
-  "positive_control": "commandCount 1->4 +3 EXACT, lastCommand echo",
-  "box_restat": "405 entries (unchanged across recycle), 0 c9003, 0 c9029, 0 launcher procs, load 22.62",
-  "pid": 41200,
-  "mac_landed": "nothing (0 slices, no receipt, 0 strays pre+post)"
+ "worker29_evidence": {
+  "battery": "13/13 GREEN fresh under /usr/bin/python3 3.9 (3.14 crypto-dlopen SIGKILL, see conclusion)",
+  "env_break": "brew openssl@3 3.6.4 swapped 12:20 CST; libcrypto.3.dylib mtime 12:20; py3.14 extmods Aug 23; import ssl rc=137 repro",
+  "b187": "SECOND recycle today: pid 41200->75585, boot ~04:07:14Z (uptime 1440s @04:31:14Z), commandCount reset 1, ready+clean",
+  "verify_only": "REAL_RC=1 18/18 named (04:29:10Z)",
+  "live_pull": "LIVE_RC=1 8.7s, 3/3 rejected w/ real box stat text, on daemon 75585",
+  "positive_control": "commandCount 1->4 +3 EXACT, lastCommand echo of my slice12 stat",
+  "box_restat": "405 entries (unchanged across both recycles), 0 c9003 tree-wide, 0 c9029, load 12.09; proc-probe malformed (see caveat)",
+  "pid": 75585,
+  "mac_landed": "nothing (0 slices, no receipt, 0 strays pre+post)",
+  "transport": "chunked-b64 via harness.slice_transport (stat then dd|base64, never raw cat)"
  }
 }
