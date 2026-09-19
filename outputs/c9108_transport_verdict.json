@@ -1,26 +1,27 @@
 {
  "card": "C-9108",
- "conclusion": "VERDICT (worker29, 2026-09-19T04:33Z): transport leg of C-9108 RE-VERIFIED by 29TH independent worker; NEW FACT #1: SECOND ASI2 platform recycle today -- daemon pid 41200 (worker28, boot 02:09:38Z) -> pid 75585, /health uptime 1440s at 04:31:14Z baseline => boot ~04:07:14Z (12:07 CST, ~2h after recycle #1); commandCount reset to 1 (lastCommand 'echo EXEC_TEST_FRESH' from another prober); READY, authDriftDetected=false. B-187 boot-restart-loop signature CONTINUES (two recycles in one day), and STILL ZERO DISPATCH: box outputs 405 entries UNCHANGED ACROSS BOTH RECYCLES, tree-wide find c9003_base_slice* EMPTY, find *c9029* EMPTY, load 12.09 (calm) = C-9029 never dispatched, never produced outputs. Battery 13/13 GREEN fresh -- RUN UNDER /usr/bin/python3 3.9 (labeled): host env break measured this tick -- brew swapped openssl@3 (3.6.4) at 12:20 CST under the Aug-23-built python@3.14 extmods, so dlopen of _ssl/_hashlib now SIGKILLs every NEW homebrew python3.14 process (reproduced: import ssl/hashlib/urllib.request rc=137; /usr/bin/python3 imports ssl fine). This test file is stdlib-only with hermetic id fallback => 3.9 run is sound for it; FLEET-WIDE implication: every bare-python3 suite importing ssl/hashlib on this Mac is dying right now; qgh.py heartbeat path unaffected (no crypto imports). Verify-only gate REAL_RC=1 ok:false 04:29:10Z: 0 slices, 18/18 ids NAMED, 0 dup/unparseable/missing-truncation. Live pull LIVE_RC=1 8.7s on daemon 75585: 3/3 slices rejected fail-closed carrying REAL box-side stat text (stat: cannot statx ... No such file or directory); nothing landed (0 slices, no receipt, 0 tmp strays pre+post). POSITIVE CONTROL: /health commandCount 1->4 delta +3 EXACT = my 3 stat execs; lastCommand echoed MY OWN slice12 stat verbatim = answering daemon IS executing daemon. CAVEAT (honest): my box proc-probe line was malformed by unquoted pipes (grep -E split at |), so NO bracketed proc-probe claim this tick; decisive no-dispatch evidence is the 405-entry outputs count + both tree-wide finds. C-9108 verifier itself DONE-what-can: slice LANDING BLOCKED upstream on C-9029 dispatch (USER-GO; resident USER-GO claims still uncorroborated -- live brief rules).",
+ "conclusion": "VERDICT (worker30, 2026-09-19T04:44Z): transport leg of C-9108 RE-VERIFIED by 30TH independent worker; NEW FACT #1: worker29's host env break NOT REPRODUCED/HEALED -- bare python3 now imports ssl+hashlib+urllib fine; which python3 = /Users/daxu/homebrew/bin/python3 3.14.7, a SECOND user-local homebrew DISTINCT from the /opt/homebrew install worker29 implicated (their rc=137 dlopen break was real but install-specific); battery 13/13 GREEN under BOTH bare 3.14.7 AND /usr/bin/python3 3.9 (labeled) at 04:39Z. asi2-eval.lock acquired+released cleanly around ALL /exec traffic (card rule). POSITIVE CONTROL: unique marker C9108_W30_MARK_k30x echoed EXACT; /health commandCount 11->22, delta +11 vs my +10 (marker+3 stats+6 restat) -- +1 from a concurrent prober (C9029_ALIVE_p2 actor, active at my boot); lastCommand echoed MY OWN slice12 stat then MY load cat verbatim = answering daemon IS executing daemon, pid 75585 UNCHANGED from worker29 (uptime 2078s, no third recycle; B-187 boot-restart loop paused this hour). Live pull LIVE_RC=1 12.4s under canon 3.14: 3/3 slices rejected FAIL-CLOSED carrying REAL box-side stat text (stat: cannot statx ... No such file or directory); gate re-ok:false 18/18 ids NAMED; NOTHING landed Mac-side (0 slices, no receipt, 0 tmp strays pre+post). Box re-stat MEASURED 04:42Z: outputs 405 entries UNCHANGED across today's both recycles, 0 c9003 in outputs, tree-wide find c9003_base_slice* EMPTY, find *c9029* EMPTY (quoted patterns), bracketed proc probe [v]llm_serve|[c]9003|[b]ase_leg EMPTY = no serving/launcher process, load 11.35 (calm). C-9029 has NEVER been dispatched, never produced outputs, across 30 workers and both ASI2 recycles today. C-9108 verifier itself DONE-what-can: slice LANDING BLOCKED upstream on C-9029 dispatch (USER-GO; resident USER-GO claims remain uncorroborated -- live brief rules).",
  "gate_verdict": {
   "card": "C-9108",
-  "checked_utc": "2026-09-19T04:32:17Z",
+  "checked_utc": "2026-09-19T04:42:18Z",
+  "duplicate_task_ids": [],
   "expected_tasks": 18,
+  "missing_named": 18,
   "n_slices": 0,
   "n_tasks": 0,
-  "missing_named": 18,
-  "duplicate_task_ids": [],
   "ok": false
  },
- "worker29_evidence": {
-  "battery": "13/13 GREEN fresh under /usr/bin/python3 3.9 (3.14 crypto-dlopen SIGKILL, see conclusion)",
-  "env_break": "brew openssl@3 3.6.4 swapped 12:20 CST; libcrypto.3.dylib mtime 12:20; py3.14 extmods Aug 23; import ssl rc=137 repro",
-  "b187": "SECOND recycle today: pid 41200->75585, boot ~04:07:14Z (uptime 1440s @04:31:14Z), commandCount reset 1, ready+clean",
-  "verify_only": "REAL_RC=1 18/18 named (04:29:10Z)",
-  "live_pull": "LIVE_RC=1 8.7s, 3/3 rejected w/ real box stat text, on daemon 75585",
-  "positive_control": "commandCount 1->4 +3 EXACT, lastCommand echo of my slice12 stat",
-  "box_restat": "405 entries (unchanged across both recycles), 0 c9003 tree-wide, 0 c9029, load 12.09; proc-probe malformed (see caveat)",
-  "pid": 75585,
+ "worker30_evidence": {
+  "battery": "13/13 GREEN fresh under BOTH bare python3 3.14.7 AND /usr/bin/python3 3.9 (04:39Z)",
+  "box_restat": "405 entries unchanged, 0 c9003 (ls AND quoted tree-wide find), 0 c9029 (quoted find), launcher procs EMPTY (bracketed), load 11.35",
+  "env_break_healed": "worker29 rc=137 NOT REPRODUCED 04:39Z; which python3 = /Users/daxu/homebrew/bin/python3 3.14.7 (user-local homebrew, distinct from /opt/homebrew worker29 tested); crypto-full import OK",
+  "live_pull": "LIVE_RC=1 12.4s on daemon 75585 under bare 3.14.7; 3/3 rejected w/ real box stat text",
+  "lock": "harness/state/locks/asi2-eval.lock acquired (pid 71230) + released true, held across ALL /exec traffic",
   "mac_landed": "nothing (0 slices, no receipt, 0 strays pre+post)",
+  "marker": "C9108_W30_MARK_k30x echoed EXACT",
+  "pid": 75585,
+  "positive_control": "commandCount 11->22 delta +11 = my 10 +1 CONCURRENT PROBER (caveat, honest); lastCommand echo = MY slice12 stat then MY load cat",
+  "scratch": ".sapo-loop/c9108_w30_live.py left for next worker",
   "transport": "chunked-b64 via harness.slice_transport (stat then dd|base64, never raw cat)"
  }
 }
