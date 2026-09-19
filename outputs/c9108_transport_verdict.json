@@ -1,22 +1,20 @@
 {
   "card": "C-9108",
-  "conclusion": "VERDICT (worker19, 2026-09-19T00:27:30Z): transport leg of C-9108 VERIFIED WORKING across FIVE independent workers (exec #18-24 by workers 15-18; #25 this worker - stat/ls/find/ps real box output, not timeout); live pull re-exercised -> fail-closed (LIVE_RC=1, 0 slices, 18/18 ids named, nothing landed, no receipt, 0 tmp strays); box-side MEASURED 3/3 stat No-such-file + 0 c9003_base_slice* whole-dir find + 405 outputs entries UNCHANGED + 0 c9029 handoff files = C-9029 never produced outputs; NEW this worker: box pid 22293 (50-min-sustained ready) has ENDED and NO vllm/serve process currently runs box-side, consistent with C-9029 never dispatched; C-9108 verifier itself DONE-what-could (code b10c90d/ef4dd80 landed, 38/38 GREEN incl c9108 13/13); slice LANDING remains BLOCKED upstream on C-9029 dispatch (USER-GO); next actor: dispatch C-9029 base leg, then re-run python3 -m harness.slice_transport",
+  "conclusion": "VERDICT (worker21, 2026-09-19T01:13:13Z): transport leg of C-9108 VERIFIED WORKING across SEVEN independent workers (workers 15/16/17/18 + this worker's live pull + box probe; 9 fresh exec calls all real-output); live pull re-exercised -> fail-closed LIVE_RC=1, 3/3 slices rejected with REAL box-side stat error text (No such file), nothing landed, no receipt, 0 tmp strays; box MEASURED UNCHANGED: 405 outputs entries, 0 c9003_base_slice*, 0 C-9029 handoff files, NO serving/launcher process, load 11.80 (background class); NEW this worker: direct /health read shows ASI2 daemon pid 22293 ready=true uptime 7181s (~2h since ~23:09Z) -- SAME pid across workers 15-21, longest ready window of the campaign, B-187 flip ABSENT ~2h+, and this CONTRADICTS worker19 'pid 22293 GONE' box-ps claim (grep-self-match class; daemon never died); C-9108 verifier itself DONE-what-could (code b10c90d/ef4dd80, 13/13 + battery 38/38 GREEN fresh this worker); slice LANDING remains BLOCKED upstream on C-9029 dispatch (USER-GO; resident tick-1250 'USER GO RECEIVED' claim still UNCORROBORATED by any artifact -- no handoff file, nothing dispatched, box untouched); next actor: dispatch C-9029 base leg, then re-run python3 -m harness.slice_transport",
   "gate_verdict": {
     "card": "C-9108",
-    "checked_utc": "2026-09-19T01:04:33Z",
-    "duplicate": 0,
+    "checked_utc": "2026-09-19T01:09:54Z",
+    "duplicate_task_ids": [],
     "expected_tasks": 18,
     "missing_named": 18,
-    "missing_truncation": 0,
     "n_slices": 0,
     "n_tasks": 0,
-    "note": "verify-only REAL_RC=1 at 01:03:18Z + live-run gate at 01:04:33Z; all 18 missing ids named both runs",
+    "note": "verify-only REAL_RC=1 at 01:08:55Z + live-run gate at 01:09:54Z (this worker, both fresh); all 18 missing ids named both runs",
     "ok": false,
-    "real_rc_subprocess": 1,
-    "unexpected": 0,
-    "unparseable": 0
+    "unexpected_task_ids": [],
+    "unparseable": []
   },
-  "generated_utc": "2026-09-19T01:04:33Z",
+  "generated_utc": "2026-09-19T01:13:13Z",
   "impl_state": {
     "commits": [
       "b10c90d verifier+9 tests RED->GREEN",
@@ -221,6 +219,52 @@
     },
     "window_cst": "2026-09-19 09:00-09:10 CST",
     "worker": "worker20"
+  },
+  "worker21_verification": {
+    "asi2_daemon": {
+      "boot_est_utc": "~23:09Z 2026-09-18 (consistent with worker18 3020s@23:59Z)",
+      "method": "direct GET /health 127.0.0.1:19004 (no grep, no ps chain)",
+      "pid": 22293,
+      "ready": true,
+      "significance": "SAME pid across workers 15-21 = ~2h sustained ready, longest of campaign; B-187 flip ABSENT entire window; CONTRADICTS worker19 'pid_22293 GONE (ps empty)' box claim",
+      "startupError": null,
+      "startupFailureKind": null,
+      "startupState": "ready",
+      "uptime_s": 7181
+    },
+    "box": {
+      "box_uptime": "120 days 14:55",
+      "c9003_hits": 0,
+      "c9029_handoff_files": 0,
+      "control": "echo C9108_W21_CONTROL_OK -> C9108_W21_CONTROL_OK (real output, 7th independent worker)",
+      "load": "11.80 12.36 12.72 (background class)",
+      "outputs_entries": 405,
+      "serving_process": "NONE - ps vllm/c9029/c9003_launch empty",
+      "verdict": "C-9029 still never produced outputs; leg still never dispatched; box UNCHANGED vs workers 15-20"
+    },
+    "conclusion": "transport VERIFIED alive+repeatable by 7th independent worker; source ABSENT (C-9029 never ran); live pull fail-closed held; landing BLOCKED on C-9029 dispatch (USER-GO) - unchanged from worker20",
+    "dispatch_state": "C-9029 dispatch still USER-GO-gated; no handoff/dispatch artifact Mac-side or box-side at probe time",
+    "exec": {
+      "attempts": "~#46 total (37 prior + 3 live-pull stats + 6 probe execs this worker, all real-output, zero timeouts)",
+      "note": "python3 verifier transport + direct urllib /health used as sanctioned instruments (curl denied pattern from prior ticks)",
+      "result": "SUCCESS - positive control echo + stat/ls/find/ps/uptime real box output"
+    },
+    "gate": {
+      "live_run": "LIVE_RC=1 at 01:09:54Z: 3/3 slices rejected fail-closed with REAL box stat error text carried back over /exec, nothing landed, no receipt, 0 tmp strays",
+      "verify_only": "REAL_RC=1, n_slices=0, 18/18 ids NAMED, zero transport calls, checked_utc 2026-09-19T01:08:55Z"
+    },
+    "mac_hygiene": {
+      "c9003_slices": 0,
+      "outputs_entries": 91,
+      "receipt": "intentionally ABSENT",
+      "tmp_strays": 0
+    },
+    "tests": {
+      "battery": "38/38 passed fresh (c9108 13/13 + c9106_slice_watch + transport_heal_detect + heal_self_monitor)",
+      "c9108_standalone": "13/13 passed (own fresh run 01:08Z, current tree)"
+    },
+    "window_cst": "2026-09-19 09:06-09:15",
+    "worker": "worker21"
   },
   "worker5_verification": {
     "b187_live_watch": "pid 27778 (8th in chain 57686->43132->51845->5566->78941->62376->87288->27778) observed booting 05:13:41 CST (up=35s, startupError=null) -> flipped error by 05:14:21 CST (up=75s) with startupError 'Shell terminal for ASI2 failed because the Huanxin shell end...' = fast B-187 signature, flip watched live",
