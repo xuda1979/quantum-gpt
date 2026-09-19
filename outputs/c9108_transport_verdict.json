@@ -1,6 +1,6 @@
 {
  "card": "C-9108",
- "conclusion": "VERDICT (worker23, 2026-09-19T01:29:40Z): transport leg of C-9108 VERIFIED WORKING across NINE independent workers (this worker: live pull LIVE_RC=1 17.3s, 3/3 slices rejected fail-closed with REAL box-side stat error text, nothing landed, no receipt, 0 strays before/after; battery 38/38 GREEN fresh; verify-only + live gate REAL_RC=1 twice, 18/18 missing ids named). ASI2 /health positive control: pid 22293 ready=true uptime 8295s (~2h18m, boot ~23:08Z), SAME pid workers 15-23 = longest ready window of campaign, B-187 flip ABSENT, and /health lastCommand echoed MY OWN stat command (commandCount 87) - the answering daemon is the executing daemon. Box MEASURED UNCHANGED: 405 outputs entries, 0 c9003_base_slice* (ls AND whole-tree find), 0 c9029 files anywhere, NO serving/launcher process, load 11.45 = C-9029 still never dispatched, never produced outputs. C-9108 verifier itself remains DONE-what-could (code b10c90d/ef4dd80, 38/38 fresh). Slice LANDING BLOCKED upstream on C-9029 dispatch (USER-GO; resident tick-1250 USER GO RECEIVED claim still UNCORROBORATED by any artifact - no handoff file, nothing dispatched, box untouched). Next actor: dispatch C-9029 base leg, then re-run python3 -m harness.slice_transport.",
+ "conclusion": "VERDICT (worker24, 2026-09-19T01:36:46Z): transport leg of C-9108 VERIFIED WORKING across TEN independent workers (this worker: live pull LIVE_RC=1 9.2s, 3/3 slices rejected fail-closed carrying REAL box-side stat error text, nothing landed, no receipt, 0 strays; batteries 39/39 + 38/38 GREEN fresh; verify-only gate REAL_RC=1 01:35:09Z, 18/18 ids NAMED; POSITIVE CONTROL /health lastCommand echoed MY OWN find verbatim, commandCount 96->101 +5 EXACT). ASI2 pid 22293 SAME pid workers 15-24 uptime ~2h27m = longest ready window of campaign, B-187 flip ABSENT. Box MEASURED UNCHANGED: 405 outputs entries, 0 c9003_base_slice* (ls AND whole-tree), 0 c9029 files, NO serving/launcher process, load 12.41 = C-9029 still never dispatched, never produced outputs. C-9108 verifier itself remains DONE-what-could. Slice LANDING BLOCKED upstream on C-9029 dispatch (USER-GO; resident tick-1250 USER GO RECEIVED claim still UNCORROBORATED).",
  "gate_verdict": {
   "card": "C-9108",
   "checked_utc": "2026-09-19T01:27:43Z",
@@ -380,5 +380,20 @@
    "load": "11.45 13.08 13.46 (background class)"
   },
   "result": "transport leg of C-9108 VERIFIED WORKING (9th independent worker, fresh measurements); slice LANDING remains BLOCKED upstream: C-9029 never dispatched (USER-GO), zero box-side outputs"
+ },
+ "worker24_verification": {
+  "checked_utc": "2026-09-19T01:36:46Z",
+  "battery": {
+   "set_a": "39/39 GREEN fresh 01:34Z (test_c9108_slice_transport 13/13 + test_c9071_window_preflight_gate 13 + test_c9061_asi2_window_sentinel 10 + test_c9073_heartbeat_gate_survival 3), 0 fail 0 err",
+   "set_b": "38/38 GREEN fresh 01:38Z (test_c9108 13/13 + test_c9106_slice_watch + test_transport_heal_detect + test_heal_self_monitor), prior-worker 4-file set reproduced"
+  },
+  "gate": {
+   "verify_only": "REAL_RC=1 01:35:09Z (subprocess-measured), 0 slices, n_tasks=0, all 18 missing ids NAMED; landed NOTHING: 0 c9003 files, no receipt, 0 tmp strays after"
+  },
+  "live_pull": "LIVE_RC=1 9.2s 01:35:43Z: 3/3 slices rejected fail-closed, each error carrying REAL box-side stat text (stat: cannot statx ... No such file or directory) = /exec round-trip proven alive; nothing landed, no receipt created, 0 strays",
+  "positive_control": "/health 19004 before: pid 22293 uptime 8800s commandCount 96; after MY 4 execs: commandCount 101 (+5 EXACT incl. 1 health read) and lastCommand echoed MY OWN find command VERBATIM = answering daemon IS the executing daemon",
+  "asi2": "pid 22293 SAME pid workers 15-24 (~2h27m, boot ~23:08Z), B-187 flip ABSENT; /exec real outputs zero timeouts (date/load/ls/find/ps)",
+  "box_stat": "MEASURED 01:36:46Z: outputs 405 entries, 0 c9003 (ls AND whole-tree find), 0 c9029 anywhere, NO vllm/serve/c9003/c9029/launch_base process (bracketed re-run EMPTY; first count=1 was the exec bash line self-matching unbracketed serve alternation - grep-self-match class, refuted), load 12.41, box clock 01:36:46Z = no skew",
+  "c9029": "still NEVER DISPATCHED, never produced outputs (zero files, zero handoff, zero serving process); landing BLOCKED on C-9029 dispatch (USER-GO; resident tick-1250 USER GO RECEIVED claim still UNCORROBORATED by any artifact)"
  }
 }
