@@ -101,6 +101,30 @@ def load_candidate_overrides(path: Path | None) -> dict[str, Path]:
     return overrides
 
 
+def select_candidate_tasks(
+    task_files: list[Path], candidate_overrides: dict[str, Path]
+) -> list[Path]:
+    """Order task files by the candidate-overrides map and reject unknown ids.
+
+    The runner must execute in manifest/candidate-map order (not discovery
+    order) so that scorecard rows align with the candidate map.  Any override
+    key that does not correspond to a known task is a hard error — a silent
+    skip would let a typo drop a candidate without trace.
+    """
+    task_ids: dict[str, Path] = {}
+    for tf in task_files:
+        metadata = json.loads(tf.read_text(encoding="utf-8"))
+        task_ids[str(metadata["id"])] = tf
+
+    unknown = set(candidate_overrides) - set(task_ids)
+    if unknown:
+        raise SystemExit(f"unknown task ids in candidate map: {sorted(unknown)}")
+
+    if not candidate_overrides:
+        return list(task_files)
+    return [task_ids[tid] for tid in candidate_overrides if tid in task_ids]
+
+
 def resolve_candidate_paths(
     metadata: dict[str, Any], task_dir: Path, override_path: Path | None
 ) -> tuple[dict[str, Path], str]:
@@ -282,6 +306,8 @@ if __name__ == "__main__":
         raise SystemExit("No tasks found under evals/tasks")
 
     candidate_overrides = load_candidate_overrides(args.candidate_map)
+    if candidate_overrides:
+        task_files = select_candidate_tasks(task_files, candidate_overrides)
     results = [run_task(path, candidate_overrides) for path in task_files]
 
     for result in results:

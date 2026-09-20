@@ -360,24 +360,29 @@ def is_terminal_card_id(state_dir, card_id):
     """
     try:
         with open(os.path.join(state_dir, "EVENTS.jsonl"), encoding="utf-8") as f:
-            text = f.read()
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    ev = json.loads(line)
+                except (ValueError, TypeError):
+                    continue
+                if not isinstance(ev, dict):
+                    continue
+                # card id may be in "card" or "id" field, any order
+                if ev.get("card") != card_id and ev.get("id") != card_id:
+                    continue
+                kind = ev.get("kind")
+                if kind == "reaped":
+                    verdict = ev.get("verdict")
+                    if verdict is not None and verdict != "null":
+                        return True
+                elif kind in TERMINAL_EVENT_KINDS:
+                    return True
+        return False
     except OSError:
         return False
-    escaped = re.escape(card_id)
-    # 1. reaped with non-null verdict (card field, verdict after)
-    if re.search(
-        r'"kind":\s*"reaped".*?"card":\s*"' + escaped + r'".*?"verdict":\s*"(?!null)' r'[^"]+"',
-        text,
-    ):
-        return True
-    # 2. other terminal kinds -- always terminal, id in "card" or "id" field
-    other_kinds = "|".join(k for k in TERMINAL_EVENT_KINDS if k != "reaped")
-    if re.search(
-        r'"kind":\s*"(?:' + other_kinds + r')".*?"(?:card|id)":\s*"' + escaped + r'"',
-        text,
-    ):
-        return True
-    return False
 
 
 def add_card(queue, card, state_dir=None):
@@ -461,7 +466,11 @@ def purge_card(queue, card_id, live_fn=None):
     return True
 
 
-def rearm_ghost_running_cards(queue, fleet, live_fn=None):
+def rearm_ghost_running_cards(queue, fleet, live_fn=None, terminal_ids=None):
+    # terminal_ids (C-0001/C-9135): optional set of card ids with a terminal
+    # event in EVENTS.jsonl (reaped DONE / purged / voided / dead). Such ids
+    # are pruned/historical and MUST never be resurrected -- a running card
+    # that is already terminal stays put instead of being flipped to ready.
     """C-9014: re-arm 'running' cards whose fleet agent is gone (ghost).
 
     A card can land in status "running" with no LIVE fleet entry — e.g. the
@@ -496,6 +505,11 @@ def rearm_ghost_running_cards(queue, fleet, live_fn=None):
     rearmed = []
     for c in queue["cards"]:
         if c.get("status") != "running":
+            continue
+        if terminal_ids and c["id"] in terminal_ids:
+            # C-0001/C-9135: terminal card id (already reaped DONE / purged /
+            # voided) — a stale fleet or event-log recovery row must not
+            # resurrect it. Leave status untouched, do NOT re-arm.
             continue
         if c["id"] in live_cards:
             continue  # has a live worker — genuinely running, leave it

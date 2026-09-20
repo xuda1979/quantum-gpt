@@ -85,6 +85,24 @@ class TestGhostRunningRearm(unittest.TestCase):
         self.assertTrue(c.get("requeued_utc"))
         self.assertEqual(c["bounce_count"], 1)  # environmental: no strike
 
+    def test_terminal_card_id_is_not_rearmed(self):
+        # C-0001: a running card whose id is TERMINAL in event history (already
+        # reaped DONE / purged / voided) must NOT be resurrected to "ready" --
+        # gauntlet invariant C-9135: a terminal/pruned card id must never come
+        # back to life even if a stale fleet entry or event-log recovery leaves
+        # it looking "running".
+        queue = q(make_card(id="C-TERM", status="running", claimed_by="9"))
+        fleet = fl()  # no fleet row -> normally a ghost and would be re-armed
+        rearmed = H.rearm_ghost_running_cards(
+            queue, fleet, live_fn=lambda a: True, terminal_ids={"C-TERM"}
+        )
+        self.assertEqual(rearmed, [], "terminal card id must not be re-armed")
+        self.assertEqual(
+            H.find_card(queue, "C-TERM")["status"],
+            "running",
+            "terminal card must not be flipped back to ready",
+        )
+
     def test_running_card_with_live_entry_is_untouched(self):
         queue = q(make_card(id="C-9001", status="running", claimed_by="9"))
         fleet = fl(agent("C-9001", pid=4242))

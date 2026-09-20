@@ -1022,7 +1022,10 @@ def _reap():
     # C-9014: re-arm running cards with no live fleet entry (ghosts from
     # event-log recovery or lost fleet rows) -- AFTER the harvest loop so
     # just-reaped agents are already stopped and never double-counted.
-    for _ghost_id in H.rearm_ghost_running_cards(queue, fleet):
+    # C-0001: never re-arm a TERMINAL card id (already reaped/purged/voided)
+    # -- the terminal/pruned id would otherwise be resurrected to "ready".
+    _terminal_ids = H.history_terminal_card_ids(STATE)
+    for _ghost_id in H.rearm_ghost_running_cards(queue, fleet, terminal_ids=_terminal_ids):
         event(STATE, "card_ghost_rearmed", {"card": _ghost_id})
     # dead cards that exhausted retries
     for c in queue["cards"]:
