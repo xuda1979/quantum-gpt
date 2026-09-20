@@ -17,7 +17,9 @@ from here. Cross-boundary changes need the architect lane's sign-off.
 from __future__ import annotations
 
 # ruff: noqa: UP038  # (X | Y) isinstance is py3.10-only; runs under the py3.9 .venv
+import os
 import re
+import threading
 from typing import Any
 
 import torch
@@ -442,58 +444,65 @@ def split_batched_generations(
     return completions
 
 
-
 # ---------------------------------------------------------------------------
 # Bounded generation watchdog (C-9523: step_begin hang class-extinction)
 # ---------------------------------------------------------------------------
 
-class GenerationTimeoutError(Exception):
-    """Raised when model.generate exceeds the bounded watchdog timeout."""
-
 
 def generation_timeout_s() -> float:
-    """Resolve the generation timeout from env (default 1800s)."""
-    import os
-    return float(os.environ.get("GRPO_GENERATION_TIMEOUT_S", "1800"))
+    """Bounded generation watchdog deadline in seconds (env GRPO_GENERATION_TIMEOUT_S).
+
+    2026-09-20 (C-9523 class-extinction): the ASCEND NPU TBE task_distribute
+    subprocess died mid-rollout ("TBE Subprocess[task_distribute] ... main
+    process disappeared"); model.generate never returned and the trainer
+    busy-spun at 135-153% CPU with a futex-blocked child for the whole 42+
+    min budget. Default 1800s bounds a single generation so the trainer fails
+    fast-closed (GenerationTimeoutError) instead of spinning. 0 disables the
+    watchdog (legacy unbounded path)."""
+    raw = os.environ.get("GRPO_GENERATION_TIMEOUT_S", "")
+    try:
+        value = float(raw)
+    except (TypeError, ValueError):
+        return 1800.0
+    return value if value >= 0.0 else 1800.0
 
 
-def run_bounded_generation(fn, timeout_s=None):
-    """Run fn() in a daemon thread with a bounded timeout.
+class GenerationTimeoutError(RuntimeError):
+    """Raised when a generation call exceeds the bounded watchdog deadline."""
 
-    If fn completes within timeout_s, return its result.
-    If fn raises, propagate the exception.
-    If timeout_s elapses, raise GenerationTimeoutError.
 
-    The daemon thread keeps running after timeout (it cannot be killed),
-    but the caller returns fail-closed immediately.
+def run_bounded_generation(fn, *, timeout_s=None, label="generate"):
+    """Run ``fn`` under a bounded daemon-thread watchdog (fail-closed).
+
+    The caller normally blocks forever (e.g. an NPU model.generate whose TBE
+    task-distribute subprocess died); this aborts after ``timeout_s`` seconds
+    with :class:`GenerationTimeoutError`` so the harness can fail fast and
+    relaunch instead of spinning a full budget. Returns ``fn()`` when it
+    completes in time; re-raises whatever ``fn`` raised otherwise.
+
+    Note: on timeout the daemon thread is abandoned (never joined). That is
+    intentional for the dead-NPU fail-fast path the caller exits promptly.
     """
-    import threading
-    import time
-
     if timeout_s is None:
         timeout_s = generation_timeout_s()
+    if timeout_s <= 0.0:
+        return fn()
+    box = {}
 
-    result = [None]
-    exc = [None]
-    done = threading.Event()
-
-    def _runner():
+    def _run():
         try:
-            result[0] = fn()
-        except Exception as e:
-            exc[0] = e
-        finally:
-            done.set()
+            box["result"] = fn()
+        except BaseException as exc:  # capture AND re-raise (incl. KeyboardInterrupt)
+            box["error"] = exc
 
-    t = threading.Thread(target=_runner, daemon=True)
-    t.start()
-
-    if not done.wait(timeout=timeout_s):
+    thread = threading.Thread(target=_run, name="gen-watchdog", daemon=True)
+    thread.start()
+    thread.join(timeout_s)
+    if thread.is_alive():
         raise GenerationTimeoutError(
-            f"generation exceeded {timeout_s}s timeout (GRPO_GENERATION_TIMEOUT_S)"
+            f"{label} exceeded {timeout_s:.0f}s watchdog (NPU TBE / rollout stall); "
+            "trainer would busy-spin indefinitely otherwise"
         )
-
-    if exc[0] is not None:
-        raise exc[0]
-
-    return result[0]
+    if "error" in box:
+        raise box["error"]
+    return box["result"]
