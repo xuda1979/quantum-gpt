@@ -575,16 +575,13 @@ def bounce_dead_running_cards(state_dir, pid_alive_fn=None):
         c["deadline_utc"] = None
         c["requeued_utc"] = now_iso()
         bounced.append(c["id"])
-        # Record event
-        event_path = os.path.join(state_dir, "events.jsonl")
-        evt = {
-            "ts": now_iso(),
-            "kind": "dead_worker_requeued",
-            "card": c["id"],
-            "reason": "all_workers_dead_deadline_expired",
-        }
-        with open(event_path, "a") as f:
-            f.write(json.dumps(evt) + "\n")
+        # Record event: use canonical event() helper (C-9505: lowercase
+        # events.jsonl was a separate file on case-sensitive filesystems)
+        event(
+            state_dir,
+            "dead_worker_requeued",
+            {"card": c["id"], "reason": "all_workers_dead_deadline_expired"},
+        )
     if bounced:
         save_queue(state_dir, queue)
     return bounced
@@ -1614,7 +1611,7 @@ def render_progress(goal, queue, fleet, tick_no, verdicts=None, probes=None, sta
     L.append(f"- status: **{goal.get('status', 'OPEN')}**")
     L.append(f"- target: {goal.get('target_pass', '?')}")
     L.append(
-        f"- best adapter eval so far: **{best_pass}/18**"
+        f"- best adapter eval so far: **{best_pass}/{goal.get('target_pass', '18/18').split('/')[-1]}**"
         + (f" (verdict: {best_vf})" if best_vf else "")
     )
     L.append("")

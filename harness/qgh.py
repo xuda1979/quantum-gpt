@@ -718,6 +718,7 @@ def cmd_dispatch(args):
     # the quota gate are excluded from re-selection (no busy loop).
     quota_probe = None
     quota_blocked_ids = set()
+    refused_ids = set()  # C-9506: track refused cards to avoid infinite loop
     # GLOBAL-priority dispatch: repeatedly take the highest-priority ready card
     # whose lane has a free WIP slot. Lane order must never beat priority.
     while len(live) < MAX_LIVE_AGENTS:
@@ -731,6 +732,7 @@ def cmd_dispatch(args):
             and lane_live.get(c["lane"], 0) < WIP_LIMITS.get(c["lane"], 1)
             and not H.card_backoff_active(ops, c["id"])
             and c["id"] not in quota_blocked_ids  # C-9132
+            and c["id"] not in refused_ids  # C-9506
             and not (wedged and c["lane"] in BOX_BOUND_LANES and (args.lane is None))
         ]
         if not candidates:
@@ -738,9 +740,12 @@ def cmd_dispatch(args):
         card = candidates[0]
         ok, why = dispatch_target_ok(queue, card, lanes=lanes)
         if not ok:
-            # fail closed: never claim or spawn against a bad target
+            # fail closed: never claim or spawn against a bad target, but
+            # CONTINUE to the next candidate (C-9506: a race-condition claim
+            # on the first candidate must not block dispatch of other ready cards)
             event(STATE, "dispatch_refused", {"card": card.get("id"), "why": why[:200]})
-            break
+            refused_ids.add(card["id"])
+            continue
         # C-9132: API-quota preflight for launch legs. C-9029 burned 3 spawn
         # cycles in 9 min on exhausted quota (额度耗尽); each cycle cost a
         # 25-min budget slot and a spawn. ONE cheap probe per dispatch run;
@@ -781,7 +786,11 @@ def cmd_dispatch(args):
         ]
         claimed = claim_card(queue, card["id"], "dispatching")
         if claimed is None:
-            break
+            # C-9506: race condition -- card was claimed or changed status
+            # between candidate selection and claim. Skip to next candidate
+            # instead of breaking the entire dispatch loop.
+            refused_ids.add(card["id"])
+            continue
         try:
             entry = spawn_worker(goal, queue, card, deps)
         except Exception as exc:  # spawn must never crash the tick
@@ -789,10 +798,12 @@ def cmd_dispatch(args):
             event(STATE, "spawn_error", {"card": card["id"], "err": str(exc)[:200]})
         if entry is None:
             # lock race or refused target: spawn_worker raises only BEFORE the
-            # durable spawn, so no worker can be running -- revert is safe
+            # durable spawn, so no worker can be running -- revert is safe.
+            # C-9506: continue to next candidate instead of breaking.
             card["status"] = "ready"
             card["claimed_by"] = None
-            break
+            refused_ids.add(card["id"])
+            continue
         fleet["agents"].append(entry)
         live.append(entry)
         n_spawned += 1
@@ -1084,6 +1095,11 @@ ENV_BOUNCE_SIGNATURES = (
     "booting",
     "backoff",
     "timeout",
+    "fleet",
+    "box not ready",
+    "boxes",
+    "not ready",
+    "fleet down",
 )
 
 

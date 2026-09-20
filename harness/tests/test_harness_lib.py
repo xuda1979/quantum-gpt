@@ -250,9 +250,9 @@ class TestDoneCheckTwoLeg(unittest.TestCase):
         done, _ = H.goal_done(self.goal, v)
         self.assertFalse(done)
         v2 = [compliant_verdict()]
-        v2[0]["candidates_vs_base_gate"]["leg2"] = dict(status="FAIL",
-                                                        n_checked=18,
-                                                        n_byte_match=18)
+        v2[0]["candidates_vs_base_gate"]["leg2"] = dict(
+            status="FAIL", n_checked=18, n_byte_match=18
+        )
         done, _ = H.goal_done(self.goal, v2)
         self.assertFalse(done)
         # A verdict that never recorded the gate fails closed too.
@@ -370,10 +370,6 @@ class TestState(unittest.TestCase):
         self.assertEqual(json.loads(lines[1])["x"], 2)
 
 
-if __name__ == "__main__":
-    unittest.main()
-
-
 class TestApiBackoff(unittest.TestCase):
     def test_backoff_trips_after_consecutive_failures(self):
         d = tmp_state()
@@ -419,3 +415,33 @@ class TestRotateLog(unittest.TestCase):
         H.rotate_log(p)
         self.assertEqual(os.path.getsize(p), 5)
         self.assertFalse(os.path.exists(p + ".1"))
+
+
+class TestBounceDeadRunningEventsFile(unittest.TestCase):
+    """C-9505: bounce_dead_running_cards must write events to EVENTS.jsonl
+    (uppercase), not events.jsonl (lowercase). The lowercase path was a
+    separate file on case-sensitive filesystems (Linux CI), splitting the
+    event log and losing audit trail."""
+
+    def test_bounce_writes_to_canonical_EVENTS_file(self):
+        d = tempfile.mkdtemp(prefix="qgh-test-bounce-")
+        q = {"cards": [], "seq": 0}
+        card = make_card(card_id="C-9505", budget_min=1)
+        card["status"] = "running"
+        card["claimed_by"] = "99999"
+        card["deadline_utc"] = "2020-01-01T00:00:00Z"
+        H.add_card(q, card)
+        H.save_queue(d, q)
+        fleet = {"agents": [{"pid": 99999, "status": "running", "card": "C-9505"}]}
+        H.save_fleet(d, fleet)
+        bounced = H.bounce_dead_running_cards(d, pid_alive_fn=lambda pid: False)
+        self.assertEqual(bounced, ["C-9505"])
+        events_path = os.path.join(d, "EVENTS.jsonl")
+        self.assertTrue(os.path.exists(events_path), "EVENTS.jsonl must exist")
+        lines = open(events_path).read().strip().splitlines()
+        kinds = [json.loads(line)["kind"] for line in lines]
+        self.assertIn("dead_worker_requeued", kinds)
+
+
+if __name__ == "__main__":
+    unittest.main()

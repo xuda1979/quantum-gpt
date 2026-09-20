@@ -1090,3 +1090,70 @@ class TestTransportGate(unittest.TestCase):
         dispatched_lanes = {c["lane"] for c in q["cards"] if c["status"] == "running"}
         self.assertNotIn("evaluator", dispatched_lanes, "refresh failure must not open the gate")
         self.assertEqual(order, [])
+
+
+class TestDispatchContinuesAfterTargetRefused(unittest.TestCase):
+    """C-9506: when dispatch_target_ok refuses the first candidate (e.g.,
+    a race condition where the card was claimed between candidate selection
+    and target validation), dispatch must CONTINUE to the next ready card,
+    not break the entire loop."""
+
+    def setUp(self):
+        self._old_state = qgh.STATE
+        qgh.STATE = tempfile.mkdtemp(prefix="qgh_c9506_")
+        os.makedirs(os.path.join(qgh.STATE, "briefs"), exist_ok=True)
+        os.makedirs(os.path.join(qgh.STATE, "agents"), exist_ok=True)
+        os.makedirs(os.path.join(qgh.STATE, "locks"), exist_ok=True)
+        goal = (
+            H.load_goal(qgh.STATE) if os.path.exists(os.path.join(qgh.STATE, "GOAL.json")) else {}
+        )
+        goal["objective"] = "test objective here"
+        goal["target_pass"] = "18/18"
+        goal["status"] = "OPEN"
+        H.save_json(os.path.join(qgh.STATE, "GOAL.json"), goal)
+        q_fleet = {"agents": []}
+        qgh.save_fleet(qgh.STATE, q_fleet)
+
+    def tearDown(self):
+        import shutil
+
+        shutil.rmtree(qgh.STATE, ignore_errors=True)
+        qgh.STATE = self._old_state
+
+    def test_dispatch_continues_after_target_refused(self):
+        # Two ready cards in the queue
+        seed_card(card_id="C-9506a", lane="fixer", title="first card here test")
+        seed_card(card_id="C-9506b", lane="fixer", title="second card here test")
+        # Simulate C-9506a being claimed by a live PID (race condition)
+        q = qgh.load_queue(qgh.STATE)
+        for card in q["cards"]:
+            if card["id"] == "C-9506a":
+                card["claimed_by"] = str(os.getpid())  # live PID
+        qgh.save_queue(qgh.STATE, q)
+
+        spawned = []
+
+        def fake_spawn(goal, queue, card, dep_results):
+            spawned.append(card["id"])
+            return {
+                "pid": os.getpid(),
+                "card": card["id"],
+                "lane": card["lane"],
+                "brief": "x",
+                "log": "x",
+                "started_utc": H.now_iso(),
+                "deadline_utc": "2026-09-20T12:00:00Z",
+                "status": "running",
+            }
+
+        real_spawn = qgh.spawn_worker
+        qgh.spawn_worker = fake_spawn
+        try:
+            qgh.cmd_dispatch(type("A", (), {"lane": None})())
+        finally:
+            qgh.spawn_worker = real_spawn
+
+        # C-9506b should still be dispatched even though C-9506a was refused
+        self.assertIn(
+            "C-9506b", spawned, "dispatch must continue to next candidate after target refused"
+        )
