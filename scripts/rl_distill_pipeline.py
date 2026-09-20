@@ -1180,7 +1180,7 @@ def _eval_gate_tripped(gate: EvalGateConfig, verdict: dict[str, Any] | None) -> 
     # r_runnable collapse is an immediate hard stop — runnable code is foundational.
     r_run = verdict.get("r_runnable")
     base_r_run = verdict.get("baseline_r_runnable")
-    if isinstance(r_run, int | float) and isinstance(base_r_run, int | float):
+    if isinstance(r_run, (int, float)) and isinstance(base_r_run, (int, float)):
         if (base_r_run - r_run) >= gate.tolerance_r_runnable:
             return (
                 f"r_runnable collapse: {r_run:.3f} vs baseline {base_r_run:.3f} "
@@ -1190,7 +1190,7 @@ def _eval_gate_tripped(gate: EvalGateConfig, verdict: dict[str, Any] | None) -> 
     pass1 = verdict.get("adapter_eval_pass_at_1")
     base_pass1 = verdict.get("baseline_eval_pass_at_1")
     consec = verdict.get("consecutive_regressions", 0)
-    if isinstance(pass1, int | float) and isinstance(base_pass1, int | float):
+    if isinstance(pass1, (int, float)) and isinstance(base_pass1, (int, float)):
         if (base_pass1 - pass1) >= gate.tolerance_pass_at_1:
             if consec >= gate.required_consecutive:
                 return (

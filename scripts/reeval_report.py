@@ -94,7 +94,7 @@ def main():
         vals = [
             v["exec"].get("runtime_ms")
             for v in r.values()
-            if isinstance(v["exec"].get("runtime_ms"), int | float)
+            if isinstance(v["exec"].get("runtime_ms"), (int, float))
         ]
         return (sum(vals) / len(vals)) if vals else None
 
