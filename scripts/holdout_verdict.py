@@ -676,6 +676,20 @@ def compose(leg1, leg2, target=DEFAULT_TARGET):
         "goal_target": target,
         "adapter_applied_marker": leg1["env"].get("adapter_applied_marker"),
         "adapter_probe_differs_marker": leg1["env"].get("adapter_probe_differs_marker"),
+        "fail_closed_markers": {
+            "adapter_applied": {
+                "source": "envelope",
+                "value": leg1["env"].get("adapter_applied_marker") is True,
+                "leg1": leg1["env"].get("adapter_applied_marker") is True,
+                "leg2": leg2["env"].get("adapter_applied_marker") is True,
+            },
+            "adapter_probe_differs": {
+                "source": "envelope",
+                "value": leg1["env"].get("adapter_probe_differs_marker") is True,
+                "leg1": leg1["env"].get("adapter_probe_differs_marker") is True,
+                "leg2": leg2["env"].get("adapter_probe_differs_marker") is True,
+            },
+        },
         "independent_second_leg": True,
         # C-9117: the enforced bar + each leg's recorded evidence, so
         # the done-check can audit independence without re-deriving it.
