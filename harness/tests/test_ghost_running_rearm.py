@@ -32,7 +32,9 @@ NEW_CARD_KW = ("budget_min", "gates", "deps", "priority")
 
 def make_card(**kw):
     cid = kw.pop("id", None)
-    base = dict(title="t", lane="fixer", why="w", acceptance=["a"])
+    base = dict(
+        title="test card", lane="fixer", why="test why", acceptance=["acceptance criterion"]
+    )
     for k in NEW_CARD_KW:
         if k in kw:
             base[k] = kw.pop(k)
