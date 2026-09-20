@@ -234,6 +234,78 @@ def configured_eos_token_ids(model: Any, tokenizer: Any = None) -> set[int]:
     return ids
 
 
+def configured_suppress_token_ids(
+    model: Any,
+    tokenizer: Any = None,
+    *,
+    stop_eos_ids: set[int] | None = None,
+) -> set[int]:
+    """Compute the set of token IDs that should be unsampleable during rollout.
+
+    2026-09-11 (BOS/PAD-in-EOS root cause, C-9433): Qwen3.8-27B generation_config
+    declares bos_token_id 248044 as a member of eos_token_id, so the
+    sequence-start/pad marker is a legal rollout end. Every candidate died
+    after 2-4 tokens.
+
+    The fix: suppress the BOS/PAD id during decode while the genuine chat EOS
+    stays in the stop set. Returns the set of IDs to suppress.
+
+    Safety: if suppressing would remove every stop ID, returns empty set.
+    """
+    if stop_eos_ids is None:
+        stop_eos_ids = configured_eos_token_ids(model, tokenizer)
+    if not stop_eos_ids:
+        return set()
+
+    gen_config = getattr(model, "generation_config", None)
+    bos_id = getattr(gen_config, "bos_token_id", None)
+    pad_id = getattr(gen_config, "pad_token_id", None)
+
+    model_config = getattr(model, "config", None)
+    if bos_id is None:
+        bos_id = getattr(model_config, "bos_token_id", None)
+    if pad_id is None:
+        pad_id = getattr(model_config, "pad_token_id", None)
+
+    suppress: set[int] = set()
+    for special_id in (bos_id, pad_id):
+        if special_id is not None:
+            special_id = int(special_id)
+            if special_id in stop_eos_ids:
+                suppress.add(special_id)
+
+    if tokenizer is not None:
+        tok_eos = getattr(tokenizer, "eos_token_id", None)
+        if tok_eos is not None:
+            suppress.discard(int(tok_eos))
+
+    if suppress and (stop_eos_ids - suppress) == set():
+        return set()
+
+    return suppress
+
+
+def rollout_suppress_logits_processor(suppress_token_ids: set[int] | None):
+    """Build a SuppressTokensLogitsProcessor for the given IDs.
+
+    Returns None when the set is empty.
+
+    2026-09-13/14: model.generate(suppress_tokens=...) is silently inert on
+    transformers >= 5. Must route through SuppressTokensLogitsProcessor.
+    """
+    if not suppress_token_ids:
+        return None
+
+    try:
+        from transformers import SuppressTokensLogitsProcessor
+    except ImportError:
+        return None
+
+    return SuppressTokensLogitsProcessor(
+        sorted(int(t) for t in suppress_token_ids)
+    )
+
+
 def append_fence_stop_markers(
     completion_token_ids: list[torch.Tensor],
     raw_responses: list[str],

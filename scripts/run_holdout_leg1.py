@@ -43,6 +43,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 # C-9110: the leg-time differ evidence authority.
 from scripts.candidates_differ_probe import envelope_evidence  # noqa: E402
+from scripts.holdout_markers import compute_holdout_markers  # noqa: E402
 
 LEG1_SCRIPT = "scripts/run_asi2_base_adapter_rubric_eval.py"
 PROBE_SCRIPT = "scripts/eval_failclosed_probe.py"
@@ -346,10 +347,13 @@ def main(argv=None):
         scores=scores,
         max_new_tokens=args.max_new_tokens,
     )
-    # C-9432: markers computed from log verification, not hardcoded
-    envelope["adapter_applied_marker"] = MARKER_APPLIED in text
-    envelope["adapter_probe_differs_marker"] = MARKER_PROBE_DIFFERS in text
-    envelope["created_utc"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    # C-9432: markers derived from probe stage evidence (fail-closed); the
+    # fail-closed probe only emits the adapter_applied / adapter_probe_differs
+    # stage events after it actually verified the adapter applies and the
+    # base-vs-adapter probe output differs -- never hardcoded True.
+    _m_applied, _m_differs = compute_holdout_markers(text, args.adapter)
+    envelope["adapter_applied_marker"] = _m_applied
+    envelope["adapter_probe_differs_marker"] = _m_differs
     envelope["created_utc"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     # C-9110: record the per-task candidate-vs-base diff counts at
     # LEG time so the envelope carries the differ evidence onward.
