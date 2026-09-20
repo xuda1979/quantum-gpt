@@ -710,6 +710,43 @@ def auto_requeue_zero_bounce(state_dir):
         return 0
 
 
+def auto_retire_high_bounce(state_dir, threshold=4):
+    """C-9534: Auto-retire bounced cards with bounce_count >= threshold.
+
+    Bounced cards with high bounce_count are stuck -- they keep failing the
+    same way. Retire them (mark dead) so the queue stays clean and the
+    dispatcher can focus on new, more targeted cards. The bounce reasons
+    are preserved in the card data for future mining.
+
+    Returns the count of retired cards. Never raises -- best-effort.
+    """
+    try:
+        queue = load_queue(state_dir)
+        retired = 0
+        for c in queue["cards"]:
+            if c["status"] == "bounced" and c.get("bounce_count", 0) >= threshold:
+                c["status"] = "dead"
+                c["retired_utc"] = now_iso()
+                retired += 1
+                try:
+                    event(
+                        state_dir,
+                        "card_auto_retired",
+                        {
+                            "card": c["id"],
+                            "bounce_count": c.get("bounce_count", 0),
+                            "title": c.get("title", "")[:80],
+                        },
+                    )
+                except Exception:
+                    pass
+        if retired:
+            save_queue(state_dir, queue)
+        return retired
+    except Exception:
+        return 0
+
+
 def running_count(queue, lane):
     return sum(1 for c in queue["cards"] if c["status"] == "running" and c["lane"] == lane)
 
@@ -3190,6 +3227,13 @@ def cmd_tick(_args):
                 event(STATE, "auto_requeue_zero_bounce", {"count": _n_rq})
         except Exception as _rq_exc:
             event(STATE, "auto_requeue_error", {"err": repr(_rq_exc)[:160]})
+        # C-9534: auto-retire high-bounce cards to keep the queue clean.
+        try:
+            _n_ret = auto_retire_high_bounce(STATE)
+            if _n_ret:
+                event(STATE, "auto_retire_high_bounce", {"count": _n_ret})
+        except Exception as _ret_exc:
+            event(STATE, "auto_retire_error", {"err": repr(_ret_exc)[:160]})
         # auto-eval: scan for new training checkpoints and queue eval cards
         auto_eval_scan()
         # dispatch (skip only if this very process is the wedged-tick killer)
@@ -4365,6 +4409,7 @@ H = _types.SimpleNamespace(
     auto_eval_on_checkpoint=auto_eval_on_checkpoint,
     auto_queue_training=auto_queue_training,
     auto_requeue_zero_bounce=auto_requeue_zero_bounce,
+    auto_retire_high_bounce=auto_retire_high_bounce,
     backoff_active=backoff_active,
     bank_scorer_sha_pins=bank_scorer_sha_pins,
     bounce_dead_running_cards=bounce_dead_running_cards,
