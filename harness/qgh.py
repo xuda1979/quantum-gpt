@@ -930,8 +930,13 @@ def _reap():
         api_error = verdict is None and any(sig in text for sig in API_ERROR_SIGNATURES)
         # C-9124: /exec endpoint failure is environmental (box transport broken, not card fault)
         exec_failure = H.is_exec_endpoint_failure(text)
+        # C-9515: wrapper-only output (claude CLI failed before doing work)
+        # is also environmental — never the card's fault.
+        wrapper_only = verdict is None and H.is_wrapper_only_output(body)
         environmental = (
-            (not alive and verdict is None and len(body) == 0) or api_error or exec_failure
+            (not alive and verdict is None and (len(body) == 0 or wrapper_only))
+            or api_error
+            or exec_failure
         ) and not stalled
         if outcome is None:
             if not alive:

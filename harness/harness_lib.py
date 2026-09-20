@@ -933,6 +933,33 @@ def is_exec_endpoint_failure(text):
     return any(sig in t for sig in EXEC_FAILURE_SIGNATURES)
 
 
+WRAPPER_OUTPUT_SIGNATURES = (
+    "claude wrapper",
+    "probing cmri",
+    "using cmri",
+)
+
+
+def is_wrapper_only_output(tail_lines):
+    """C-9515: True iff the worker's output consists ONLY of claude wrapper
+    debug lines (no RESULT, no actual work output). This is an environmental
+    death: the claude CLI failed to start or crashed before doing any work,
+    which is never the card's fault.
+
+    Without this, agents that produce wrapper output but no RESULT get a
+    bounce strike because len(body) > 0 defeats the environmental check.
+    """
+    if not tail_lines:
+        return False
+    for line in tail_lines:
+        ln = line.strip().lower()
+        if not ln:
+            continue
+        if not any(sig in ln for sig in WRAPPER_OUTPUT_SIGNATURES):
+            return False
+    return True
+
+
 def is_gate_skip_blocked(text):
     """True iff a worker BLOCKED result cites the window-gate SKIP marker.
 
