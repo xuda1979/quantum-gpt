@@ -1559,8 +1559,9 @@ def compute_metrics(state_dir, window_min=60):
             per_lane[lane] = per_lane.get(lane, 0) + 1
     return {
         "dispatched_total": count("dispatched"),
-        "done_total": count("reaped")
-        and sum(1 for e in ev if e.get("kind") == "reaped" and e.get("verdict") == "DONE"),
+        "done_total": sum(
+            1 for e in ev if e.get("kind") == "reaped" and e.get("verdict") == "DONE"
+        ),
         "bounce_total": count("gate_bounced"),
         "env_fail_total": count("spawn_failed_env"),
         "dispatched_1h": count("dispatched", cutoff),
