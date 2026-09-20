@@ -912,9 +912,14 @@ def _reap():
         outcome = "stalled-killed" if stalled else None
         verdict, tail = harvest_log(a.get("log"))
         try:
-            text = open(a.get("log"), encoding="utf-8", errors="replace").read()
+            full_text = open(a.get("log"), encoding="utf-8", errors="replace").read()
         except (OSError, TypeError):
-            text = ""
+            full_text = ""
+        # C-9508: scope API-error and exec-failure detection to the LAST
+        # dispatch segment only -- a prior dispatch's API error must not
+        # classify the current (possibly clean) dispatch as environmental.
+        _segs = H.DISPATCH_SEG_RE.split(full_text)
+        text = _segs[-1] if _segs else full_text
         # ENVIRONMENTAL = pid DEAD + produced NOTHING (spawn/credential/API
         # failure) -> never burns the card's bounce budget. A worker that was
         # ALIVE past its deadline with no output is a HUNG worker, not an API
@@ -1061,6 +1066,9 @@ def _reap():
             c["status"] = "dead"
             event(STATE, "card_dead", {"card": c["id"], "title": c["title"]})
     save_queue(STATE, queue)
+    # C-9508: prune stopped agents from FLEET.json to prevent unbounded growth.
+    # Stopped agents are historical baggage -- their log files persist for audit.
+    fleet["agents"] = [a for a in fleet["agents"] if a.get("status") != "stopped"]
     save_fleet(STATE, fleet)
     # duplicate-id repair FIRST (a single duplicate refused by the preflight
     # must never hold the whole dispatch hostage), then dep-blocker self-heal
