@@ -42,13 +42,26 @@ def reaped_events(card_id):
     return out
 
 
-def resurrect(agent_pid):
+def resurrect(agent_pid, card_id="C-9086"):
     """Simulate the live failure: a concurrent writer's stale fleet write
-    puts an already-reaped row back to status "running" (same card+pid)."""
+    puts an already-reaped row back to status "running" (same card+pid).
+    C-9508: stopped agents are pruned after reap, so re-add the entry
+    to simulate a concurrent writer racing the prune."""
     fleet = qgh.load_fleet(qgh.STATE)
+    found = False
     for a in fleet["agents"]:
         if a["pid"] == agent_pid:
             a["status"] = "running"
+            found = True
+    if not found:
+        # Pruned by C-9508; re-add the row as running (concurrent writer simulation)
+        fleet["agents"].append({
+            "pid": agent_pid,
+            "card": card_id,
+            "lane": "fixer",
+            "status": "running",
+            "log": os.path.join(qgh.STATE, "agents", card_id + ".log"),
+        })
     qgh.save_fleet(qgh.STATE, fleet)
 
 
@@ -83,7 +96,7 @@ class TestC9086ReapIdempotent(unittest.TestCase):
         q = qgh.load_queue(qgh.STATE)
         self.assertEqual(H.find_card(q, c["id"])["status"], "done")
         # the lost-update resurrection
-        resurrect(proc.pid)
+        resurrect(proc.pid, c["id"])
         qgh._reap()  # second pass over the same (card, pid)
         self.assertEqual(
             len(reaped_events(c["id"])),
@@ -91,8 +104,11 @@ class TestC9086ReapIdempotent(unittest.TestCase):
             "reaping the same (card, pid) twice must emit exactly ONE reaped event",
         )
         fleet = qgh.load_fleet(qgh.STATE)
-        row = [a for a in fleet["agents"] if a["pid"] == proc.pid][0]
-        self.assertEqual(row["status"], "stopped", "stale row must not linger as running")
+        rows = [a for a in fleet["agents"] if a["pid"] == proc.pid]
+        # C-9508: stopped agents are pruned, so the row is gone (no stale row to linger)
+        if rows:
+            self.assertEqual(rows[0]["status"], "stopped", "stale row must not linger as running")
+        # else: pruned -- even better, no stale row exists
         q = qgh.load_queue(qgh.STATE)
         card = H.find_card(q, c["id"])
         self.assertEqual(card["status"], "done", "second pass must not touch the card")
