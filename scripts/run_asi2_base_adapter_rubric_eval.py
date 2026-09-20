@@ -58,7 +58,9 @@ def parse_args() -> argparse.Namespace:
         help="benchmark file: one task id per line, '#' comments (default: 13-task training set)",
     )
     parser.add_argument("--device", default="npu")
-    parser.add_argument("--max-new-tokens", type=int, default=1536)
+    parser.add_argument(
+        "--max-new-tokens", type=int, default=4096
+    )  # C-9198 raised from 1536 to fix truncation
     parser.add_argument("--limit", type=int, default=0)
     # 2026-09-14 (parallel-eval speedup): slice the benchmark task list so
     # multiple independent workers -- each sharded over its OWN NPU subset --
