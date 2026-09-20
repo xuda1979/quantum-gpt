@@ -382,6 +382,9 @@ class TestStaleTickLock(unittest.TestCase):
     def setUp(self):
         import shutil
 
+        _status = os.path.join(qgh.STATE, "STATUS.md")
+        if os.path.exists(_status):
+            os.remove(_status)
         for sub in ("agents", "briefs", "locks", "standup", "probes"):
             p = os.path.join(qgh.STATE, sub)
             shutil.rmtree(p, ignore_errors=True)
@@ -862,6 +865,12 @@ class TestTransportGate(unittest.TestCase):
     burns a worker spawn just to rediscover the outage."""
 
     def setUp(self):
+        # Mock the quota probe so box-bound lanes are not gated by real API calls
+        import unittest.mock as _mock
+        self._quota_patcher = _mock.patch.object(
+            qgh.QPG, "probe_quota", return_value=dict(verdict="OK", detail="test mock")
+        )
+        self._quota_patcher.start()
         for sub in ("agents", "briefs", "locks", "standup", "probes"):
             os.makedirs(os.path.join(qgh.STATE, sub), exist_ok=True)
         qgh.save_json(os.path.join(qgh.STATE, "QUEUE.json"), {"cards": [], "seq": 0})
@@ -870,6 +879,9 @@ class TestTransportGate(unittest.TestCase):
             os.path.join(qgh.STATE, "OPS.json"),
             {"consecutive_spawn_failures": 0, "backoff_until_utc": None},
         )
+
+    def tearDown(self):
+        self._quota_patcher.stop()
 
     def test_box_bound_lanes_held_while_transport_wedged(self):
         seed_card(title="eval leg", lane="evaluator")
