@@ -9,7 +9,7 @@
 #      This is the pass_base==18/18 deadlock guard.
 #   4. FULL TIE (pass + composite equal): measured False with rule
 #      "full-tie-deadlock" -- named, never silent; unblocking it needs a
-#      GOAL amendment (GOAL.json is frozen; user-gated).
+#      GOAL amendment (GOAL.json is frozen; harness-auto-gated).
 import os
 import sys
 import unittest
