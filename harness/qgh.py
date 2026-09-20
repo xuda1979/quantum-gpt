@@ -3358,6 +3358,36 @@ def cmd_tick(_args):
             event(STATE, "auto_retire_error", {"err": repr(_ret_exc)[:160]})
         # auto-eval: scan for new training checkpoints and queue eval cards
         auto_eval_scan()
+        # C-9541: alert when training is running but no checkpoints produced
+        try:
+            _ops_post = load_ops(STATE)
+            _trainer_probe = load_json(os.path.join(STATE, "probes", "trainer.json"), {})
+            _trainer_status = _trainer_probe.get("status", "unknown")
+            _has_running_trainer = any(
+                c.get("lane") == "trainer-ops"
+                and c.get("status") == "running"
+                and pid_alive(c.get("claimed_by", ""))
+                for c in load_queue(STATE).get("cards", [])
+            )
+            if _has_running_trainer and _trainer_status == "no_live_run":
+                _ops_post["trainer_no_checkpoint_ticks"] = (
+                    _ops_post.get("trainer_no_checkpoint_ticks", 0) + 1
+                )
+                if _ops_post.get("trainer_no_checkpoint_ticks", 0) >= 10:
+                    event(
+                        STATE,
+                        "trainer_no_checkpoints",
+                        {
+                            "ticks": _ops_post["trainer_no_checkpoint_ticks"],
+                            "msg": "trainer running but no checkpoints for 10+ ticks",
+                        },
+                    )
+                    _ops_post["trainer_no_checkpoint_ticks"] = 0
+            else:
+                _ops_post["trainer_no_checkpoint_ticks"] = 0
+            save_ops(STATE, _ops_post)
+        except Exception:
+            pass
         # dispatch (skip only if this very process is the wedged-tick killer)
         r = self_spawn(["dispatch"], timeout=300)
         dispatch_note = (r.stdout or "").strip()
