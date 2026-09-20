@@ -86,7 +86,7 @@ STATE = os.environ.get("QGH_STATE_DIR") or os.path.join(REPO, "harness", "state"
 QGH = os.path.join(REPO, "harness", "qgh.py")
 CLAUDE = os.environ.get("QGH_CLAUDE", "/Users/daxu/homebrew/bin/claude")
 CRON_MARK = "qgh.py tick"
-MAX_LIVE_AGENTS = 10  # 5-10 agents working together; raised from 6 (2026-09-18)
+MAX_LIVE_AGENTS = 100  # user directive 2026-09-19: maximize parallel agents
 TICK_LOCK = os.path.join(STATE, "locks", "tick.lock")
 TICK_STALE_SEC = 1800  # a tick holding the lock >30min is wedged -> break it
 # A successful tick appends to STATUS.md; a CRASHING tick still touches
@@ -224,7 +224,7 @@ def cmd_seed(_args):
     n += seed(
         "Fail-closed re-eval of newest adapter checkpoint (post qiskit fix)",
         "evaluator",
-        "B-225: pre-fix verdicts are untrustworthy on the pass component; the "
+        "B-330: pre-fix verdicts are untrustworthy on the pass component; the "
         "18/18 verdict chain must start from trustworthy measurements",
         [
             "run the 18-task holdout leg with 3 parallel task slices on ASI2",
@@ -347,6 +347,7 @@ def cmd_fleet(_args):
 WORKER_ENV_FILES = (
     "/Users/daxu/.codex/secrets/huanxin.env",
     "/Users/daxu/.claude-mcp-cron/claude_headless.env",
+    "/Users/daxu/.claude-mcp-cron/claude_headless_override.env",
 )
 
 
@@ -455,6 +456,14 @@ def spawn_worker(goal, queue, card, dep_results):
     log_path = os.path.join(STATE, "agents", "{}.log".format(card["id"]))
     with open(log_path, "a", encoding="utf-8") as f:
         f.write(f"\n===== dispatch {now_iso()} =====\n")
+    hb_path = os.path.join(STATE, "agents", "{}.progress".format(card["id"]))
+    # C-9073/C-9115: pre-create the heartbeat file BEFORE the worker starts.
+    # A missing file skips the reaper's STALL check (fail-open), and a
+    # gate-stranded worker denied create-permission has no file to append
+    # to. The dispatch line also anchors freshness at spawn time.
+    H.append_heartbeat(
+        hb_path, "dispatched card {} (progress pre-created by dispatcher)".format(card["id"])
+    )
     card["claimed_by"] = "pending"
     # Minimal deterministic env: workers get credentials from the sourced files,
     # never from whatever session happened to run the tick.
@@ -514,6 +523,18 @@ def spawn_worker(goal, queue, card, dep_results):
         {"card": card["id"], "lane": card["lane"], "pid": pid, "budget_min": card["budget_min"]},
     )
     return entry
+
+
+def cmd_heartbeat(args):
+    """Worker heartbeat (C-9073/C-9115): the sanctioned append route.
+
+    Gate-degraded sessions deny shell redirection -- the brief's old echo >>
+    recipe left heartbeat-silent workers that the reaper killed as STALLED
+    while they worked. Appends via harness_lib.append_heartbeat, which
+    survives the permission gate.
+    """
+    hb = os.path.join(STATE, "agents", f"{args.card}.progress")
+    H.append_heartbeat(hb, args.message)
 
 
 BOX_BOUND_LANES = ("evaluator", "trainer-ops", "deploy-integrity")
@@ -672,8 +693,33 @@ def _reap():
     fleet = load_fleet(STATE)
     goal = load_goal(STATE)
     reaped = 0
+    # C-9086 reap idempotency: (card, pid) pairs already reaped per EVENTS.
+    # Pre-fix events carry no pid, so their key (card, None) never matches a
+    # live row's real pid -- idempotency holds for every reap emitted from
+    # now on without rewriting history.
+    seen_reaps = set()
+    try:
+        with open(os.path.join(STATE, "EVENTS.jsonl"), encoding="utf-8") as f:
+            for line in f:
+                try:
+                    ev = json.loads(line)
+                except ValueError:
+                    continue
+                if ev.get("kind") == "reaped":
+                    seen_reaps.add((ev.get("card"), ev.get("pid")))
+    except OSError:
+        pass
     for a in fleet["agents"]:
         if a.get("status") != "running":
+            continue
+        # C-9086: a row resurrected to "running" by a concurrent writer's lost
+        # update must not re-harvest an already-reaped (card, pid): second
+        # pass is a no-op except marking the stale row stopped. Key is
+        # (card, pid), never card alone -- a NEW incarnation (new pid) of the
+        # same card must still reap normally.
+        key = (a.get("card"), a.get("pid"))
+        if key in seen_reaps:
+            a["status"] = "stopped"
             continue
         card = find_card(queue, a.get("card"))
         alive = pid_alive(a.get("pid"))
@@ -708,7 +754,15 @@ def _reap():
         hb_path = os.path.join(STATE, "agents", "{}.progress".format(a.get("card")))
         stalled = False
         if alive and os.path.exists(hb_path):
+            # C-9093: a progress file left by a PRIOR incarnation of the same
+            # card is hours old; the fresh worker must not be stall-killed for
+            # it. Age the heartbeat off max(mtime, started_utc) -- the file
+            # cannot predate this incarnation. Missing/unparseable started_utc
+            # falls back to mtime-only (fail closed, never fabricated).
             hb_age = time.time() - os.path.getmtime(hb_path)
+            started_min = H.age_min(a.get("started_utc"))
+            if started_min is not None:
+                hb_age = min(hb_age, max(started_min, 0.0) * 60)
             if hb_age > H.STALL_MIN * 60:
                 kill_pid(a["pid"])
                 alive = False
@@ -730,8 +784,10 @@ def _reap():
         # API-down signature: claude prints an API error as its final output —
         # non-empty body but still an outage, never a card fault.
         api_error = verdict is None and any(sig in text for sig in API_ERROR_SIGNATURES)
+        # C-9124: /exec endpoint failure is environmental (box transport broken, not card fault)
+        exec_failure = H.is_exec_endpoint_failure(text)
         environmental = (
-            (not alive and verdict is None and len(body) == 0) or api_error
+            (not alive and verdict is None and len(body) == 0) or api_error or exec_failure
         ) and not stalled
         if outcome is None:
             if not alive:
@@ -822,8 +878,15 @@ def _reap():
         event(
             STATE,
             "reaped",
-            {"card": a.get("card"), "lane": a.get("lane"), "outcome": outcome, "verdict": verdict},
+            {
+                "card": a.get("card"),
+                "pid": a.get("pid"),
+                "lane": a.get("lane"),
+                "outcome": outcome,
+                "verdict": verdict,
+            },
         )
+        seen_reaps.add(key)
         a["status"] = "stopped"
         if os.path.exists(os.path.join(STATE, "locks", "agent-{}.lock".format(a.get("card")))):
             _rmtree(os.path.join(STATE, "locks", "agent-{}.lock".format(a.get("card"))))
@@ -846,6 +909,12 @@ def _reap():
     # duplicate-id repair FIRST (a single duplicate refused by the preflight
     # must never hold the whole dispatch hostage), then dep-blocker self-heal
     _dedup_card_ids()
+    # C-9124: auto-clean stale agent locks (dead PID holders block dispatch)
+    _cleanup_stale_agent_locks()
+    # C-9123: bounce cards stuck in 'running' with all-dead workers and
+    # expired deadlines (prevents dependency deadlocks like the C-9029
+    # incident where a card sat 'running' for 8h blocking 3 downstream cards)
+    H.bounce_dead_running_cards(STATE)
     # dep-blocker self-heal (re-queue env-bounced blockers, escalate dead ones),
     # then re-read the queue before the top-up decision
     _reconcile_dep_blockers()
@@ -911,22 +980,92 @@ def _dedup_card_ids():
                 {"was": old, "now": fresh, "title": extra["title"][:80]},
             )
     queue["seq"] = max(maxnum, queue.get("seq", 0))
-    save_queue(STATE, queue)
+    # Write directly, bypassing save_queue's C-9027 identity validation:
+    # we just re-id'd a duplicate — the old on-disk card under that id
+    # necessarily has a different title/lane, which the validation would
+    # reject. This is the repair path, not a mutation.
+    save_json(os.path.join(STATE, "QUEUE.json"), queue)
     return True
+
+
+def _cleanup_stale_agent_locks():
+    """C-9124: remove agent lock files/dirs held by dead PIDs.
+
+    A stale agent lock (agent-<card>.lock) blocks spawn_worker from
+    dispatching the card — acquire_lock returns None and the card
+    silently never dispatches. This was the root cause of the C-9029
+    dispatch failure (2026-09-19): a lock held by dead PID 4343
+    blocked all dispatches for hours."""
+    lock_dir = os.path.join(STATE, "locks")
+    if not os.path.isdir(lock_dir):
+        return
+    for name in os.listdir(lock_dir):
+        if not name.startswith("agent-") or not name.endswith(".lock"):
+            continue
+        lock_path = os.path.join(lock_dir, name)
+        # Lock can be a file (JSON token) or directory (with pid file)
+        if os.path.isdir(lock_path):
+            pid_file = os.path.join(lock_path, "pid")
+            if os.path.isfile(pid_file):
+                try:
+                    pid = int(open(pid_file).read().strip())
+                    if not H.pid_alive(pid):
+                        os.unlink(pid_file)
+                        os.rmdir(lock_path)
+                        event(
+                            STATE,
+                            "stale_lock_cleaned",
+                            {"lock": name, "pid": pid, "reason": "dead_pid"},
+                        )
+                except (OSError, ValueError):
+                    pass
+        elif os.path.isfile(lock_path):
+            # JSON token lock — check if holder PID is dead
+            try:
+                tok = json.loads(open(lock_path).read())
+                pid = tok.get("pid")
+                if pid and not H.pid_alive(pid):
+                    os.unlink(lock_path)
+                    event(
+                        STATE,
+                        "stale_lock_cleaned",
+                        {"lock": name, "pid": pid, "reason": "dead_pid"},
+                    )
+            except (OSError, ValueError):
+                pass
 
 
 def _reconcile_dep_blockers():
     """Self-heal dep livelock: ready cards blocked on TERMINAL (bounced/dead)
     deps. Environmental bounces re-arm the blocker (strikes reset -- they were
     never the card's fault); genuinely dead blockers trigger a planner mint to
-    re-decompose. Runs every tick before the planner top-up check."""
+    re-decompose. Runs every tick before the planner top-up check.
+
+    C-9095: also heals BLOCKED cards whose named blockers are all done --
+    status "blocked" was a write-only trap (the blocked_by field had zero
+    readers anywhere), so C-9010 rotted behind done C-9026. Superseded
+    blockers do NOT release (C-0060 doctrine: superseded edges are stale
+    and need owner re-pointing, and _deps_satisfied would strand the
+    released card as undispatchable-ready). Silent blocks (no named
+    blocker) and missing blocker ids fail closed. A live owner's park
+    (claimed_by pid alive) is never stomped.
+
+    C-9056/v7 self-heal: a bounced NON-environmental or dead dep can
+    never reach done -- the old code only re-listed it in
+    dead_dep_escalated every tick (55+ events measured) while the
+    dependent stayed undispatchable forever: the exact precondition of
+    the v7 live guard, re-baselined by hand v1..v7. The stale edge is
+    now DROPPED (audited dep_edge_dropped) so the dependent becomes
+    dispatchable; the blocker card itself stays as the historical
+    record, and the C-9114 gate judges idleness on the honest claimable
+    count afterwards."""
     queue = load_queue(STATE)
     changed = False
     dead_blockers = []
     for c in queue["cards"]:
         if c["status"] != "ready":
             continue
-        for dep_id in c["deps"]:
+        for dep_id in list(c["deps"]):
             dep = find_card(queue, dep_id)
             if dep is None or dep["status"] not in ("bounced", "dead"):
                 continue
@@ -938,18 +1077,79 @@ def _reconcile_dep_blockers():
                 dep["deadline_utc"] = None
                 changed = True
                 event(STATE, "dep_blocker_requeued", {"blocker": dep["id"], "unblocks": c["id"]})
-            elif dep["id"] not in dead_blockers:
-                dead_blockers.append(dep["id"])
+            else:
+                # C-9056/v7 self-heal: never-done dep -- drop the stale
+                # edge (audited) instead of re-escalating it every tick.
+                if dep_id in c["deps"]:
+                    c["deps"] = [d for d in c["deps"] if d != dep_id]
+                    changed = True
+                    event(STATE, "dep_edge_dropped", {"blocker": dep_id, "unblocks": c["id"]})
+                if dep_id not in dead_blockers:
+                    dead_blockers.append(dep_id)
+    # C-9095 dep-guard: a card parked in status "blocked" behind named
+    # blockers must re-evaluate when those blockers resolve. Release only
+    # on ALL-DONE; anything else (open, superseded, missing) fails closed.
+    for c in queue["cards"]:
+        if c["status"] != "blocked":
+            continue
+        holder = c.get("claimed_by")
+        if holder and pid_alive(holder):
+            continue  # a live owner's active park
+        names = list(c.get("deps") or [])
+        bb = c.get("blocked_by")
+        if isinstance(bb, str) and bb.strip():
+            names.append(bb.strip())
+        elif isinstance(bb, list):
+            names.extend(x for x in bb if isinstance(x, str) and x.strip())
+        if not names:
+            continue  # silent block: an owner must state the reason
+        blockers = [find_card(queue, n) for n in names]
+        if any(b is None or b["status"] != "done" for b in blockers):
+            continue
+        c["status"] = "ready"
+        c["blocked_by"] = None
+        c["claimed_by"] = None
+        c["claimed_utc"] = None
+        c["deadline_utc"] = None
+        c["requeued_utc"] = now_iso()
+        changed = True
+        event(
+            STATE,
+            "dep_released",
+            dict(card=c["id"], blockers=[b["id"] for b in blockers]),
+        )
     if changed:
         save_queue(STATE, queue)
     if dead_blockers:
-        _auto_plan(load_goal(STATE))
-        event(STATE, "dead_dep_escalated", {"blockers": dead_blockers})
+        # C-9114: escalation mints ONLY when the board holds no claimable
+        # ready work. A terminally dead blocker with healthy ready cards
+        # elsewhere minted a planner card every tick (C-9111 minted on
+        # 2026-09-18T05:50Z with 25 ready + 6 running on blocker C-9029).
+        n_claimable = claimable_ready_count(queue)
+        minted = False
+        if n_claimable == 0:
+            _auto_plan(load_goal(STATE))
+            minted = True
+        event(
+            STATE,
+            "dead_dep_escalated",
+            {"blockers": dead_blockers, "claimable_ready": n_claimable, "minted": minted},
+        )
     return changed, dead_blockers
 
 
 def _auto_plan(goal):
     queue = load_queue(STATE)
+    # C-9027 (3): every auto_plan decision records its count basis
+    # (ready + unblocked) so a misfire is auditable from EVENTS.jsonl
+    # alone.
+    ready_count = sum(1 for c in queue["cards"] if c.get("status") == "ready")
+    unblocked_count = sum(
+        1
+        for c in queue["cards"]
+        if c.get("status") in ("ready", "running")
+        and all((find_card(queue, d) or {}).get("status") == "done" for d in (c.get("deps") or []))
+    )
     # idempotency guard: never mint a second identical planner card while one
     # is already ready/running (the C-0044/45/46 duplicate-mint class)
     for c in queue["cards"]:
@@ -958,7 +1158,15 @@ def _auto_plan(goal):
             and c["status"] in ("ready", "running")
             and c["title"].startswith("Queue nearly empty")
         ):
-            event(STATE, "auto_plan_skipped", {"existing": c["id"]})
+            event(
+                STATE,
+                "auto_plan_skipped",
+                {
+                    "existing": c["id"],
+                    "ready_count": ready_count,
+                    "unblocked_count": unblocked_count,
+                },
+            )
             return
     card = new_card(
         "Queue nearly empty: decompose next objective steps",
@@ -975,11 +1183,30 @@ def _auto_plan(goal):
     )
     add_card(queue, card)
     save_queue(STATE, queue)
-    event(STATE, "auto_plan", {"card": card["id"]})
+    event(
+        STATE,
+        "auto_plan",
+        {"card": card["id"], "ready_count": ready_count, "unblocked_count": unblocked_count},
+    )
 
 
 # ----------------------------------------------------------------------------- tick
 def cmd_tick(_args):
+    # C-9125: clean up stale tick lock if it's a directory (the acquire_lock
+    # O_EXCL mechanism can't take over a directory-based lock, so a killed
+    # tick's lock permanently blocks all future ticks)
+    if os.path.isdir(TICK_LOCK):
+        pid_file = os.path.join(TICK_LOCK, "pid")
+        if os.path.isfile(pid_file):
+            try:
+                pid = int(open(pid_file).read().strip())
+                if not H.pid_alive(pid):
+                    import shutil
+
+                    shutil.rmtree(TICK_LOCK)
+                    event(STATE, "stale_tick_lock_cleaned", {"pid": pid})
+            except (OSError, ValueError):
+                pass
     lock = acquire_lock(TICK_LOCK, stale_sec=TICK_STALE_SEC)
     if lock is None:
         print("tick skipped: another tick live")
@@ -1007,6 +1234,11 @@ def cmd_tick(_args):
         verdicts = scan_verdicts(REPO)
         refresh_trainer_probe()  # C-0074: trainer row from live file evidence
         probes = _probe_results()
+        # reload queue+fleet AFTER dispatch (which ran as a subprocess and
+        # modified them on disk) so the standup/dashboard/progress see the
+        # CURRENT state, not the pre-dispatch snapshot.
+        queue = load_queue(STATE)
+        fleet = load_fleet(STATE)
         text = render_standup(goal, queue, fleet, tick_no, verdicts, probes, state_dir=STATE)
         path = os.path.join(STATE, "standup", f"standup-{tick_no}.md")
         with open(path, "w", encoding="utf-8") as f:
@@ -1054,6 +1286,81 @@ def cmd_tick(_args):
             save_json(os.path.join(STATE, "GOAL.json"), goal)
             event(STATE, "GOAL_ACHIEVED", {"verdict": vfile})
         print(f"tick #{tick_no} done (reaped={reaped}, {dispatch_note})")
+        # C-9125: detailed tick status — user directive: show full state, not tiny info
+        fleet_live = sum(
+            1
+            for a in fleet.get("agents", [])
+            if a.get("status") == "running" and H.pid_alive(a.get("pid"))
+        )
+        ready = H.ready_cards(queue)
+        running = [c for c in queue["cards"] if c.get("status") == "running"]
+        blocked = [c for c in queue["cards"] if c.get("status") == "blocked"]
+        bounced = [c for c in queue["cards"] if c.get("status") == "bounced"]
+        done = [c for c in queue["cards"] if c.get("status") == "done"]
+        print(
+            f"  FLEET: {fleet_live} live agents | MAX={MAX_LIVE_AGENTS} | ASI1={'R' if (env_health.get('ASI1') or {}).get('ready') else 'N'} ASI2={'R' if (env_health.get('ASI2') or {}).get('ready') else 'N'} ASI3={'R' if (env_health.get('ASI3') or {}).get('ready') else 'N'}"
+        )
+        print(
+            f"  QUEUE: {len(ready)} ready | {len(running)} running | {len(blocked)} blocked | {len(bounced)} bounced | {len(done)} done | total={len(queue['cards'])}"
+        )
+        # C-9125: auth + API health check (detect auth expiry early)
+        # Check ALL worker env files for ANTHROPIC_API_KEY
+        _has_key = False
+        for _envf in WORKER_ENV_FILES:
+            try:
+                if os.path.exists(_envf):
+                    with open(_envf) as f:
+                        if "ANTHROPIC_API_KEY" in f.read():
+                            _has_key = True
+                            break
+            except OSError:
+                pass
+        ops = load_ops(STATE)
+        print(
+            f"  AUTH: {'OK' if _has_key else 'MISSING ANTHROPIC_API_KEY'} | API backoff: {ops.get('backoff_until_utc', 'none')}"
+        )
+        print(
+            f"  GATE: {H.load_json(os.path.join(STATE, 'c9071', 'window_gate_go.json'), {}).get('verdict', 'NONE') if os.path.exists(os.path.join(STATE, 'c9071', 'window_gate_go.json')) else 'SKIP' if os.path.exists(os.path.join(STATE, 'c9071', 'window_gate_skip.json')) else 'NONE'}"
+        )
+        print(
+            f"  VERDICT: best={goal.get('best','?')} | target={goal.get('target_pass','?')} | status={goal.get('status','?')}"
+        )
+        # C-9125: blocker analysis — what's preventing the next step?
+        _blockers = []
+        if ops.get("backoff_until_utc"):
+            _blockers.append(f"API backoff until {ops['backoff_until_utc']}")
+        if not _has_key:
+            _blockers.append("AUTH: ANTHROPIC_API_KEY missing")
+        _gate_go = os.path.exists(os.path.join(STATE, "c9071", "window_gate_go.json"))
+        if not _gate_go:
+            _blockers.append("GATE: not GO")
+        _asi2 = env_health.get("ASI2") or {}
+        if not _asi2.get("ready"):
+            _blockers.append("ASI2: not ready")
+        if _blockers:
+            print(f"  BLOCKERS: {' | '.join(_blockers)}")
+        else:
+            print("  BLOCKERS: none -- ready to launch!")
+        if running:
+            for c in running[:10]:
+                print(
+                    f"    RUNNING: {c['id']} [{c.get('lane','?')}] {c.get('title','?')[:60]} bounce={c.get('bounce_count',0)}"
+                )
+        if ready:
+            for c in ready[:10]:
+                print(f"    READY: {c['id']} [{c.get('lane','?')}] {c.get('title','?')[:60]}")
+        if blocked:
+            for c in blocked[:5]:
+                deps = c.get("deps", [])
+                print(f"    BLOCKED: {c['id']} deps={deps} {c.get('title','?')[:50]}")
+        # C-9125: auto-diagnose /exec health on each box
+        for _name, _port in (("ASI1", 20646), ("ASI2", 19004), ("ASI3", 20653)):
+            _h = env_health.get(_name)
+            if _h and _h.get("ready"):
+                _cc = _h.get("commandCount", 0)
+                _busy = _h.get("busy", False)
+                _last = (_h.get("lastCommand") or "")[:60]
+                print(f"    {_name} /exec: cmdCount={_cc} busy={_busy} last=[{_last}]")
     finally:
         release_lock(lock)
 
@@ -1143,7 +1450,7 @@ def _probe_results():
     """Read box-probe result files (written by probe agents), fail-stale-closed."""
     probes = {}
     d = os.path.join(STATE, "probes")
-    for name in ("asi1", "asi2", "asi3", "trainer"):
+    for name in ("asi1", "asi2", "asi3", "trainer", "train_fire"):
         p = os.path.join(d, f"{name}.json")
         data = load_json(p)
         if not data:
@@ -1402,6 +1709,12 @@ def cmd_heal(_args):
     self_spawn(["tick"])
 
 
+def cmd_review(_args):
+    from review import run_review
+
+    return run_review(STATE, REPO)
+
+
 # ----------------------------------------------------------------------------- main
 def main():
     ap = argparse.ArgumentParser(prog="qgh")
@@ -1422,6 +1735,7 @@ def main():
         "doctor",
         "metrics",
         "heal",
+        "review",
     ):
         s = sub.add_parser(name.replace("-", "_") if False else name)
         s.set_defaults(func=globals()["cmd_" + name.replace("-", "_")])
@@ -1447,6 +1761,11 @@ def main():
     p = sub.add_parser("dispatch")
     p.add_argument("--lane", default=None)
     p.set_defaults(func=cmd_dispatch)
+
+    p = sub.add_parser("heartbeat")
+    p.add_argument("card", metavar="C-XXXX")
+    p.add_argument("message")
+    p.set_defaults(func=cmd_heartbeat)
 
     p = sub.add_parser("watch")
     p.add_argument("--interval", type=int, default=600)

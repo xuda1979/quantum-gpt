@@ -7712,7 +7712,7 @@ GREEN after: 4/4. W1 asserts a fresh marker STILL suppresses, so the fix is not 
 CONSEQUENCE: step_000003_adapter returns to PENDING and will be evaluated on a later cycle.
 
 
-## B-225 (2026-09-14) -- THE EVAL BOX LACKED QISKIT, SO THE PASS MASS WAS STRUCTURALLY UNEARNABLE (THE REAL DARK-REWARD ROOT CAUSE) -- FIXED
+## B-330 (2026-09-14) -- THE EVAL BOX LACKED QISKIT, SO THE PASS MASS WAS STRUCTURALLY UNEARNABLE (THE REAL DARK-REWARD ROOT CAUSE) -- FIXED
 Status: FIXED (installed qiskit on the ASI2 eval runtime). Root cause of the
 flat comprehensive scores is NOT primarily the lr bleed -- it is that opponents
 could not run at all on the eval host.
