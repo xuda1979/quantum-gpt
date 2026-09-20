@@ -440,3 +440,60 @@ def split_batched_generations(
             comp = comp[: int((comp == eos_token_id).nonzero()[0])]
         completions.append(comp)
     return completions
+
+
+
+# ---------------------------------------------------------------------------
+# Bounded generation watchdog (C-9523: step_begin hang class-extinction)
+# ---------------------------------------------------------------------------
+
+class GenerationTimeoutError(Exception):
+    """Raised when model.generate exceeds the bounded watchdog timeout."""
+
+
+def generation_timeout_s() -> float:
+    """Resolve the generation timeout from env (default 1800s)."""
+    import os
+    return float(os.environ.get("GRPO_GENERATION_TIMEOUT_S", "1800"))
+
+
+def run_bounded_generation(fn, timeout_s=None):
+    """Run fn() in a daemon thread with a bounded timeout.
+
+    If fn completes within timeout_s, return its result.
+    If fn raises, propagate the exception.
+    If timeout_s elapses, raise GenerationTimeoutError.
+
+    The daemon thread keeps running after timeout (it cannot be killed),
+    but the caller returns fail-closed immediately.
+    """
+    import threading
+    import time
+
+    if timeout_s is None:
+        timeout_s = generation_timeout_s()
+
+    result = [None]
+    exc = [None]
+    done = threading.Event()
+
+    def _runner():
+        try:
+            result[0] = fn()
+        except Exception as e:
+            exc[0] = e
+        finally:
+            done.set()
+
+    t = threading.Thread(target=_runner, daemon=True)
+    t.start()
+
+    if not done.wait(timeout=timeout_s):
+        raise GenerationTimeoutError(
+            f"generation exceeded {timeout_s}s timeout (GRPO_GENERATION_TIMEOUT_S)"
+        )
+
+    if exc[0] is not None:
+        raise exc[0]
+
+    return result[0]
