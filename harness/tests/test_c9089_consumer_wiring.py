@@ -16,10 +16,11 @@ claim.
 """
 
 import json
-import pytest
 import os
 import re
 import sys
+
+import pytest
 
 TEST_DIR = os.path.dirname(os.path.abspath(__file__))
 HARNESS_DIR = os.path.dirname(TEST_DIR)

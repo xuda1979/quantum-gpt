@@ -23,10 +23,11 @@ test below failed on the missing feature before implementation.
 """
 
 import json
-import pytest
 import pathlib
 import re
 import sys
+
+import pytest
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "harness"))
