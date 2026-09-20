@@ -708,6 +708,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "LOO advantages in canonical loo mode; legacy max total/component reward std in "
         "group_std ablation mode.",
     )
+    p.add_argument(
+        "--min-rms-for-update",
+        type=float,
+        default=None,
+        help="Warm-continue fix: when advantage RMS exceeds this threshold, the "
+        "flat_candidate_dispersion gate does NOT hard-zero the magnitude even with "
+        "pass_rate=0 and low dispersion. Set to 0.01 for warm-continue runs to "
+        "preserve partial-credit gradient signal. None = original s26 gate behavior.",
+    )
     p.add_argument("--curriculum-ema-decay", type=float, default=0.9)
     p.add_argument("--curriculum-min-weight", type=float, default=0.05)
     p.add_argument("--curriculum-uncertainty-bonus", type=float, default=0.35)
@@ -6710,6 +6719,7 @@ def main() -> int:
             # (resume-3 step-26 RED class).
             advantages=advantages,
             pass_rate=pass_rate,
+            min_rms_for_update=getattr(args, "min_rms_for_update", None),
         )
 
         repair_queued = False

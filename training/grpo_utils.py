@@ -821,6 +821,24 @@ def _safe_details(result: dict | None) -> list[str]:
     return details
 
 
+def _all_details_pure_syntax_failure(details: list[str]) -> bool:
+    """True when EVERY detail is a compile-time (syntax-family) failure.
+
+    2026-09-18: the runtime ladder (B-232/B-237/B-238) and the participation
+    epsilon (B-331) own ADJACENT regimes. A candidate whose harness run
+    produced runtime evidence (TypeError, NameError, ...) is governed by the
+    runtime ladder's caps -- a fenceless prose-only candidate must stay
+    EXACTLY 0.0 there (tests/test_fence_zero_partial_credit.py). A candidate
+    that never got past compile (pure SyntaxError family) never entered that
+    regime, so the participation epsilon still owns its dead zone
+    (tests/test_participation_reward_dead_zone.py).
+    """
+    if not details:
+        return False
+    compile_markers = ("SyntaxError:", "IndentationError:", "TabError:")
+    return all(any(marker in detail for marker in compile_markers) for detail in details)
+
+
 def _has_runtime_failure(details: list[str]) -> bool:
     runtime_markers = (
         "SyntaxError:",
@@ -1370,15 +1388,23 @@ def _graded_syntax_score(code: str) -> float:
         return 1.0
     except (SyntaxError, ValueError):
         pass
-    # Tier 2: partial — has Python keywords/structure but won't fully parse
+    # Tier 2: partial — has CODE STRUCTURE keywords but won't fully parse.
+    # 2026-09-18 (RED tests/test_fence_zero_partial_credit.py): any-Python-
+    # keyword was too loose — English prose hits kwlist constantly ("and",
+    # "not", "is", "in"), so a fenceless prose-only candidate scored a false
+    # 0.3 (B-238 contract: prose recovers NOTHING). Structure detection is
+    # word-exact (via the tokenizer) and restricted to the same quartet the
+    # fallback scan below uses, so prose can never read as code structure.
     has_structure = False
     try:
         import io
-        import keyword
         import tokenize
 
         tokens = list(tokenize.tokenize(io.BytesIO(code.encode("utf-8", errors="ignore")).readline))
-        has_structure = any(t.type == tokenize.NAME and t.string in keyword.kwlist for t in tokens)
+        has_structure = any(
+            t.type == tokenize.NAME and t.string in ("def", "class", "import", "from")
+            for t in tokens
+        )
     except Exception:
         pass
     if not has_structure:
@@ -1538,9 +1564,16 @@ def build_reward_breakdown(
     # This is strictly below the 0.3 tier-2 from _graded_syntax_score, so
     # it never creates false progress — it only prevents all-flat groups.
     if total_reward == 0.0 and not passed:
-        participation = _participation_epsilon(code)
-        if participation > 0.0:
-            total_reward = participation
+        # B-238 boundary (2026-09-18): when the harness recorded a RUNTIME
+        # failure, the runtime ladder (B-232/B-237 caps) owns the regime and
+        # a fenceless prose-only candidate must stay EXACTLY 0.0 (pinned by
+        # tests/test_fence_zero_partial_credit.py). The participation epsilon
+        # fires only for pure syntax/structure-less garbage that produced no
+        # runtime evidence at all.
+        if not _has_runtime_failure(details) or _all_details_pure_syntax_failure(details):
+            participation = _participation_epsilon(code)
+            if participation > 0.0:
+                total_reward = participation
 
     return {
         "passed": passed,
@@ -2325,6 +2358,7 @@ def policy_update_signal_magnitude(
     advantages=None,
     min_candidate_dispersion: float = 0.5,
     pass_rate: float | None = None,
+    min_rms_for_update: float | None = None,
 ) -> tuple[float, str]:
     """Select the signal magnitude used by the flat-group update gate.
 
@@ -2355,7 +2389,15 @@ def policy_update_signal_magnitude(
             if dispersion < float(min_candidate_dispersion):
                 has_boundary = pass_rate is not None and 0.0 < float(pass_rate) < 1.0
                 if not has_boundary:
-                    return 0.0, "flat_candidate_dispersion"
+                    # Warm-continue fix: when min_rms_for_update is provided and
+                    # the advantage RMS exceeds it, the group has real partial-credit
+                    # signal even with low dispersion. Don't hard-zero — let the
+                    # model learn from the gradient. Preserves the original s26
+                    # outlier gate when min_rms_for_update is None (backward compat).
+                    if min_rms_for_update is not None and magnitude >= float(min_rms_for_update):
+                        pass  # fall through to return magnitude
+                    else:
+                        return 0.0, "flat_candidate_dispersion"
         return max(0.0, magnitude), "loo_advantage_rms"
     return max(0.0, float(signal_stats.get("signal_std", 0.0))), "reward_signal_std"
 
