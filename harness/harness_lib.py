@@ -1112,6 +1112,47 @@ def auto_eval_on_checkpoint(queue, checkpoint_name, run_dir):
     return card
 
 
+class TrainingProgressTracker:
+    """Track training progress toward 18/18: step, pass rate, trend.
+
+    Used by the tick to decide when to trigger eval, when to alert
+    on stalled training, and when to celebrate improvement.
+    """
+
+    def __init__(self):
+        self._history = []  # list of (step, n_passed, n_total)
+        self._evaluated_checkpoints = set()
+
+    @property
+    def latest_step(self):
+        return self._history[-1][0] if self._history else 0
+
+    @property
+    def latest_pass_rate(self):
+        if not self._history:
+            return 0.0
+        _, p, t = self._history[-1]
+        return p / t if t > 0 else 0.0
+
+    def update(self, step, n_passed, n_total):
+        self._history.append((step, n_passed, n_total))
+
+    def is_improving(self):
+        if len(self._history) < 2:
+            return True  # assume improving until proven otherwise
+        _, p1, t1 = self._history[-2]
+        _, p2, t2 = self._history[-1]
+        r1 = p1 / t1 if t1 > 0 else 0.0
+        r2 = p2 / t2 if t2 > 0 else 0.0
+        return r2 > r1
+
+    def should_eval_checkpoint(self, step):
+        if step in self._evaluated_checkpoints:
+            return False
+        self._evaluated_checkpoints.add(step)
+        return True
+
+
 # ----------------------------------------------------------------------------- done-check
 def load_goal(state_dir):
     return load_json(os.path.join(state_dir, "GOAL.json"), {})

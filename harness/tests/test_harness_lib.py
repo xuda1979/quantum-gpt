@@ -516,3 +516,31 @@ class TestAutoEvalOnCheckpoint(unittest.TestCase):
         self.assertIn("pass_adapter", acceptance_text)
         self.assertIn("beats_base", acceptance_text)
         self.assertIn("18/18", acceptance_text)
+
+
+class TestTrainingProgressTracker(unittest.TestCase):
+    """Track training progress: step, pass rate, and trend toward 18/18."""
+
+    def test_track_step_progress(self):
+        tracker = H.TrainingProgressTracker()
+        tracker.update(28, 0, 4)  # step 28, 0 passed, 4 total
+        self.assertEqual(tracker.latest_step, 28)
+        self.assertEqual(tracker.latest_pass_rate, 0.0)
+
+    def test_track_improvement(self):
+        tracker = H.TrainingProgressTracker()
+        tracker.update(28, 0, 4)
+        tracker.update(35, 1, 4)
+        self.assertTrue(tracker.is_improving())
+
+    def test_track_no_improvement(self):
+        tracker = H.TrainingProgressTracker()
+        tracker.update(28, 0, 4)
+        tracker.update(35, 0, 4)
+        self.assertFalse(tracker.is_improving())
+
+    def test_should_trigger_eval_on_new_checkpoint(self):
+        tracker = H.TrainingProgressTracker()
+        tracker.update(28, 0, 4)
+        self.assertTrue(tracker.should_eval_checkpoint(28))
+        self.assertFalse(tracker.should_eval_checkpoint(28))  # already evaluated
