@@ -745,7 +745,6 @@ def auto_cleanup_stale_running(state_dir):
         if cleaned:
             save_queue(state_dir, queue)
             try:
-                from harness_lib import now_iso as _ni
                 event(state_dir, "stale_running_cleaned", {"count": cleaned})
             except Exception:
                 pass
@@ -837,7 +836,7 @@ def bounce_reason(verdict, outcome, over):
     literal = "RESULT: DONE|PARTIAL|BLOCKED"
     parts = []
     if outcome == "stalled-killed":
-        parts.append("stalled: heartbeat stale >20 min")
+        parts.append(f"stalled: heartbeat stale >{STALL_MIN} min")
     elif outcome == "overrun-killed" or over:
         parts.append("overran deadline")
     elif outcome == "dead":

@@ -30,8 +30,8 @@ class TestAutoRetireHighBounce(unittest.TestCase):
             {
                 "id": "C-3002",
                 "status": "bounced",
-                "title": "bounce3",
-                "bounce_count": 3,
+                "title": "bounce2-kept",
+                "bounce_count": 2,
                 "lane": "fixer",
             },
             {
@@ -62,12 +62,12 @@ class TestAutoRetireHighBounce(unittest.TestCase):
         )
 
     def test_retire_high_bounce_cards(self):
-        """Cards with bounce_count >= 4 should be retired to dead."""
+        """Cards with bounce_count >= 3 should be retired to dead."""
         result = qgh.auto_retire_high_bounce(self.state_dir)
         self.assertEqual(result, 2, "should retire 2 cards (bounce_count 4 and 5)")
 
     def test_does_not_retire_low_bounce(self):
-        """Cards with bounce_count < 4 should NOT be retired."""
+        """Cards with bounce_count < 3 should NOT be retired."""
         qgh.auto_retire_high_bounce(self.state_dir)
         queue = qgh.load_queue(self.state_dir)
         by_id = {c["id"]: c for c in queue["cards"]}
