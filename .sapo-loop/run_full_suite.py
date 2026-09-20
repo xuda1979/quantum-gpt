@@ -316,6 +316,7 @@ def run_chunk(node_ids):
         "--tb=no",
         "-p",
         "no:warnings",
+        "--timeout=60",
     ] + node_ids
     timeout_s = _chunk_timeout_for(node_ids)
     try:
