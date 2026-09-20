@@ -710,7 +710,51 @@ def auto_requeue_zero_bounce(state_dir):
         return 0
 
 
-def auto_retire_high_bounce(state_dir, threshold=4):
+def auto_cleanup_stale_running(state_dir):
+    """C-9537: Requeue running cards whose worker PID is dead.
+
+    A running card with a dead PID is a stuck card that reap missed
+    (e.g. fleet entry was already marked stopped but card status
+    was never updated). This requeues it (bounce strike, as the
+    worker failed) so a fresh dispatch can happen.
+    Returns count of cleaned-up cards.
+    """
+    try:
+        queue = load_queue(state_dir)
+        cleaned = 0
+        for c in queue["cards"]:
+            if c["status"] != "running":
+                continue
+            claimed_by = c.get("claimed_by")
+            if not claimed_by:
+                # running without a PID claim is already corrupt
+                c["status"] = "bounced"
+                c["bounce_count"] = c.get("bounce_count", 0) + 1
+                c["bounce_reason"] = "running without claimed_by"
+                c["claimed_by"] = None
+                c["claimed_utc"] = None
+                cleaned += 1
+                continue
+            if not pid_alive(claimed_by):
+                c["status"] = "bounced"
+                c["bounce_count"] = c.get("bounce_count", 0) + 1
+                c["bounce_reason"] = "worker PID dead"
+                c["claimed_by"] = None
+                c["claimed_utc"] = None
+                cleaned += 1
+        if cleaned:
+            save_queue(state_dir, queue)
+            try:
+                from harness_lib import now_iso as _ni
+                event(state_dir, "stale_running_cleaned", {"count": cleaned})
+            except Exception:
+                pass
+        return cleaned
+    except Exception:
+        return 0
+
+
+def auto_retire_high_bounce(state_dir, threshold=3):
     """C-9534: Auto-retire bounced cards with bounce_count >= threshold.
 
     Bounced cards with high bounce_count are stuck -- they keep failing the
@@ -1236,9 +1280,17 @@ def auto_queue_training(state_dir):
             return None
         queue = load_queue(state_dir)
         # Check if any trainer-ops card is running or ready
+        # C-9536: a running card with a dead PID must NOT block new
+        # training -- the worker died without reap catching it. Verify
+        # PID liveness before counting it as truly running.
         for c in queue["cards"]:
-            if c.get("lane") == "trainer-ops" and c["status"] in ("running", "ready"):
+            if c.get("lane") == "trainer-ops" and c["status"] == "ready":
                 return None
+            if c.get("lane") == "trainer-ops" and c["status"] == "running":
+                claimed_by = c.get("claimed_by")
+                if claimed_by and pid_alive(claimed_by):
+                    return None
+                # Dead PID: this card is stale, do not block new training
         # Need a training card
         card = new_card(
             title="Auto: launch/resume GRPO training with v10 benchmark (18/18 holdout coverage) toward 18/18",
@@ -3226,6 +3278,13 @@ def cmd_tick(_args):
             except subprocess.SubprocessError:
                 pass
         rotate_log(os.path.join(STATE, "tick.log"))
+        # C-9537: cleanup stale running cards (dead PID) before auto-queue.
+        try:
+            _n_cleaned = auto_cleanup_stale_running(STATE)
+            if _n_cleaned:
+                event(STATE, "auto_cleanup_stale_running", {"count": _n_cleaned})
+        except Exception as _clean_exc:
+            event(STATE, "auto_cleanup_stale_error", {"err": repr(_clean_exc)[:160]})
         # C-9532: auto-queue training launch when no training is running.
         try:
             _card = auto_queue_training(STATE)
@@ -4425,6 +4484,7 @@ H = _types.SimpleNamespace(
     auto_eval_on_checkpoint=auto_eval_on_checkpoint,
     auto_queue_training=auto_queue_training,
     auto_requeue_zero_bounce=auto_requeue_zero_bounce,
+    auto_cleanup_stale_running=auto_cleanup_stale_running,
     auto_retire_high_bounce=auto_retire_high_bounce,
     backoff_active=backoff_active,
     bank_scorer_sha_pins=bank_scorer_sha_pins,
