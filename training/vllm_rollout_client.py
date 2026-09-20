@@ -46,7 +46,8 @@ class VllmRolloutClient:
             return self._health_ok
         try:
             req = urllib.request.Request(self.base_url + "/health")
-            with urllib.request.urlopen(req, timeout=5) as resp:
+            opener = opener_factory()
+            with opener.open(req, timeout=5) as resp:
                 self._health_ok = resp.status == 200
         except Exception:
             self._health_ok = False

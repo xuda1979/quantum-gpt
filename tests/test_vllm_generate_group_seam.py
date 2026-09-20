@@ -122,7 +122,9 @@ class _FakeVllmClient:
     def is_up(self, *, force: bool = False) -> bool:
         return self.up
 
-    def generate_batch(self, prompt, n, max_tokens, temperature, seed=None, stop=None):
+    def generate_batch(
+        self, prompt, n, max_tokens, temperature, seed=None, stop=None, suppress_token_ids=None
+    ):
         return self.completions[:n]
 
 
@@ -292,7 +294,9 @@ def test_vllm_seam_greedy_sampled_mix_batch_splits() -> None:
             super().__init__(up=True)
             self.calls: list[tuple[int, float]] = []
 
-        def generate_batch(self, prompt, n, max_tokens, temperature, seed=None, stop=None):
+        def generate_batch(
+            self, prompt, n, max_tokens, temperature, seed=None, stop=None, suppress_token_ids=None
+        ):
             self.calls.append((n, temperature))
             return ["```python\nx = 1\n```"] * n
 
