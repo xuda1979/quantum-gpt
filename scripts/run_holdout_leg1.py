@@ -346,8 +346,9 @@ def main(argv=None):
         scores=scores,
         max_new_tokens=args.max_new_tokens,
     )
-    envelope["adapter_applied_marker"] = True
-    envelope["adapter_probe_differs_marker"] = True
+    # C-9432: markers computed from log verification, not hardcoded
+    envelope["adapter_applied_marker"] = MARKER_APPLIED in text
+    envelope["adapter_probe_differs_marker"] = MARKER_PROBE_DIFFERS in text
     envelope["created_utc"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     envelope["created_utc"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     # C-9110: record the per-task candidate-vs-base diff counts at
