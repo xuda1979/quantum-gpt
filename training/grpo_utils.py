@@ -31,6 +31,7 @@ from training.compat import strict_zip
 # anchored to observable evidence separate last-mile failures (plausible code
 # failing only on outputs/params) from gross failures.
 MODEL_JUDGE_DIMENSIONS = (
+    "correctness",
     "correctness_of_intent",
     "result_correctness",
     "completeness",

@@ -197,7 +197,7 @@ class TestC9095LiveQueueInvariant(unittest.TestCase):
                 continue
             states = [cards.get(n, dict()).get("status", "missing") for n in names]
             if all(s == "done" for s in states):
-                stale.append((c["id"], list(zip(names, states, strict=False))))
+                stale.append((c["id"], list(zip(names, states))))
         self.assertEqual(
             stale,
             [],

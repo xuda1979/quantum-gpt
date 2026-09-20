@@ -124,7 +124,9 @@ from training.generation import (  # noqa: E402
     configured_suppress_token_ids,
     extract_code,
     has_closed_code_fence,  # noqa: F401  # deliberate re-export, pinned by test_generation_module_extraction
+    generation_timeout_s,
     rollout_suppress_logits_processor,
+    run_bounded_generation,
     truncate_at_closing_fence,
 )
 from training.grpo_utils import (  # noqa: E402
@@ -2744,6 +2746,48 @@ def train_pass_truncation_breakdown(
     }
 
 
+
+def _generate_with_no_grad(
+    model,
+    *,
+    inputs,
+    group_size,
+    max_new_tokens,
+    temperature,
+    top_p,
+    do_sample,
+    stop_eos_ids,
+    suppress_token_ids,
+    backend,
+    prompt_len,
+):
+    """Run one batched ``model.generate`` inside a no_grad context.
+
+    C-9523: invoked through ``run_bounded_generation`` (a daemon-thread
+    watchdog) so a dead ASCEND NPU TBE task_distribute subprocess fails
+    fast-closed instead of hanging the trainer forever. ``no_grad`` is applied
+    HERE (not in the caller) so the worker thread also runs grad-disabled, as
+    the original rollout path did.
+    """
+    with torch.no_grad():
+        out = model.generate(
+            **build_batched_prompt_inputs(inputs, group_size=group_size),
+            max_new_tokens=max_new_tokens,
+            temperature=temperature,
+            top_p=top_p,
+            do_sample=do_sample,
+            use_cache=True,
+            return_dict_in_generate=True,
+            output_scores=False,
+            eos_token_id=sorted(stop_eos_ids) if stop_eos_ids else None,
+            logits_processor=rollout_suppress_logits_processor(suppress_token_ids),
+            stopping_criteria=StoppingCriteriaList(
+                [StopAfterClosedCodeFence(backend.text_backend, prompt_length=prompt_len)]
+            ),
+        )
+    return out
+
+
 def generate_group(
     model,
     backend: TextPreprocessorBackend,
@@ -2934,48 +2978,50 @@ def generate_group(
         greedy_n = greedy_count if not _vllm_succeeded else 0
         sampled_n = max(group_size - greedy_n, 0) if not _vllm_succeeded else 0
         if greedy_n > 0:
-            with torch.no_grad():
-                greedy_out = model.generate(
-                    **build_batched_prompt_inputs(inputs, group_size=greedy_n),
+            # C-9523: bounded generation watchdog. A dead ASCEND NPU TBE
+            # task_distribute subprocess makes model.generate never return
+            # (trainer busy-spins at >130% CPU, child futex-blocked). The
+            # watchdog fails fast-closed on GRPO_GENERATION_TIMEOUT_S instead
+            # of spinning the whole budget.
+            greedy_out = run_bounded_generation(
+                lambda: _generate_with_no_grad(
+                    model,
+                    inputs=inputs,
+                    group_size=greedy_n,
                     max_new_tokens=effective_max_new_tokens,
                     temperature=0.0,
                     top_p=args.top_p,
                     do_sample=False,
-                    use_cache=True,
-                    return_dict_in_generate=True,
-                    output_scores=False,
-                    eos_token_id=sorted(stop_eos_ids) if stop_eos_ids else None,
-                    logits_processor=rollout_suppress_logits_processor(suppress_token_ids),
-                    stopping_criteria=StoppingCriteriaList(
-                        [StopAfterClosedCodeFence(backend.text_backend, prompt_length=prompt_len)]
-                    ),
-                )
+                    stop_eos_ids=stop_eos_ids,
+                    suppress_token_ids=suppress_token_ids,
+                    backend=backend,
+                    prompt_len=prompt_len,
+                ),
+                label="greedy_generate_%d" % greedy_n,
+            )
             for gids in greedy_out.sequences:
                 gen_ids = gids[prompt_len:]
                 raw_responses.append(backend.text_backend.decode(gen_ids, skip_special_tokens=True))
                 completion_token_ids.append(gen_ids.detach().cpu().clone())
             _release_device_cache(torch)
         if sampled_n > 0:
-            with torch.no_grad():
-                sampled_out = model.generate(
-                    **build_batched_prompt_inputs(inputs, group_size=sampled_n),
+            # C-9523: bounded generation watchdog (see greedy block above).
+            sampled_out = run_bounded_generation(
+                lambda: _generate_with_no_grad(
+                    model,
+                    inputs=inputs,
+                    group_size=sampled_n,
                     max_new_tokens=effective_max_new_tokens,
                     temperature=effective_temp,
                     top_p=args.top_p,
                     do_sample=True,
-                    use_cache=True,
-                    return_dict_in_generate=True,
-                    output_scores=False,
-                    eos_token_id=sorted(stop_eos_ids) if stop_eos_ids else None,
-                    # 2026-09-11 (BOS/PAD-in-EOS root cause): SuppressTokensLogitsProcessor
-                    # runs for BOTH greedy and sampled decode (checked in the pinned
-                    # transformers 4.57.6 _get_logits_processor), and the stop set keeps
-                    # at least one real EOS — so this cannot run away.
-                    logits_processor=rollout_suppress_logits_processor(suppress_token_ids),
-                    stopping_criteria=StoppingCriteriaList(
-                        [StopAfterClosedCodeFence(backend.text_backend, prompt_length=prompt_len)]
-                    ),
-                )
+                    stop_eos_ids=stop_eos_ids,
+                    suppress_token_ids=suppress_token_ids,
+                    backend=backend,
+                    prompt_len=prompt_len,
+                ),
+                label="sampled_generate_%d" % sampled_n,
+            )
             for sids in sampled_out.sequences:
                 gen_ids = sids[prompt_len:]
                 raw_responses.append(backend.text_backend.decode(gen_ids, skip_special_tokens=True))

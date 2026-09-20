@@ -112,7 +112,7 @@ def detect_no_progress(history, n=DEFAULT_PLATEAU_ROUNDS):
     if len(passes) < n + 1:
         return record
     window = passes[-(n + 1) :]
-    deltas = [b - a for a, b in zip(window, window[1:], strict=False)]
+    deltas = [b - a for a, b in zip(window, window[1:])]
     record["rounds"] = [r.get("round") for r in entries[-n:]]
     if all(d <= 0 for d in deltas):
         record["plateau"] = True

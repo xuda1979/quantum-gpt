@@ -48,7 +48,7 @@ class TestComputeSlices(unittest.TestCase):
 class TestMergeSliceScores(unittest.TestCase):
     def _slice_payload(self, task_ids, adapter_passes, base_passes):
         records = []
-        for tid, ap, bp in zip(task_ids, adapter_passes, base_passes, strict=False):
+        for tid, ap, bp in zip(task_ids, adapter_passes, base_passes):
             records.append(
                 dict(
                     model="adapter",
