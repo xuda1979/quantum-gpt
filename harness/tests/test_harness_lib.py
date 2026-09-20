@@ -544,3 +544,25 @@ class TestTrainingProgressTracker(unittest.TestCase):
         tracker.update(28, 0, 4)
         self.assertTrue(tracker.should_eval_checkpoint(28))
         self.assertFalse(tracker.should_eval_checkpoint(28))  # already evaluated
+
+
+class TestStallDetector(unittest.TestCase):
+    """Detect when training is stalled and needs restart."""
+
+    def test_no_stall_when_recent_progress(self):
+        detector = H.StallDetector(stall_threshold_min=30)
+        detector.record_progress(step=28, timestamp="2026-09-20T17:37:00Z")
+        detector.record_progress(step=29, timestamp="2026-09-20T18:05:00Z")
+        self.assertFalse(detector.is_stalled(current_time="2026-09-20T18:10:00Z"))
+
+    def test_stall_when_no_progress_for_30min(self):
+        detector = H.StallDetector(stall_threshold_min=30)
+        detector.record_progress(step=28, timestamp="2026-09-20T17:37:00Z")
+        self.assertTrue(detector.is_stalled(current_time="2026-09-20T18:20:00Z"))
+
+    def test_should_restart_when_stalled(self):
+        detector = H.StallDetector(stall_threshold_min=30)
+        detector.record_progress(step=28, timestamp="2026-09-20T17:37:00Z")
+        stalled = detector.is_stalled(current_time="2026-09-20T18:20:00Z")
+        self.assertTrue(stalled)
+        self.assertTrue(detector.should_restart())

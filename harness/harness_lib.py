@@ -1153,6 +1153,36 @@ class TrainingProgressTracker:
         return True
 
 
+class StallDetector:
+    """Detect when training is stalled (no progress for N minutes).
+
+    Used by the tick to decide when to restart training or alert.
+    """
+
+    def __init__(self, stall_threshold_min=30):
+        self.stall_threshold_min = stall_threshold_min
+        self._last_progress = None  # (step, timestamp_iso)
+
+    def record_progress(self, step, timestamp):
+        self._last_progress = (step, timestamp)
+
+    def is_stalled(self, current_time=None):
+        if self._last_progress is None:
+            return False  # no data yet
+        _, ts = self._last_progress
+        if current_time is None:
+            age = age_min(ts)
+        else:
+            ref = parse_iso(current_time) if isinstance(current_time, str) else current_time
+            age = age_min(ts, ref)
+        if age is None:
+            return False
+        return age > self.stall_threshold_min
+
+    def should_restart(self):
+        return self.is_stalled()
+
+
 # ----------------------------------------------------------------------------- done-check
 def load_goal(state_dir):
     return load_json(os.path.join(state_dir, "GOAL.json"), {})
