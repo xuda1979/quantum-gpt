@@ -11,7 +11,7 @@ export HOME="${HOME:-/Users/daxu}"
 export USER="${USER:-daxu}"
 export PATH="${PATH:-/usr/bin:/bin:/usr/sbin:/sbin:/Users/daxu/homebrew/bin:/Users/daxu/.local/bin}"
 ROOT="/Users/daxu/software/quantum-gpt"
-LOG="$ROOT/logs/session_keeper.log"
+LOG="${SK_KEEPER_LOG:-$ROOT/logs/session_keeper.log}"
 ENVF="/Users/daxu/.claude-mcp-cron/claude_headless.env"
 CLAUDE="/Users/daxu/homebrew/bin/claude"
 HEARTBEAT="/tmp/session_keeper_state.json"
@@ -249,11 +249,32 @@ awake_ok() {
 
 # ── cron doctor: future cron jobs get durable auth automatically ──
 cron_doctor() {
-  for f in /Users/daxu/.claude-mcp-cron/jobs/*/run.sh; do
+  # B-093 (fixed 2026-09-20): the old body had BOTH the counterfeit-log bug
+  # (( grep || sed ) && echo -- the echo fired precisely when sed NEVER ran)
+  # AND a hardcoded jobs glob that ignored SK_CRON_JOBS_DIR. Now: honor
+  # SK_CRON_JOBS_DIR, skip already-marked files BEFORE acting, and log
+  # "patched" only when the file actually changed.
+  local jobs_dir="${SK_CRON_JOBS_DIR:-/Users/daxu/.claude-mcp-cron/jobs}"
+  local f tmp_patch patched line
+  for f in "$jobs_dir"/*/run.sh; do
     [ -f "$f" ] || continue
-    grep -q "claude_headless.env" "$f" || \
-      sed -i '' 's|^done$|done\n\nif [ -f /Users/daxu/.claude-mcp-cron/claude_headless.env ]; then\n  source /Users/daxu/.claude-mcp-cron/claude_headless.env\nfi|' "$f" 2>/dev/null && \
+    grep -q "claude_headless.env" "$f" && continue
+    tmp_patch="$f.cron_doctor.$$"
+    : > "$tmp_patch"
+    patched=""
+    while IFS= read -r line || [ -n "$line" ]; do
+      printf '%s\n' "$line" >> "$tmp_patch"
+      if [ -z "$patched" ] && [ "$line" = "done" ]; then
+        printf '\nif [ -f /Users/daxu/.claude-mcp-cron/claude_headless.env ]; then\n  source /Users/daxu/.claude-mcp-cron/claude_headless.env\nfi\n' >> "$tmp_patch"
+        patched=1
+      fi
+    done < "$f"
+    if [ -n "$patched" ]; then
+      mv "$tmp_patch" "$f"
       echo "[$(date '+%F %T')] cron_doctor patched $f" >> "$LOG"
+    else
+      rm -f "$tmp_patch"
+    fi
   done
 }
 

@@ -45,7 +45,7 @@ pytestmark = pytest.mark.skipif(
 
 def test_sapo_key_remap_inserts_language_model_segment() -> None:
     """SAPO text-only keys must be remapped into the full-model namespace."""
-    from scripts.run_hf_pass1_eval import _remap_sapo_keys
+    from scripts.adapter_probe_checked import _remap_sapo_keys
 
     keys = [
         "base_model.model.model.layers.0.mlp.gate_proj.lora_A.weight",
@@ -69,7 +69,7 @@ def test_sapo_key_remap_inserts_language_model_segment() -> None:
 
 def test_adapter_effectively_zero_detects_silent_skip() -> None:
     """A PeftModel whose lora_B is all zero must be flagged as not applied."""
-    from scripts.run_hf_pass1_eval import _adapter_effectively_zero, _state_has_nonzero_b
+    from scripts.adapter_probe_checked import _adapter_effectively_zero, _state_has_nonzero_b
 
     zero_state = {
         "base_model.model.model.language_model.layers.0.mlp.gate_proj.lora_B.default.weight": torch.zeros(
@@ -104,7 +104,7 @@ def test_adapter_effectively_zero_not_fooled_by_in_place_peft_mutation() -> None
     base object in place: the zero-check must use a pre-mutation id snapshot,
     or it skips every live delta as "base" and fails closed on genuinely live
     adapters (2026-08-25 aliasing regression that aborted all three legs)."""
-    from scripts.run_hf_pass1_eval import _adapter_effectively_zero
+    from scripts.adapter_probe_checked import _adapter_effectively_zero
 
     base = _tiny_multimodal_base()
     base.eval()
@@ -166,7 +166,7 @@ def test_tiny_multimodal_sapo_adapter_changes_probe_output(tmp_path: Path) -> No
     Red before the fix: peft silently skips the mismatched keys and the probe
     output equals base. Green after: remap + fail-closed load apply the delta.
     """
-    from scripts.run_hf_pass1_eval import _apply_adapter_checked, _probe_differs
+    from scripts.adapter_probe_checked import _apply_adapter_checked, _probe_differs
 
     base = _tiny_multimodal_base()
     base.eval()
@@ -215,7 +215,7 @@ def test_tiny_multimodal_sapo_adapter_changes_probe_output(tmp_path: Path) -> No
 
 def test_apply_adapter_fails_closed_on_truly_empty_adapter(tmp_path: Path) -> None:
     """An adapter with zero B must raise, not silently run base."""
-    from scripts.run_hf_pass1_eval import _apply_adapter_checked
+    from scripts.adapter_probe_checked import _apply_adapter_checked
 
     base = _tiny_multimodal_base()
     base.eval()
@@ -266,7 +266,8 @@ def test_real_sapo_adapter_probe_differs_base(adapter_dir: Path) -> None:
     Loads on NPU with the production config (balanced-layers/54 GiB) — the
     same path the promotion legs use, and fast enough to gate every leg.
     """
-    from scripts.run_hf_pass1_eval import _apply_adapter_checked, _probe_differs, load_model
+    from scripts.adapter_probe_checked import _apply_adapter_checked, _probe_differs
+    from scripts.run_hf_pass1_eval import load_model
 
     base = load_model(
         REAL_BASE,

@@ -45,6 +45,34 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+# B-241 (2026-09-15): the no-teacher correction fallback -- the verified
+# distillation reference. Line N of this jsonl holds the verified code for
+# qc-NNNN task ids (the same source the repair-source preflight gate checks),
+# so a box tree without it fails the launch gate instead of silently
+# converting nothing. Derived from this script's own repo root.
+DEFAULT_REFERENCE_JSONL = (
+    ROOT
+    / "data"
+    / "generated"
+    / "quantum_dedup_1k_glm52_soft_distill_v3_verified_nologit_v3"
+    / "questions_and_code.jsonl"
+)
+
+
+def _load_jsonl(path: Path) -> list:
+    records: list = []
+    if not path.is_file():
+        return records
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        try:
+            records.append(json.loads(line))
+        except json.JSONDecodeError:
+            continue
+    return records
+
+
 from training.grpo_utils import (  # noqa: E402
     extract_behavior_hints_from_test_source,
     summarize_python_interface,
@@ -174,15 +202,93 @@ def ask_teacher(
     return out or None
 
 
-def load_reference_correction(task_dir: Path, meta: dict[str, Any]) -> str | None:
-    """Fallback correction: the task's verified reference candidate.py."""
+def _strip_stub(source: str) -> str:
+    """The source minus comment lines and blank lines. Empty == a training
+    stub (e.g. a "# training stub" file) -- not a usable correction target."""
+    kept = []
+    for line in source.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        kept.append(stripped)
+    return "\n".join(kept)
+
+
+_REFERENCE_SCAN_CACHE: dict = dict()
+
+
+def _compilable_reference_codes(source: Path) -> list:
+    """[code, ...] in file order for every jsonl record whose non-blank code
+    COMPILES.
+
+    COMPILE-only, never executed: verifying by EXECuting every record was
+    measured at 75+ CPU-minutes for ONE repair-source preflight process
+    (917-record jsonl x per-task calls, 2026-09-20), with orphaned copies
+    piling up per suite chunk. Runtime verification belongs to the repair
+    stage's run_candidate_against_harness, which grounds the conversion
+    against the task's own tests anyway. Cached per (path, mtime_ns, size)
+    so the preflight's per-task calls and the sidecar's repeated polls scan
+    the file once.
+    """
+    try:
+        stat = source.stat()
+    except OSError:
+        return []
+    key = (str(source), stat.st_mtime_ns, stat.st_size)
+    cached = _REFERENCE_SCAN_CACHE.get(key)
+    if cached is not None:
+        return cached
+    eligible: list = []
+    for line in source.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        try:
+            record = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(record, dict):
+            continue
+        code = str(record.get("code") or "")
+        if not code.strip() or not _strip_stub(code):
+            continue
+        try:
+            compile(code, "<distill-source>", "exec")
+        except (SyntaxError, ValueError):
+            continue
+        eligible.append(code)
+    _REFERENCE_SCAN_CACHE[key] = eligible
+    return eligible
+
+
+def load_reference_correction(
+    task_dir: Path, meta: dict[str, Any], source: Path | str | None = None
+) -> str | None:
+    """Fallback correction for a failed repair candidate.
+
+    Priority: (1) the task's OWN verified reference candidate file -- the
+    on-task correction target -- unless it is a comment-only training STUB
+    (a stub teaches nothing; the distill record is the fallback, per B-241);
+    (2) otherwise the LAST record in ``source`` (a questions+code JSONL)
+    whose code compiles -- COMPILE-only, never executed here (see
+    _compilable_reference_codes). Returns None when neither source yields
+    usable code.
+    """
     candidate_file = meta.get("candidate_file")
-    if not candidate_file:
-        return None
-    path = task_dir / candidate_file
-    if not path.is_file():
-        return None
-    return path.read_text(encoding="utf-8")
+    if candidate_file:
+        path = task_dir / candidate_file
+        if path.is_file():
+            candidate = path.read_text(encoding="utf-8")
+            if _strip_stub(candidate):
+                return candidate
+    if source is not None and str(meta.get("id") or "").startswith("qc-"):
+        # B-241 contract (preflight docstring): the distill reference jsonl
+        # is the correction source for qc-NNNN ids ONLY. A non-qc task
+        # without its own candidate_file is UNearnable and must fail the
+        # launch gate, not be rescued by a generic record.
+        eligible = _compilable_reference_codes(Path(source))
+        if eligible:
+            return eligible[-1]
+    return None
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:

@@ -104,6 +104,26 @@ NEW_TASK_IDS: list[str] = [
     "quantum_rl_v2_qml_jacobian_rx_ry",
     "quantum_rl_v2_qml_kernel_ring_r3",
     "quantum_rl_v2_qml_vc_sign_x1",
+    # waves 4-6 gap-fill lineage (gate-alias registry, amplitude-damping
+    # Kraus, GHZ/MABK witness, phase round-trip, gate-alias sequence,
+    # channel damping fidelity, register phase round-trip, alias phase
+    # drill, bare-file gate norm, statevector fidelity check, circuit
+    # construct+measure, compact phase round-trip). Restored 2026-09-20:
+    # the builder had lost this wave section and re-rendered only 44 of
+    # the checked-in 56 tasks -- regeneration silently DROPPED 12 training
+    # tasks whose dirs exist and whose contracts verify.
+    "quantum_rl_v4_gapfill_gate_alias_registry",
+    "quantum_rl_v4_gapfill_amplitude_damping_kraus",
+    "quantum_rl_v4_gapfill_ghz_mabk_witness",
+    "quantum_rl_v4_gapfill_phase_roundtrip",
+    "quantum_rl_v5_gapfill_gate_alias_sequence",
+    "quantum_rl_v5_gapfill_channel_damping_fidelity",
+    "quantum_rl_v5_gapfill_register_phase_roundtrip",
+    "quantum_rl_v5_gapfill_alias_phase_drill",
+    "quantum_rl_v6_gapfill_bare_file_gate_norm",
+    "quantum_rl_v6_gapfill_statevector_fidelity_check",
+    "quantum_rl_v6_gapfill_circuit_construct_measure",
+    "quantum_rl_v6_gapfill_compact_phase_roundtrip",
 ]
 
 
@@ -127,10 +147,10 @@ def render() -> str:
     source_hash = hashlib.sha256(SOURCES_JSONL.read_bytes()).hexdigest()
     contract_hash = task_contract_hash(ids)
     lines = [
-        "# SAPO RL training from quantum_rl_questions_v2.jsonl: waves 1+2+3 + extension = 44 tasks.",
+        f"# SAPO RL training from quantum_rl_questions_v2.jsonl: waves 1-6 gap-fill lineage = {len(ids)} tasks.",
         f"# source={SOURCES_JSONL.relative_to(ROOT)} sha256={source_hash}",
         f"# task_contract_sha256={contract_hash}",
-        "# targeted=44 deterministic=0 semantic=0",
+        f"# targeted={len(ids)} deterministic=0 semantic=0",
         "# required_import_roots=",
         "# reference_execution_verified=true runs=3",
         "# Wave 1 (2026-08-31): frozen-holdout competence classes (partial",

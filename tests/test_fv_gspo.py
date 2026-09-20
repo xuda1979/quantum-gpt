@@ -81,13 +81,22 @@ def test_flat_final_reward_overrides_fresh_posterior_to_repair() -> None:
 
 
 def test_repair_tasks_receive_zero_mixture_probability_when_other_work_exists() -> None:
+    """B-245 contract (supersedes the original hard-zero law): a quarantined
+    REPAIR_SFT task gets a small RESIDUAL re-probe slice while other work
+    exists -- a hard zero was a life sentence the router could never
+    overturn. The residual is capped (0.05 mass -> 0.0625 share here: 0.05
+    over the 0.8 total) and DISAPPEARS entirely when the whole pool is
+    quarantined, so the all-zero no-trainable-tasks breaker still fires
+    (test_all_quarantined_tasks_do_not_fall_back_to_uniform_sampling pins
+    that end-of-life law)."""
     router = FrontierRouter()
     tasks = [_task("repair"), _task("fresh")]
     router.probe_record("repair", step=1, pass_rate=0.0, shaped_signal_std=0.0)
     router.mark_repair("repair")
     weights = build_mixture_weights(router, tasks, step=2)
-    assert weights[0] == 0.0
-    assert weights[1] == 1.0
+    assert 0.0 < weights[0] <= 0.07, weights
+    assert weights[1] >= 0.9, "the fresh task must keep the dominant share"
+    assert abs(sum(weights) - 1.0) < 1e-9
 
 
 def test_all_quarantined_tasks_do_not_fall_back_to_uniform_sampling() -> None:

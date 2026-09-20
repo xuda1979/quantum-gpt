@@ -90,5 +90,7 @@ def test_only_provable_inert_skips_holdout_eval() -> None:
     assert '== "inert_at_precision"' not in skip
     # the inert_at_precision branch must proceed (not skip) to the eval
     assert "proceeding to the frozen holdout eval" in source
-    # the inert skip must exit before the rubric eval
-    assert 'update_state "$TS" "inert" "adapter_delta_zero"' in source
+    # the inert skip must exit before the rubric eval, and the write must be
+    # keyed by the checkpoint's full-path identity (E2, the B-105 law)
+    assert 'update_state "$STATE_KEY" "inert" "adapter_delta_zero"' in source
+    assert 'update_state "$TS"' not in source

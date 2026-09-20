@@ -7,9 +7,21 @@ from pathlib import Path
 from typing import Any
 
 try:
-    from evals.runner.task_metadata import resolve_test_path
+    from evals.runner.frozen_contract import (
+        aggregate_sha256,
+        repo_relative,
+        sha256_file,
+        sha256_text,
+    )
+    from evals.runner.public_task_spec import build_public_task_spec
 except ModuleNotFoundError:  # pragma: no cover - script execution path
-    from task_metadata import resolve_test_path
+    from frozen_contract import (
+        aggregate_sha256,
+        repo_relative,
+        sha256_file,
+        sha256_text,
+    )
+    from public_task_spec import build_public_task_spec
 
 ROOT = Path(__file__).resolve().parents[2]
 TASKS_ROOT = ROOT / "evals" / "tasks"
@@ -75,25 +87,18 @@ def sanitize_text(text: str) -> str:
 
 
 def build_user_prompt(task_dir: Path, metadata: dict[str, Any], prompt_style: str) -> str:
-    reference_candidate = sanitize_text((task_dir / metadata["candidate_file"]).read_text())
-    tests_source = sanitize_text(resolve_test_path(task_dir, metadata).read_text())
+    # 2026-09-20: the model-visible body is the PUBLIC task spec. The old
+    # body embedded the REFERENCE CANDIDATE (a worked solution) and the
+    # COMPLETE TESTS SOURCE -- the model could pass by echoing scorer
+    # artifacts (prompt answer-leak; the s97 near-pass contract-miss class).
+    # The task id line and the style suffix stay for run-identity parity.
     style = PROMPT_STYLES[prompt_style]
-
-    return (
-        f"Task ID: {metadata['id']}\n"
-        f"Task name: {metadata['name']}\n"
-        f"Domain: {metadata['domain']}\n"
-        f"Category: {metadata['category']}\n\n"
-        f"{style['user_suffix']}\n\n"
-        "Reference candidate style example (for format guidance, not for blind copying):\n"
-        "--- BEGIN REFERENCE CANDIDATE ---\n"
-        f"{reference_candidate}\n"
-        "--- END REFERENCE CANDIDATE ---\n\n"
-        "Tests the candidate must satisfy:\n"
-        "--- BEGIN TESTS ---\n"
-        f"{tests_source}\n"
-        "--- END TESTS ---\n"
-    )
+    spec = build_public_task_spec(task_dir, metadata)
+    head = f"Task ID: {metadata.get('id', task_dir.name)}\n"
+    suffix = str(style.get("user_suffix") or "").strip()
+    if suffix:
+        return head + spec + "\n\n" + suffix + "\n"
+    return head + spec + "\n"
 
 
 def select_task_files(task_files: list[Path], requested_task_ids: list[str]) -> list[Path]:
@@ -122,7 +127,13 @@ def create_run_dir(run_name: str | None) -> Path:
     return run_dir
 
 
-def write_run_artifacts(run_dir: Path, prompt_style: str, notes: str | None, task_files: list[Path]) -> None:
+def write_run_artifacts(
+    run_dir: Path,
+    prompt_style: str,
+    notes: str | None,
+    task_files: list[Path],
+    task_id_file: Path | None = None,
+) -> None:
     prompts_dir = run_dir / "prompts"
     candidates_dir = run_dir / "candidates"
     prompts_dir.mkdir(parents=True, exist_ok=True)
@@ -138,6 +149,9 @@ def write_run_artifacts(run_dir: Path, prompt_style: str, notes: str | None, tas
         "notes": notes,
         "tasks": [],
     }
+    if task_id_file is not None:
+        manifest["task_id_file"] = repo_relative(task_id_file, ROOT)
+        manifest["task_id_file_sha256"] = sha256_text(task_id_file.read_text(encoding="utf-8"))
 
     for task_json in task_files:
         task_dir = task_json.parent
@@ -148,20 +162,57 @@ def write_run_artifacts(run_dir: Path, prompt_style: str, notes: str | None, tas
         prompt_path.write_text(prompt_text)
         candidate_path.write_text("# Paste model output here.\n")
         candidate_map[metadata["id"]] = str(candidate_path.relative_to(run_dir))
-        manifest["tasks"].append(
-            {
-                "id": metadata["id"],
-                "name": metadata["name"],
-                "domain": metadata["domain"],
-                "category": metadata["category"],
-                "prompt_file": str(prompt_path.relative_to(run_dir)),
-                "candidate_file": str(candidate_path.relative_to(run_dir)),
-            }
-        )
+        tests_path = task_dir / str(metadata.get("test_file", "tests.py"))
+        task_entry = {
+            "id": metadata["id"],
+            "name": metadata["name"],
+            "domain": metadata["domain"],
+            "category": metadata["category"],
+            "prompt_file": str(prompt_path.relative_to(run_dir)),
+            "candidate_file": str(candidate_path.relative_to(run_dir)),
+            "prompt_sha256": sha256_file(prompt_path),
+            "task_json_sha256": sha256_file(task_json),
+            "task_json_file": repo_relative(task_json, ROOT),
+        }
+        if tests_path.is_file():
+            task_entry["test_file_sha256"] = sha256_file(tests_path)
+            task_entry["test_file"] = repo_relative(tests_path, ROOT)
+        manifest["tasks"].append(task_entry)
 
     (run_dir / "candidate-map.json").write_text(json.dumps(candidate_map, indent=2) + "\n")
+    system_prompt_path = run_dir / "SYSTEM_PROMPT.txt"
+    system_prompt_path.write_text(style["system_prompt"] + "\n")
+    manifest["system_prompt_sha256"] = sha256_file(system_prompt_path)
+    manifest["evaluation_runner_sha256"] = sha256_file(ROOT / "evals" / "runner" / "run_eval.py")
+    public_records = [
+        {
+            "id": str(task["id"]),
+            "prompt_sha256": str(task["prompt_sha256"]),
+            "task_json_sha256": str(task.get("task_json_sha256", "")),
+        }
+        for task in manifest["tasks"]
+        if task.get("prompt_sha256")
+    ]
+    manifest["public_eval_contract_sha256"] = aggregate_sha256(
+        {"system_prompt_sha256": manifest["system_prompt_sha256"], "tasks": public_records}
+    )
+    scorer_records = [
+        {
+            "id": str(task["id"]),
+            "task_json_sha256": str(task.get("task_json_sha256", "")),
+            "test_file_sha256": str(task["test_file_sha256"]),
+        }
+        for task in manifest["tasks"]
+        if task.get("test_file_sha256") and task.get("test_file")
+    ]
+    manifest["scorer_contract_sha256"] = aggregate_sha256(
+        {"evaluation_runner_sha256": manifest["evaluation_runner_sha256"], "tasks": scorer_records}
+    )
     (run_dir / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
-    (run_dir / "SYSTEM_PROMPT.txt").write_text(style["system_prompt"] + "\n")
+    try:
+        run_dir_ref = run_dir.relative_to(ROOT)
+    except ValueError:
+        run_dir_ref = run_dir  # external run dir (tests, external batches)
     (run_dir / "README.txt").write_text(
         "This run directory captures prompt inputs and candidate output slots for a single eval batch.\n\n"
         f"Prompt style: {prompt_style}\n"
@@ -171,21 +222,28 @@ def write_run_artifacts(run_dir: Path, prompt_style: str, notes: str | None, tas
         "2. For each task, send prompts/<task_id>.txt as the user message.\n"
         "3. Save the raw model code output into candidates/<task_id>.py.\n"
         "4. Score the batch with:\n"
-        f"   python3 evals/runner/run_eval.py --candidate-map {run_dir.relative_to(ROOT) / 'candidate-map.json'}\n"
+        f"   python3 evals/runner/run_eval.py --candidate-map {run_dir_ref / 'candidate-map.json'}\n"
     )
 
 
-
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Prepare a timestamped eval run directory with prompts and candidate slots.")
-    parser.add_argument("--run-name", default=None, help="Optional deterministic run directory name under evals/runs/.")
+    parser = argparse.ArgumentParser(
+        description="Prepare a timestamped eval run directory with prompts and candidate slots."
+    )
+    parser.add_argument(
+        "--run-name",
+        default=None,
+        help="Optional deterministic run directory name under evals/runs/.",
+    )
     parser.add_argument(
         "--prompt-style",
         default="direct",
         choices=sorted(PROMPT_STYLES),
         help="Prompt style variant to materialize for this run.",
     )
-    parser.add_argument("--notes", default=None, help="Optional free-text note recorded in manifest.json.")
+    parser.add_argument(
+        "--notes", default=None, help="Optional free-text note recorded in manifest.json."
+    )
     parser.add_argument(
         "--task-id",
         action="append",
@@ -206,5 +264,10 @@ if __name__ == "__main__":
     requested_task_ids = [*load_task_id_file(args.task_id_file), *args.task_id]
     task_files = select_task_files(discover_tasks(), requested_task_ids)
     run_dir = create_run_dir(args.run_name)
-    write_run_artifacts(run_dir, prompt_style=args.prompt_style, notes=args.notes, task_files=task_files)
-    print(run_dir.relative_to(ROOT))
+    write_run_artifacts(
+        run_dir, prompt_style=args.prompt_style, notes=args.notes, task_files=task_files
+    )
+    try:
+        print(run_dir.relative_to(ROOT))
+    except ValueError:
+        print(run_dir)

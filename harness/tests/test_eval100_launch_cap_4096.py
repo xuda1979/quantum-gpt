@@ -51,23 +51,35 @@ def _launch_flag():
 class Eval100LaunchCapTest(unittest.TestCase):
     def test_reeval_module_default_is_4096(self):
         self.assertGreaterEqual(
-            _reeval_default(), MIN_CAP,
+            _reeval_default(),
+            MIN_CAP,
             REEVAL_REL + " MAX_NEW_TOKENS must be >= " + str(MIN_CAP),
         )
 
     def test_launch_script_does_not_undercut_cap(self):
         launch = _launch_flag()
         self.assertGreaterEqual(
-            launch, MIN_CAP,
-            LAUNCH_REL + " --max-new-tokens " + str(launch)
-            + " under-cuts the " + str(MIN_CAP) + " cap; truncates s97-class "
+            launch,
+            MIN_CAP,
+            LAUNCH_REL
+            + " --max-new-tokens "
+            + str(launch)
+            + " under-cuts the "
+            + str(MIN_CAP)
+            + " cap; truncates s97-class "
             "solutions (C-9038 rebank4 / C-9198).",
         )
         self.assertEqual(
-            launch, _reeval_default(),
-            LAUNCH_REL + " --max-new-tokens (" + str(launch)
-            + ") drifted from " + REEVAL_REL + " default ("
-            + str(_reeval_default()) + "); they must track the same cap.",
+            launch,
+            _reeval_default(),
+            LAUNCH_REL
+            + " --max-new-tokens ("
+            + str(launch)
+            + ") drifted from "
+            + REEVAL_REL
+            + " default ("
+            + str(_reeval_default())
+            + "); they must track the same cap.",
         )
 
 

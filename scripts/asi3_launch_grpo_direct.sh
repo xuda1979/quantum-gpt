@@ -149,7 +149,17 @@ export ENTROPY_TOKEN_CAP="${ASI3_SAPO_ENTROPY_TOKEN_CAP:-256}"
 # here or a persistent-webshell export silently redirects the repair
 # conversion ledger -> count_repair_conversions() sees 0 -> the
 # all_fail_without_repair breaker false-trips (2026-08-24 bug-hunt).
-export REPAIR_CONVERTED_JSONL="${ASI3_SAPO_REPAIR_CONVERTED_JSONL:-$OUT/repair_stage/repair_converted.jsonl}"
+# B-241 (2026-09-15): pin the repair sidecar's tasks dir so the sidecar AND
+# the ensure-script relaunch inherit the launcher path instead of the
+# sidecar's REPO_ROOT-relative fallback (which diverges from NAS_ROOT on the
+# box).
+export FV_GSPO_TASKS_DIR="${ASI3_SAPO_TASKS_DIR:-$NAS_ROOT/evals/tasks}"
+# C-9122 (2026-09-16): the trainer's sys.executable IS the grader runtime --
+# pin it to the C-9066-verified interpreter; ambient TRAINER_PY must never
+# silently choose the grader runtime (persistent-webshell export class).
+export TRAINER_PY="${ASI3_SAPO_TRAINER_PY:-/usr/local/python3.11.14/bin/python3}"
+# B-163/B-159 (2026-09-13): crash-progress credit default.
+export CRASH_PROGRESS_CREDIT="${ASI3_SAPO_CRASH_PROGRESS_CREDIT:-${CRASH_PROGRESS_CREDIT:-1}}"
 
 # Pin the less frequently changed knobs too; stale generic values must never
 # mutate a supposedly canonical ASI3 SAPO launch.
@@ -206,6 +216,15 @@ export ADAPTIVE_TEMP_STEP="${ASI3_SAPO_ADAPTIVE_TEMP_STEP:-0.15}"
 export ADAPTIVE_TEMP_MAX="${ASI3_SAPO_ADAPTIVE_TEMP_MAX:-1.3}"
 
 if [[ "$1" == "launch" ]]; then
+  # B-163/B-159 (2026-09-13): the rollout token budget has a HARD floor. A
+  # budget that cannot close a fence is not a tuning choice, it is a launch
+  # that cannot score. Fail CLOSED before any side effect; override only
+  # deliberately via ASI3_SAPO_MAX_NEW_TOKENS_FLOOR.
+  MAX_NEW_TOKENS_FLOOR="${ASI3_SAPO_MAX_NEW_TOKENS_FLOOR:-2048}"
+  if [[ "$MAX_NEW_TOKENS" =~ ^[0-9]+$ && "$MAX_NEW_TOKENS" -lt "$MAX_NEW_TOKENS_FLOOR" ]]; then
+    echo "[asi3] ERROR: MAX_NEW_TOKENS=$MAX_NEW_TOKENS is below the proven floor $MAX_NEW_TOKENS_FLOOR -- refusing to launch (B-163; deliberate override: ASI3_SAPO_MAX_NEW_TOKENS_FLOOR)" >&2
+    exit 1
+  fi
   required_files=(
     "$MODEL_PATH/config.json"
     "$NAS_ROOT/training/grpo_trainer.py"
@@ -214,14 +233,17 @@ if [[ "$1" == "launch" ]]; then
     "$NAS_ROOT/evals/runner/single_candidate_eval.py"
     "$NAS_ROOT/$BENCHMARK_FILE"
     "$NAS_ROOT/scripts/fv_gspo_repair_sidecar.sh"
+    "$NAS_ROOT/scripts/fv_gspo_repair_stage.py"
     "$NAS_ROOT/scripts/sapo_ensure_repair_sidecar.sh"
     "$NAS_ROOT/training/sidecar_liveness.py"
+    "$NAS_ROOT/scripts/sapo_repair_source_preflight.py"
     "$CONFIG_FILE"
     "$NAS_ROOT/evals/benchmarks/quantum_generalization_holdout_v1.txt"
     "$NAS_ROOT/evals/benchmarks/quantum_generalization_holdout_v2_hard.txt"
     "$NAS_ROOT/evals/benchmarks/quantum_generalization_holdout_v3_multi_framework.txt"
     "$NAS_ROOT/evals/benchmarks/qwen36_27b_quantum_holdout_v1.txt"
     "$NAS_ROOT/evals/benchmarks/sapo_promotion_holdout_v1_18.txt"
+    "$NAS_ROOT/data/generated/quantum_dedup_1k_glm52_soft_distill_v3_verified_nologit_v3/questions_and_code.jsonl"
   )
   for required_file in "${required_files[@]}"; do
     if [[ ! -f "$required_file" ]]; then
@@ -229,6 +251,45 @@ if [[ "$1" == "launch" ]]; then
       exit 1
     fi
   done
+
+  # B-241 (2026-09-13): the repair sidecar rc=2s every poll without
+  # <domain>/qc-NNNN/task.json data -- the 20260913T233607Z leg death. Refuse
+  # the launch when the tree carries no qc task data at all. Ordered AFTER
+  # the required-files loop: a missing tree must fail with the precise
+  # required-file error, not this tree-shape gate.
+  qc_tasks=("$NAS_ROOT"/evals/tasks/*/qc-*/task.json)
+  qc_found=0
+  for _qf in "${qc_tasks[@]}"; do
+    [ -f "$_qf" ] && qc_found=1 && break
+  done
+  if [ "$qc_found" != "1" ]; then
+    echo "PREFLIGHT FAIL: no evals/tasks/<domain>/qc-NNNN/task.json found -- repair stage has nothing to load (B-241)" >&2
+    exit 1
+  fi
+
+  # B-241 (2026-09-15): the repair sidecar converts queued records against a
+  # tasks dir; with NO <domain>/<task>/task.json under it every record would
+  # silently skip each poll and repair_converted.jsonl would never be written
+  # (the all_fail_without_repair breaker then starved). Fail closed BEFORE
+  # anything boots.
+  if [[ ! -d "$FV_GSPO_TASKS_DIR" ]]; then
+    echo "[asi3] ERROR: repair-stage correction sources missing: $FV_GSPO_TASKS_DIR (tasks dir does not exist)" >&2
+    exit 1
+  fi
+  repair_task_count="$(find "$FV_GSPO_TASKS_DIR" -mindepth 3 -maxdepth 3 -name task.json 2>/dev/null | wc -l | tr -d ' ')"
+  if [[ "$repair_task_count" -eq 0 ]]; then
+    echo "[asi3] ERROR: repair-stage correction sources missing: $FV_GSPO_TASKS_DIR (no <domain>/<task>/task.json found)" >&2
+    exit 1
+  fi
+  # B-241 preflight: every launch-manifest task's repair correction must be
+  # EARNABLE on this box (declared candidate_file, or the qc-N reference
+  # line usable) -- the earnability rule is IMPORTED from the repair stage
+  # itself so this gate cannot drift from the consumer's definition. The
+  # gate verifies by COMPILING record code, never executing it (the exec
+  # variant burned 75+ CPU-min per process, 2026-09-20).
+  python3 "$NAS_ROOT/scripts/sapo_repair_source_preflight.py" \
+    --manifest "$NAS_ROOT/$BENCHMARK_FILE" \
+    --tasks-dir "$FV_GSPO_TASKS_DIR"
 
   # The generated manifest records the exact third-party imports used by its
   # verified reference programs. Refuse to spend a rollout on tasks whose

@@ -93,6 +93,8 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from evals.runner.public_task_spec import build_public_task_spec  # noqa: E402
+
 # ── standard 12-task IDs used throughout the R&D cycle ───────────────────────
 STANDARD_12_TASK_IDS = [
     "quantum_gate_alias_normalization",
@@ -390,24 +392,11 @@ def render_prompt(backend: Any, task_prompt: str) -> str:
 
 
 def build_task_prompt(task_dir: Path, meta: dict[str, Any]) -> str:
-    tests = (task_dir / meta.get("test_file", "tests.py")).read_text(encoding="utf-8")
-    candidate_name = meta.get("candidate_file", "candidate.py")
-    existing = (
-        (task_dir / candidate_name).read_text(encoding="utf-8")
-        if (task_dir / candidate_name).exists()
-        else ""
-    )
-    return (
-        f"Task: {meta['name']}\n"
-        f"Domain: {meta['domain']}\n"
-        f"Category: {meta['category']}\n\n"
-        "Implement candidate.py so the tests pass. Return only Python source.\n\n"
-        "Tests:\n```python\n"
-        f"{tests[:9000]}\n"
-        "```\n\nExisting/reference API shape:\n```python\n"
-        f"{existing[:3000]}\n"
-        "```\n"
-    )
+    # 2026-09-20: the model sees the PUBLIC task spec only. The previous body
+    # pasted the full tests.py source and the reference candidate file into
+    # the prompt -- the model could pass by echoing scorer artifacts
+    # (prompt answer-leak class).
+    return build_public_task_spec(task_dir, meta)
 
 
 def sanitize_code(text: str) -> str:

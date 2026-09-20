@@ -1142,7 +1142,7 @@ def build_prompt(task: dict, research_methods: list[Any] | None = None) -> str:
     else:
         parts.append(f"Task: {meta.get('name', task['task_dir'].name)}")
 
-    parts.append(f"Task ID: {meta.get('id', task['task_dir'].name)}")
+    parts.append(f"Task id: {meta.get('id', task['task_dir'].name)}")
     parts.append(
         f"Domain: {meta.get('domain', 'unknown')}\nCategory: {meta.get('category', 'unknown')}"
     )
@@ -1178,6 +1178,7 @@ def build_prompt(task: dict, research_methods: list[Any] | None = None) -> str:
         # and "Return only the complete Python source, without markdown fences
         # or explanation." The old "Stop immediately" wording caused EOS-collapse.
         "Write a Python file that satisfies the public task contract; hidden tests will verify it.\n"
+        "Return only the final Python code.\n"
         "Return only the candidate file contents.\n"
         "Implement the requested file. Hidden tests will verify behavior.\n"
         "Return only the complete Python source, without markdown fences or explanation."
