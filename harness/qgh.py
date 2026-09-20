@@ -91,8 +91,8 @@ CLAUDE = os.environ.get("QGH_CLAUDE", "/Users/daxu/homebrew/bin/claude")
 # Worker model: cmri GLM-5.2 quota is exhausted (额度耗尽); zhipu GLM-4.7 is
 # the verified working fallback (tested rc=0, both prompt-arg and stdin).
 # Override at runtime via QGH_PROVIDER / QGH_WORKER_MODEL env vars.
-CLAUDE_ARGS = os.environ.get("QGH_CLAUDE_ARGS", "-p z -m glm-4.7")
-WORKER_MODEL_DEFAULT = "glm-4.7"
+CLAUDE_ARGS = os.environ.get("QGH_CLAUDE_ARGS", "-p huanxin -m dp4")
+WORKER_MODEL_DEFAULT = "dp4"
 WORKER_MODEL = os.environ.get("QGH_WORKER_MODEL", WORKER_MODEL_DEFAULT)
 CRON_MARK = "qgh.py tick"
 MAX_LIVE_AGENTS = 100  # user mandate: agent working limit is 100
