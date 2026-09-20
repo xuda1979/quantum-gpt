@@ -1,0 +1,85 @@
+{
+    "objective": "LoRA adapter on Qwen3.8-27B that passes 18/18 on the frozen 18-task quantum holdout, fail-closed verified (adapter-applied + probe-differs, candidates differ from base), and beats base.",
+    "target": "18/18 pass_adapter + beats_base=true + fail-closed markers + independent second-leg reconfirm",
+    "created_utc": "2026-09-20T07:15:00Z",
+    "last_updated": "2026-09-20T08:21:55Z",
+    "phase": "pre-re-eval: C-9378(markers)+C-9379(truncation) running, C-9402(sha-pin) ready. Queue vaporized 3x, rebuilt. All deps resolve.",
+    "iteration_count": 0,
+    "current_best_pass": "3/18",
+    "last_eval_ts": "pre-fix (s97 leg4, superseded)",
+    "next_action": "C-9500 training + C-9502 fleet -> C-9501 eval -> C-9503 markers -> C-9504 second-leg -> goal_done",
+    "critical_path": [
+        {
+            "step": 1,
+            "card": "C-9500",
+            "status": "running",
+            "desc": "launch/resume GRPO training toward 18/18"
+        },
+        {
+            "step": 2,
+            "card": "C-9502",
+            "status": "running",
+            "desc": "restore fleet readiness"
+        },
+        {
+            "step": 3,
+            "card": "C-9501",
+            "status": "ready",
+            "desc": "fresh fail-closed holdout verdict"
+        },
+        {
+            "step": 4,
+            "card": "C-9503",
+            "status": "ready",
+            "desc": "compute fail-closed markers from probe data"
+        },
+        {
+            "step": 5,
+            "card": "C-9504",
+            "status": "ready",
+            "desc": "independent second-leg reconfirmation"
+        }
+    ],
+    "blocking_cards": [
+        "C-9378 (running): markers",
+        "C-9379 (running): truncation",
+        "C-9402 (ready): sha-pin"
+    ],
+    "gap_to_goal": {
+        "current": "3/18 (pre-fix superseded)",
+        "target": "18/18",
+        "gap": 15,
+        "note": "13/15 likely fixable with truncation+sanitize. Remaining needs v4 training."
+    },
+    "goal_done_criteria_status": {
+        "criterion_1_verdict_18_18_beats_base": {
+            "met": false,
+            "best": "3/18",
+            "card": "C-9394"
+        },
+        "criterion_2_fail_closed_markers": {
+            "met": false,
+            "card": "C-9378 (running)"
+        },
+        "criterion_3_independent_second_leg": {
+            "met": false,
+            "card": "C-9391"
+        }
+    },
+    "score_history": [
+        {
+            "checkpoint": "s26 (step 000026)",
+            "pass_adapter": "3/18",
+            "pass_base": "1/18",
+            "beats_base": true,
+            "note": "statistical tie with s97, superseded"
+        },
+        {
+            "checkpoint": "s97 (step 000097)",
+            "pass_adapter": "3/18",
+            "pass_base": "1/18",
+            "beats_base": true,
+            "note": "superseded pre-sha-pin, needs re-eval with fixed scorer+truncation"
+        }
+    ]
+}
