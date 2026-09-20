@@ -1291,6 +1291,15 @@ def auto_queue_training(state_dir):
                     return None
                 # Dead PID: this card is stale, do not block new training
         # Need a training card
+        # C-9538: deduplicate -- skip if there are already >= 3 bounced
+        # trainer-ops cards from prior auto-queue attempts (they will be
+        # auto-retired by auto_retire_high_bounce, but until then we don't
+        # need to pile on more).
+        _bounced_trainer_count = sum(
+            1 for c in queue["cards"] if c.get("lane") == "trainer-ops" and c["status"] == "bounced"
+        )
+        if _bounced_trainer_count >= 3:
+            return None
         card = new_card(
             title="Auto: launch/resume GRPO training with v10 benchmark (18/18 holdout coverage) toward 18/18",
             lane="trainer-ops",
@@ -3313,6 +3322,23 @@ def cmd_tick(_args):
         # dispatch (skip only if this very process is the wedged-tick killer)
         r = self_spawn(["dispatch"], timeout=300)
         dispatch_note = (r.stdout or "").strip()
+        # C-9539: track zero-dispatch streak for productivity monitoring
+        _ops = load_ops(STATE)
+        if "dispatched 0" in dispatch_note or "dispatched 0 workers" in dispatch_note:
+            _ops["zero_dispatch_streak"] = _ops.get("zero_dispatch_streak", 0) + 1
+        else:
+            _ops["zero_dispatch_streak"] = 0
+        save_ops(STATE, _ops)
+        # If 5+ consecutive zero-dispatch ticks, force aggressive cleanup
+        if _ops.get("zero_dispatch_streak", 0) >= 5:
+            try:
+                _n_cleaned = auto_cleanup_stale_running(STATE)
+                if _n_cleaned:
+                    event(STATE, "zero_dispatch_force_cleanup", {"count": _n_cleaned})
+                    _ops["zero_dispatch_streak"] = 0
+                    save_ops(STATE, _ops)
+            except Exception:
+                pass
         # standup
         queue = load_queue(STATE)
         fleet = load_fleet(STATE)
