@@ -59,11 +59,50 @@ def extract_code(response: str) -> str:
 # surfaced by the cap_run_with_fence_opener diagnostic instead.
 _CODE_FENCE_OPEN_RE = re.compile(r"```[^\S\r\n]*[A-Za-z0-9_+.-]*[^\S\r\n]*\r?\n", re.IGNORECASE)
 
+# 2026-09-13 (second fence-collapse pass): a fenced body counts as substantial
+# when it carries a STATEMENT MARKER (assignment, call, colon, bracket, quote,
+# literal) or at least MIN_FENCE_CONTENT_NONSPACE non-whitespace characters.
+# Length alone cannot separate the cases -- the observed spurious body ("tery",
+# 4 non-whitespace chars) is longer than the 3-char real answer "x = 1" that
+# adjacent suites pin as must-close, so the marker check is primary and the
+# char count is a backstop for long marker-free expressions (e.g. "x" * 200).
+MIN_FENCE_CONTENT_NONSPACE = 5
+_CODE_BODY_MARKER_RE = re.compile(
+    r"[=:()\[\]{}'\".,]|->|\bdef\b|\bclass\b|\bimport\b|\bfrom\b|\breturn\b"
+    r"|\bif\b|\bfor\b|\bwhile\b|\bprint\b|\blambda\b"
+)
+
+
+def _fence_body_is_substantial(text: str, opening_end: int) -> bool:
+    """Check whether the fenced body after *opening_end* is a real program."""
+    close = text.find("```", opening_end)
+    if close < 0:
+        return False
+    body = text[opening_end:close]
+    non_ws = "".join(body.split())
+    if len(non_ws) >= MIN_FENCE_CONTENT_NONSPACE:
+        return True
+    return bool(_CODE_BODY_MARKER_RE.search(body))
+
 
 def has_closed_code_fence(text: str) -> bool:
-    """Return true only after a Markdown code fence has been closed."""
+    """Return true only after a Markdown code fence with substantial body has been closed."""
     opening = _CODE_FENCE_OPEN_RE.search(text)
-    return opening is not None and text.find("```", opening.end()) >= 0
+    if opening is None:
+        return False
+    # Scan fences: skip non-substantial bodies, find the first substantial close.
+    pos = opening.end()
+    while True:
+        close = text.find("```", pos)
+        if close < 0:
+            return False
+        if _fence_body_is_substantial(text, pos):
+            return True
+        # Not substantial -- look for the next fence opener after this close.
+        next_open = _CODE_FENCE_OPEN_RE.search(text, close + 3)
+        if next_open is None:
+            return False
+        pos = next_open.end()
 
 
 def truncate_at_closing_fence(text: str) -> str:
@@ -81,14 +120,25 @@ def truncate_at_closing_fence(text: str) -> str:
 
     Returns the text unchanged when no closing fence exists (the caller's
     EOS/truncation backstops apply, exactly as in the decode path).
+
+    2026-09-13: skips non-substantial fenced bodies (short garbage) and cuts
+    at the first *substantial* closing fence, consistent with
+    ``has_closed_code_fence``.
     """
     opening = _CODE_FENCE_OPEN_RE.search(text)
     if opening is None:
         return text
-    close = text.find("```", opening.end())
-    if close < 0:
-        return text
-    return text[: close + 3]
+    pos = opening.end()
+    while True:
+        close = text.find("```", pos)
+        if close < 0:
+            return text
+        if _fence_body_is_substantial(text, pos):
+            return text[: close + 3]
+        next_open = _CODE_FENCE_OPEN_RE.search(text, close + 3)
+        if next_open is None:
+            return text
+        pos = next_open.end()
 
 
 class StopAfterClosedCodeFence(StoppingCriteria):
@@ -301,9 +351,7 @@ def rollout_suppress_logits_processor(suppress_token_ids: set[int] | None):
     except ImportError:
         return None
 
-    return SuppressTokensLogitsProcessor(
-        sorted(int(t) for t in suppress_token_ids)
-    )
+    return SuppressTokensLogitsProcessor(sorted(int(t) for t in suppress_token_ids))
 
 
 def append_fence_stop_markers(

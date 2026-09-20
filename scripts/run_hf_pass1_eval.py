@@ -121,6 +121,162 @@ def load_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+# ---------------------------------------------------------------------------
+# SAPO adapter-key remapping and integrity helpers
+# ---------------------------------------------------------------------------
+
+
+def _remap_sapo_keys(keys: list[str]) -> list[str]:
+    """Insert ``language_model`` segment into text-only-namespace SAPO keys.
+
+    The full multimodal model keeps every language-model weight under
+    ``model.model.language_model.*``; a text-only-namespace key that is NOT
+    remapped is silently dropped by peft -> partial (or zero) merge.
+    Keys that already contain ``language_model`` are left untouched, as are
+    non-adapter keys (no SAPO-namespace prefix).
+    """
+    remapped: list[str] = []
+    for key in keys:
+        if "language_model" in key:
+            remapped.append(key)
+            continue
+        # Three-segment prefix: base_model.model.model.<rest>
+        if key.startswith("base_model.model.model."):
+            rest = key[len("base_model.model.model.") :]
+            remapped.append(f"base_model.model.model.language_model.{rest}")
+        # Two-segment prefix: base_model.model.<rest>
+        elif key.startswith("base_model.model."):
+            rest = key[len("base_model.model.") :]
+            remapped.append(f"base_model.model.language_model.{rest}")
+        else:
+            remapped.append(key)
+    return remapped
+
+
+def _missing_loaded_tensors(model: Any, state_dict: dict[str, Any]) -> list[str]:
+    """Report state-dict keys that were silently dropped by peft.
+
+    On-disk keys (no ``.default``) must match in-model names (with it).
+    Returns a list of missing tensor names (without the ``base_model.`` prefix).
+    """
+    # Build a set of model param names, stripping the ``.default`` segment
+    # that peft inserts (e.g. ``lora_B.default.weight`` -> ``lora_B.weight``)
+    # so on-disk keys (without ``.default``) can match.
+    model_param_names: set[str] = set()
+    for name, _ in model.named_parameters():
+        model_param_names.add(name.replace(".default", ""))
+
+    missing: list[str] = []
+    for key in state_dict:
+        cmp_key = key.replace(".default", "")
+        if cmp_key in model_param_names:
+            continue
+        # Not found -- report with ``base_model.`` prefix stripped
+        report = key.replace(".default", "")
+        if report.startswith("base_model."):
+            report = report[len("base_model.") :]
+        missing.append(report)
+    return missing
+
+
+def _state_inert(state_dict: dict[str, Any]) -> bool:
+    """Check whether a LoRA state dict is effectively inert (identity).
+
+    A LoRA delta is inert when every lora_B tensor is zero (the product
+    lora_A @ lora_B is zero regardless of lora_A).  Non-LoRA tensors
+    (modules_to_save) cannot be proven inert.  An empty checkpoint fails
+    closed (returns False).
+    """
+    if not state_dict:
+        return False
+
+    has_lora_b = False
+    for key, tensor in state_dict.items():
+        if "lora_B" in key:
+            has_lora_b = True
+            if hasattr(tensor, "abs") and tensor.abs().max().item() > 0:
+                return False
+        elif "lora_A" not in key:
+            # Non-LoRA tensor (e.g. modules_to_save) -- cannot prove inert
+            return False
+    return has_lora_b
+
+
+def _adapter_effectively_zero(merged: Any, base: Any) -> bool:
+    """Check whether the merged model is effectively identical to base.
+
+    Parameters that are the SAME object (shared via submodule reference) are
+    skipped.  For adapter-only parameters (not in base):
+    - lora_B tensors must be zero (the delta lora_A @ lora_B is then zero
+      regardless of lora_A).
+    - Any non-lora_B adapter parameter (modules_to_save-style) must be zero
+      (it represents a direct weight replacement, not a factored delta).
+    """
+    base_param_ids: set[int] = set()
+    for _, param in base.named_parameters():
+        base_param_ids.add(id(param))
+
+    for name, param in merged.named_parameters():
+        if id(param) in base_param_ids:
+            continue
+        # Adapter-only parameter
+        is_zero = not hasattr(param, "abs") or param.abs().max().item() == 0
+        if is_zero:
+            continue
+        # Nonzero: only lora_A is allowed (delta is lora_A @ lora_B, so
+        # lora_A alone does not change the output when lora_B is zero).
+        if "lora_A" in name:
+            continue
+        return False
+
+    return True
+
+
+def _probe_differs(base: Any, adapter: Any, probe: str, backend: Any) -> bool:
+    """Check whether the adapter changes first-step logits vs base.
+
+    Greedy tokens can stay identical for a weak-but-real delta; logits cannot.
+    Compares the first-step scores (logits) from ``model.generate`` with
+    ``return_dict_in_generate=True, output_scores=True``.
+    """
+    import torch
+
+    def _first_scores(model: Any, text: str) -> Any:
+        tokenizer = backend.text_backend
+        inputs = tokenizer(text, return_tensors="pt")
+        with torch.inference_mode():
+            output = model.generate(
+                **inputs,
+                max_new_tokens=1,
+                return_dict_in_generate=True,
+                output_scores=True,
+            )
+        if output.scores is not None and len(output.scores) > 0:
+            return output.scores[0]
+        return None
+
+    base_scores = _first_scores(base, probe)
+    adapter_scores = _first_scores(adapter, probe)
+
+    if base_scores is None or adapter_scores is None:
+        return False
+
+    return bool(base_scores.ne(adapter_scores).any())
+
+
+def verify_prompt_contract(run_dir: Path, manifest: dict[str, Any]) -> str:
+    """Verify that all frozen prompt/scorer hashes in *manifest* still match.
+
+    Delegates to ``evals.runner.frozen_contract.verify_frozen_eval_contract``.
+    Returns the ``public_eval_contract_sha256`` on success, raises
+    ``SystemExit`` on any mismatch.
+    """
+    from evals.runner.frozen_contract import verify_frozen_eval_contract
+
+    result = verify_frozen_eval_contract(run_dir, manifest, root=ROOT, verify_runner=True)
+    return str(result["public_eval_contract_sha256"])
+
+
 def write_candidate_map(run_dir: Path, tasks: list[dict[str, Any]]) -> Path:
     candidate_map = {
         str(task["id"]): str(task["candidate_file"])
