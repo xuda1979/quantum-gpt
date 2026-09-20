@@ -1,5 +1,8 @@
 """Card C-9038: truncation fail-closed (P0 ceiling).
 
+NOTE: test_slice_record_truncated_true_on_cap_hit imports the runner
+module (torch + transformers + peft = ~14s), so it needs a 120s timeout.
+
 The canonical 18-task runner capped completions at --max-new-tokens
 (default 384) with NO truncation evidence in the slice records and NO
 scorer handling: a cap-cut completion could bank a pass, so 18/18 was
