@@ -927,7 +927,7 @@ def _reap():
                 outcome = "harvested"
         ops = load_ops(STATE)
         if environmental:
-            note_spawn_result(STATE, ops, ok=False, card=a.get("card"))
+            note_spawn_result(STATE, ops, ok=False, card=a.get("card"), environmental=True)
             save_ops(STATE, ops)
             event(
                 STATE,
@@ -974,7 +974,20 @@ def _reap():
                     card["requeued_utc"] = H.now_iso()
                     event(STATE, "gate_skip_requeued", {"card": card["id"]})
                 else:
-                    release_card(card, "bounced", tail[-1] if tail else "", "worker blocked")
+                    # C-9476: if the BLOCKED text carries an environmental
+                    # signature (transport, connection, timeout, etc.), re-arm
+                    # WITHOUT a bounce strike -- the box being down is not the
+                    # card fault.
+                    _blocked_text = (text or "").lower()
+                    if any(sig in _blocked_text for sig in ENV_BOUNCE_SIGNATURES):
+                        card["status"] = "ready"
+                        card["claimed_by"] = None
+                        card["claimed_utc"] = None
+                        card["deadline_utc"] = None
+                        card["requeued_utc"] = H.now_iso()
+                        event(STATE, "env_blocked_requeued", {"card": card["id"]})
+                    else:
+                        release_card(card, "bounced", tail[-1] if tail else "", "worker blocked")
         elif verdict == "PARTIAL" and over:
             if card:
                 release_card(

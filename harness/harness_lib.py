@@ -1379,7 +1379,7 @@ def save_ops(state_dir, ops):
     save_json(os.path.join(state_dir, "OPS.json"), ops)
 
 
-def note_spawn_result(state_dir, ops, ok, card=None):
+def note_spawn_result(state_dir, ops, ok, card=None, environmental=False):
     """Track consecutive spawn failures; trip backoff after N in a row.
 
     card=None -> legacy GLOBAL counter (pre-C-9126 shape). card=<id> ->
@@ -1414,15 +1414,17 @@ def note_spawn_result(state_dir, ops, ok, card=None):
             e["backoff_until_utc"] = (
                 datetime.now(timezone.utc) + timedelta(minutes=BACKOFF_MIN)
             ).strftime("%Y-%m-%dT%H:%M:%SZ")
-        # Also increment the global counter so backoff_active() (which
-        # checks the global) can trip for any card's repeated failures.
-        # Without this, environmental deaths (API errors) increment only
-        # the per-card counter and the global backoff never arms.
-        ops[CONSECUTIVE_SPAWN_FAIL_KEY] = ops.get(CONSECUTIVE_SPAWN_FAIL_KEY, 0) + 1
-        if ops[CONSECUTIVE_SPAWN_FAIL_KEY] >= SPAWN_FAIL_THRESHOLD:
-            ops[BACKOFF_PATH_KEY] = (
-                datetime.now(timezone.utc) + timedelta(minutes=BACKOFF_MIN)
-            ).strftime("%Y-%m-%dT%H:%M:%SZ")
+        # C-9449: environmental failures (box down, API error) must NOT trip
+        # the global backoff — they are infrastructure problems, not card
+        # faults. Non-box-bound lanes (planner, fixer, qa-steward) can still
+        # make progress when boxes are down, and the global backoff blocks
+        # them all. Only TRUE spawn failures increment the global counter.
+        if not environmental:
+            ops[CONSECUTIVE_SPAWN_FAIL_KEY] = ops.get(CONSECUTIVE_SPAWN_FAIL_KEY, 0) + 1
+            if ops[CONSECUTIVE_SPAWN_FAIL_KEY] >= SPAWN_FAIL_THRESHOLD:
+                ops[BACKOFF_PATH_KEY] = (
+                    datetime.now(timezone.utc) + timedelta(minutes=BACKOFF_MIN)
+                ).strftime("%Y-%m-%dT%H:%M:%SZ")
     return ops
 
 

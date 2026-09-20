@@ -16,6 +16,7 @@ os.environ["QGH_STATE_DIR"] = tempfile.mkdtemp(prefix="qgh-int-")
 sys.path.insert(0, HARNESS_DIR)
 import harness_lib as H  # noqa: E402
 import qgh  # noqa: E402
+
 qgh.STATE = os.environ["QGH_STATE_DIR"]  # rebind in case conftest already imported qgh
 
 
@@ -158,14 +159,16 @@ class TestLifecycle(unittest.TestCase):
         self.assertEqual(card["status"], "ready")
         self.assertEqual(card["bounce_count"], 0)  # NO strike
         ops = H.load_ops(qgh.STATE)
-        self.assertEqual(ops["consecutive_spawn_failures"], 1)
-        # second environmental death trips backoff
+        # C-9449: environmental deaths must NOT trip the global backoff
+        self.assertEqual(ops["consecutive_spawn_failures"], 0)
+        self.assertFalse(H.backoff_active(ops))
+        # second environmental death still does not trip global backoff
         c2 = seed_card()
         _, _, p2 = running_agent(c2, "exit 0\n")
         p2.wait()
         qgh._reap()
         ops = H.load_ops(qgh.STATE)
-        self.assertTrue(H.backoff_active(ops))
+        self.assertFalse(H.backoff_active(ops), "environmental deaths must not trip global backoff")
 
     def test_overrun_hung_worker_killed_and_struck(self):
         c = seed_card()
@@ -577,7 +580,8 @@ class TestApiErrorClassification(unittest.TestCase):
         self.assertEqual(card["status"], "ready")
         self.assertEqual(card["bounce_count"], 0, "API outage must not strike the card")
         ops = H.load_ops(qgh.STATE)
-        self.assertEqual(ops["consecutive_spawn_failures"], 1)
+        # C-9449: environmental (API outage) must not increment global counter
+        self.assertEqual(ops["consecutive_spawn_failures"], 0)
 
 
 class TestDispatchDeadlineIntegrity(unittest.TestCase):
