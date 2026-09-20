@@ -248,8 +248,8 @@ def save_queue(state_dir, queue):
         _disk_n = len(_verify.get("cards", []))
         if _disk_n < _pre_save_n:
             raise RuntimeError(
-                "save_queue integrity check failed: disk has %d cards "
-                "but memory had %d -- a clobbering write vaporized cards" % (_disk_n, _pre_save_n)
+                f"save_queue integrity check failed: disk has {_disk_n} cards "
+                f"but memory had {_pre_save_n} -- a clobbering write vaporized cards"
             )
     except (OSError, ValueError):
         pass  # verify is best-effort; the save itself already happened

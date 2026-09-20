@@ -112,7 +112,7 @@ def detect_no_progress(history, n=DEFAULT_PLATEAU_ROUNDS):
     if len(passes) < n + 1:
         return record
     window = passes[-(n + 1) :]
-    deltas = [b - a for a, b in zip(window, window[1:])]
+    deltas = [b - a for a, b in zip(window, window[1:], strict=False)]
     record["rounds"] = [r.get("round") for r in entries[-n:]]
     if all(d <= 0 for d in deltas):
         record["plateau"] = True
@@ -171,12 +171,11 @@ def escalation_card_spec(history, n=DEFAULT_PLATEAU_ROUNDS):
     rec = detect_no_progress(history, n=n)
     last_pass = rec["last_pass"]
     return {
-        "title": "Escalation: %d-round no-progress plateau at %s/18 (C-0070 detector)"
-        % (n, last_pass),
+        "title": f"Escalation: {n}-round no-progress plateau at {last_pass}/18 (C-0070 detector)",
         "lane": "planner",
         "why": (
-            "pass_adapter did not increase for %d consecutive rounds; the "
-            "eval-mine-train loop is idling short of 18/18" % n
+            f"pass_adapter did not increase for {n} consecutive rounds; the "
+            "eval-mine-train loop is idling short of 18/18"
         ),
         "acceptance": [
             "diagnose the stalled stage via LADDER entry/exit criteria",
