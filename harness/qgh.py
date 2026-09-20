@@ -2023,7 +2023,7 @@ def cmd_done_check(_args):
 
 # ----------------------------------------------------------------------------- never-stop
 def cmd_install_cron(_args):
-    line = "*/10 * * * * cd {} && /usr/bin/python3 {} tick >> {} 2>&1".format(
+    line = "*/5 * * * * cd {} && /usr/bin/python3 {} tick >> {} 2>&1".format(
         REPO,
         QGH,
         os.path.join(STATE, "tick.log"),
@@ -2092,7 +2092,7 @@ def cmd_install_launchd(_args):
     """Second, independent scheduler: survives crontab rewrites AND reboots."""
     ok_all = True
     for label, seconds, arg in (
-        (LAUNCHD_LABEL_TICK, 600, "tick"),
+        (LAUNCHD_LABEL_TICK, 300, "tick"),
         (LAUNCHD_LABEL_HEAL, 1800, "heal"),
     ):
         log = os.path.join(STATE, f"launchd-{label}.log")
