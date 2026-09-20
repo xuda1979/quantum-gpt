@@ -45,6 +45,7 @@ class TestAutoRefreshStaleProbes(unittest.TestCase):
     """The tick must detect stale probes and auto-refresh them."""
 
     def setUp(self):
+        self._old_state = qgh.STATE
         self.tmp = tempfile.mkdtemp(prefix="qgh_c9148_")
         qgh.STATE = self.tmp
         os.makedirs(os.path.join(self.tmp, "probes"), exist_ok=True)
@@ -52,6 +53,7 @@ class TestAutoRefreshStaleProbes(unittest.TestCase):
     def tearDown(self):
         import shutil
 
+        qgh.STATE = self._old_state
         shutil.rmtree(self.tmp, ignore_errors=True)
 
     def test_stale_probes_trigger_refresh(self):
