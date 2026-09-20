@@ -1421,6 +1421,45 @@ class StallDetector:
         return self.is_stalled()
 
 
+class GoalProgressTracker:
+    """C-9540: Track best pass count and detect goal-level stalls.
+
+    When the best pass_adapter count has not improved for N ticks,
+    the harness should take corrective action (requeue training,
+    alert, change strategy).
+    """
+
+    def __init__(self, stall_threshold_ticks=20):
+        self.stall_threshold_ticks = stall_threshold_ticks
+        self._best_pass = 0
+        self._ticks_since_improvement = 0
+        self._history = []  # list of (tick_no, best_pass)
+
+    def record_tick(self, tick_no, best_pass):
+        """Record the best pass count seen at this tick."""
+        if best_pass > self._best_pass:
+            self._best_pass = best_pass
+            self._ticks_since_improvement = 0
+        else:
+            self._ticks_since_improvement += 1
+        self._history.append((tick_no, best_pass))
+
+    def is_stalled(self):
+        """True when no improvement for stall_threshold_ticks ticks."""
+        return self._ticks_since_improvement >= self.stall_threshold_ticks
+
+    def best_pass(self):
+        return self._best_pass
+
+    def ticks_since_improvement(self):
+        return self._ticks_since_improvement
+
+    def status(self):
+        if self.is_stalled():
+            return f"stalled ({self._ticks_since_improvement} ticks without improvement, best={self._best_pass}/18)"
+        return f"progressing (best={self._best_pass}/18, {self._ticks_since_improvement} ticks since last improvement)"
+
+
 # ----------------------------------------------------------------------------- done-check
 def load_goal(state_dir):
     return load_json(os.path.join(state_dir, "GOAL.json"), {})
@@ -4511,6 +4550,7 @@ H = _types.SimpleNamespace(
     auto_requeue_zero_bounce=auto_requeue_zero_bounce,
     auto_cleanup_stale_running=auto_cleanup_stale_running,
     auto_retire_high_bounce=auto_retire_high_bounce,
+    GoalProgressTracker=GoalProgressTracker,
     backoff_active=backoff_active,
     bank_scorer_sha_pins=bank_scorer_sha_pins,
     bounce_dead_running_cards=bounce_dead_running_cards,
