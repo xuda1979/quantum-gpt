@@ -53,6 +53,7 @@ def _sdk_ok():
         card="C-9066",
         artifact="sdk_positive_control",
         ok=True,
+        utc=TS,
         interpreters=[
             dict(
                 interpreter="/usr/bin/python3", qiskit=True, pennylane=True, cirq=True, control_rc=0

@@ -41,6 +41,7 @@ from datetime import datetime, timedelta, timezone
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import harness_lib as H  # noqa: E402
+import quota_preflight_gate as QPG  # noqa: E402  (C-9132)
 from harness_lib import (  # noqa: E402
     BACKOFF_PATH_KEY,
     LANES,
@@ -66,6 +67,7 @@ from harness_lib import (  # noqa: E402
     note_spawn_result,
     now_iso,
     pid_alive,
+    purge_card,
     ready_cards,
     release_card,
     render_progress,
@@ -85,6 +87,7 @@ REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 STATE = os.environ.get("QGH_STATE_DIR") or os.path.join(REPO, "harness", "state")
 QGH = os.path.join(REPO, "harness", "qgh.py")
 CLAUDE = os.environ.get("QGH_CLAUDE", "/Users/daxu/homebrew/bin/claude")
+CLAUDE_ARGS = os.environ.get("QGH_CLAUDE_ARGS", "-p cmri -m GLM-5.2")
 CRON_MARK = "qgh.py tick"
 MAX_LIVE_AGENTS = 100  # user directive 2026-09-19: maximize parallel agents
 TICK_LOCK = os.path.join(STATE, "locks", "tick.lock")
@@ -204,7 +207,7 @@ def cmd_seed(_args):
 
     def seed(title, lane, why, acc, **kw):
         if title not in titles:
-            add_card(queue, new_card(title, lane, why, acc, **kw))
+            add_card(queue, new_card(title, lane, why, acc, **kw), state_dir=STATE)
             return 1
         return 0
 
@@ -278,7 +281,7 @@ def cmd_card(args):
         deps=args.dep,
         priority=args.priority,
     )
-    add_card(queue, card)
+    add_card(queue, card, state_dir=STATE)
     save_queue(STATE, queue)
     event(
         STATE,
@@ -318,6 +321,39 @@ def cmd_card_requeue(args):
         sys.exit(1)  # fail closed: a refusal must never look like success
 
 
+def cmd_card_remove(args):
+    """C-9139: purge a card from the queue.  Refuses to purge a running
+    card whose claimed_by pid is still alive (orphan guard).  Removes
+    dead/ready/bounced cards unconditionally."""
+    queue = load_queue(STATE)
+    fleet = load_fleet(STATE)
+    removed, refused = [], []
+    for cid in args.ids:
+        card = find_card(queue, cid)
+        if card is None:
+            refused.append(f"{cid}: not found")
+            continue
+        # Also stop any fleet entry for this card
+        ok = purge_card(queue, cid)
+        if ok:
+            removed.append(cid)
+            # Stop fleet agent entries for the purged card
+            for a in fleet.get("agents", []):
+                if a.get("card") == cid and a.get("status") == "running":
+                    a["status"] = "stopped"
+            event(STATE, "card_purged", {"id": cid, "title": card.get("title", "")})
+            print(f"PURGED {cid}")
+        else:
+            refused.append(f"{cid}: running with live pid, refuse to orphan")
+    save_queue(STATE, queue)
+    save_fleet(STATE, fleet)
+    for r in refused:
+        print("REFUSED " + r)
+    print(f"purged {len(removed)} card(s), refused {len(refused)}")
+    if refused:
+        sys.exit(1)
+
+
 def cmd_queue(_args):
     queue = load_queue(STATE)
     rows = sorted(queue["cards"], key=lambda c: (c["priority"], c["created_utc"]))
@@ -345,6 +381,7 @@ def cmd_fleet(_args):
 
 # ----------------------------------------------------------------------------- dispatch
 WORKER_ENV_FILES = (
+    "/Users/daxu/.codex/secrets/cmri.env",
     "/Users/daxu/.codex/secrets/huanxin.env",
     "/Users/daxu/.claude-mcp-cron/claude_headless.env",
     "/Users/daxu/.claude-mcp-cron/claude_headless_override.env",
@@ -354,7 +391,7 @@ WORKER_ENV_FILES = (
 def worker_command():
     """bash: source credential files, then exec claude (pid stays the worker's)."""
     srcs = " ".join(f'[ -f "{f}" ] && source "{f}";' for f in WORKER_ENV_FILES)
-    return ["/bin/bash", "-c", f"{srcs} exec '{CLAUDE}' --print"]
+    return ["/bin/bash", "-c", f"{srcs} exec '{CLAUDE}' {CLAUDE_ARGS} --print"]
 
 
 def dispatch_target_ok(queue, card, lanes=None, claim_in_progress=False):
@@ -629,7 +666,13 @@ def cmd_dispatch(args):
         pass  # explicit lane request overrides the gate (operator escape hatch)
     live = [a for a in fleet["agents"] if a.get("status") == "running" and pid_alive(a.get("pid"))]
     n_spawned = 0
+    spawned_cards = []
     lanes = args.lane.split(",") if args.lane else None
+    # C-9132: quota preflight state -- ONE cheap probe per dispatch run,
+    # lazily fired by the first launch-leg candidate; ids gate-skipped by
+    # the quota gate are excluded from re-selection (no busy loop).
+    quota_probe = None
+    quota_blocked_ids = set()
     # GLOBAL-priority dispatch: repeatedly take the highest-priority ready card
     # whose lane has a free WIP slot. Lane order must never beat priority.
     while len(live) < MAX_LIVE_AGENTS:
@@ -641,6 +684,8 @@ def cmd_dispatch(args):
             for c in ready_cards(queue)
             if (lanes is None or c["lane"] in lanes)
             and lane_live.get(c["lane"], 0) < WIP_LIMITS.get(c["lane"], 1)
+            and not H.card_backoff_active(ops, c["id"])
+            and c["id"] not in quota_blocked_ids  # C-9132
             and not (wedged and c["lane"] in BOX_BOUND_LANES and (args.lane is None))
         ]
         if not candidates:
@@ -651,6 +696,39 @@ def cmd_dispatch(args):
             # fail closed: never claim or spawn against a bad target
             event(STATE, "dispatch_refused", {"card": card.get("id"), "why": why[:200]})
             break
+        # C-9132: API-quota preflight for launch legs. C-9029 burned 3 spawn
+        # cycles in 9 min on exhausted quota (额度耗尽); each cycle cost a
+        # 25-min budget slot and a spawn. ONE cheap probe per dispatch run;
+        # EXHAUSTED or UNKNOWN -> gate_skip with a NAMED blocker artifact and
+        # NO spawn (fail closed). The card stays ready (no bounce strike) so
+        # a later run with quota dispatches it.
+        if card.get("lane") in BOX_BOUND_LANES:
+            if quota_probe is None:
+                try:
+                    quota_probe = QPG.probe_quota(env_files=WORKER_ENV_FILES)
+                except Exception as exc:  # a probe crash must never kill the tick
+                    quota_probe = dict(
+                        verdict=QPG.UNKNOWN,
+                        detail=f"probe error: {str(exc)[:160]}",
+                        utc=H.now_iso(),
+                    )
+            if not QPG.gate_allows(quota_probe):
+                quota_blocked_ids.add(card["id"])
+                try:
+                    QPG.write_quota_block(STATE, quota_probe, card=card["id"])
+                except OSError:
+                    pass
+                event(
+                    STATE,
+                    "gate_skip",
+                    {
+                        "card": card["id"],
+                        "gate": "api_quota",
+                        "blocker": quota_probe.get("verdict"),
+                        "detail": (quota_probe.get("detail") or "")[:200],
+                    },
+                )
+                continue
         deps = [
             (d["id"], d["title"], d.get("result"))
             for d in (find_card(queue, x) for x in card["deps"])
@@ -673,11 +751,16 @@ def cmd_dispatch(args):
         fleet["agents"].append(entry)
         live.append(entry)
         n_spawned += 1
+        spawned_cards.append(card["id"])
+    for cid in sorted(c["id"] for c in ready_cards(queue) if H.card_backoff_active(ops, c["id"])):
+        _skip = dict()
+        _skip["card"] = cid
+        event(STATE, "dispatch_backoff_skip", _skip)
     if n_spawned:
         ops = load_ops(STATE)
-        if ops.get("consecutive_spawn_failures"):
-            note_spawn_result(STATE, ops, ok=True)
-            save_ops(STATE, ops)
+        for cid in spawned_cards:
+            note_spawn_result(STATE, ops, ok=True, card=cid)
+        save_ops(STATE, ops)
     save_queue(STATE, queue)
     save_fleet(STATE, fleet)
     print(f"dispatched {n_spawned} workers")
@@ -799,15 +882,15 @@ def _reap():
                 outcome = "harvested"
         ops = load_ops(STATE)
         if environmental:
-            note_spawn_result(STATE, ops, ok=False)
+            note_spawn_result(STATE, ops, ok=False, card=a.get("card"))
             save_ops(STATE, ops)
             event(
                 STATE,
                 "spawn_failed_env",
                 {
                     "card": a.get("card"),
-                    "consecutive": ops.get("consecutive_spawn_failures"),
-                    "backoff_until": ops.get(BACKOFF_PATH_KEY),
+                    "consecutive": H.card_consecutive_spawn_fails(ops, a.get("card")),
+                    "backoff_until": H.card_backoff_until(ops, a.get("card")),
                 },
             )
         if verdict == "DONE":
@@ -872,8 +955,9 @@ def _reap():
                 release_card(card, "bounced", (tail[-1] if tail else ""), reason)
         if not environmental:
             ops = load_ops(STATE)
-            if ops.get("consecutive_spawn_failures"):
-                note_spawn_result(STATE, ops, ok=True)
+            _cid = a.get("card")
+            if H.card_consecutive_spawn_fails(ops, _cid) or H.card_backoff_active(ops, _cid):
+                note_spawn_result(STATE, ops, ok=True, card=_cid)
                 save_ops(STATE, ops)
         event(
             STATE,
@@ -1067,7 +1151,18 @@ def _reconcile_dep_blockers():
             continue
         for dep_id in list(c["deps"]):
             dep = find_card(queue, dep_id)
-            if dep is None or dep["status"] not in ("bounced", "dead"):
+            if dep is None:
+                # Dead dep: card no longer exists in the queue. Drop the
+                # stale edge so the ready card is never permanently blocked.
+                c["deps"] = [d for d in c["deps"] if d != dep_id]
+                changed = True
+                event(
+                    STATE,
+                    "dep_edge_dropped",
+                    {"blocker": dep_id, "unblocks": c["id"], "reason": "dep_not_in_queue"},
+                )
+                continue
+            if dep["status"] not in ("bounced", "dead"):
                 continue
             if dep["status"] == "bounced" and _bounce_was_environmental(dep):
                 dep["status"] = "ready"
@@ -1181,13 +1276,145 @@ def _auto_plan(goal):
         priority=0,
         budget_min=20,
     )
-    add_card(queue, card)
+    add_card(queue, card, state_dir=STATE)
     save_queue(STATE, queue)
     event(
         STATE,
         "auto_plan",
         {"card": card["id"], "ready_count": ready_count, "unblocked_count": unblocked_count},
     )
+
+
+# ----------------------------------------------------------------- C-9133 re-arm
+
+# C-9133: the C-9098 window re-arm (run_rearm / sentinel --rearm) keeps
+# window_open.json fresh for the C-9071 gate but was only callable BY HAND.
+# Left unwired, the artifact self-expires (window_fresh_s=1800s) and every
+# launch leg SKIPs on window=window_open_stale (2026-09-20T05:01:55Z event)
+# while ASI2 sits ready. The resident tick now detects staleness with the
+# SAME freshness judge the gate applies and spawns ONE detached re-arm loop;
+# the loop writes window_open.json ONLY on a bar-met poll (C-9020 two-signal),
+# so a re-arm failure leaves the gate SKIP -- fail closed, exactly as before.
+
+REARM_WINDOW_FRESH_S = 1800.0  # MUST equal the C-9071 window staleness bar
+REARM_CARD = "C-9098"
+
+
+def _window_age_s(window_dir, clock=time.time):
+    """Age of window_open.json in seconds, or None when the artifact is
+    absent/unreadable/not-open. Mirrors the C-9071 window judge: unknown is
+    NEVER fresh and NEVER stale -- it is None, and None never re-arms."""
+    try:
+        with open(os.path.join(window_dir, "window_open.json"), encoding="utf-8") as f:
+            doc = json.load(f)
+    except (OSError, ValueError):
+        return None
+    if not isinstance(doc, dict) or doc.get("artifact") != "window_open":
+        return None
+    try:
+        return clock() - H.parse_iso(str(doc.get("generated_utc"))).timestamp()
+    except (ValueError, TypeError, AttributeError):
+        return None
+
+
+def _rearm_running(lock_path):
+    """Single-flight liveness: the lock names a LIVE pid whose lstart still
+    matches (the reaper's pid-reuse guard). Dead/stale/corrupt/absent lock
+    => not running, so exactly one new re-arm may claim it."""
+    try:
+        with open(lock_path, encoding="utf-8") as f:
+            rec = json.load(f)
+    except (OSError, ValueError):
+        return False
+    if not isinstance(rec, dict):
+        return False
+    pid, lstart = rec.get("pid"), rec.get("lstart")
+    if not isinstance(pid, int) or not H.pid_alive(pid):
+        return False
+    return bool(lstart) and H.process_lstart(pid) == lstart
+
+
+def _spawn_rearm_detached(state_dir):
+    """Spawn the C-9098 re-arm loop DETACHED from this tick (it polls the
+    C-9020 bar for up to rearm_budget_s=7200s; a tick must never block on
+    it) and stamp the single-flight lock. Returns the child pid."""
+    lock_dir = os.path.join(state_dir, "locks")
+    log_dir = os.path.join(state_dir, "c9098")
+    os.makedirs(lock_dir, exist_ok=True)
+    os.makedirs(log_dir, exist_ok=True)
+    env = {
+        "PATH": os.environ.get("PATH", "/usr/bin:/bin:/usr/local/bin"),
+        "HOME": os.environ.get("HOME", "/tmp"),
+        "TMPDIR": os.environ.get("TMPDIR", "/tmp"),
+    }
+    log_path = os.path.join(log_dir, "rearm.log")
+    with open(log_path, "a", encoding="utf-8") as lf:
+        proc = subprocess.Popen(
+            [
+                sys.executable,
+                os.path.join(REPO, "harness", "asi2_window_sentinel.py"),
+                "--rearm",
+            ],
+            stdout=lf,
+            stderr=subprocess.STDOUT,
+            cwd=REPO,
+            env=env,
+            start_new_session=True,
+        )
+    rec = dict(pid=proc.pid, lstart=H.process_lstart(proc.pid), started_utc=now_iso())
+    with open(os.path.join(lock_dir, "c9098-rearm.json"), "w", encoding="utf-8") as f:
+        json.dump(rec, f)
+    return proc.pid
+
+
+def auto_rearm_stale_window(
+    state_dir=None,
+    clock=time.time,
+    window_fresh_s=REARM_WINDOW_FRESH_S,
+    spawn_fn=None,
+    is_running_fn=None,
+):
+    """C-9133: the resident runner's re-arm decision (once per tick).
+
+    - window_open.json STALE (age > window_fresh_s -- the exact artifact the
+      C-9071 gate reads window_open_stale from) => invoke the C-9098 re-arm
+      path (detached `asi2_window_sentinel.py --rearm`), single-flight: no
+      manual step, no re-arm herd.
+    - a fresh window => NO re-arm (no spurious re-arms).
+    - a missing/not-open artifact => no decision from this card (owned
+      elsewhere; fail closed).
+    - NEVER writes window_open.json itself and NEVER clears the gate: a
+      re-arm that fails to open leaves the gate SKIP (fail closed).
+    Returns an action dict; never raises into the tick."""
+    sd = state_dir or STATE
+    window_dir = os.path.join(sd, "c9061")
+    lock_path = os.path.join(sd, "locks", "c9098-rearm.json")
+    age_s = _window_age_s(window_dir, clock)
+    if age_s is None:
+        return dict(action="no-artifact")
+    if age_s <= window_fresh_s:
+        return dict(action="fresh", age_s=round(age_s, 1))
+    if (is_running_fn or (lambda: _rearm_running(lock_path)))():
+        return dict(action="already-running", age_s=round(age_s, 1))
+    if spawn_fn is None:
+        spawn_fn = lambda: _spawn_rearm_detached(sd)  # noqa: E731
+    try:
+        pid = spawn_fn()
+    except Exception as exc:
+        try:
+            event(sd, "c9133_rearm_spawn_failed", {"err": repr(exc)[:160]})
+        except Exception:
+            pass
+        return dict(action="spawn-failed", age_s=round(age_s, 1))
+    try:
+        event(
+            sd,
+            "c9133_window_rearm_spawned",
+            {"pid": pid, "window_age_s": round(age_s, 1), "card": REARM_CARD},
+        )
+    except Exception:
+        pass  # telemetry must never unwind the decision
+    return dict(action="spawned", pid=pid, age_s=round(age_s, 1))
 
 
 # ----------------------------------------------------------------------------- tick
@@ -1217,6 +1444,14 @@ def cmd_tick(_args):
             print("GOAL ACHIEVED — loop retired")
             return
         reaped = _reap()
+        # C-9133: a stale window_open artifact must re-arm the C-9098
+        # sentinel WITHOUT a hand-run --rearm; otherwise every launch leg
+        # re-SKIPs on window_open_stale (05:01:55Z) while ASI2 sits ready.
+        # Detect-only spawn, single-flight; must never break a tick.
+        try:
+            auto_rearm_stale_window()
+        except Exception as _rearm_exc:
+            event(STATE, "c9133_rearm_step_error", {"err": repr(_rearm_exc)[:160]})
         # fail-closed scheduler self-checks: cron AND launchd (belt + braces)
         for heal_cmd in ("install-cron", "install-launchd"):
             try:
@@ -1233,6 +1468,7 @@ def cmd_tick(_args):
         tick_no = _next_standup_no()
         verdicts = scan_verdicts(REPO)
         refresh_trainer_probe()  # C-0074: trainer row from live file evidence
+        auto_refresh_stale_probes()  # C-9148: re-measure stale/missing box probes
         probes = _probe_results()
         # reload queue+fleet AFTER dispatch (which ran as a subprocess and
         # modified them on disk) so the standup/dashboard/progress see the
@@ -1446,10 +1682,106 @@ def refresh_trainer_probe(state_dir=None, outputs_dir=None):
         return None
 
 
+def refresh_box_probes_best_effort(state_dir=None):
+    """C-9145: live-refresh stale box daemon probes (asi1/asi2/asi3) best-effort.
+
+    Called by _probe_results() when on-disk probe files are older than 30 min,
+    so the standup shows current reality rather than a STALE label.  Returns
+    True if the refresh ran (files updated), False on failure.  Never raises."""
+    sd = state_dir or STATE
+    try:
+        import resource_probes as RP
+        from harness_lib import now_iso, save_json
+
+        out_dir = os.path.join(sd, "probes")
+        os.makedirs(out_dir, exist_ok=True)
+        for name, port in RP.DAEMON_PORTS.items():
+            p = RP.probe_daemon(name, port)  # health-only, read-only
+            rec = {"ts": now_iso(), "status": p.get("status"), "summary": p.get("summary")}
+            if "liveness" in p:
+                rec["liveness"] = p["liveness"]
+            save_json(os.path.join(out_dir, f"{name}.json"), rec)
+        return True
+    except Exception:
+        return False  # probe refresh must never break standup
+
+
+# C-9148: staleness threshold for the auto-refresh gate (matches _probe_results).
+PROBE_STALE_MIN = 30
+
+
+def auto_refresh_stale_probes(state_dir=None, clock=None):
+    """C-9148: detect stale/missing box probes and re-measure them live.
+
+    Called by the tick BEFORE _probe_results() so the standup sees fresh
+    data even when the external probe agent has died.  Uses the SAME 30-min
+    threshold _probe_results() applies, and calls resource_probes.run_all()
+    to re-measure ALL five probes (asi1/asi2/asi3/trainer/train_fire) --
+    not just the three daemon-health probes that
+    refresh_box_probes_best_effort covers.
+
+    Fail-closed: a refresh failure returns action="refresh-failed" and
+    never raises.  Fresh probes return action="skip" (no spurious refresh).
+    """
+    sd = state_dir or STATE
+    probe_dir = os.path.join(sd, "probes")
+    box_names = ("asi1", "asi2", "asi3", "trainer", "train_fire")
+    _any_stale = False
+    for name in box_names:
+        p = os.path.join(probe_dir, f"{name}.json")
+        data = load_json(p)
+        if not data:
+            _any_stale = True
+            break
+        age = age_min(data.get("ts"))
+        if age is None or age > PROBE_STALE_MIN:
+            _any_stale = True
+            break
+    if not _any_stale:
+        return dict(action="skip")
+    try:
+        import resource_probes as RP
+
+        RP.run_all(sd)
+        try:
+            event(sd, "c9148_probe_refresh", {"action": "refreshed"})
+        except Exception:
+            pass  # telemetry must never unwind the refresh
+        return dict(action="refreshed")
+    except Exception:
+        try:
+            event(sd, "c9148_probe_refresh", {"action": "refresh-failed"})
+        except Exception:
+            pass
+        return dict(action="refresh-failed")
+
+
 def _probe_results():
-    """Read box-probe result files (written by probe agents), fail-stale-closed."""
+    """Read box-probe result files (written by probe agents), fail-stale-closed.
+
+    C-9145: when any box daemon probe (asi1/asi2/asi3) is stale (>30 min or
+    illegible ts), attempt a best-effort live refresh before labelling STALE.
+    If the refresh succeeds the standup shows the fresh summary; if it fails
+    the standup shows STALE (fail-closed)."""
     probes = {}
     d = os.path.join(STATE, "probes")
+    _box_names = ("asi1", "asi2", "asi3")
+    _any_stale = False
+    for name in _box_names:
+        p = os.path.join(d, f"{name}.json")
+        data = load_json(p)
+        if not data:
+            _any_stale = True
+            break
+        age = age_min(data.get("ts"))
+        if age is None or age > 30:
+            _any_stale = True
+            break
+    if _any_stale:
+        try:
+            refresh_box_probes_best_effort(STATE)
+        except Exception:
+            pass
     for name in ("asi1", "asi2", "asi3", "trainer", "train_fire"):
         p = os.path.join(d, f"{name}.json")
         data = load_json(p)
@@ -1757,6 +2089,9 @@ def main():
     cr = cp.add_parser("requeue")
     cr.add_argument("ids", nargs="+", metavar="C-XXXX")
     cr.set_defaults(func=cmd_card_requeue)
+    crem = cp.add_parser("remove")
+    crem.add_argument("ids", nargs="+", metavar="C-XXXX")
+    crem.set_defaults(func=cmd_card_remove)
 
     p = sub.add_parser("dispatch")
     p.add_argument("--lane", default=None)

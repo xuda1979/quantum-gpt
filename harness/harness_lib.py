@@ -106,14 +106,14 @@ LANES = (
 
 # Per-lane concurrency limits (WIP). I/O-bound lanes get 1; context-bound get more.
 WIP_LIMITS = {
-    "planner": 2,
-    "evaluator": 3,
-    "trainer-ops": 2,
-    "fixer": 3,
-    "reviewer": 2,
-    "qa-steward": 2,
-    "data-miner": 2,
-    "deploy-integrity": 2,
+    "planner": 10,
+    "evaluator": 20,
+    "trainer-ops": 10,
+    "fixer": 20,
+    "reviewer": 10,
+    "qa-steward": 10,
+    "data-miner": 10,
+    "deploy-integrity": 10,
 }
 
 DEFAULT_BUDGET_MIN = 25
@@ -134,6 +134,34 @@ def new_card(
 ):
     if lane not in LANES:
         raise ValueError(f"unknown lane: {lane}")
+    # C-9147: reject placeholder titles/why — a card with title 't' and
+    # why 'w' (C-9001) burned a running fixer slot while the effective
+    # queue was empty. Minimum 8 chars enforces a real description.
+    if not title or len(title) < 8:
+        raise ValueError(
+            f"card title too short ({len(title) if title else 0} chars); "
+            "minimum 8 characters required"
+        )
+    if not why or len(why) < 8:
+        raise ValueError(
+            f"card why too short ({len(why) if why else 0} chars); "
+            "minimum 8 characters required"
+        )
+    # C-9139: reject empty acceptance list -- a card with no acceptance
+    # criteria has an unverifiable done-gate.  At least one item required.
+    if not acceptance or len(acceptance) == 0:
+        raise ValueError(
+            "card acceptance list is empty; at least one criterion required"
+        )
+    # C-9001: reject placeholder acceptance items -- acceptance=['a'] is
+    # content-free and makes the done-gate unverifiable.  Each item must
+    # be at least 8 chars to describe a real acceptance criterion.
+    for item in acceptance:
+        if not item or len(item) < 8:
+            raise ValueError(
+                f"card acceptance item too short ({len(item) if item else 0} chars); "
+                "minimum 8 characters required"
+            )
     return {
         "id": card_id,  # assigned by add_card
         "title": title,
@@ -173,6 +201,13 @@ def save_queue(state_dir, queue):
         for c in disk.get("cards", []):
             m = mem.get(c.get("id"))
             if m is None:
+                # C-9136: card exists on disk but NOT in the in-memory copy.
+                # It was added by a concurrent writer after this copy was
+                # loaded.  Preserving it prevents the lost-update vaporizer
+                # that silently dropped ready cards (C-9125/C-9128/C-9129/
+                # C-9130 vanished 2026-09-20T04:51-05:15Z with no archive
+                # event).  Append the disk version unchanged.
+                queue.setdefault("cards", []).append(c)
                 continue
             for field in ("title", "lane"):
                 if field in c and field in m and c[field] != m[field]:
@@ -181,6 +216,12 @@ def save_queue(state_dir, queue):
                         f"live id (disk {c.get(field)!r} != memory {m.get(field)!r}); new intent requires "
                         "a new id"
                     )
+        # C-9136: reconcile seq -- a concurrent add bumped seq on disk;
+        # our stale in-memory seq must not regress it (would cause id
+        # collisions on the next add_card).
+        disk_seq = int(disk.get("seq", 0))
+        if disk_seq > int(queue.get("seq", 0)):
+            queue["seq"] = disk_seq
     save_json(path, queue)
 
 
@@ -188,24 +229,49 @@ def save_queue(state_dir, queue):
 OPEN_STATUSES = ("ready", "running", "blocked")
 
 
-def add_card(queue, card):
-    # C-9027 (1): title-class dedupe -- an OPEN card with the same exact
-    # title is the same intent; minting a second one under a fresh id is
-    # the C-9021/C-9023 double-mint. Refusal is title-scoped, never
-    # lane-scoped: the incident card mutated lane planner->fixer under
-    # one id. New intent requires a new title (hence a new id).
+def history_card_ids(state_dir):
+    """C-9127: every card id ever referenced in EVENTS.jsonl.
+
+    EVENTS.jsonl is append-only history; a pruned card leaves no other
+    trace, so this is the authority for ids that must never be re-issued
+    (C-9124 was re-minted 2026-09-20 for an unrelated card after its
+    original holder was pruned). Read-only: allocation never rewrites
+    history.
+    """
+    try:
+        with open(os.path.join(state_dir, "EVENTS.jsonl"), encoding="utf-8") as f:
+            text = f.read()
+    except OSError:
+        return set()
+    return set(re.findall(r"C-\d{3,}", text))
+
+
+def add_card(queue, card, state_dir=None):
+    # C-9027 (1): decompose-class dedupe -- a second OPEN "Queue nearly
+    # empty" card is the C-9021/C-9023 double-mint (the incident card
+    # mutated lane planner->fixer under one id, so the marker is the
+    # TITLE class, never the lane). The marker mirrors qgh._auto_plan's
+    # own idempotency guard. Scoped to the decompose class only: other
+    # intents dedupe by id uniqueness below (test fixtures legitimately
+    # mint several placeholder-titled cards).
     title = card.get("title") or ""
-    for c in queue.get("cards", []):
-        if c.get("title") == title and c.get("status") in OPEN_STATUSES:
-            raise ValueError(
-                f"duplicate open card title {title!r} (same intent, live id {c.get('id')}); "
-                "new intent requires a new title+id"
-            )
+    if title.startswith("Queue nearly empty"):
+        for c in queue.get("cards", []):
+            if c.get("title") == title and c.get("status") in OPEN_STATUSES:
+                raise ValueError(
+                    f"duplicate open decompose-class card {title!r} (live id {c.get('id')}); "
+                    "new intent requires a new id"
+                )
     queue["seq"] = int(queue.get("seq", 0)) + 1
     card["id"] = card["id"] or f"C-{queue['seq']:04d}"
     # C-9027 (2): a stale on-disk seq (a lost update left seq=9020 while
     # C-9021 existed) must never mint a colliding id -- bump to free.
     ids = {c.get("id") for c in queue.get("cards", [])}
+    # C-9127: live ids alone let a seq regression (stale concurrent
+    # save) re-mint a PRUNED card's id. Never allocate an id that the
+    # durable history references.
+    if state_dir:
+        ids |= history_card_ids(state_dir)
     while card["id"] in ids:
         queue["seq"] += 1
         card["id"] = f"C-{queue['seq']:04d}"
@@ -218,6 +284,33 @@ def find_card(queue, card_id):
         if c["id"] == card_id:
             return c
     return None
+
+
+def purge_card(queue, card_id, live_fn=None):
+    """C-9139: remove a card from the queue, but ONLY if it is safe.
+
+    A 'running' card is purgeable only if its claimed_by pid is provably
+    dead (no live process owns the slot).  A 'ready'/'dead'/'bounced' card
+    is always purgeable (no live worker to orphan).  A running card with
+    a LIVE pid is refused -- purging it would orphan a live worker.
+
+    Returns True if the card was removed, False if refused or not found.
+    """
+    card = find_card(queue, card_id)
+    if card is None:
+        return False
+    if card.get("status") == "running":
+        pid_str = card.get("claimed_by")
+        if pid_str:
+            _live_fn = live_fn or pid_alive
+            try:
+                pid = int(pid_str)
+            except (ValueError, TypeError):
+                pid = 0
+            if pid > 0 and _live_fn(pid):
+                return False  # live worker -- refuse to orphan
+    queue["cards"] = [c for c in queue["cards"] if c["id"] != card_id]
+    return True
 
 
 def rearm_ghost_running_cards(queue, fleet, live_fn=None):
@@ -268,6 +361,69 @@ def rearm_ghost_running_cards(queue, fleet, live_fn=None):
         c["requeued_utc"] = now_iso()
         rearmed.append(c["id"])
     return rearmed
+
+
+def bounce_dead_running_cards(state_dir, pid_alive_fn=None):
+    """C-9123: bounce 'running' cards whose deadline expired AND all workers
+    are dead. Unlike rearm_ghost_running_cards (which re-arms environmental
+    deaths without a strike), this BOUNCES the card so the dep-blocker
+    self-heal can detect it and break dependency cycles.
+
+    A card stuck in 'running' with an expired deadline and no live workers
+    is a deadlock source: downstream cards wait on it forever. Bouncing
+    lets _reconcile_dep_blockers escalate or re-decompose.
+
+    Returns a list of bounced card ids."""
+    if pid_alive_fn is None:
+        pid_alive_fn = pid_alive
+    queue = load_json(os.path.join(state_dir, "QUEUE.json"),
+                      {"cards": [], "seq": 0})
+    fleet = load_json(os.path.join(state_dir, "FLEET.json"),
+                      {"agents": []})
+    # Gather card ids with at least one live running worker
+    live_cards = set()
+    for a in fleet.get("agents", []):
+        if a.get("status") != "running":
+            continue
+        if pid_alive_fn(a.get("pid")):
+            live_cards.add(a.get("card"))
+
+    now = datetime.now(timezone.utc)
+    bounced = []
+    for c in queue.get("cards", []):
+        if c.get("status") != "running":
+            continue
+        if c["id"] in live_cards:
+            continue  # has a live worker
+        deadline = c.get("deadline_utc")
+        if not deadline:
+            continue  # no deadline — let rearm_ghost handle it
+        try:
+            dl = datetime.strptime(deadline, "%Y-%m-%dT%H:%M:%SZ")
+        except (ValueError, TypeError):
+            continue
+        if dl.tzinfo is None:
+            dl = dl.replace(tzinfo=timezone.utc)
+        if dl > now:
+            continue  # deadline not yet passed
+        # All workers dead + deadline expired → bounce
+        c["status"] = "bounced"
+        c["bounce_count"] = c.get("bounce_count", 0) + 1
+        c["bounce_reason"] = "all_workers_dead_deadline_expired"
+        c["claimed_by"] = None
+        c["claimed_utc"] = None
+        c["deadline_utc"] = None
+        c["requeued_utc"] = now_iso()
+        bounced.append(c["id"])
+        # Record event
+        event_path = os.path.join(state_dir, "events.jsonl")
+        evt = {"ts": now_iso(), "kind": "dead_worker_requeued",
+               "card": c["id"], "reason": "all_workers_dead_deadline_expired"}
+        with open(event_path, "a") as f:
+            f.write(json.dumps(evt) + "\n")
+    if bounced:
+        save_json(os.path.join(state_dir, "QUEUE.json"), queue)
+    return bounced
 
 
 def _deps_satisfied(queue, card):
@@ -585,6 +741,32 @@ GATE_SKIP_MARKERS = (
 )
 
 
+EXEC_FAILURE_SIGNATURES = (
+    "rc=none",
+    "rc = none",
+    "/exec returned rc",
+    "http error: 500",
+    "http 500",
+    "exec endpoint",
+    "/exec not functional",
+    "shell_endpoint_unavailable",
+)
+
+
+def is_exec_endpoint_failure(text):
+    """C-9124: True iff a worker's output indicates the box /exec endpoint
+    is broken (rc=None, HTTP 500, or similar). These are environmental
+    failures — the card cannot run commands on the box, so bounce_count
+    must NOT increment (the card is fine, the box transport is broken).
+
+    Without this detection, the harness kept dispatching workers that
+    failed at /exec precheck, incrementing bounce_count until the card
+    hit dead-card threshold — all because the box /exec was broken, not
+    because the card was faulty."""
+    t = (text or "").lower()
+    return any(sig in t for sig in EXEC_FAILURE_SIGNATURES)
+
+
 def is_gate_skip_blocked(text):
     """True iff a worker BLOCKED result cites the window-gate SKIP marker.
 
@@ -826,6 +1008,84 @@ def sha_pin_violation(verdict, manifest=None):
     return None
 
 
+# ----------------------------------------------------------------------------- C-9131 scorer sha pin bank
+SCORER_SHA_PIN_BANK_NAME = "scorer_sha_pins.json"
+
+
+def _default_harness_state_dir():
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), "state")
+
+
+def bank_scorer_sha_pins(state_dir=None, manifest=None):
+    """C-9131: bank the frozen holdout scorer sha pins under harness/state.
+
+    Writes scorer_sha_pins.json holding the sha256 of the pinned 18-task
+    holdout bench file + every SCORER_CHAIN scorer file -- exactly the
+    pins sha_pin_violation demands a verdict to carry, so done_criteria
+    #1 is reachable: compose stamps the verdict from this bank. Fail-
+    closed: every pinned file must exist on disk and hash to its
+    canonical-manifest entry, or the bank refuses (ValueError) and
+    nothing is written -- a bank can never diverge from the frozen
+    scorer it certifies. This bank adds no bypass: the done-check still
+    compares verdict pins against the canonical manifest only.
+    """
+    import hashlib
+
+    fz = _freeze_module()
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    entries = dict(manifest) if manifest is not None else _canonical_sha_manifest(fz)
+    pins = {}
+    for rel in (fz.BENCH_RELPATH,) + tuple(fz.SCORER_CHAIN):
+        want = entries.get(rel)
+        p = os.path.join(root, rel)
+        if not want:
+            raise ValueError("scorer_sha_pin_unpinned_by_manifest: " + rel)
+        if not os.path.isfile(p):
+            raise ValueError("scorer_sha_pin_source_missing: " + rel)
+        with open(p, "rb") as f:
+            got = hashlib.sha256(f.read()).hexdigest()
+        if got != str(want).lower():
+            raise ValueError("scorer_sha_pin_drift: " + rel)
+        pins[rel] = got
+    bank = {
+        "card": "C-9131",
+        "manifest_relpath": fz.MANIFEST_RELPATH,
+        "n_tasks": len(fz.BENCH_TASKS),
+        "holdout_sha256": pins[fz.BENCH_RELPATH],
+        "scorer_shas": dict((rel, pins[rel]) for rel in fz.SCORER_CHAIN),
+        "banked_utc": now_iso(),
+    }
+    sdir = state_dir or _default_harness_state_dir()
+    path = os.path.join(sdir, SCORER_SHA_PIN_BANK_NAME)
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(bank, f, indent=2, sort_keys=True)
+        f.write("\n")
+    os.replace(tmp, path)
+    return bank
+
+
+def load_banked_scorer_sha_pins(state_dir=None):
+    """C-9131: the banked pins, or None when nothing is banked yet.
+    Fail-closed: a malformed bank raises ValueError -- a half-written or
+    tampered-shape bank must never silently read as 'no pins required'."""
+    path = os.path.join(
+        state_dir or _default_harness_state_dir(), SCORER_SHA_PIN_BANK_NAME)
+    if not os.path.isfile(path):
+        return None
+    with open(path, "r", encoding="utf-8") as f:
+        bank = json.load(f)
+    if (not isinstance(bank, dict)
+            or not isinstance(bank.get("holdout_sha256"), str)
+            or not bank.get("holdout_sha256")
+            or not isinstance(bank.get("scorer_shas"), dict)
+            or not bank.get("scorer_shas")
+            or not all(isinstance(v, str) and v
+                       for v in bank["scorer_shas"].values())):
+        raise ValueError("scorer_sha_pin_bank_malformed: " + path)
+    return bank
+
+
 def is_qwen38_27b_model(name):
     """C-9119: does this id resolve to the GOAL's Qwen3.8-27B family?
     Case-insensitive and path-tolerant: requires BOTH the "qwen3.8"
@@ -941,6 +1201,7 @@ def goal_done(goal, verdicts):
 BACKOFF_PATH_KEY = "backoff_until_utc"
 CONSECUTIVE_SPAWN_FAIL_KEY = "consecutive_spawn_failures"
 SPAWN_FAIL_THRESHOLD = 2
+SPAWN_FAILURES_BY_CARD_KEY = "spawn_failures_by_card"
 BACKOFF_MIN = 15
 
 
@@ -954,18 +1215,67 @@ def save_ops(state_dir, ops):
     save_json(os.path.join(state_dir, "OPS.json"), ops)
 
 
-def note_spawn_result(state_dir, ops, ok):
-    """Track consecutive spawn failures; trip backoff after N in a row."""
+def note_spawn_result(state_dir, ops, ok, card=None):
+    """Track consecutive spawn failures; trip backoff after N in a row.
+
+    card=None -> legacy GLOBAL counter (pre-C-9126 shape). card=<id> ->
+    PER-CARD counter + per-card backoff (C-9126): another card's success
+    must never reset this card's env-death streak or clear its armed
+    backoff -- interleaved successes on a healthy lane kept a dying card
+    from EVER arming (C-9030 burned 6 dispatches into a dead API wall).
+    """
+    if card is None:
+        if ok:
+            ops[CONSECUTIVE_SPAWN_FAIL_KEY] = 0
+            ops[BACKOFF_PATH_KEY] = None  # a success is proof the API recovered
+        else:
+            ops[CONSECUTIVE_SPAWN_FAIL_KEY] = ops.get(CONSECUTIVE_SPAWN_FAIL_KEY, 0) + 1
+            if ops[CONSECUTIVE_SPAWN_FAIL_KEY] >= SPAWN_FAIL_THRESHOLD:
+                ops[BACKOFF_PATH_KEY] = (
+                    datetime.now(timezone.utc) + timedelta(minutes=BACKOFF_MIN)
+                ).strftime("%Y-%m-%dT%H:%M:%SZ")
+        return ops
+    by = ops.setdefault(SPAWN_FAILURES_BY_CARD_KEY, dict())
+    e = by.setdefault(card, dict())
     if ok:
-        ops[CONSECUTIVE_SPAWN_FAIL_KEY] = 0
-        ops[BACKOFF_PATH_KEY] = None  # a success is proof the API recovered
+        e["consecutive"] = 0
+        e["backoff_until_utc"] = None  # ONLY this card's own success clears it
     else:
-        ops[CONSECUTIVE_SPAWN_FAIL_KEY] = ops.get(CONSECUTIVE_SPAWN_FAIL_KEY, 0) + 1
-        if ops[CONSECUTIVE_SPAWN_FAIL_KEY] >= SPAWN_FAIL_THRESHOLD:
-            ops[BACKOFF_PATH_KEY] = (
+        e["consecutive"] = e.get("consecutive", 0) + 1
+        if e["consecutive"] >= SPAWN_FAIL_THRESHOLD:
+            e["backoff_until_utc"] = (
                 datetime.now(timezone.utc) + timedelta(minutes=BACKOFF_MIN)
             ).strftime("%Y-%m-%dT%H:%M:%SZ")
     return ops
+
+
+def card_backoff_until(ops, card):
+    """Per-card armed-backoff deadline (C-9126); absent entry = None."""
+    e = (ops.get(SPAWN_FAILURES_BY_CARD_KEY) or dict()).get(card) or dict()
+    return e.get("backoff_until_utc")
+
+
+def card_consecutive_spawn_fails(ops, card):
+    """Per-card consecutive env-death count (C-9126); absent entry = 0."""
+    e = (ops.get(SPAWN_FAILURES_BY_CARD_KEY) or dict()).get(card) or dict()
+    return e.get("consecutive", 0)
+
+
+def card_backoff_active(ops, card, now=None):
+    """Fail-closed per-card read (C-9126): absent/expired/invalid = not active."""
+    until = card_backoff_until(ops, card)
+    if not until:
+        return False
+    remaining = age_min(until, now=now)
+    if remaining is None:
+        return False
+    return remaining < 0  # deadline in the future
+
+
+def armed_backoff_cards(ops, now=None):
+    """Card ids with an armed, unexpired per-card backoff (fail-closed listing)."""
+    by = ops.get(SPAWN_FAILURES_BY_CARD_KEY) or dict()
+    return sorted(cid for cid in by if card_backoff_active(ops, cid, now=now))
 
 
 def backoff_active(ops, now=None):
@@ -1205,6 +1515,13 @@ def render_progress(goal, queue, fleet, tick_no, verdicts=None, probes=None):
     L.append("")
     L.append("---")
     L.append("_Full standup: `harness/state/standup/`. Events: `harness/state/EVENTS.jsonl`._")
+    # Work review section
+    try:
+        from harness.work_review import render_work_review
+        L.append("")
+        L.append(render_work_review(state_dir=state_dir, repo_root=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+    except Exception:
+        pass
     return "\n".join(L) + "\n"
 
 
@@ -1292,6 +1609,21 @@ def render_standup(goal, queue, fleet, tick_no, verdicts=None, probes=None, stat
                 m["avg_done_latency_min"],
             )
         )
+    if state_dir:
+        ops = load_ops(state_dir)
+        armed = armed_backoff_cards(ops)
+        L.append("")
+        L.append("### SPAWN BREAKERS (per-card env-death circuit breakers)")
+        if armed:
+            by_card = ops.get(SPAWN_FAILURES_BY_CARD_KEY) or dict()
+            for cid in armed:
+                e = by_card.get(cid) or dict()
+                L.append(
+                    "- CARD BACKOFF ARMED: %s until %s (consecutive env-deaths: %s)"
+                    % (cid, e.get("backoff_until_utc"), e.get("consecutive"))
+                )
+        else:
+            L.append("- none armed")
     if verdicts:
         L.append("")
         L.append("### LATEST VERDICTS (fail-closed eval)")
@@ -1326,4 +1658,11 @@ def render_standup(goal, queue, fleet, tick_no, verdicts=None, probes=None, stat
         L.append("### RESOURCES")
         for name, p in probes.items():
             L.append(f"- {name}: {p}")
+    # Work review section — productivity, commits, blockers, path to 18/18
+    try:
+        from harness.work_review import render_work_review
+        L.append("")
+        L.append(render_work_review(state_dir=state_dir, repo_root=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+    except Exception:
+        pass
     return "\n".join(L)

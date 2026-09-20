@@ -44,6 +44,7 @@ mock window; never gates this one).
 
 import argparse
 import json
+import os
 import sys
 import time
 from datetime import datetime, timezone
@@ -55,6 +56,7 @@ import harness_lib as H  # noqa: E402
 ROOT = Path(__file__).resolve().parents[1]
 CARD_ID = "C-9071"
 WINDOW_FRESH_S = 1800.0  # measured: ASI2 windows degraded ~13 min after open
+SDK_FRESH_S = 7200.0  # C-9125: SDK positive control stale after 2h (box env can drift)
 RC_GO, RC_SKIP = 0, 5
 GO_NAME = "window_gate_go.json"
 SKIP_NAME = "window_gate_skip.json"
@@ -76,6 +78,8 @@ def make_ctx(
     runner_root=None,
     clock=time.time,
     window_fresh_s=WINDOW_FRESH_S,
+    writer_pid=None,
+    writer_lstart=None,
 ):
     """All I/O and time injected; the suite never touches live state."""
     return dict(
@@ -86,6 +90,8 @@ def make_ctx(
         runner_root=str(runner_root) if runner_root else str(ROOT),
         clock=clock,
         window_fresh_s=float(window_fresh_s),
+        writer_pid=writer_pid,
+        writer_lstart=writer_lstart,
     )
 
 
@@ -110,20 +116,48 @@ def _parse_iso(ts):
         return None
 
 
+# C-9103: wall-clock process start, captured AT IMPORT (os.clock() is
+# CPU time since process start, so now - clock ~= boot wall time; the
+# gate is a short-lived judge, so drift <0.5s). The gate never spawns
+# processes, so ps/proc are off the table by design (C-9071 suite).
+_PROC_EPOCH = time.time() - time.process_time()
+
+
+def _proc_lstart_iso():
+    """This process's start time as ISO-8601 UTC Z. C-9103: stamped onto
+    every gate artifact + event so B-223 staleness (writer running
+    pre-edit gate code) is checkable from the artifact ALONE: compare
+    writer.lstart vs the gate-file mtime; lstart older than the file =
+    stale enforcer, refuse."""
+    return datetime.fromtimestamp(_PROC_EPOCH, tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
 # --------------------------------------------------------- preflight judges
 # Named reasons ONLY; every reason string is asserted by the C-9071 suite.
 
 
-def _check_c9066(doc):
+def _check_c9066(doc, ctx=None):
     """SDK positive control (artifact OWNED by C-9066): every holdout
     interpreter imports qiskit+pennylane+cirq and the control round-trip
-    succeeded."""
+    succeeded. C-9125: freshness bound — stale OK rejected."""
     if not isinstance(doc, dict):
         return "malformed"
     if doc.get("artifact") != "sdk_positive_control":
         return "artifact_mismatch"
     if doc.get("ok") is not True:
         return "ok_not_true"
+    utc = doc.get("utc")
+    if isinstance(utc, str):
+        try:
+            ts = H.parse_iso(utc).timestamp()
+            now_epoch = ctx["clock"]() if ctx and "clock" in ctx else time.time()
+            age_s = now_epoch - ts
+            if age_s > SDK_FRESH_S:
+                return "sdk_control_stale"
+        except (ValueError, TypeError):
+            return "sdk_control_utc_unparseable"
+    else:
+        return "sdk_control_utc_missing"
     inter = doc.get("interpreters")
     if not isinstance(inter, list) or not inter:
         return "interpreters_missing"
@@ -193,7 +227,7 @@ PREFLIGHTS = (
     (
         "c9066_sdk_positive_control",
         "C-9066_sdk_positive_control.json",
-        lambda doc, ctx: _check_c9066(doc),
+        lambda doc, ctx: _check_c9066(doc, ctx),
     ),
     ("c9051_parity_ok", "C-9051_parity.json", lambda doc, ctx: _check_c9051(doc)),
     ("c9038_ceiling", "C-9038_ceiling.json", _check_c9038),
@@ -237,11 +271,19 @@ def evaluate(ctx):
             unmet[key] = reason
     verdict = "SKIP" if unmet else "GO"
     art_name = GO_NAME if verdict == "GO" else SKIP_NAME
+    writer = dict(
+        pid=ctx["writer_pid"] if ctx.get("writer_pid") is not None else os.getpid(),
+        lstart=(
+            ctx["writer_lstart"] if ctx.get("writer_lstart") is not None else _proc_lstart_iso()
+        ),
+        lstart_source="module_load",
+    )
     payload = dict(
         card=CARD_ID,
         artifact="window_gate",
         verdict=verdict,
         generated_utc=H.now_iso(),
+        writer=writer,
         window=window_summary,
         window_fresh_s=ctx["window_fresh_s"],
         unmet=dict(unmet),
@@ -267,6 +309,8 @@ def evaluate(ctx):
             verdict=verdict,
             unmet=dict(unmet),
             window_pid=window_summary.get("pid"),
+            writer_pid=writer["pid"],
+            writer_lstart=writer["lstart"],
             artifact=str(path),
         ),
     )
@@ -300,7 +344,9 @@ def main(argv=None):
         window_fresh_s=args.window_fresh_s,
     )
     verdict, path, detail = evaluate(ctx)
-    print("c9071: {} {} unmet={}".format(verdict, path, json.dumps(detail["unmet"], sort_keys=True)))
+    print(
+        "c9071: {} {} unmet={}".format(verdict, path, json.dumps(detail["unmet"], sort_keys=True))
+    )
     return RC_GO if verdict == "GO" else RC_SKIP
 
 
