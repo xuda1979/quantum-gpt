@@ -1,6 +1,6 @@
 """C-9534: auto-retire high-bounce cards to keep the queue clean.
 
-Bounced cards with bounce_count >= 4 are stuck -- they keep failing the same
+Bounced cards with bounce_count >= 3 are stuck -- they keep failing the same
 way. Auto-retire them (mark dead) so the queue stays clean and the dispatcher
 can focus on new, more targeted cards. The bounce reasons are preserved for
 future mining.
@@ -71,7 +71,7 @@ class TestAutoRetireHighBounce(unittest.TestCase):
         qgh.auto_retire_high_bounce(self.state_dir)
         queue = qgh.load_queue(self.state_dir)
         by_id = {c["id"]: c for c in queue["cards"]}
-        self.assertEqual(by_id["C-3002"]["status"], "bounced", "bounce_count=3 should stay bounced")
+        self.assertEqual(by_id["C-3002"]["status"], "bounced", "bounce_count=2 should stay bounced")
         self.assertEqual(by_id["C-3005"]["status"], "bounced", "bounce_count=2 should stay bounced")
 
     def test_tick_calls_auto_retire(self):
