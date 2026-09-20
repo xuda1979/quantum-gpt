@@ -186,6 +186,8 @@ def run_review(state_dir, repo_dir):
             ("auto_queue_training", "auto_queue_training(" in tick_src),
             ("auto_eval_scan", "auto_eval_scan(" in tick_src),
             ("auto_requeue_zero_bounce", "auto_requeue_zero_bounce(" in tick_src),
+            ("auto_cleanup_stale_running", "auto_cleanup_stale_running(" in tick_src),
+            ("auto_retire_high_bounce", "auto_retire_high_bounce(" in tick_src),
         ]
         for name, wired in checks:
             if wired:
