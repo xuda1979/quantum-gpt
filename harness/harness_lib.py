@@ -625,9 +625,13 @@ def is_past_deadline(card, now=None):
 def auto_requeue_zero_bounce(state_dir):
     """C-9529: Auto-requeue bounced cards with 0 bounces.
 
-    Bounced cards sitting idle with bounces=0 are a productivity leak.
+    Bounced cards sitting idle with bounce_count=0 are a productivity leak.
     This sets status=ready, clears claimed_by/claimed_utc so the dispatcher
     can pick them up on the next cycle. Returns the count of requeued cards.
+
+    C-9533: the field is "bounce_count" (set by new_card), not "bounces".
+    The old check c.get("bounces", 0) always returned 0 because the field
+    did not exist, requeueing ALL bounced cards including high-bounce ones.
 
     Never raises -- best-effort.
     """
@@ -635,7 +639,7 @@ def auto_requeue_zero_bounce(state_dir):
         queue = load_queue(state_dir)
         requeued = 0
         for c in queue["cards"]:
-            if c["status"] == "bounced" and c.get("bounces", 0) == 0:
+            if c["status"] == "bounced" and c.get("bounce_count", 0) == 0:
                 c["status"] = "ready"
                 c["claimed_by"] = None
                 c["claimed_utc"] = None
