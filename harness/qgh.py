@@ -14,9 +14,11 @@ Stdlib only; Python 3.9-safe (box runtime gate: no `X | Y`, no match, no zip str
 
 from __future__ import annotations
 
+import argparse
 import json
 import os
 import re
+import shutil
 import signal
 import subprocess
 import sys
@@ -276,7 +278,7 @@ def save_queue(state_dir, queue):
     # C-9415: count cards BEFORE save_json (a clobbering monkeypatch
     # may mutate the queue object in-place during the write).
     _pre_save_n = len(queue.get("cards", []))
-    save_json(path, queue)
+    H.save_json(path, queue)
     # C-9415: post-write integrity check -- if the atomic write landed
     # fewer cards than the caller supplied (a clobbering concurrent
     # writer or a corrupted save), fail closed rather than silently
@@ -2433,7 +2435,7 @@ def spawn_worker(goal, queue, card, dep_results):
         pass  # telemetry must never unwind a completed spawn
     entry = {
         "pid": pid,
-        "lstart": process_lstart(pid),
+        "lstart": H.process_lstart(pid),
         "card": card["id"],
         "lane": card["lane"],
         "brief": brief_path,
@@ -2514,7 +2516,7 @@ def _reap():
         # Treat as DEAD (harvest only) -- never kill the new owner.
         recorded_lstart = a.get("lstart")
         if alive and recorded_lstart:
-            current = process_lstart(a.get("pid"))
+            current = H.process_lstart(a.get("pid"))
             if current != recorded_lstart:
                 event(STATE, "pid_reuse_detected", {"card": a.get("card"), "pid": a.get("pid")})
                 alive = False  # harvest path; kill branches are skipped
@@ -2972,7 +2974,7 @@ def _rearm_running(lock_path):
     pid, lstart = rec.get("pid"), rec.get("lstart")
     if not isinstance(pid, int) or not pid_alive(pid):
         return False
-    return bool(lstart) and process_lstart(pid) == lstart
+    return bool(lstart) and H.process_lstart(pid) == lstart
 
 
 
@@ -3003,7 +3005,7 @@ def _spawn_rearm_detached(state_dir):
             env=env,
             start_new_session=True,
         )
-    rec = dict(pid=proc.pid, lstart=process_lstart(proc.pid), started_utc=now_iso())
+    rec = dict(pid=proc.pid, lstart=H.process_lstart(proc.pid), started_utc=now_iso())
     with open(os.path.join(lock_dir, "c9098-rearm.json"), "w", encoding="utf-8") as f:
         json.dump(rec, f)
     return proc.pid
@@ -3535,7 +3537,7 @@ def cmd_install_launchd(_args):
     """Second, independent scheduler: survives crontab rewrites AND reboots."""
     ok_all = True
     for label, seconds, arg in (
-        (LAUNCHD_LABEL_TICK, 300, "tick"),
+        (LAUNCHD_LABEL_TICK, 120, "tick"),
         (LAUNCHD_LABEL_HEAL, 1800, "heal"),
     ):
         log = os.path.join(STATE, f"launchd-{label}.log")
@@ -4184,6 +4186,160 @@ def dispatch_target_ok(queue, card, lanes=None, claim_in_progress=False):
 
 
 
+
+def cmd_goal(_args):
+    goal = load_goal(STATE)
+    print(json.dumps(goal, indent=1, ensure_ascii=False))
+
+
+@_queue_locked
+
+def cmd_seed(_args):
+    """Seed the objective critical path. Idempotent by (id-key) title prefix."""
+    queue = load_queue(STATE)
+    titles = {c["title"] for c in queue["cards"]}
+
+    def seed(title, lane, why, acc, **kw):
+        if title not in titles:
+            add_card(queue, new_card(title, lane, why, acc, **kw), state_dir=STATE)
+            return 1
+        return 0
+
+    n = 0
+    n += seed(
+        "Assess current run + box state; file follow-up cards",
+        "planner",
+        "a stale picture of training/eval state blocks every correct next card",
+        [
+            "probe ASI1/2/3 daemon health + running trainer + newest checkpoints",
+            "identify newest adapter not yet fail-closed eval'd",
+            "file cards: eval-newest-adapter, keep-training-healthy, mine-failures",
+        ],
+        priority=0,
+        budget_min=20,
+    )
+    n += seed(
+        "Fail-closed re-eval of newest adapter checkpoint (post qiskit fix)",
+        "evaluator",
+        "B-330: pre-fix verdicts are untrustworthy on the pass component; the "
+        "18/18 verdict chain must start from trustworthy measurements",
+        [
+            "run the 18-task holdout leg with 3 parallel task slices on ASI2",
+            "leg log shows adapter-applied AND adapter-probe-differs markers",
+            "candidates not byte-identical to base (spot-check 3)",
+            "write outputs/verdict_<step>.json with per-task pass + composite",
+        ],
+        priority=0,
+        budget_min=90,
+        gates=["eval-failclosed"],
+    )
+    n += seed(
+        "Keep ASI3 trainer healthy (alive, finite loss, checkpoint cadence)",
+        "trainer-ops",
+        "training is the adapter generator; a dead/starved trainer blocks the goal",
+        [
+            "trainer process alive + step markers advancing",
+            "loss/reward finite; zero-change alarm absent",
+            "crash -> evidence captured -> TDD fix card filed -> gated relaunch",
+        ],
+        priority=1,
+        budget_min=20,
+    )
+    n += seed(
+        "Mine failing holdout tasks into concrete repair/data cards",
+        "data-miner",
+        "base=1/18 and best adapter=3/18: 15 tasks fail; each failing task is a "
+        "work item on the critical path to 18/18",
+        [
+            "parse latest verdict + candidate outputs",
+            "per failing task: failure class (syntax/api/algorithm/harness)",
+            "file 1-3 cards: repair prompt, SFT data, reward shaping, or harness fix",
+        ],
+        priority=1,
+        budget_min=30,
+    )
+    save_queue(STATE, queue)
+    event(STATE, "seed", {"added": n})
+    print(f"seeded {n} new cards")
+
+
+@_queue_locked
+
+def cmd_card(args):
+    queue = load_queue(STATE)
+    card = new_card(
+        title=args.title,
+        lane=args.lane,
+        why=args.why,
+        acceptance=args.accept or ["complete the card as titled"],
+        budget_min=args.budget,
+        gates=args.gate,
+        deps=args.dep,
+        priority=args.priority,
+    )
+    add_card(queue, card, state_dir=STATE)
+    save_queue(STATE, queue)
+    event(
+        STATE,
+        "card_added",
+        {
+            "id": card["id"],
+            "title": card["title"],
+            "lane": card["lane"],
+            "priority": card["priority"],
+        },
+    )
+    print(card["id"])
+
+
+@_queue_locked
+
+def cmd_queue(_args):
+    queue = load_queue(STATE)
+    rows = sorted(queue["cards"], key=lambda c: (c["priority"], c["created_utc"]))
+    print(f"{'id':<6} {'P':<3} {'lane':<16} {'status':<8} {'title':<52} budget")
+    for c in rows:
+        print(
+            f"{c['id']:<6} P{c['priority']:<2} {c['lane']:<16} {c['status']:<8} "
+            f"{c['title'][:52]:<52} {c['budget_min']}m"
+        )
+
+
+
+def cmd_fleet(_args):
+    fleet = load_fleet(STATE)
+    for a in fleet["agents"]:
+        if a.get("status") != "running":
+            continue
+        left = age_min(a.get("deadline_utc"))
+        print(
+            f"{a.get('pid'):<8} {a.get('card'):<7} {a.get('lane'):<16} "
+            f"alive={pid_alive(a.get('pid'))!s:<5} "
+            f"age={age_min(a.get('started_utc'))!s:<6} "
+            f"left={(-left) if left is not None else '?'}"
+        )
+
+
+# ----------------------------------------------------------------------------- dispatch
+WORKER_ENV_FILES = (
+    "/Users/daxu/.codex/secrets/cmri.env",
+    "/Users/daxu/.codex/secrets/zhipu.env",
+    "/Users/daxu/.codex/secrets/huanxin.env",
+    "/Users/daxu/.claude-mcp-cron/claude_headless.env",
+    "/Users/daxu/.claude-mcp-cron/claude_headless_override.env",
+)
+
+
+
+def cmd_reap(_args):
+    _reap()
+
+
+
+
+def cmd_remove(args):
+    return cmd_card_remove(args)
+
 # H: helper namespace for tests (H.new_card, H.save_json, etc.)
 import types as _types
 H = _types.SimpleNamespace(
@@ -4264,3 +4420,7 @@ H = _types.SimpleNamespace(
     sha_pin_violation=sha_pin_violation,
     trim_status_file=trim_status_file,
 )
+
+
+if __name__ == "__main__":
+    main()

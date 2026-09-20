@@ -61,8 +61,8 @@ def test_blend_p_dominant_judge_mass_blends_shaped_and_judge() -> None:
     assert blend_comprehensive_reward(
         pass_reward=0.0,
         shaped_reward=0.8,
-        model_dim_scores={"correctness": 0.5},
-        dim_weights={"correctness": 0.4},
+        model_dim_scores={"correctness_of_intent": 0.5},
+        dim_weights={"correctness_of_intent": 0.4},
         mode="p_dominant",
     ) == pytest.approx(0.785)
 
