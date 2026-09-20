@@ -14,6 +14,10 @@ from typing import Any
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from scripts.dashboard_display_text import (
+    DISPLAY_LABELS,
+    DETAIL_REPLACEMENTS,
+    EVENT_STAGE_LABELS,
+    STATUS_VALUE_LABELS,
     format_display_value,
     zh_counter_key,
     zh_detail,

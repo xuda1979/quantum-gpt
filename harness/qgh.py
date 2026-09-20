@@ -2198,6 +2198,45 @@ def trim_status_file(state_dir, keep=500):
     return pruned
 
 
+def _tick_floor(state_dir):
+    """C-9007: read durable tick history from STATUS.md so the tick counter
+    never regresses below the highest tick seen, even if standup/ is wiped.
+
+    Returns the highest tick number found in STATUS.md, or 0 if no ticks.
+    """
+    status_path = os.path.join(state_dir, "STATUS.md")
+    if not os.path.isfile(status_path):
+        return 0
+    max_tick = 0
+    try:
+        with open(status_path, encoding="utf-8") as f:
+            for line in f:
+                m = re.search(r'tick#(\d+)', line)
+                if m:
+                    max_tick = max(max_tick, int(m.group(1)))
+    except OSError:
+        pass
+    return max_tick
+
+
+def _next_standup_no(state_dir=None):
+    """Compute the next standup number, never going below _tick_floor."""
+    sd = state_dir or os.environ.get("QGH_STATE_DIR") or os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "harness", "state"
+    )
+    standup_dir = os.path.join(sd, "standup")
+    nums = []
+    if os.path.isdir(standup_dir):
+        for fn in os.listdir(standup_dir):
+            m = re.match(r'standup-(\d+)\.md', fn)
+            if m:
+                nums.append(int(m.group(1)))
+    floor = _tick_floor(sd)
+    file_next = (max(nums) + 1) if nums else 1
+    return max(file_next, floor + 1)
+
+
+
 # H: helper namespace for tests (H.new_card, H.save_json, H.add_card, etc.)
 import types as _types
 H = _types.SimpleNamespace(
