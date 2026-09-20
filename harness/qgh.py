@@ -1524,6 +1524,57 @@ def auto_rearm_stale_window(
 
 
 # ----------------------------------------------------------------------------- tick
+def auto_eval_scan():
+    """Scan ASI3 training output for new checkpoints and auto-queue eval cards.
+
+    This is the core automation loop: when training produces a new checkpoint,
+    we automatically queue an eval card to measure progress toward 18/18.
+    Never raises — best-effort, must not break the tick.
+    """
+    try:
+        import json as _json
+        import urllib.request as _url
+
+        # Check ASI3 for latest training checkpoints
+        r = _url.urlopen(
+            "http://127.0.0.1:20653/exec",
+            timeout=10,
+            data=_json.dumps(
+                {
+                    "command": "ls -t /root/work/software/quantum-gpt/outputs/sapo-27b-ai-*/ 2>/dev/null | head -20"
+                }
+            ).encode(),
+            headers={"Content-Type": "application/json"},
+        )
+        resp = _json.loads(r.read())
+        output = resp.get("output", "")
+
+        # Find checkpoint directories (step_XXXXXX_adapter)
+        import re
+
+        checkpoints = re.findall(r"(step_\d+_adapter)", output)
+        if not checkpoints:
+            return  # no checkpoints found
+
+        # Find the run directory
+        run_dirs = re.findall(r"(sapo-27b-ai-\d+T\d+)", output)
+        if not run_dirs:
+            return
+
+        latest_run = run_dirs[0]
+        latest_ckpt = checkpoints[0]
+
+        # Check if we already have an eval card for this checkpoint
+        queue = load_queue(STATE)
+        card = H.auto_eval_on_checkpoint(queue, latest_ckpt, latest_run)
+        if card is not None:
+            H.add_card(queue, card)
+            save_queue(STATE, queue)
+            event(STATE, "auto_eval_queued", {"checkpoint": latest_ckpt, "run": latest_run})
+    except Exception:
+        pass  # best-effort, never break the tick
+
+
 def cmd_tick(_args):
     # C-9125: clean up stale tick lock if it's a directory (the acquire_lock
     # O_EXCL mechanism can't take over a directory-based lock, so a killed
@@ -1577,6 +1628,8 @@ def cmd_tick(_args):
             except subprocess.SubprocessError:
                 pass
         rotate_log(os.path.join(STATE, "tick.log"))
+        # auto-eval: scan for new training checkpoints and queue eval cards
+        auto_eval_scan()
         # dispatch (skip only if this very process is the wedged-tick killer)
         r = self_spawn(["dispatch"], timeout=300)
         dispatch_note = (r.stdout or "").strip()
@@ -1585,8 +1638,8 @@ def cmd_tick(_args):
         fleet = load_fleet(STATE)
         tick_no = _next_standup_no()
         verdicts = scan_verdicts(REPO)
-        refresh_trainer_probe()  # C-0074: trainer row from live file evidence
         auto_refresh_stale_probes()  # C-9148: re-measure stale/missing box probes
+        refresh_trainer_probe()  # C-0074: trainer row from live file evidence (after auto_refresh)
         probes = _probe_results()
         # reload queue+fleet AFTER dispatch (which ran as a subprocess and
         # modified them on disk) so the standup/dashboard/progress see the
@@ -1875,6 +1928,14 @@ def auto_refresh_stale_probes(state_dir=None, clock=None):
         import resource_probes as RP
 
         RP.run_all(sd)
+        # C-9107: re-enrich trainer probe after run_all overwrites it
+        # with daemon-based result (run_all uses probe_trainer which returns
+        # UNKNOWN without exec transport; refresh_trainer_probe uses
+        # probe_trainer_files + liveness enrichment).
+        try:
+            refresh_trainer_probe(sd)
+        except Exception:
+            pass
         try:
             event(sd, "c9148_probe_refresh", {"action": "refreshed"})
         except Exception:
@@ -1935,7 +1996,8 @@ def cmd_metrics(_args):
 
 
 def cmd_standup(_args):
-    refresh_trainer_probe()  # C-0074: trainer row from live file evidence
+    auto_refresh_stale_probes()  # C-9148: re-measure stale/missing box probes
+    refresh_trainer_probe()  # C-0074: trainer row from live file evidence (after auto_refresh)
     goal = load_goal(STATE)
     queue = load_queue(STATE)
     fleet = load_fleet(STATE)
