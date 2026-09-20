@@ -28,7 +28,6 @@ the adapter the leg actually dispatched. Nothing is ever assumed True.
 from __future__ import annotations
 
 import json
-import re
 from pathlib import Path
 
 STAGE_APPLIED = "adapter_applied"
