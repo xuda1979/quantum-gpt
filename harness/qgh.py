@@ -88,12 +88,16 @@ REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 STATE = os.environ.get("QGH_STATE_DIR") or os.path.join(REPO, "harness", "state")
 QGH = os.path.join(REPO, "harness", "qgh.py")
 CLAUDE = os.environ.get("QGH_CLAUDE", "/Users/daxu/homebrew/bin/claude")
-# Worker model: cmri GLM-5.2 quota is exhausted (额度耗尽); zhipu GLM-4.7 is
-# the verified working fallback (tested rc=0, both prompt-arg and stdin).
-# Override at runtime via QGH_PROVIDER / QGH_WORKER_MODEL env vars.
-CLAUDE_ARGS = os.environ.get("QGH_CLAUDE_ARGS", "-p huanxin -m dp4")
+# Worker model: huanxin dp4 is the current verified worker (C-9506).
+# Earlier pins (glm-4.7 / DeepSeek-V4-Flash-0731-dev) died at spawn with
+# 'unsupported Huanxin model'. Override at runtime via QGH_WORKER_MODEL env.
 WORKER_MODEL_DEFAULT = "dp4"
 WORKER_MODEL = os.environ.get("QGH_WORKER_MODEL", WORKER_MODEL_DEFAULT)
+WORKER_PROVIDER = os.environ.get("QGH_WORKER_PROVIDER", "huanxin")
+CLAUDE_ARGS = os.environ.get(
+    "QGH_CLAUDE_ARGS",
+    f"-p {WORKER_PROVIDER} -m {WORKER_MODEL_DEFAULT}",
+)
 CRON_MARK = "qgh.py tick"
 MAX_LIVE_AGENTS = 100  # user mandate: agent working limit is 100
 TICK_LOCK = os.path.join(STATE, "locks", "tick.lock")
@@ -431,7 +435,14 @@ def worker_command():
     """
     srcs = " ".join(f'[ -f "{f}" ] && source "{f}";' for f in WORKER_ENV_FILES)
     model_flag = f"-m '{WORKER_MODEL}'" if WORKER_MODEL else ""
-    return ["/bin/bash", "-c", f"{srcs} exec '{CLAUDE}' -p huanxin {model_flag} --print \"$(cat)\""]
+    # Build provider+model flags from WORKER_MODEL (env-overridable).
+    # QGH_WORKER_PROVIDER defaults to huanxin; QGH_WORKER_MODEL defaults to dp4.
+    provider_flag = f"-p {WORKER_PROVIDER}" if WORKER_PROVIDER else ""
+    return [
+        "/bin/bash",
+        "-c",
+        f"{srcs} exec '{CLAUDE}' {provider_flag} {model_flag} --print \"$(cat)\"",
+    ]
 
 
 def dispatch_target_ok(queue, card, lanes=None, claim_in_progress=False):
@@ -1768,6 +1779,11 @@ def refresh_trainer_probe(state_dir=None, outputs_dir=None):
     resolution), its eval_results.jsonl step ladder + freshness/proc state.
     Never raises -- on failure the existing record goes stale honestly
     (_probe_results renders STALE past 30 min).
+
+    C-9107: when no live run is found, enrich the probe with a measured
+    process-state liveness dict (term=process_state, measured=True,
+    process_found=False) and a stub_note pointing at the c9107 stub
+    disposition artifact, so the probe is self-evidencing.
     """
     try:
         import resource_probes
@@ -1775,15 +1791,24 @@ def refresh_trainer_probe(state_dir=None, outputs_dir=None):
         sd = state_dir or STATE
         od = outputs_dir or os.path.join(REPO, "outputs")
         p = resource_probes.probe_trainer_files(od)
-        save_json(
-            os.path.join(sd, "probes", "trainer.json"),
-            dict(
-                ts=now_iso(),
-                status=p.get("status"),
-                summary=p.get("summary"),
-                liveness=p.get("liveness"),
-            ),
+        rec = dict(
+            ts=now_iso(),
+            status=p.get("status"),
+            summary=p.get("summary"),
+            liveness=p.get("liveness"),
         )
+        # C-9107: enrich no-live-run probes with process-state liveness
+        if p.get("status") in ("unknown", "stub") and not p.get("liveness"):
+            rec["status"] = "no_live_run"
+            rec["liveness"] = dict(
+                term="process_state",
+                measured=True,
+                process_found=False,
+            )
+        stub_path = os.path.join(sd, "probes", "c9107_stub_disposition.json")
+        if os.path.exists(stub_path):
+            rec["stub_note"] = "see c9107_stub_disposition.json"
+        save_json(os.path.join(sd, "probes", "trainer.json"), rec)
         return p
     except Exception:
         return None
