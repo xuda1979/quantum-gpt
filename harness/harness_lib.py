@@ -1882,3 +1882,30 @@ def render_standup(goal, queue, fleet, tick_no, verdicts=None, probes=None, stat
     except Exception:
         pass
     return "\n".join(L)
+
+
+def prune_old_probes(state_dir, max_age_days=7):
+    """C-9510: prune probe files older than max_age_days to prevent disk bloat.
+
+    Probe artifacts (harness/state/probes/*.json) accumulate indefinitely.
+    This removes files older than max_age_days, keeping only recent probes
+    for audit. Returns the count of pruned files.
+    """
+    import time
+
+    probes_dir = os.path.join(state_dir, "probes")
+    if not os.path.isdir(probes_dir):
+        return 0
+    cutoff = time.time() - (max_age_days * 24 * 3600)
+    pruned = 0
+    for name in os.listdir(probes_dir):
+        if not name.endswith(".json"):
+            continue
+        path = os.path.join(probes_dir, name)
+        try:
+            if os.path.getmtime(path) < cutoff:
+                os.remove(path)
+                pruned += 1
+        except OSError:
+            pass
+    return pruned

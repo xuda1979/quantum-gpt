@@ -1530,6 +1530,13 @@ def cmd_tick(_args):
             print("GOAL ACHIEVED — loop retired")
             return
         reaped = _reap()
+        # C-9510: prune old probe files to prevent disk bloat
+        try:
+            _pruned = H.prune_old_probes(STATE, max_age_days=7)
+            if _pruned:
+                event(STATE, "probes_pruned", {"count": _pruned})
+        except Exception:
+            pass
         # C-9133: a stale window_open artifact must re-arm the C-9098
         # sentinel WITHOUT a hand-run --rearm; otherwise every launch leg
         # re-SKIPs on window_open_stale (05:01:55Z) while ASI2 sits ready.
