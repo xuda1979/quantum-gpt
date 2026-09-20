@@ -1078,6 +1078,25 @@ def scan_verdicts(repo_root, limit=12):
     return verdicts
 
 
+def _candidates_differ_gate_passes(v):
+    """Fail-closed candidates-differ evidence on the verdict (C-9456).
+
+    The composer records candidates_vs_base_gate TOP-LEVEL on the verdict
+    as {leg1: {...}, leg2: {...}}; a verdict whose gate is UNKNOWN, FAIL,
+    or absent for either leg never retires the goal. This is the
+    done-criteria "candidates differ from base" marker, verified from the
+    recorded probe evidence, not assumed.
+    """
+    gates = v.get("candidates_vs_base_gate")
+    if not isinstance(gates, dict):
+        return False
+    for leg in ("leg1", "leg2"):
+        gate = gates.get(leg)
+        if not isinstance(gate, dict) or gate.get("status") != "PASS":
+            return False
+    return True
+
+
 def _leg_probe_differs(leg):
     """Probe-differs evidence on one leg, from either marker shape."""
     if not isinstance(leg, dict):
@@ -1335,6 +1354,10 @@ def goal_done(goal, verdicts):
         if not isinstance(leg1, dict) or not isinstance(leg2, dict):
             continue
         if not (_leg_probe_differs(leg1) and _leg_probe_differs(leg2)):
+            continue
+        if not _candidates_differ_gate_passes(v):
+            # C-9456: the "candidates differ from base" done-criterion is
+            # fail-closed; UNKNOWN/FAIL/absent gate never retires the goal.
             continue
         box1 = leg1.get("box") or None
         box2 = leg2.get("box") or None
