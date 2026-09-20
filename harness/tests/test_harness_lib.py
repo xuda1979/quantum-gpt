@@ -443,5 +443,41 @@ class TestBounceDeadRunningEventsFile(unittest.TestCase):
         self.assertIn("dead_worker_requeued", kinds)
 
 
+class TestHarvestLogTailScope(unittest.TestCase):
+    """C-9507: harvest_log tail must come from the LAST dispatch segment only.
+
+    A whole-file tail leaks previous dispatch lines into gate checks and
+    bounce reasons -- the same class as the C-9048-A verdict scope fix."""
+
+    def test_tail_from_last_segment_only(self):
+        d = tempfile.mkdtemp(prefix="qgh-test-harvest-")
+        log = os.path.join(d, "worker.log")
+        with open(log, "w") as f:
+            f.write("===== dispatch 2026-09-20T10:00:00Z =====\n")
+            f.write("old line from first dispatch\n")
+            f.write("RESULT: DONE\n")
+            f.write("===== dispatch 2026-09-20T11:00:00Z =====\n")
+            f.write("new line from second dispatch\n")
+            f.write("RESULT: BLOCKED\n")
+        verdict, tail = H.harvest_log(log)
+        self.assertEqual(verdict, "BLOCKED")
+        # The tail must NOT contain the old line from the first dispatch
+        tail_text = " ".join(tail)
+        self.assertNotIn("old line from first dispatch", tail_text)
+        self.assertIn("new line from second dispatch", tail_text)
+
+    def test_verdict_from_last_segment(self):
+        d = tempfile.mkdtemp(prefix="qgh-test-harvest-")
+        log = os.path.join(d, "worker.log")
+        with open(log, "w") as f:
+            f.write("===== dispatch 2026-09-20T10:00:00Z =====\n")
+            f.write("RESULT: DONE\n")
+            f.write("===== dispatch 2026-09-20T11:00:00Z =====\n")
+            f.write("worker produced no result\n")
+        verdict, tail = H.harvest_log(log)
+        # No RESULT in the last segment -> verdict None (not DONE from first)
+        self.assertIsNone(verdict)
+
+
 if __name__ == "__main__":
     unittest.main()

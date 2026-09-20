@@ -884,8 +884,13 @@ def harvest_log(log_path):
     # defeating the environmental re-arm and burning bounce strikes
     # with a lying reason.
     segments = DISPATCH_SEG_RE.split(text)
-    m = RESULT_RE.search(segments[-1] if segments else text)
-    tail = [ln for ln in text.strip().splitlines() if ln.strip()][-10:]
+    last_seg = segments[-1] if segments else text
+    m = RESULT_RE.search(last_seg)
+    # C-9507: tail must come from the LAST dispatch segment only, not the
+    # whole file -- a whole-file tail leaks previous dispatch lines into
+    # gate checks and bounce reasons (same class as the C-9048-A verdict
+    # scope fix).
+    tail = [ln for ln in last_seg.strip().splitlines() if ln.strip()][-10:]
     return (m.group(1) if m else None), tail
 
 
