@@ -88,8 +88,11 @@ REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 STATE = os.environ.get("QGH_STATE_DIR") or os.path.join(REPO, "harness", "state")
 QGH = os.path.join(REPO, "harness", "qgh.py")
 CLAUDE = os.environ.get("QGH_CLAUDE", "/Users/daxu/homebrew/bin/claude")
-CLAUDE_ARGS = os.environ.get("QGH_CLAUDE_ARGS", "-p cmri -m GLM-5.2")
-WORKER_MODEL_DEFAULT = "GLM-5.2"
+# Worker model: cmri GLM-5.2 quota is exhausted (额度耗尽); zhipu GLM-4.7 is
+# the verified working fallback (tested rc=0, both prompt-arg and stdin).
+# Override at runtime via QGH_PROVIDER / QGH_WORKER_MODEL env vars.
+CLAUDE_ARGS = os.environ.get("QGH_CLAUDE_ARGS", "-p z -m glm-4.7")
+WORKER_MODEL_DEFAULT = "glm-4.7"
 WORKER_MODEL = os.environ.get("QGH_WORKER_MODEL", WORKER_MODEL_DEFAULT)
 CRON_MARK = "qgh.py tick"
 MAX_LIVE_AGENTS = 100  # user mandate: agent working limit is 100
@@ -413,6 +416,7 @@ def cmd_fleet(_args):
 # ----------------------------------------------------------------------------- dispatch
 WORKER_ENV_FILES = (
     "/Users/daxu/.codex/secrets/cmri.env",
+    "/Users/daxu/.codex/secrets/zhipu.env",
     "/Users/daxu/.codex/secrets/huanxin.env",
     "/Users/daxu/.claude-mcp-cron/claude_headless.env",
     "/Users/daxu/.claude-mcp-cron/claude_headless_override.env",
@@ -427,7 +431,7 @@ def worker_command():
     """
     srcs = " ".join(f'[ -f "{f}" ] && source "{f}";' for f in WORKER_ENV_FILES)
     model_flag = f"-m '{WORKER_MODEL}'" if WORKER_MODEL else ""
-    return ["/bin/bash", "-c", f"{srcs} exec '{CLAUDE}' -p cmri {model_flag} --print \"$(cat)\""]
+    return ["/bin/bash", "-c", f"{srcs} exec '{CLAUDE}' -p huanxin {model_flag} --print \"$(cat)\""]
 
 
 def dispatch_target_ok(queue, card, lanes=None, claim_in_progress=False):
