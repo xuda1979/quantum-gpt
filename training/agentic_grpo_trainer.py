@@ -1889,7 +1889,7 @@ def main() -> int:
             summarize_trajectory_behavior(trajectory) for trajectory in trajectories
         ]
         evaluations = []
-        for trajectory, trajectory_summary in zip(trajectories, trajectory_summaries, strict=False):
+        for trajectory, trajectory_summary in zip(trajectories, trajectory_summaries):
             evaluation = evaluate_candidate(
                 trajectory.final_candidate,
                 test_harness,

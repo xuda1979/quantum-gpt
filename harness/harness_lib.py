@@ -117,7 +117,7 @@ WIP_LIMITS = {
 }
 
 DEFAULT_BUDGET_MIN = 25
-STALL_MIN = 20  # heartbeat staleness that counts as a stall
+STALL_MIN = 10  # heartbeat staleness that counts as a stall (2min ticks)
 MAX_BUDGET_MIN = 90
 
 
@@ -609,6 +609,45 @@ def ready_cards(queue, lane=None):
     return out
 
 
+def is_past_deadline(card, now=None):
+    """C-9532: Check if a card is past its deadline_utc."""
+    deadline = card.get("deadline_utc")
+    if not deadline:
+        return False
+    try:
+        dt = datetime.strptime(deadline, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+        current = now or datetime.now(timezone.utc)
+        return current > dt
+    except (ValueError, TypeError):
+        return False
+
+
+def auto_requeue_zero_bounce(state_dir):
+    """C-9529: Auto-requeue bounced cards with 0 bounces.
+
+    Bounced cards sitting idle with bounces=0 are a productivity leak.
+    This sets status=ready, clears claimed_by/claimed_utc so the dispatcher
+    can pick them up on the next cycle. Returns the count of requeued cards.
+
+    Never raises -- best-effort.
+    """
+    try:
+        queue = load_queue(state_dir)
+        requeued = 0
+        for c in queue["cards"]:
+            if c["status"] == "bounced" and c.get("bounces", 0) == 0:
+                c["status"] = "ready"
+                c["claimed_by"] = None
+                c["claimed_utc"] = None
+                c["requeued_utc"] = now_iso()
+                requeued += 1
+        if requeued:
+            save_queue(state_dir, queue)
+        return requeued
+    except Exception:
+        return 0
+
+
 def running_count(queue, lane):
     return sum(1 for c in queue["cards"] if c["status"] == "running" and c["lane"] == lane)
 
@@ -1078,6 +1117,46 @@ def find_card_by_id_in(queue, card_id):
         if c["id"] == card_id:
             return c
     return None
+
+
+# ----------------------------------------------------------------------------- auto-training
+def auto_queue_training(state_dir):
+    """C-9531: Auto-queue a training launch card with v10 benchmark.
+
+    When no training is running and the goal is still OPEN, queue a
+    trainer-ops card to launch/resume GRPO training using the v10 benchmark
+    (quantum_grpo_training_v10_sapo_18holdout.txt) which covers all 18
+    holdout tasks.
+
+    Returns the new card dict if one was created, or None if not needed.
+    Never raises -- best-effort.
+    """
+    try:
+        goal = load_json(os.path.join(state_dir, "GOAL.json"), {})
+        if goal.get("status") == "DONE":
+            return None
+        queue = load_queue(state_dir)
+        # Check if any trainer-ops card is running or ready
+        for c in queue["cards"]:
+            if c.get("lane") == "trainer-ops" and c["status"] in ("running", "ready"):
+                return None
+        # Need a training card
+        card = new_card(
+            title="Auto: launch/resume GRPO training with v10 benchmark (18/18 holdout coverage) toward 18/18",
+            lane="trainer-ops",
+            why="No training running and goal is OPEN. v10 benchmark covers all 18 holdout tasks (unlike v9 which has 0 overlap). Use --min-rms-for-update 0.01 for warm-continue.",
+            acceptance=[
+                "Launch GRPO training on ASI3 using v10 benchmark (quantum_grpo_training_v10_sapo_18holdout.txt)",
+                "Use --min-rms-for-update 0.01 for warm-continue training",
+                "Verify training is producing checkpoints with step/loss advancement",
+                "Report current pass count if eval is available",
+            ],
+            budget_min=40,
+            priority=0,
+        )
+        return card
+    except Exception:
+        return None
 
 
 # ----------------------------------------------------------------------------- auto-eval

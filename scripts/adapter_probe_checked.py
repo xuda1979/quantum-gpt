@@ -167,7 +167,7 @@ def _apply_adapter_checked(base: Any, adapter_dir: Path) -> Any:
         remapped = _remap_sapo_keys(list(state.keys()))
         if remapped != list(state.keys()):
             tensors = dict()
-            for old_key, new_key in zip(state.keys(), remapped, strict=False):
+            for old_key, new_key in zip(state.keys(), remapped):
                 tensors[new_key] = state[old_key]
             load_dir = Path(tempfile.mkdtemp(prefix="sapo-adapter-remap-"))
             save_file(tensors, str(load_dir / "adapter_model.safetensors"))

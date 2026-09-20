@@ -3633,12 +3633,7 @@ def quarantine_gate_active(
     """
     if degenerate_policy_alarm:
         return True
-    if (
-        entropy_mean is not None
-        and float(entropy_mean) < DEGENERATE_POLICY_ENTROPY_MAX
-        and completion_token_lengths
-        and max(int(length) for length in completion_token_lengths) < int(entropy_max_tokens)
-    ):
+    if entropy_mean is not None and float(entropy_mean) < DEGENERATE_POLICY_ENTROPY_MAX:
         return True
     if completion_token_lengths and max(int(length) for length in completion_token_lengths) < int(
         collapse_max_tokens
@@ -5315,15 +5310,15 @@ def main() -> int:
     _early_metrics = Path(args.output_dir) / "grpo_step_metrics.jsonl"
     if (
         _early_metrics.exists()
-        and not args.overwrite_output_dir
-        and not (args.resume_from or args.resume_state)
+        and not getattr(args, "overwrite_output_dir", False)
+        and not (getattr(args, "resume_from", None) or getattr(args, "resume_state", None))
     ):
         raise SystemExit(
             f"Output dir already contains {_early_metrics.name}; pass "
             "--overwrite-output-dir to start fresh."
         )
     # Early resume-state guard:
-    if args.resume_state and not args.adapter_init:
+    if getattr(args, "resume_state", None) and not getattr(args, "adapter_init", None):
         raise ValueError(
             "--resume-state requires --adapter-init: the soft-resume must "
             "continue from the paused checkpoint's weights; restoring the "
@@ -5331,7 +5326,7 @@ def main() -> int:
             "policy rewind"
         )
     # Early resume-state JSON validation:
-    if args.resume_state:
+    if getattr(args, "resume_state", None):
         try:
             import json as _json
 

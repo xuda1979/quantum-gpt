@@ -112,7 +112,7 @@ def _extract_function_specs(text: str) -> list[FunctionSpec]:
                             name=f"*{args.vararg.arg}", annotation=None, has_default=False
                         )
                     )
-                for kwarg, default in zip(args.kwonlyargs, args.kw_defaults, strict=False):
+                for kwarg, default in zip(args.kwonlyargs, args.kw_defaults):
                     annotation = (
                         ast.unparse(kwarg.annotation) if kwarg.annotation is not None else None
                     )

@@ -299,7 +299,7 @@ def summarize_candidate_interface(candidate_path: Path) -> list[str]:
                 if node.args.vararg is None:
                     args.append("*")
                 for kwarg, default in zip(
-                    node.args.kwonlyargs, node.args.kw_defaults, strict=False
+                    node.args.kwonlyargs, node.args.kw_defaults
                 ):
                     kwarg_text = kwarg.arg
                     if kwarg.annotation is not None:

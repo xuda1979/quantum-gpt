@@ -85,7 +85,7 @@ def rewrite_split(
     }
 
     with out_path.open("w", encoding="utf-8") as handle:
-        for code_row, semantic_row in zip(code_rows, semantic_rows, strict=False):
+        for code_row, semantic_row in zip(code_rows, semantic_rows):
             code_id = code_row["example_id"]
             semantic_id = semantic_row["example_id"]
             if code_id != semantic_id:

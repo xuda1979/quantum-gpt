@@ -296,7 +296,7 @@ def _r_partial(
         return 1.0
     table = category_table if category_table is not None else _CATEGORIES
     max_severity = 0.0
-    for issue, cat in zip(issues, categories, strict=False):
+    for issue, cat in zip(issues, categories):
         if cat == "other":
             continue
         # Look up the severity weight for the matched pattern.
