@@ -23,9 +23,9 @@ import signal
 import subprocess
 import sys
 import time
+import types as _types
 from datetime import datetime, timedelta, timezone
 from functools import wraps
-
 
 # ----------------------------------------------------------------------------- module constants
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -57,7 +57,7 @@ API_ERROR_SIGNATURES = (
     "rate limit",
 )
 # QPG: quota preflight gate module (imported lazily to avoid circular deps)
-import importlib as _importlib
+
 try:
     import quota_preflight_gate as QPG
 except ImportError:
@@ -289,8 +289,8 @@ def save_queue(state_dir, queue):
         _disk_n = len(_verify.get("cards", []))
         if _disk_n < _pre_save_n:
             raise RuntimeError(
-                "save_queue integrity check failed: disk has %d cards "
-                "but memory had %d -- a clobbering write vaporized cards" % (_disk_n, _pre_save_n)
+                f"save_queue integrity check failed: disk has {_disk_n} cards "
+                f"but memory had {_pre_save_n} -- a clobbering write vaporized cards"
             )
     except (OSError, ValueError):
         pass  # verify is best-effort; the save itself already happened
@@ -329,11 +329,6 @@ def save_queue(state_dir, queue):
 OPEN_STATUSES = ("ready", "running", "blocked")
 
 
-
-
-
-
-
 def cmd_init(_args=None):
     """Initialize the state directory with empty queue, goal, and fleet."""
     sd = os.environ.get("QGH_STATE_DIR") or os.path.join(
@@ -348,16 +343,20 @@ def cmd_init(_args=None):
     if not os.path.exists(os.path.join(sd, "QUEUE.json")):
         save_json(os.path.join(sd, "QUEUE.json"), {"cards": [], "seq": 0})
     if not os.path.exists(os.path.join(sd, "GOAL.json")):
-        save_json(os.path.join(sd, "GOAL.json"), {
-            "objective": "test objective",
-            "model": "test-model",
-            "target_pass": "18/18",
-            "status": "OPEN",
-            "created_utc": now_iso(),
-            "done_criteria": [],
-        })
+        save_json(
+            os.path.join(sd, "GOAL.json"),
+            {
+                "objective": "test objective",
+                "model": "test-model",
+                "target_pass": "18/18",
+                "status": "OPEN",
+                "created_utc": now_iso(),
+                "done_criteria": [],
+            },
+        )
     if not os.path.exists(os.path.join(sd, "FLEET.json")):
         save_json(os.path.join(sd, "FLEET.json"), {"agents": []})
+
 
 def history_card_ids(state_dir):
     """C-9127: every card id ever referenced in EVENTS.jsonl.
@@ -2252,7 +2251,7 @@ def _tick_floor(state_dir):
     try:
         with open(status_path, encoding="utf-8") as f:
             for line in f:
-                m = re.search(r'tick#(\d+)', line)
+                m = re.search(r"tick#(\d+)", line)
                 if m:
                     max_tick = max(max_tick, int(m.group(1)))
     except OSError:
@@ -2262,14 +2261,18 @@ def _tick_floor(state_dir):
 
 def _next_standup_no(state_dir=None):
     """Compute the next standup number, never going below _tick_floor."""
-    sd = state_dir or os.environ.get("QGH_STATE_DIR") or os.path.join(
-        os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "harness", "state"
+    sd = (
+        state_dir
+        or os.environ.get("QGH_STATE_DIR")
+        or os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "harness", "state"
+        )
     )
     standup_dir = os.path.join(sd, "standup")
     nums = []
     if os.path.isdir(standup_dir):
         for fn in os.listdir(standup_dir):
-            m = re.match(r'standup-(\d+)\.md', fn)
+            m = re.match(r"standup-(\d+)\.md", fn)
             if m:
                 nums.append(int(m.group(1)))
     floor = _tick_floor(sd)
@@ -2281,6 +2284,7 @@ QUEUE_STALE_SEC = 1800
 LOCK_STALE_S = 1800
 DISPATCH_SEG_RE = re.compile(r"^=====\s*dispatch\b.*=====\s*$", re.MULTILINE)
 REARM_WINDOW_FRESH_S = 1800.0
+REARM_CARD = "C-9098"  # card id for rearm telemetry
 LAUNCHD_LABEL_TICK = "com.quantumgpt.qgh-tick"
 LAUNCHD_LABEL_HEAL = "com.quantumgpt.qgh-heal"
 CLAUDE = os.environ.get("QGH_CLAUDE", "claude")
@@ -2293,6 +2297,7 @@ TRANSPORT_WEDGE_MARK = "exec_wedged"
 PROBE_STALE_S = 3600
 CLAUDE = os.environ.get("QGH_CLAUDE", "/Users/daxu/homebrew/bin/claude")
 
+
 def self_spawn(args_list, timeout=None):
     """Run qgh as a subprocess, propagating the state-dir seam."""
     env = dict(os.environ)
@@ -2300,7 +2305,6 @@ def self_spawn(args_list, timeout=None):
     return subprocess.run(
         [sys.executable, QGH] + args_list, capture_output=True, text=True, env=env, timeout=timeout
     )
-
 
 
 def claimable_ready_count(queue):
@@ -2322,7 +2326,6 @@ def claimable_ready_count(queue):
         if not stuck:
             n += 1
     return n
-
 
 
 def planner_topup_needed(queue, min_ready=2):
@@ -2347,13 +2350,16 @@ def planner_topup_needed(queue, min_ready=2):
     return True
 
 
-
 def worker_command():
     """bash: source credential files, then exec claude (pid stays the worker's)."""
     srcs = " ".join(f'[ -f "{f}" ] && source "{f}";' for f in WORKER_ENV_FILES)
     model_flag = f"-m '{WORKER_MODEL}'" if WORKER_MODEL else ""
     provider_flag = f"-p {WORKER_PROVIDER}" if WORKER_PROVIDER else ""
-    return ["/bin/bash", "-c", srcs + " exec '" + CLAUDE + "' " + provider_flag + " " + model_flag + " --print \"$(cat)\""]
+    return [
+        "/bin/bash",
+        "-c",
+        srcs + " exec '" + CLAUDE + "' " + provider_flag + " " + model_flag + ' --print "$(cat)"',
+    ]
 
 
 def spawn_worker(goal, queue, card, dep_results):
@@ -2448,7 +2454,6 @@ def spawn_worker(goal, queue, card, dep_results):
     return entry
 
 
-
 def cmd_heartbeat(args):
     """Worker heartbeat (C-9073/C-9115): the sanctioned append route.
 
@@ -2473,7 +2478,6 @@ def cmd_heartbeat(args):
             event(STATE, "ghost_heartbeat", {"card": args.card})
     except Exception:
         pass  # detection must never unwind a successful heartbeat
-
 
 
 def _reap():
@@ -2745,7 +2749,6 @@ def _reap():
     return reaped
 
 
-
 def _reconcile_dep_blockers():
     """Self-heal dep livelock: ready cards blocked on TERMINAL (bounced/dead)
     deps. Environmental bounces re-arm the blocker (strikes reset -- they were
@@ -2861,7 +2864,6 @@ def _reconcile_dep_blockers():
     return changed, dead_blockers
 
 
-
 def _auto_plan(goal):
     queue = load_queue(STATE)
     # C-9027 (3): every auto_plan decision records its count basis
@@ -2959,7 +2961,6 @@ def cmd_card_remove(args):
         sys.exit(1)
 
 
-
 def _rearm_running(lock_path):
     """Single-flight liveness: the lock names a LIVE pid whose lstart still
     matches (the reaper's pid-reuse guard). Dead/stale/corrupt/absent lock
@@ -2975,7 +2976,6 @@ def _rearm_running(lock_path):
     if not isinstance(pid, int) or not pid_alive(pid):
         return False
     return bool(lstart) and H.process_lstart(pid) == lstart
-
 
 
 def _spawn_rearm_detached(state_dir):
@@ -3009,7 +3009,6 @@ def _spawn_rearm_detached(state_dir):
     with open(os.path.join(lock_dir, "c9098-rearm.json"), "w", encoding="utf-8") as f:
         json.dump(rec, f)
     return proc.pid
-
 
 
 def auto_rearm_stale_window(
@@ -3064,6 +3063,7 @@ def auto_rearm_stale_window(
 
 # ----------------------------------------------------------------------------- tick
 
+
 def auto_eval_scan():
     """Scan ASI3 training output for new checkpoints and auto-queue eval cards.
 
@@ -3113,7 +3113,6 @@ def auto_eval_scan():
             event(STATE, "auto_eval_queued", {"checkpoint": latest_ckpt, "run": latest_run})
     except Exception:
         pass  # best-effort, never break the tick
-
 
 
 def cmd_tick(_args):
@@ -3169,6 +3168,16 @@ def cmd_tick(_args):
             except subprocess.SubprocessError:
                 pass
         rotate_log(os.path.join(STATE, "tick.log"))
+        # C-9532: auto-queue training launch when no training is running.
+        try:
+            _card = auto_queue_training(STATE)
+            if _card is not None:
+                _q = load_queue(STATE)
+                add_card(_q, _card)
+                save_queue(STATE, _q)
+                event(STATE, "auto_training_queued", {"card": _card["id"]})
+        except Exception as _tq_exc:
+            event(STATE, "auto_training_queue_error", {"err": repr(_tq_exc)[:160]})
         # auto-eval: scan for new training checkpoints and queue eval cards
         auto_eval_scan()
         # dispatch (skip only if this very process is the wedged-tick killer)
@@ -3310,8 +3319,7 @@ def cmd_tick(_args):
                 _last = (_h.get("lastCommand") or "")[:60]
                 print(f"    {_name} /exec: cmdCount={_cc} busy={_busy} last=[{_last}]")
     finally:
-        release_lock(lock)
-
+        release_lock(TICK_LOCK, lock)
 
 
 def refresh_trainer_probe(state_dir=None, outputs_dir=None):
@@ -3354,7 +3362,6 @@ def refresh_trainer_probe(state_dir=None, outputs_dir=None):
         return p
     except Exception:
         return None
-
 
 
 def auto_refresh_stale_probes(state_dir=None, clock=None):
@@ -3411,7 +3418,6 @@ def auto_refresh_stale_probes(state_dir=None, clock=None):
         return dict(action="refresh-failed")
 
 
-
 def _probe_results():
     """Read box-probe result files (written by probe agents), fail-stale-closed.
 
@@ -3435,7 +3441,7 @@ def _probe_results():
             break
     if _any_stale:
         try:
-            refresh_box_probes_best_effort(STATE)
+            _refresh_box_probe_best_effort(STATE)
         except Exception:
             pass
     for name in ("asi1", "asi2", "asi3", "trainer", "train_fire"):
@@ -3452,12 +3458,10 @@ def _probe_results():
     return probes
 
 
-
 def cmd_metrics(_args):
     from harness_lib import compute_metrics
 
     print(json.dumps(compute_metrics(STATE), indent=1))
-
 
 
 def cmd_standup(_args):
@@ -3470,7 +3474,6 @@ def cmd_standup(_args):
         goal, queue, fleet, 0, scan_verdicts(REPO), _probe_results(), state_dir=STATE
     )
     print(text)
-
 
 
 def cmd_done_check(_args):
@@ -3488,6 +3491,7 @@ def cmd_done_check(_args):
 
 
 # ----------------------------------------------------------------------------- never-stop
+
 
 def cmd_install_cron(_args):
     line = "*/5 * * * * cd {} && /usr/bin/python3 {} tick >> {} 2>&1".format(
@@ -3515,7 +3519,6 @@ def cmd_install_cron(_args):
         print(f"cron install FAILED: {p.stderr}")
 
 
-
 def _launchd_installed(label):
     p = os.path.expanduser(f"~/Library/LaunchAgents/{label}.plist")
     if not os.path.exists(p):
@@ -3531,6 +3534,26 @@ def _launchd_installed(label):
     except (OSError, subprocess.SubprocessError):
         return True  # file present; don't flap on probe failure
 
+
+PLIST_TMPL = """<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>%(label)s</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/bin/python3</string>
+    <string>%(qgh)s</string>
+    <string>%(arg)s</string>
+  </array>
+  <key>StartInterval</key><integer>%(seconds)d</integer>
+  <key>RunAtLoad</key><false/>
+  <key>StandardOutPath</key><string>%(log)s</string>
+  <key>StandardErrorPath</key><string>%(log)s</string>
+  <key>Nice</key><integer>5</integer>
+</dict>
+</plist>
+"""
 
 
 def cmd_install_launchd(_args):
@@ -3575,7 +3598,6 @@ def cmd_install_launchd(_args):
                 ok_all = False
         event(STATE, "launchd_installed", {"label": label, "seconds": seconds})
     print("launchd schedulers %s" % ("installed" if ok_all else "PARTIALLY INSTALLED"))
-
 
 
 def cmd_doctor(_args):
@@ -3629,13 +3651,11 @@ def cmd_doctor(_args):
     print("goal: %s" % (f"ACHIEVED via {vfile}" if done else "OPEN"))
 
 
-
 def cmd_watch(args):
     interval = args.interval
     while True:
         self_spawn(["tick"])
         time.sleep(interval)
-
 
 
 def _last_success_age_s():
@@ -3652,7 +3672,6 @@ def _last_success_age_s():
         return time.time() - os.path.getmtime(p)
     except OSError:
         return None
-
 
 
 def cmd_heal(_args):
@@ -3684,7 +3703,6 @@ def cmd_heal(_args):
     self_spawn(["tick"])
 
 
-
 def cmd_review(_args):
     from review import run_review
 
@@ -3692,6 +3710,7 @@ def cmd_review(_args):
 
 
 # ----------------------------------------------------------------------------- main
+
 
 def main():
     ap = argparse.ArgumentParser(prog="qgh")
@@ -3755,10 +3774,6 @@ def main():
     args.func(args)
 
 
-
-
-
-
 def _queue_locked(fn):
     """C-9386: serialize a QUEUE.json read-modify-write under a file lock.
 
@@ -3781,8 +3796,8 @@ def _queue_locked(fn):
     return wrapper
 
 
-
 # Additional restored helper functions
+
 
 def _window_age_s(window_dir, clock=time.time):
     """Age of window_open.json in seconds, or None when the artifact is
@@ -3801,11 +3816,9 @@ def _window_age_s(window_dir, clock=time.time):
         return None
 
 
-
 def _bounce_was_environmental(card):
     reason = ((card.get("bounce_reason") or "") + " " + (card.get("result") or "")).lower()
     return any(sig in reason for sig in ENV_BOUNCE_SIGNATURES)
-
 
 
 def _cleanup_stale_agent_locks():
@@ -3855,7 +3868,6 @@ def _cleanup_stale_agent_locks():
                 pass
 
 
-
 def _dedup_card_ids():
     """Repair duplicate card ids (concurrent card-add race): keep the running
     one, else the oldest; re-id the rest and repoint dependent cards' deps."""
@@ -3897,14 +3909,8 @@ def _dedup_card_ids():
     return True
 
 
-
 def _rmtree(path):
-    import shutil
-
     shutil.rmtree(path, ignore_errors=True)
-
-
-
 
 
 ENV_BOUNCE_SIGNATURES = (
@@ -3952,7 +3958,6 @@ def cmd_card_requeue(args):
     print(f"requeued {len(requeued)} card(s), refused {len(refused)}")
     if refused:
         sys.exit(1)  # fail closed: a refusal must never look like success
-
 
 
 def cmd_dispatch(args):
@@ -4097,7 +4102,6 @@ def _box_probe_age_s(state_dir):
         return None
 
 
-
 def _refresh_box_probe_best_effort(state_dir):
     """Re-measure the box daemon probes (asi1/asi2/asi3) from live /health.
 
@@ -4122,7 +4126,6 @@ def _refresh_box_probe_best_effort(state_dir):
             save_json(os.path.join(out_dir, f"{name}.json"), rec)
     except Exception:
         pass  # probe refresh must never break dispatch
-
 
 
 def transport_wedged(state_dir=None):
@@ -4154,8 +4157,6 @@ def transport_wedged(state_dir=None):
     return False
 
 
-
-
 def dispatch_target_ok(queue, card, lanes=None, claim_in_progress=False):
     """Fail-closed preflight for dispatch: refuse when the target card is
     missing from the queue, resolves to a DIFFERENT card (duplicate-id
@@ -4184,16 +4185,12 @@ def dispatch_target_ok(queue, card, lanes=None, claim_in_progress=False):
     return True, "ok"
 
 
-
-
-
 def cmd_goal(_args):
     goal = load_goal(STATE)
     print(json.dumps(goal, indent=1, ensure_ascii=False))
 
 
 @_queue_locked
-
 def cmd_seed(_args):
     """Seed the objective critical path. Idempotent by (id-key) title prefix."""
     queue = load_queue(STATE)
@@ -4264,7 +4261,6 @@ def cmd_seed(_args):
 
 
 @_queue_locked
-
 def cmd_card(args):
     queue = load_queue(STATE)
     card = new_card(
@@ -4293,7 +4289,6 @@ def cmd_card(args):
 
 
 @_queue_locked
-
 def cmd_queue(_args):
     queue = load_queue(STATE)
     rows = sorted(queue["cards"], key=lambda c: (c["priority"], c["created_utc"]))
@@ -4303,7 +4298,6 @@ def cmd_queue(_args):
             f"{c['id']:<6} P{c['priority']:<2} {c['lane']:<16} {c['status']:<8} "
             f"{c['title'][:52]:<52} {c['budget_min']}m"
         )
-
 
 
 def cmd_fleet(_args):
@@ -4330,18 +4324,15 @@ WORKER_ENV_FILES = (
 )
 
 
-
 def cmd_reap(_args):
     _reap()
-
-
 
 
 def cmd_remove(args):
     return cmd_card_remove(args)
 
+
 # H: helper namespace for tests (H.new_card, H.save_json, etc.)
-import types as _types
 H = _types.SimpleNamespace(
     _candidates_differ_gate_passes=_candidates_differ_gate_passes,
     _canonical_sha_manifest=_canonical_sha_manifest,
