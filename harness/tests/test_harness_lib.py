@@ -18,7 +18,9 @@ def tmp_state():
 
 
 def make_card(**kw):
-    base = dict(title="t", lane="fixer", why="w", acceptance=["a"])
+    base = dict(
+        title="test card", lane="fixer", why="test why", acceptance=["acceptance criterion"]
+    )
     base.update(kw)
     return H.new_card(**base)
 
@@ -106,7 +108,7 @@ class TestGates(unittest.TestCase):
 class TestBrief(unittest.TestCase):
     def test_brief_small_and_has_contract(self):
         goal = "test goal"
-        c = make_card(acceptance=["a1", "a2"], gates=["tdd"], budget_min=25)
+        c = make_card(acceptance=["criterion one", "criterion two"], gates=["tdd"], budget_min=25)
         b = H.compose_brief(goal, c, dep_results=[])
         n = len(b.splitlines())
         self.assertLessEqual(n, H.BRIEF_MAX_LINES)
