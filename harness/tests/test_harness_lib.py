@@ -481,3 +481,38 @@ class TestHarvestLogTailScope(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestAutoEvalOnCheckpoint(unittest.TestCase):
+    """When training produces a new checkpoint, the harness should
+    automatically queue an eval card to measure progress toward 18/18."""
+
+    def test_new_checkpoint_triggers_eval_card(self):
+        q = {"cards": [], "seq": 0}
+        result = H.auto_eval_on_checkpoint(q, "step_000028", "sapo-27b-ai-20260920T163329")
+        self.assertIsNotNone(result)
+        self.assertEqual(result["lane"], "evaluator")
+        self.assertIn("step_000028", result["title"])
+
+    def test_existing_eval_card_prevents_duplicate(self):
+        q = {"cards": [], "seq": 0}
+        H.auto_eval_on_checkpoint(q, "step_000028", "sapo-27b-ai-20260920T163329")
+        H.add_card(
+            q,
+            H.new_card(
+                title="Eval checkpoint step_000028",
+                lane="evaluator",
+                why="measure progress",
+                acceptance=["run eval"],
+            ),
+        )
+        result = H.auto_eval_on_checkpoint(q, "step_000028", "sapo-27b-ai-20260920T163329")
+        self.assertIsNone(result)
+
+    def test_eval_card_has_correct_acceptance(self):
+        q = {"cards": [], "seq": 0}
+        result = H.auto_eval_on_checkpoint(q, "step_000028", "sapo-27b-ai-20260920T163329")
+        acceptance_text = " ".join(result.get("acceptance", []))
+        self.assertIn("pass_adapter", acceptance_text)
+        self.assertIn("beats_base", acceptance_text)
+        self.assertIn("18/18", acceptance_text)

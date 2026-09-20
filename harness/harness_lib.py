@@ -1080,6 +1080,38 @@ def find_card_by_id_in(queue, card_id):
     return None
 
 
+# ----------------------------------------------------------------------------- auto-eval
+def auto_eval_on_checkpoint(queue, checkpoint_name, run_dir):
+    """When training produces a new checkpoint, automatically queue an eval
+    card to measure progress toward 18/18.
+
+    Returns a new card dict if one should be created, or None if an eval
+    card for this checkpoint already exists (dedup).
+
+    This is the core automation primitive: train -> checkpoint -> eval ->
+    verdict -> (if <18/18) -> continue training -> (if 18/18) -> done-check.
+    """
+    for c in queue.get("cards", []):
+        title = c.get("title", "")
+        if checkpoint_name in title and c.get("lane") == "evaluator":
+            return None
+    card = new_card(
+        title=f"Auto-eval checkpoint {checkpoint_name} from {run_dir}",
+        lane="evaluator",
+        why=f"Training produced {checkpoint_name}; must measure pass_adapter vs 18/18 target and beats_base to track progress toward goal.",
+        acceptance=[
+            f"Run fail-closed holdout eval on {checkpoint_name} adapter from {run_dir}",
+            "Record pass_adapter count (target 18/18) and beats_base verdict",
+            "If pass_adapter < 18/18: note which tasks failed and queue remediation",
+            "If pass_adapter == 18/18: trigger goal-done-check with two-leg reconfirm",
+        ],
+        budget_min=40,
+        gates=["tdd"],
+        priority=0,
+    )
+    return card
+
+
 # ----------------------------------------------------------------------------- done-check
 def load_goal(state_dir):
     return load_json(os.path.join(state_dir, "GOAL.json"), {})
@@ -1182,14 +1214,22 @@ def _canonical_sha_manifest(fz=None):
     return dict(fz.load_manifest(os.path.join(repo_root, fz.MANIFEST_RELPATH)))
 
 
-def sha_pin_violation(verdict, manifest=None):
+def sha_pin_violation(verdict, manifest=None, state_dir=None):
     """C-0031: NAMED sha-pin violation for a verdict, or None when its
-    embedded holdout/scorer sha256 pins match the canonical freeze
+    embedded holdout/scorer sha256 pins match the pinned scorer.
+
+    C-9507: the authoritative "want" pins are resolved from the C-9131
+    attestation bank (harness/state/scorer_sha_pins.json) when a
+    well-formed bank is present (state_dir defaults to the harness state
+    dir, and callers may pass an explicit state_dir). The bank cannot
+    diverge from the freeze manifest -- bank_scorer_sha_pins refuses any
+    drift -- so honoring the bank honors the frozen scorer without adding
+    a bypass. When no bank is banked, fall back to the canonical freeze
     manifest (evals/benchmarks/sapo_promotion_holdout_v1_18.sha256).
-    Fail-closed: missing pins, missing manifest coverage, a drifted sha,
-    or an unreadable manifest each reject with a distinct named
-    violation, so verdicts banked under a pre-pin scorer (the Sep 8-9
-    outputs/ verdicts) can never satisfy the done-check."""
+    Fail-closed: missing pins, missing coverage, a drifted sha, or an
+    unreadable manifest each reject with a distinct named violation, so
+    verdicts banked under a pre-pin scorer (the Sep 8-9 outputs/
+    verdicts) can never satisfy the done-check."""
     if not isinstance(verdict, dict):
         return "verdict_not_an_object"
     pins = verdict.get("scorer_shas")
@@ -1200,6 +1240,32 @@ def sha_pin_violation(verdict, manifest=None):
         return "holdout_sha_pin_missing"
     try:
         fz = _freeze_module()
+        # C-9507: prefer the banked attestation when present; the bank is
+        # the card's explicit "honored against banked scorer_sha_pins.json"
+        # requirement. Absent/malformed bank -> fall back to the manifest.
+        bank = load_banked_scorer_sha_pins(state_dir=state_dir)
+    except Exception:
+        bank = None
+    bank_hold = None
+    bank_shas = None
+    if bank is not None:
+        bank_hold = bank.get("holdout_sha256")
+        bank_shas = bank.get("scorer_shas")
+    if bank_shas and isinstance(bank_hold, str) and bank_hold:
+        # honor the banked pins as the authoritative attestation
+        if str(hold).lower() != bank_hold.lower():
+            return "holdout_sha_mismatch"
+        for rel in fz.SCORER_CHAIN:
+            want = bank_shas.get(rel)
+            if not isinstance(want, str) or not want:
+                return "canonical_manifest_lacks_scorer:" + rel
+            got = pins.get(rel)
+            if not isinstance(got, str) or not got:
+                return "scorer_sha_pin_missing:" + rel
+            if str(got).lower() != want.lower():
+                return "scorer_sha_mismatch:" + rel
+        return None
+    try:
         entries = dict(manifest) if manifest is not None else _canonical_sha_manifest(fz)
     except Exception:
         return "canonical_manifest_unreadable"
