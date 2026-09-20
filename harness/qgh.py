@@ -89,7 +89,7 @@ QGH = os.path.join(REPO, "harness", "qgh.py")
 CLAUDE = os.environ.get("QGH_CLAUDE", "/Users/daxu/homebrew/bin/claude")
 CLAUDE_ARGS = os.environ.get("QGH_CLAUDE_ARGS", "-p cmri -m GLM-5.2")
 CRON_MARK = "qgh.py tick"
-MAX_LIVE_AGENTS = 100  # user directive 2026-09-19: maximize parallel agents
+MAX_LIVE_AGENTS = 10  # reduced from 100: cmri GLM-5.2 gateway rate-limits at high concurrency
 TICK_LOCK = os.path.join(STATE, "locks", "tick.lock")
 TICK_STALE_SEC = 1800  # a tick holding the lock >30min is wedged -> break it
 # A successful tick appends to STATUS.md; a CRASHING tick still touches
@@ -568,9 +568,23 @@ def cmd_heartbeat(args):
     recipe left heartbeat-silent workers that the reaper killed as STALLED
     while they worked. Appends via harness_lib.append_heartbeat, which
     survives the permission gate.
+
+    C-0001: emit a ghost_heartbeat event when the card is NOT in QUEUE.json
+    so ghost dispatches (workers dispatched outside the tick, under a
+    terminal/removed card ID) are VISIBLE in audit history. The heartbeat
+    append MUST still succeed -- the worker needs it to survive the stall
+    reaper. Fail-open for the write, fail-closed for detection.
     """
     hb = os.path.join(STATE, "agents", f"{args.card}.progress")
     H.append_heartbeat(hb, args.message)
+    # C-0001: detect ghost card (not in QUEUE). Must not raise -- a heartbeat
+    # failure would stall-kill a healthy worker. Best-effort event emission.
+    try:
+        queue = load_queue(STATE)
+        if H.find_card(queue, args.card) is None:
+            event(STATE, "ghost_heartbeat", {"card": args.card})
+    except Exception:
+        pass  # detection must never unwind a successful heartbeat
 
 
 BOX_BOUND_LANES = ("evaluator", "trainer-ops", "deploy-integrity")
