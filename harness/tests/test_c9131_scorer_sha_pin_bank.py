@@ -104,13 +104,13 @@ def test_bank_scorer_sha_pins_banks_exact_frozen_pins(tmp_path):
     assert H.load_banked_scorer_sha_pins(state_dir=str(tmp_path)) == bank
 
 
-def test_goal_done_fires_yes_when_pins_banked():
+def test_goal_done_fires_yes_when_pins_banked(tmp_path):
     """THE C-9131 fix: a verdict stamped from the banked pins composes
     goal_done YES -- done_criteria #1 is reachable again."""
     manifest = _manifest_from_disk()
     with mock.patch.object(H, "_canonical_sha_manifest", _manifest_from_disk):
-        bank = H.bank_scorer_sha_pins(manifest=manifest)
-        loaded = H.load_banked_scorer_sha_pins()
+        bank = H.bank_scorer_sha_pins(state_dir=str(tmp_path), manifest=manifest)
+        loaded = H.load_banked_scorer_sha_pins(state_dir=str(tmp_path))
         assert loaded == bank
         v = _full_verdict(loaded["holdout_sha256"], loaded["scorer_shas"])
         assert H.sha_pin_violation(v) is None

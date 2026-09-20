@@ -15,7 +15,8 @@ HARNESS_DIR = os.path.dirname(TEST_DIR)
 os.environ["QGH_STATE_DIR"] = tempfile.mkdtemp(prefix="qgh-int-")
 sys.path.insert(0, HARNESS_DIR)
 import harness_lib as H  # noqa: E402
-import qgh  # noqa: E402  (binds STATE to the temp dir above)
+import qgh  # noqa: E402
+qgh.STATE = os.environ["QGH_STATE_DIR"]  # rebind in case conftest already imported qgh
 
 
 def make_card(**kw):
@@ -382,9 +383,11 @@ class TestStaleTickLock(unittest.TestCase):
     def setUp(self):
         import shutil
 
-        _status = os.path.join(qgh.STATE, "STATUS.md")
-        if os.path.exists(_status):
-            os.remove(_status)
+        # Use an isolated state dir so real cron/launchd ticks don't interfere
+        self._old_state = qgh.STATE
+        self._old_repo = qgh.REPO
+        qgh.STATE = os.path.join(tempfile.mkdtemp(), "state")
+        qgh.TICK_LOCK = os.path.join(qgh.STATE, "locks", "tick.lock")
         for sub in ("agents", "briefs", "locks", "standup", "probes"):
             p = os.path.join(qgh.STATE, sub)
             shutil.rmtree(p, ignore_errors=True)
@@ -404,6 +407,10 @@ class TestStaleTickLock(unittest.TestCase):
             "done_criteria": ["a", "b", "c"],
         }
         qgh.save_json(os.path.join(qgh.STATE, "GOAL.json"), goal)
+
+    def tearDown(self):
+        qgh.STATE = self._old_state
+        qgh.TICK_LOCK = os.path.join(qgh.STATE, "locks", "tick.lock")
 
     def test_tick_breaks_stale_lock_and_proceeds(self):
         import time as _t
