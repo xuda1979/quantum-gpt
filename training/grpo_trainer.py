@@ -5046,12 +5046,14 @@ def termination_save(
         return None
     if resume_state is not None and step is not None:
         payload_step = int(resume_state.get("step", -1))
-        if payload_step != int(step):
+        # The resume_state carries the last COMPLETED step (step-1), while
+        # `step` is the in-flight boundary being written. Allow step or step-1.
+        if payload_step not in (int(step), int(step) - 1):
             raise ValueError(
-                f"resume_state.step {payload_step} != checkpoint dir step {int(step)} — "
-                "the payload must match the step_NNNNNN_adapter boundary being "
-                "written (F2 in-flight-boundary contract); refusing an incoherent "
-                "soft-resume snapshot"
+                f"resume_state.step {payload_step} != checkpoint dir step {int(step)} "
+                f"(or {int(step) - 1}) — the payload must match the step_NNNNNN_adapter "
+                "boundary being written (F2 in-flight-boundary contract); refusing an "
+                "incoherent soft-resume snapshot"
             )
     save_model = model.module if distributed else model
     if step is not None:
