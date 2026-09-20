@@ -88,6 +88,8 @@ STATE = os.environ.get("QGH_STATE_DIR") or os.path.join(REPO, "harness", "state"
 QGH = os.path.join(REPO, "harness", "qgh.py")
 CLAUDE = os.environ.get("QGH_CLAUDE", "/Users/daxu/homebrew/bin/claude")
 CLAUDE_ARGS = os.environ.get("QGH_CLAUDE_ARGS", "-p cmri -m GLM-5.2")
+WORKER_MODEL_DEFAULT = "DeepSeek-V4-Flash-0731-dev"
+WORKER_MODEL = os.environ.get("QGH_WORKER_MODEL", WORKER_MODEL_DEFAULT)
 CRON_MARK = "qgh.py tick"
 MAX_LIVE_AGENTS = 10  # reduced from 100: cmri GLM-5.2 gateway rate-limits at high concurrency
 TICK_LOCK = os.path.join(STATE, "locks", "tick.lock")
@@ -395,7 +397,8 @@ def worker_command():
     input, we read stdin into a variable and pass it as the --print argument.
     """
     srcs = " ".join(f'[ -f "{f}" ] && source "{f}";' for f in WORKER_ENV_FILES)
-    return ["/bin/bash", "-c", f"{srcs} exec '{CLAUDE}' {CLAUDE_ARGS} --print \"$(cat)\""]
+    model_flag = f"-m '{WORKER_MODEL}'" if WORKER_MODEL else ""
+    return ["/bin/bash", "-c", f"{srcs} exec '{CLAUDE}' -p cmri {model_flag} --print \"$(cat)\""]
 
 
 def dispatch_target_ok(queue, card, lanes=None, claim_in_progress=False):
