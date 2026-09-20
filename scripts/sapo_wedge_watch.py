@@ -110,6 +110,35 @@ def probe_health(base_url: str, timeout: float = PROBE_TIMEOUT) -> tuple[dict | 
     return payload, "ok"
 
 
+class WedgeTracker:
+    """Tracks consecutive wedge observations per port."""
+
+    def __init__(self, consecutive_needed: int = 2) -> None:
+        self.consecutive_needed = consecutive_needed
+        self._counts: dict[int, int] = {}
+
+    def should_remediate(self, port: int, is_wedged: object) -> bool:
+        wedged = bool(is_wedged) or is_wedged == "unknown"
+        if wedged:
+            self._counts[port] = self._counts.get(port, 0) + 1
+        else:
+            self._counts[port] = 0
+            return False
+        if self._counts[port] >= self.consecutive_needed:
+            self._counts[port] = 0
+            return True
+        return False
+
+
+def remediation_command(port: int, env: str) -> str:
+    """Build the kill+relaunch recipe for a wedged Huanxin daemon."""
+    return (
+        f"kill $(cat /tmp/huanxin-daemon-{env}.pid 2>/dev/null) 2>/dev/null; "
+        f"rm -f /tmp/huanxin-daemon-{env}.pid; "
+        f"FORGE_KC_CALLBACK=1 capture_chrome_fixed1 --env {env} --port {port}"
+    )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--ports", default=",".join(str(p) for p in DEFAULT_PORTS))

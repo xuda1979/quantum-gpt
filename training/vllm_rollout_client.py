@@ -25,6 +25,14 @@ class VllmUnavailable(RuntimeError):
     """Raised when the vLLM rollout server cannot be reached or errors."""
 
 
+# Injectable opener factory (tests replace this with a mock).
+def _default_opener_factory():
+    return urllib.request.build_opener(urllib.request.ProxyHandler({}))
+
+
+opener_factory = _default_opener_factory
+
+
 class VllmRolloutClient:
     def __init__(self, base_url: str = DEFAULT_BASE, timeout_s: float = 600.0):
         self.base_url = base_url.rstrip("/")
@@ -53,6 +61,7 @@ class VllmRolloutClient:
         temperature: float,
         seed: int | None = None,
         stop: list[str] | None = None,
+        suppress_token_ids: list[int] | None = None,
     ) -> list[str]:
         if n <= 0:
             return []
@@ -67,12 +76,15 @@ class VllmRolloutClient:
             payload["seed"] = seed
         if stop:
             payload["stop"] = stop
+        if suppress_token_ids:
+            ids = sorted(set(suppress_token_ids))
+            payload["bad_words_ids"] = [ids]
         req = urllib.request.Request(
             self.base_url + "/v1/completions",
             data=json.dumps(payload).encode(),
             headers={"Content-Type": "application/json"},
         )
-        opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+        opener = opener_factory()
         try:
             with opener.open(req, timeout=self.timeout_s) as resp:
                 body = json.loads(resp.read().decode())
@@ -94,13 +106,16 @@ def generate_with_fallback(
     fallback_fn,
     seed: int | None = None,
     stop: list[str] | None = None,
+    suppress_token_ids: list[int] | None = None,
 ) -> tuple[list[str], str]:
     """Try vLLM; on unavailability fall back to the transformers path.
     Returns (completions, engine_used) where engine_used in {\"vllm\", \"hf\"}."""
     if client is not None and client.is_up():
         try:
             return (
-                client.generate_batch(prompt, n, max_tokens, temperature, seed, stop),
+                client.generate_batch(
+                    prompt, n, max_tokens, temperature, seed, stop, suppress_token_ids
+                ),
                 "vllm",
             )
         except VllmUnavailable:

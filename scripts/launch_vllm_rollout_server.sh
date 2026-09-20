@@ -4,6 +4,10 @@
 MODEL="${1:-/root/work/filestorage/Qwen3.8-27B}"
 PORT="${2:-8355}"
 LOG="/root/work/software/quantum-gpt/outputs/vllm_server.log"
+# LoRA support (S9.6 continuous adapter eval): hot-swap training checkpoints
+# via /v1/load_lora_adapter -- requires --enable-lora + dev endpoints.
+export VLLM_SERVER_DEV_MODE=1
+export VLLM_ALLOW_RUNTIME_LORA_UPDATING=1
 # Sleep/wake lifecycle (scripts/vllm_lifecycle.py): vLLM >= 0.10 / V1 engine
 # exposes /sleep?level=N + /wake_up only with --enable-sleep-mode AND
 # VLLM_SERVER_DEV_MODE=1 (dev endpoints — keep the port box-internal).
@@ -22,6 +26,9 @@ nohup python3 -m vllm.entrypoints.openai.api_server \
   --max-model-len 8192 \
   --dtype bfloat16 \
   --gpu-memory-utilization ${VLLM_UTIL:-0.45} \
+  --enable-lora \
+  --max-lora-rank ${VLLM_MAX_LORA_RANK:-64} \
+  --max-loras ${VLLM_MAX_LORAS:-4} \
   "${SLEEP_MODE_ARGS[@]}" \
   > "$LOG" 2>&1 < /dev/null &
 echo "vllm server launching on :$PORT (pid $!) — log: $LOG"
