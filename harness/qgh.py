@@ -912,7 +912,7 @@ def _lock_takeover_allowed(path, stale_s):
     return (age_min_val * 60.0) > stale_s
 
 
-def acquire_lock(path, stale_s=LOCK_STALE_S):
+def acquire_lock(path, stale_s=LOCK_STALE_S, stale_sec=None):
     """Take an exclusive lock file (O_EXCL create). Returns the owner token
     dict, or None when a fresh lease held by a live pid exists (refuse --
     never steal). A stale lease or a dead holder pid is taken over so a
@@ -4150,6 +4150,37 @@ def transport_wedged(state_dir=None):
     if "exec_wedged" in str(data.get("summary", "")):
         return True
     return False
+
+
+
+
+def dispatch_target_ok(queue, card, lanes=None, claim_in_progress=False):
+    """Fail-closed preflight for dispatch: refuse when the target card is
+    missing from the queue, resolves to a DIFFERENT card (duplicate-id
+    collision, the C-0021 incident), is not claimable (dead/closed/running),
+    is lane-mismatched, or is claimed_by a live pid."""
+    resolved = find_card(queue, card.get("id"))
+    if resolved is None:
+        return False, f"card missing from queue: {card.get('id')}"
+    if resolved is not card:
+        return False, (
+            f"duplicate card id {card.get('id')}: resolves to a different card "
+            f"(status={resolved.get('status')}, claimed_by={resolved.get('claimed_by')})"
+        )
+    if sum(1 for c in queue["cards"] if c.get("id") == card.get("id")) > 1:
+        # an ambiguous id can deliver two workers onto one card (C-0021)
+        return False, f"duplicate card id {card.get('id')}: id is ambiguous in queue"
+    if claim_in_progress and card.get("claimed_by") == "dispatching":
+        pass  # our own claim, stamped by cmd_dispatch while holding this lock
+    elif card.get("status") != "ready":
+        return False, f"card status is {card.get('status')!r}, not ready: {card.get('id')}"
+    if lanes is not None and card.get("lane") not in lanes:
+        return False, f"lane mismatch: {card.get('lane')!r} not in {sorted(lanes)}"
+    claimed_by = card.get("claimed_by")
+    if claimed_by and pid_alive(claimed_by):
+        return False, f"card claimed by live pid {claimed_by}: {card.get('id')}"
+    return True, "ok"
+
 
 
 

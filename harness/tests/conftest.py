@@ -10,7 +10,13 @@ Set QGH_STATE_DIR explicitly to override (not used by CI or tests).
 """
 
 import os
+import sys
 import tempfile
+
+# Ensure harness dir is on sys.path so import qgh / import harness_lib works
+_HARNESS_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if _HARNESS_DIR not in sys.path:
+    sys.path.insert(0, _HARNESS_DIR)
 
 # The live state dir — NEVER trusted as a test state dir.
 _live_state = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "state")
