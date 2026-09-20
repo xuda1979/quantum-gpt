@@ -4,6 +4,7 @@ The harness must review its own work and improve. This module runs a full
 self-diagnostic and reports actionable findings with a quality score.
 """
 
+import inspect
 import json
 import os
 import subprocess
@@ -125,6 +126,93 @@ def run_review(state_dir, repo_dir):
             findings.append(f"ruff: {n} issues")
     except Exception:
         print("  SKIP: ruff not available")
+
+    # 5. Goal status check
+    print("\n--- 5. Goal Status ---")
+    try:
+        goal_path = os.path.join(state_dir, "GOAL.json")
+        if os.path.exists(goal_path):
+            with open(goal_path) as f:
+                goal = json.load(f)
+            status = goal.get("status", "UNKNOWN")
+            target = goal.get("target_pass", "18/18")
+            print(f"  Goal: {status} (target: {target})")
+            if status == "OPEN":
+                passes.append("goal is OPEN (still pursuing 18/18)")
+            elif status == "DONE":
+                findings.append("goal is DONE -- harness should stop")
+        else:
+            findings.append("GOAL.json missing -- harness not initialized")
+    except Exception as exc:
+        findings.append(f"goal check error: {exc}")
+
+    # 6. Queue health check
+    print("\n--- 6. Queue Health ---")
+    try:
+        queue_path = os.path.join(state_dir, "QUEUE.json")
+        if os.path.exists(queue_path):
+            with open(queue_path) as f:
+                queue = json.load(f)
+            cards = queue.get("cards", [])
+            statuses = {}
+            for c in cards:
+                s = c.get("status", "?")
+                statuses[s] = statuses.get(s, 0) + 1
+            print(f"  Cards: {statuses}")
+            bounced = statuses.get("bounced", 0)
+            running = statuses.get("running", 0)
+            ready = statuses.get("ready", 0)
+            if bounced > 6:
+                findings.append(f"high bounce count: {bounced} bounced cards need decomposition")
+            else:
+                passes.append(f"bounce count manageable: {bounced}")
+            if running == 0 and ready == 0:
+                findings.append("no active or ready cards -- harness may be stalled")
+            else:
+                passes.append(f"active queue: {running} running, {ready} ready")
+    except Exception as exc:
+        findings.append(f"queue check error: {exc}")
+
+    # 7. Tick automation wiring check
+    print("\n--- 7. Automation Wiring ---")
+    try:
+        harness_dir = os.path.join(repo_dir, "harness")
+        if harness_dir not in sys.path:
+            sys.path.insert(0, harness_dir)
+        import qgh  # noqa: E402
+
+        tick_src = inspect.getsource(qgh.cmd_tick)
+        checks = [
+            ("auto_queue_training", "auto_queue_training(" in tick_src),
+            ("auto_eval_scan", "auto_eval_scan(" in tick_src),
+            ("auto_requeue_zero_bounce", "auto_requeue_zero_bounce(" in tick_src),
+        ]
+        for name, wired in checks:
+            if wired:
+                print(f"  PASS: {name} wired into tick")
+                passes.append(f"{name} wired")
+            else:
+                print(f"  FAIL: {name} NOT wired into tick")
+                findings.append(f"{name} not called from cmd_tick")
+    except Exception as exc:
+        findings.append(f"automation wiring check error: {exc}")
+
+    # 8. Last successful tick age
+    print("\n--- 8. Tick Liveness ---")
+    try:
+        status_path = os.path.join(state_dir, "STATUS.md")
+        if os.path.exists(status_path):
+            age_s = time.time() - os.path.getmtime(status_path)
+            age_min = age_s / 60.0
+            print(f"  Last successful tick: {age_min:.1f} min ago")
+            if age_min > 60:
+                findings.append(f"tick HALTED: no success in {age_min:.0f} min")
+            else:
+                passes.append(f"tick recent: {age_min:.0f} min ago")
+        else:
+            findings.append("STATUS.md missing -- no successful tick ever")
+    except Exception as exc:
+        findings.append(f"tick liveness check error: {exc}")
 
     # Summary
     print("\n=== SUMMARY ===")
