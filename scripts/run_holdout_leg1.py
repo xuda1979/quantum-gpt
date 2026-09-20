@@ -72,7 +72,7 @@ def compute_slices(n_tasks, parts=N_SLICES):
     not a leg.
     """
     if n_tasks <= 0:
-        raise ValueError("full leg needs at least one task, got %r" % n_tasks)
+        raise ValueError(f"full leg needs at least one task, got {n_tasks!r}")
     # Never dispatch a slice that selects no tasks (the evaluator refuses
     # empty slices): degenerate benchmarks get fewer, non-empty slices.
     parts = min(parts, n_tasks)
