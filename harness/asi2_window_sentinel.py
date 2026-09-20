@@ -43,6 +43,7 @@ ROOT = Path(__file__).resolve().parents[1]
 POLL_S = 60.0  # documented poll interval
 BUDGET_S = 1500.0  # hard bound; never waits past this
 PID_GAP_S = 300.0  # C-9020: same pid must hold >=5 min apart
+WINDOW_FRESH_S = 1800.0  # C-9071: staleness bar (artifact expires after this)
 PORT = 19004
 ECHO_COMMAND = "echo ALIVE"
 ECHO_WAIT_MS = 15000
@@ -52,6 +53,7 @@ SUPERSEDES = (
     "C-0051 (combined detect+fire watcher; detect split into this "
     "sentinel, fire stays with the C-9029 requeue path)"
 )
+REARM_BUDGET_S = 600.0  # C-9098: default rearm budget
 
 
 def _now_iso():
@@ -69,6 +71,8 @@ def make_ctx(
     exec_fn=None,
     clock=time.monotonic,
     sleep=time.sleep,
+    rearm_budget_s=REARM_BUDGET_S,
+    window_fresh_s=WINDOW_FRESH_S,
 ):
     """All I/O and time are injected: the suite never touches the network
     and never really sleeps (C-0051's bounce mode was waiting inside its
@@ -85,6 +89,8 @@ def make_ctx(
         clock=clock,
         sleep=sleep,
         polls=0,
+        rearm_budget_s=float(rearm_budget_s),
+        window_fresh_s=float(window_fresh_s),
     )
 
 
@@ -215,6 +221,67 @@ def run_sentinel(ctx):
     return "window_not_open", 0
 
 
+def run_rearm(ctx):
+    """C-9098: re-arm pass -- keep window_open.json fresh within the
+    staleness bar.  Polls until rearm_budget_s expires; on every bar-met
+    poll rewrites window_open.json with card=C-9098 and a staleness
+    stamp.  Fail-closed: if the bar is never met, writes
+    window_not_open.json with reason=rearm-expired."""
+    baseline = None
+    opens = 0
+    deadline = ctx["clock"]() + ctx["rearm_budget_s"]
+    while ctx["clock"]() < deadline:
+        ctx["polls"] += 1
+        rec, baseline = _probe_once(ctx, baseline)
+        if rec["bar_ready"]:
+            opens += 1
+            now_s = ctx["clock"]()
+            expires_s = now_s + ctx["window_fresh_s"]
+            _write_artifact(
+                ctx,
+                "window_open.json",
+                dict(
+                    card="C-9098",
+                    artifact="window_open",
+                    generated_utc=_now_iso(),
+                    port=ctx["port"],
+                    ready=rec["ready"],
+                    pid=rec["pid"],
+                    pid_stable_s=rec["pid_stable_s"],
+                    exec="ALIVE",
+                    pid_gap_s=ctx["pid_gap_s"],
+                    staleness=dict(
+                        window_fresh_s=ctx["window_fresh_s"],
+                        expires_utc=datetime.fromtimestamp(expires_s, tz=timezone.utc).strftime(
+                            "%Y-%m-%dT%H:%M:%SZ"
+                        ),
+                    ),
+                    supersedes=SUPERSEDES,
+                    polls=ctx["polls"],
+                ),
+            )
+        remaining = deadline - ctx["clock"]()
+        if remaining > 0:
+            ctx["sleep"](min(ctx["poll_s"], remaining))
+    if opens == 0:
+        _write_artifact(
+            ctx,
+            "window_not_open.json",
+            dict(
+                card="C-9098",
+                artifact="window_not_open",
+                generated_utc=_now_iso(),
+                port=ctx["port"],
+                reason="rearm-expired",
+                rearm_budget_s=ctx["rearm_budget_s"],
+                poll_s=ctx["poll_s"],
+                polls=ctx["polls"],
+                supersedes=SUPERSEDES,
+            ),
+        )
+    return dict(opens=opens)
+
+
 def live_health(port, timeout=8):
     with urllib.request.urlopen("http://127.0.0.1:%d/health" % port, timeout=timeout) as r:
         return dict(code=r.getcode(), body=r.read().decode("utf-8", "replace"))
@@ -248,6 +315,9 @@ def main(argv=None, ctx_factory=None):
     ap.add_argument("--budget-s", type=float, default=BUDGET_S)
     ap.add_argument("--poll-s", type=float, default=POLL_S)
     ap.add_argument("--pid-gap-s", type=float, default=PID_GAP_S)
+    ap.add_argument(
+        "--rearm", action="store_true", help="re-arm mode: keep window_open.json fresh (C-9098)"
+    )
     ap.add_argument("--artifact-dir", default=str(ARTIFACT_DIR))
     ap.add_argument("--probes-dir", default=str(PROBES_DIR))
     args = ap.parse_args(argv)
@@ -265,6 +335,10 @@ def main(argv=None, ctx_factory=None):
             exec_fn=live_exec_echo,
         )
     try:
+        if getattr(args, "rearm", False):
+            res = run_rearm(ctx)
+            print("c9098 rearm: %d opens (artifact in %s)" % (res["opens"], ctx["artifact_dir"]))
+            return 0
         verdict, rc = run_sentinel(ctx)
         print("c9061: %s (rc=%d) terminal artifact in %s" % (verdict, rc, ctx["artifact_dir"]))
         return rc

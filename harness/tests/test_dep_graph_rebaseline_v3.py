@@ -84,7 +84,7 @@ def acceptance_text(card):
 class TestDepGraphRebaselineV3(unittest.TestCase):
     def setUp(self):
         _existing = set(c["id"] for c in load_live_queue().get("cards", []))
-        _required = {'C-0037', 'C-0051', 'C-0060', 'C-0068', 'C-0076'}
+        _required = {"C-0037", "C-0051", "C-0060", "C-0068", "C-0076"}
         _missing = _required - _existing
         if _missing:
             self.skipTest("historical cards purged: " + str(sorted(_missing)[:5]))

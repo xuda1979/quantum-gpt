@@ -182,7 +182,7 @@ GUARDS = (
 class TestDepGraphRebaselineV6UndeadlockSpine(unittest.TestCase):
     def setUp(self):
         _existing = set(c["id"] for c in load_live_queue().get("cards", []))
-        _required = {'C-0010', 'C-0015', 'C-0016', 'C-0029', 'C-0037', 'C-0051', 'C-0070'}
+        _required = {"C-0010", "C-0015", "C-0016", "C-0029", "C-0037", "C-0051", "C-0070"}
         _missing = _required - _existing
         if _missing:
             self.skipTest("historical cards purged: " + str(sorted(_missing)[:5]))
@@ -242,7 +242,7 @@ class TestDepGraphRebaselineV6RedWitness(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         _existing = set(c["id"] for c in load_live_queue().get("cards", []))
-        _required = {'C-0010', 'C-0015', 'C-0016', 'C-0029', 'C-0037', 'C-0051', 'C-0070'}
+        _required = {"C-0010", "C-0015", "C-0016", "C-0029", "C-0037", "C-0051", "C-0070"}
         _missing = _required - _existing
         if _missing:
             raise unittest.SkipTest("historical cards purged: " + str(sorted(_missing)[:5]))

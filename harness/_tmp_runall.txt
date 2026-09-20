@@ -1,0 +1,40 @@
+def run_all(
+    state_dir,
+    health_fn=None,
+    trainer_exec=None,
+    now=None,
+    train_fire_state_path=None,
+    outputs_dir=None,
+    exec_probe_fn=None,
+):
+    """Probe every provisioned resource, write probes/<name>.json, return payloads.
+
+    Durable-state contract: each file carries ts, status, summary; the standup
+    renderer (qgh._probe_results) reads exactly these. C-9021: exec_probe_fn is
+    the active positive control passed to every daemon port. C-0074: the
+    trainer exec probe falls back to run-dir file evidence (outputs_dir,
+    default <repo>/outputs) whenever the transport is absent or not ready.
+    """
+    from harness_lib import now_iso, save_json
+
+    payloads = dict()
+    for name, port in DAEMON_PORTS.items():
+        payloads[name] = probe_daemon(name, port, health_fn=health_fn, exec_probe_fn=exec_probe_fn)
+    t = probe_trainer(DAEMON_PORTS["asi3"], exec_fn=trainer_exec)
+    if t.get("status") != "ready":
+        fp = probe_trainer_files(
+            outputs_dir if outputs_dir is not None else _default_outputs_dir(),
+            now=now if isinstance(now, int) else None,
+        )
+        if "step" in fp:
+            t = fp  # a real measurement beats an honest transport UNKNOWN
+    payloads["trainer"] = t
+    payloads["train_fire"] = probe_train_fire(state_path=train_fire_state_path)
+    out_dir = os.path.join(state_dir, "probes")
+    os.makedirs(out_dir, exist_ok=True)
+    for name, p in payloads.items():
+        rec = {"ts": now or now_iso(), "status": p.get("status"), "summary": p.get("summary")}
+        if "liveness" in p:
+            rec["liveness"] = p["liveness"]
+        save_json(os.path.join(out_dir, f"{name}.json"), rec)
+    return payloads

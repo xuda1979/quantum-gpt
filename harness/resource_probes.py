@@ -316,8 +316,7 @@ def probe_trainer_files(outputs_dir, now=None, proc_root=None):
         return dict(
             status="unknown",
             summary=(
-                f"UNMEASURABLE no run dir with eval_results.jsonl under "
-                f"{outputs_dir}{disclosure}"
+                f"UNMEASURABLE no run dir with eval_results.jsonl under {outputs_dir}{disclosure}"
             ),
         )
     try:

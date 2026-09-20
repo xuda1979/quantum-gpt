@@ -74,7 +74,7 @@ def render_dashboard(
     zombies = [a for a in live_agents if not pid_alive(a.get("pid"))]
     if zombies:
         L.append(
-            f"| {n} | fleet | {len(zombies)} zombies | **FAIL** | {','.join(a.get('card','?') for a in zombies)} |"
+            f"| {n} | fleet | {len(zombies)} zombies | **FAIL** | {','.join(a.get('card', '?') for a in zombies)} |"
         )
     else:
         L.append(f"| {n} | fleet | {len(live_agents)} live, 0 zombies | PASS | all alive |")
@@ -99,11 +99,11 @@ def render_dashboard(
         br = statuses.get("bounced", 0) / total_finished * 100
         if br > 30:
             L.append(
-                f"| {n} | bounce rate | {br:.0f}% ({statuses.get('bounced',0)}/{total_finished}) | **FAIL** | too many failures |"
+                f"| {n} | bounce rate | {br:.0f}% ({statuses.get('bounced', 0)}/{total_finished}) | **FAIL** | too many failures |"
             )
         else:
             L.append(
-                f"| {n} | bounce rate | {br:.0f}% ({statuses.get('bounced',0)}/{total_finished}) | PASS | acceptable |"
+                f"| {n} | bounce rate | {br:.0f}% ({statuses.get('bounced', 0)}/{total_finished}) | PASS | acceptable |"
             )
     else:
         L.append(f"| {n} | bounce rate | n/a | WARN | no finished cards |")
@@ -112,7 +112,7 @@ def render_dashboard(
     if best_pass >= 18:
         L.append(f"| {n} | goal | {best_pass}/18 | **DONE** | goal achieved |")
     elif best_pass > 0:
-        L.append(f"| {n} | goal | {best_pass}/18 | WIP | {18-best_pass} tasks remaining |")
+        L.append(f"| {n} | goal | {best_pass}/18 | WIP | {18 - best_pass} tasks remaining |")
     else:
         L.append(f"| {n} | goal | 0/18 | **FAIL** | no passing eval yet |")
     L.append("")
@@ -148,13 +148,13 @@ def render_dashboard(
                 lc = str(d.get("lastCommand") or "")[:25]
                 lcd = str(d.get("lastCommandCompletedAt") or "")[:20]
                 L.append(
-                    f"| {nm} | {d.get('port','?')} | {d.get('ready','?')} | "
-                    f"{d.get('startupState','?')} | {d.get('uptime','?')} | "
-                    f"{d.get('commandCount','?')} | {d.get('busy','?')} | "
-                    f"{d.get('busyAgeMs','?')} | {d.get('pendingRequestCount','?')} | "
-                    f"{d.get('browserMode','?')} | {d.get('shellSurfaceReady','?')} | "
-                    f"{d.get('authDriftDetected','?')} | {lc} | {lcd} | "
-                    f"{d.get('lastCommandDurationMs','?')} | {d.get('pid','?')} | {err} |"
+                    f"| {nm} | {d.get('port', '?')} | {d.get('ready', '?')} | "
+                    f"{d.get('startupState', '?')} | {d.get('uptime', '?')} | "
+                    f"{d.get('commandCount', '?')} | {d.get('busy', '?')} | "
+                    f"{d.get('busyAgeMs', '?')} | {d.get('pendingRequestCount', '?')} | "
+                    f"{d.get('browserMode', '?')} | {d.get('shellSurfaceReady', '?')} | "
+                    f"{d.get('authDriftDetected', '?')} | {lc} | {lcd} | "
+                    f"{d.get('lastCommandDurationMs', '?')} | {d.get('pid', '?')} | {err} |"
                 )
     L.append("")
 
@@ -183,7 +183,7 @@ def render_dashboard(
         L.append(
             f"| {a.get('card')} | {a.get('lane')} | {pid} | {alive} | "
             f"{ag if ag is not None else '?'} | {dl if dl is not None else '?'} | "
-            f"{log_sz} | {hb_age} | {has_result} | {a.get('started_utc','?')} | {a.get('deadline_utc','?')} |"
+            f"{log_sz} | {hb_age} | {has_result} | {a.get('started_utc', '?')} | {a.get('deadline_utc', '?')} |"
         )
     if not live_agents:
         L.append("| _no live agents — loop may be halted_ |")
@@ -197,8 +197,8 @@ def render_dashboard(
         deps = ",".join(c.get("deps", [])) or "-"
         gates = str(c.get("gates", []))[:30]
         L.append(
-            f"| {c['id']} | {c.get('lane','?')} | P{c.get('priority',9)} | "
-            f"{c.get('budget_min','?')} | {deps} | {gates} | {c.get('bounce_count',0)} | "
+            f"| {c['id']} | {c.get('lane', '?')} | P{c.get('priority', 9)} | "
+            f"{c.get('budget_min', '?')} | {deps} | {gates} | {c.get('bounce_count', 0)} | "
             f"{(c.get('title') or '')[:40]} | {(c.get('why') or '')[:40]} |"
         )
     if not ready_cards:
@@ -214,9 +214,9 @@ def render_dashboard(
     for c in running_cards:
         deps = ",".join(c.get("deps", [])) or "-"
         L.append(
-            f"| {c['id']} | {c.get('lane','?')} | P{c.get('priority',9)} | "
-            f"{c.get('budget_min','?')} | {deps} | {c.get('claimed_by','?')} | "
-            f"{c.get('claimed_utc','?')} | {c.get('deadline_utc','?')} | {(c.get('title') or '')[:40]} |"
+            f"| {c['id']} | {c.get('lane', '?')} | P{c.get('priority', 9)} | "
+            f"{c.get('budget_min', '?')} | {deps} | {c.get('claimed_by', '?')} | "
+            f"{c.get('claimed_utc', '?')} | {c.get('deadline_utc', '?')} | {(c.get('title') or '')[:40]} |"
         )
     if not running_cards:
         L.append("| _no running cards_ |")
@@ -230,7 +230,7 @@ def render_dashboard(
         br = (c.get("bounce_reason") or "")[:60]
         res = (c.get("result") or "")[:40]
         L.append(
-            f"| {c['id']} | {c.get('lane','?')} | {c.get('bounce_count',0)} | "
+            f"| {c['id']} | {c.get('lane', '?')} | {c.get('bounce_count', 0)} | "
             f"{br} | {res} | {(c.get('title') or '')[:35]} | {(c.get('why') or '')[:35]} |"
         )
     if not bounced_cards:
@@ -244,9 +244,9 @@ def render_dashboard(
     by_id = {c["id"]: c for c in cards}
     for c in blocked_cards:
         deps = c.get("deps", [])
-        deps_status = ",".join(f"{d}:{by_id.get(d,{}).get('status','?')}" for d in deps) or "-"
+        deps_status = ",".join(f"{d}:{by_id.get(d, {}).get('status', '?')}" for d in deps) or "-"
         L.append(
-            f"| {c['id']} | {c.get('lane','?')} | {','.join(deps) or '-'} | "
+            f"| {c['id']} | {c.get('lane', '?')} | {','.join(deps) or '-'} | "
             f"{deps_status} | {(c.get('title') or '')[:40]} | {(c.get('why') or '')[:40]} |"
         )
     if not blocked_cards:
@@ -259,7 +259,7 @@ def render_dashboard(
     L.append("|---|---|---|---|---|---|")
     for c in dead_cards:
         L.append(
-            f"| {c['id']} | {c.get('lane','?')} | {c.get('bounce_count',0)} | "
+            f"| {c['id']} | {c.get('lane', '?')} | {c.get('bounce_count', 0)} | "
             f"{(c.get('result') or '')[:40]} | {(c.get('title') or '')[:40]} | {(c.get('why') or '')[:40]} |"
         )
     if not dead_cards:
@@ -283,11 +283,11 @@ def render_dashboard(
             gains = ",".join(v.get("gains") or []) or "-"
             losses = ",".join(v.get("losses") or []) or "-"
             L.append(
-                f"| {vf} | {v.get('pass_adapter','?')} | {v.get('pass_base','?')} | "
-                f"{v.get('beats_base','?')} | {'YES' if v.get('superseded') else 'no'} | "
-                f"{v.get('composite_adapter','?')} | {v.get('composite_base','?')} | "
-                f"{v.get('rubric_adapter','?')} | {v.get('rubric_base','?')} | "
-                f"{v.get('n_records','?')} | {v.get('pulled_sha16','?')} | {eg} | {sc} | "
+                f"| {vf} | {v.get('pass_adapter', '?')} | {v.get('pass_base', '?')} | "
+                f"{v.get('beats_base', '?')} | {'YES' if v.get('superseded') else 'no'} | "
+                f"{v.get('composite_adapter', '?')} | {v.get('composite_base', '?')} | "
+                f"{v.get('rubric_adapter', '?')} | {v.get('rubric_base', '?')} | "
+                f"{v.get('n_records', '?')} | {v.get('pulled_sha16', '?')} | {eg} | {sc} | "
                 f"{gains} | {losses} | {sr} |"
             )
     else:
@@ -299,9 +299,9 @@ def render_dashboard(
     if verdicts:
         best_v = max(
             (v for v in verdicts if isinstance(v, dict)),
-            key=lambda v: int(str(v.get("pass_adapter", "0")).split("/")[0])
-            if v.get("pass_adapter")
-            else 0,
+            key=lambda v: (
+                int(str(v.get("pass_adapter", "0")).split("/")[0]) if v.get("pass_adapter") else 0
+            ),
             default=None,
         )
         if best_v:
@@ -313,10 +313,10 @@ def render_dashboard(
                 L.append("|---|---|---|---|---|---|---|")
                 for cat in cats:
                     L.append(
-                        f"| {cat.get('category','?')} | {cat.get('adapter_pass','?')} | "
-                        f"{cat.get('base_pass','?')} | {cat.get('adapter_rubric','?')} | "
-                        f"{cat.get('base_rubric','?')} | {cat.get('adapter_wins','?')} | "
-                        f"{cat.get('n_tasks','?')} |"
+                        f"| {cat.get('category', '?')} | {cat.get('adapter_pass', '?')} | "
+                        f"{cat.get('base_pass', '?')} | {cat.get('adapter_rubric', '?')} | "
+                        f"{cat.get('base_rubric', '?')} | {cat.get('adapter_wins', '?')} | "
+                        f"{cat.get('n_tasks', '?')} |"
                     )
             L.append("")
             # per-task wins
@@ -392,7 +392,7 @@ def render_dashboard(
     L.append("|---|---|---|---|")
     for c in done_cards[-15:]:
         L.append(
-            f"| {c['id']} | {c.get('lane','?')} | "
+            f"| {c['id']} | {c.get('lane', '?')} | "
             f"{(c.get('result') or '')[:50]} | {(c.get('title') or '')[:40]} |"
         )
     if not done_cards:

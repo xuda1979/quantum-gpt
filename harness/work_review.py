@@ -1,20 +1,31 @@
 """Work review + productivity + system health for harness standup reports."""
+
 from __future__ import annotations
-import json, os, subprocess, urllib.request
+
+import json
+import os
+import subprocess
+import urllib.request
 from pathlib import Path
+
 
 def _repo_root():
     return Path(os.environ.get("QGH_REPO", Path(__file__).resolve().parent.parent))
 
+
 def _state_dir():
     return Path(os.environ.get("QGH_STATE_DIR", _repo_root() / "harness" / "state"))
 
+
 def _run(cmd, cwd=None, timeout=10):
     try:
-        r = subprocess.run(cmd, capture_output=True, text=True, cwd=cwd or str(_repo_root()), timeout=timeout)
+        r = subprocess.run(
+            cmd, capture_output=True, text=True, cwd=cwd or str(_repo_root()), timeout=timeout
+        )
         return r.stdout.strip() if r.returncode == 0 else ""
     except Exception:
         return ""
+
 
 def _fleet_health():
     boxes = {"ASI1": 20646, "ASI2": 19004, "ASI3": 20653}
@@ -23,10 +34,23 @@ def _fleet_health():
         try:
             r = urllib.request.urlopen(f"http://127.0.0.1:{port}/health", timeout=3)
             d = json.loads(r.read())
-            results[name] = {"ready": d.get("ready"), "state": d.get("startupState"), "uptime": d.get("uptime"), "busy": d.get("busy"), "cmd": d.get("commandCount")}
+            results[name] = {
+                "ready": d.get("ready"),
+                "state": d.get("startupState"),
+                "uptime": d.get("uptime"),
+                "busy": d.get("busy"),
+                "cmd": d.get("commandCount"),
+            }
         except Exception:
-            results[name] = {"ready": False, "state": "UNREACHABLE", "uptime": 0, "busy": False, "cmd": 0}
+            results[name] = {
+                "ready": False,
+                "state": "UNREACHABLE",
+                "uptime": 0,
+                "busy": False,
+                "cmd": 0,
+            }
     return results
+
 
 def _keeper_status():
     try:
@@ -34,15 +58,22 @@ def _keeper_status():
     except Exception:
         return {"status": "MISSING"}
 
+
 def _system_load():
     return _run(["uptime"])
+
 
 def _worker_count():
     try:
         r = subprocess.run(["ps", "aux"], capture_output=True, text=True, timeout=5)
-        return sum(1 for l in r.stdout.splitlines() if "claude" in l and "cmri" in l and "GLM" in l and "--print" in l and "grep" not in l)
+        return sum(
+            1
+            for l in r.stdout.splitlines()
+            if "claude" in l and "cmri" in l and "GLM" in l and "--print" in l and "grep" not in l
+        )
     except Exception:
         return 0
+
 
 def _training_status():
     status = {"running": False, "step": None, "reward": None, "last_run": None, "verdict": None}
@@ -55,7 +86,9 @@ def _training_status():
     except Exception:
         pass
     repo = _repo_root()
-    metrics_files = sorted(repo.glob("outputs/*/grpo_step_metrics.jsonl"), key=os.path.getmtime, reverse=True)
+    metrics_files = sorted(
+        repo.glob("outputs/*/grpo_step_metrics.jsonl"), key=os.path.getmtime, reverse=True
+    )
     if metrics_files:
         status["last_run"] = metrics_files[0].parent.name
         try:
@@ -69,11 +102,20 @@ def _training_status():
     for vf in sorted(repo.glob("outputs/*verdict*.json"), key=os.path.getmtime, reverse=True):
         try:
             d = json.loads(vf.read_text())
-            status["verdict"] = {"file": vf.name, "pass_adapter": d.get("pass_adapter", d.get("adapter_pass")), "pass_base": d.get("pass_base", d.get("base_pass")), "beats_base": d.get("beats_base"), "superseded": d.get("superseded", False), "gains": d.get("gains", []), "losses": d.get("losses", [])}
+            status["verdict"] = {
+                "file": vf.name,
+                "pass_adapter": d.get("pass_adapter", d.get("adapter_pass")),
+                "pass_base": d.get("pass_base", d.get("base_pass")),
+                "beats_base": d.get("beats_base"),
+                "superseded": d.get("superseded", False),
+                "gains": d.get("gains", []),
+                "losses": d.get("losses", []),
+            }
             break
         except Exception:
             pass
     return status
+
 
 def _suite_status():
     repo = _repo_root()
@@ -94,6 +136,7 @@ def _suite_status():
         return {"status": "RUNNING", "chunks": len(chunks), "passed": tp, "failed": tf}
     return {"status": "STARTED"}
 
+
 def _events_analysis():
     ef = _state_dir() / "EVENTS.jsonl"
     done = bounce = dispatch = fail = 0
@@ -102,17 +145,22 @@ def _events_analysis():
             try:
                 ev = json.loads(line)
                 k = ev.get("kind", "")
-                if k == "dispatched": dispatch += 1
-                elif k == "done": done += 1
-                elif k == "bounce": bounce += 1
-                elif "fail" in k or "dead" in k: fail += 1
+                if k == "dispatched":
+                    dispatch += 1
+                elif k == "done":
+                    done += 1
+                elif k == "bounce":
+                    bounce += 1
+                elif "fail" in k or "dead" in k:
+                    fail += 1
             except Exception:
                 pass
     return {"dispatch": dispatch, "done": done, "bounce": bounce, "fail": fail}
 
+
 def render_work_review(state_dir=None, repo_root=None):
     repo = Path(repo_root) if repo_root else _repo_root()
-    sd = Path(state_dir) if state_dir else _state_dir()
+    Path(state_dir) if state_dir else _state_dir()
     L = []
 
     # === SYSTEM HEALTH ===
@@ -122,10 +170,14 @@ def render_work_review(state_dir=None, repo_root=None):
     for name in ["ASI1", "ASI2", "ASI3"]:
         v = fleet.get(name, {})
         ut = v.get("uptime", 0)
-        L.append(f"- {name}: ready={v.get("ready")} state={v.get("state")} uptime={ut}s ({ut//60}min) busy={v.get("busy")} cmd={v.get("cmd")}")
+        L.append(
+            f"- {name}: ready={v.get('ready')} state={v.get('state')} uptime={ut}s ({ut // 60}min) busy={v.get('busy')} cmd={v.get('cmd')}"
+        )
     L.append(f"- Fleet: {ready_count}/3 ready")
     keeper = _keeper_status()
-    L.append(f"- Keeper: status={keeper.get("status")} auth={keeper.get("headless_auth")} daemons={keeper.get("daemons")}")
+    L.append(
+        f"- Keeper: status={keeper.get('status')} auth={keeper.get('headless_auth')} daemons={keeper.get('daemons')}"
+    )
     load = _system_load()
     if load:
         L.append(f"- System: {load}")
@@ -137,18 +189,22 @@ def render_work_review(state_dir=None, repo_root=None):
     L.append("### TRAINING STATUS")
     ts = _training_status()
     if ts.get("running"):
-        L.append(f"- Status: RUNNING (step={ts.get("step")} reward={ts.get("reward")})")
+        L.append(f"- Status: RUNNING (step={ts.get('step')} reward={ts.get('reward')})")
     else:
         L.append("- Status: NOT RUNNING")
     if ts.get("last_run"):
-        L.append(f"- Last run: {ts.get("last_run")} (step={ts.get("step")} reward={ts.get("reward")})")
+        L.append(
+            f"- Last run: {ts.get('last_run')} (step={ts.get('step')} reward={ts.get('reward')})"
+        )
     v = ts.get("verdict")
     if v:
-        L.append(f"- Last verdict: {v.get("file")} adapter={v.get("pass_adapter")} base={v.get("pass_base")} beats_base={v.get("beats_base")} superseded={v.get("superseded")}")
+        L.append(
+            f"- Last verdict: {v.get('file')} adapter={v.get('pass_adapter')} base={v.get('pass_base')} beats_base={v.get('beats_base')} superseded={v.get('superseded')}"
+        )
         if v.get("gains"):
-            L.append(f"- Gains: {v.get("gains")}")
+            L.append(f"- Gains: {v.get('gains')}")
         if v.get("losses"):
-            L.append(f"- Losses: {v.get("losses")}")
+            L.append(f"- Losses: {v.get('losses')}")
     L.append("")
 
     # === EVAL STATUS ===
@@ -158,10 +214,10 @@ def render_work_review(state_dir=None, repo_root=None):
         pa = v.get("pass_adapter", "?")
         try:
             pa_num = int(str(pa).split("/")[0])
-            L.append(f"- Current: adapter {pa}/18 vs base {v.get("pass_base")}/18")
+            L.append(f"- Current: adapter {pa}/18 vs base {v.get('pass_base')}/18")
             L.append(f"- Need: {18 - pa_num} more task passes to reach 18/18")
         except Exception:
-            L.append(f"- Current: adapter={pa} base={v.get("pass_base")}")
+            L.append(f"- Current: adapter={pa} base={v.get('pass_base')}")
         if v.get("superseded"):
             L.append("- WARNING: verdict is SUPERSEDED — need canonical re-run with SHA pins")
     else:
@@ -172,12 +228,14 @@ def render_work_review(state_dir=None, repo_root=None):
     L.append("### PRODUCTIVITY")
     ev = _events_analysis()
     total = ev["dispatch"] + ev["done"] + ev["bounce"] + ev["fail"]
-    waste = f"{(ev["bounce"] + ev["fail"]) * 100 // total}%" if total > 0 else "?"
-    L.append(f"- Dispatched: {ev["dispatch"]} | Done: {ev["done"]} | Bounce: {ev["bounce"]} | Fail: {ev["fail"]} | Waste: {waste}")
+    waste = f"{(ev['bounce'] + ev['fail']) * 100 // total}%" if total > 0 else "?"
+    L.append(
+        f"- Dispatched: {ev['dispatch']} | Done: {ev['done']} | Bounce: {ev['bounce']} | Fail: {ev['fail']} | Waste: {waste}"
+    )
     if ev["dispatch"] > 0 and ev["done"] == 0:
         L.append("- CRITICAL: 0% completion rate — workers are not producing results")
     elif ev["dispatch"] > 0 and ev["done"] < ev["dispatch"] // 2:
-        L.append(f"- WARNING: low completion ({ev["done"] * 100 // ev["dispatch"]}%)")
+        L.append(f"- WARNING: low completion ({ev['done'] * 100 // ev['dispatch']}%)")
     L.append("")
 
     # === WORK REVIEW ===
@@ -193,11 +251,13 @@ def render_work_review(state_dir=None, repo_root=None):
     L.append("### TEST SUITE")
     suite = _suite_status()
     if suite.get("status") == "COMPLETE":
-        L.append(f"- Status: COMPLETE — {suite.get("result")}")
+        L.append(f"- Status: COMPLETE — {suite.get('result')}")
     elif suite.get("status") == "RUNNING":
-        L.append(f"- Status: RUNNING — {suite.get("chunks")}/27 chunks, {suite.get("passed")}P/{suite.get("failed")}F")
+        L.append(
+            f"- Status: RUNNING — {suite.get('chunks')}/27 chunks, {suite.get('passed')}P/{suite.get('failed')}F"
+        )
     else:
-        L.append(f"- Status: {suite.get("status")}")
+        L.append(f"- Status: {suite.get('status')}")
     L.append("")
 
     # === CRITICAL SELF-REVIEW ===

@@ -1,0 +1,42 @@
+def save_queue(state_dir, queue):
+    # C-9027 (3): identity (title+lane) is frozen per live id -- the
+    # C-9021 incident stood up fixer/"Split /health-ready..." under the
+    # id standup-27 had recorded as planner/"Queue nearly empty...".
+    # State fields (status/claims/deadlines) stay writable; new intent
+    # requires a NEW id. A missing/corrupt prior file skips the guard
+    # (first save).
+    path = os.path.join(state_dir, "QUEUE.json")
+    if os.path.exists(path):
+        disk = load_json(path, {"cards": [], "seq": 0})
+        mem = {c.get("id"): c for c in queue.get("cards", [])}
+        for c in disk.get("cards", []):
+            m = mem.get(c.get("id"))
+            if m is None:
+                # C-9135/C-9136: card exists on disk but NOT in the
+                # in-memory copy.  It was added by a concurrent writer
+                # after this copy was loaded.  Preserve it ONLY if it
+                # has no terminal event (reaped/card_dead/card_done/
+                # card_voided/card_superseded) in EVENTS.jsonl -- a
+                # terminal card was intentionally removed and must not
+                # be resurrected.  This prevents the lost-update
+                # vaporizer that silently dropped ready cards
+                # (C-9125/C-9128/C-9129/C-9130 vanished
+                # 2026-09-20T04:51-05:15Z with no archive event).
+                _terminal = history_terminal_card_ids(state_dir)
+                if c.get("id") not in _terminal:
+                    queue.setdefault("cards", []).append(c)
+                continue
+            for field in ("title", "lane"):
+                if field in c and field in m and c[field] != m[field]:
+                    raise ValueError(
+                        f"refusing to mutate {field} of existing card {c.get('id')} under a "
+                        f"live id (disk {c.get(field)!r} != memory {m.get(field)!r}); new intent requires "
+                        "a new id"
+                    )
+        # C-9136: reconcile seq -- a concurrent add bumped seq on disk;
+        # our stale in-memory seq must not regress it (would cause id
+        # collisions on the next add_card).
+        disk_seq = int(disk.get("seq", 0))
+        if disk_seq > int(queue.get("seq", 0)):
+            queue["seq"] = disk_seq
+    save_json(path, queue)

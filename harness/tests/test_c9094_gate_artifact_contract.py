@@ -180,7 +180,7 @@ def test_contract_schema_cell_names_required_fields():
         c9051_parity_ok=("parity", "PARITY-OK", "runner_sha256"),
         c9038_ceiling=("ceiling", "max_new_tokens", "proven_pass", "runner_sha256", "runner_mtime"),
     )
-    for key, fname, _check in G.PREFLIGHTS:
+    for key, _fname, _check in G.PREFLIGHTS:
         _card, _p, schema = rows[key]
         for token in must_name[key]:
             assert token in schema, (key, token, schema)
@@ -201,7 +201,7 @@ def test_well_formed_artifact_at_documented_path_resolves_key(tmp_path):
 
 
 def test_malformed_artifact_at_documented_path_stays_unmet(tmp_path):
-    rows = _contract_rows()
+    _contract_rows()
     bad_by_key = _malformed(tmp_path)
     for key, fname, _check in G.PREFLIGHTS:
         for bad, reason in bad_by_key[key]:

@@ -160,9 +160,9 @@ def guard_C9016_untouched(cards):
     # spine and carries no C-9056 annotation.
     c = cards["C-9016"]
     assert c.get("status") == "ready", "C-9016 must stay ready, got " + repr(c.get("status"))
-    assert "C-9056" not in (
-        c.get("reason") or ""
-    ), "C-9016 must carry no C-9056 re-baseline note (different card)"
+    assert "C-9056" not in (c.get("reason") or ""), (
+        "C-9016 must carry no C-9056 re-baseline note (different card)"
+    )
     for d in c.get("deps") or []:
         t = cards.get(d)
         assert t is not None and t.get("status") in LIVE_STATUSES, (
@@ -181,7 +181,18 @@ GUARDS = (
 class TestDepGraphRebaselineV7CanonicalSpineShells(unittest.TestCase):
     def setUp(self):
         _existing = set(c["id"] for c in load_live_queue().get("cards", []))
-        _required = {'C-0002', 'C-0005', 'C-0011', 'C-0015', 'C-0016', 'C-0029', 'C-0042', 'C-0051', 'C-0055', 'C-0065'}
+        _required = {
+            "C-0002",
+            "C-0005",
+            "C-0011",
+            "C-0015",
+            "C-0016",
+            "C-0029",
+            "C-0042",
+            "C-0051",
+            "C-0055",
+            "C-0065",
+        }
         _missing = _required - _existing
         if _missing:
             self.skipTest("historical cards purged: " + str(sorted(_missing)[:5]))
@@ -223,7 +234,18 @@ class TestDepGraphRebaselineV7RedWitness(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         _existing = set(c["id"] for c in load_live_queue().get("cards", []))
-        _required = {'C-0002', 'C-0005', 'C-0011', 'C-0015', 'C-0016', 'C-0029', 'C-0042', 'C-0051', 'C-0055', 'C-0065'}
+        _required = {
+            "C-0002",
+            "C-0005",
+            "C-0011",
+            "C-0015",
+            "C-0016",
+            "C-0029",
+            "C-0042",
+            "C-0051",
+            "C-0055",
+            "C-0065",
+        }
         _missing = _required - _existing
         if _missing:
             raise unittest.SkipTest("historical cards purged: " + str(sorted(_missing)[:5]))

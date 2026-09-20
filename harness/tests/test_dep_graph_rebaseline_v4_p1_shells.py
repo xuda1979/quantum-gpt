@@ -50,7 +50,23 @@ def load_live_queue():
 class TestDepGraphRebaselineV4P1Shells(unittest.TestCase):
     def setUp(self):
         _existing = set(c["id"] for c in load_live_queue().get("cards", []))
-        _required = {'C-0010', 'C-0015', 'C-0016', 'C-0022', 'C-0023', 'C-0029', 'C-0051', 'C-0052', 'C-0055', 'C-0059', 'C-0064', 'C-0069', 'C-0072', 'C-0073', 'C-0076'}
+        _required = {
+            "C-0010",
+            "C-0015",
+            "C-0016",
+            "C-0022",
+            "C-0023",
+            "C-0029",
+            "C-0051",
+            "C-0052",
+            "C-0055",
+            "C-0059",
+            "C-0064",
+            "C-0069",
+            "C-0072",
+            "C-0073",
+            "C-0076",
+        }
         _missing = _required - _existing
         if _missing:
             self.skipTest("historical cards purged: " + str(sorted(_missing)[:5]))

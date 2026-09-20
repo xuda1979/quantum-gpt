@@ -193,7 +193,16 @@ def save_queue(state_dir, queue):
     # (first save).
     path = os.path.join(state_dir, "QUEUE.json")
     if os.path.exists(path):
-        disk = load_json(path, {"cards": [], "seq": 0})
+        # C-9427: read the REAL disk file directly (not through a possibly-
+        # monkeypatched load_json) so the lost-update merge sees concurrent
+        # adds that happened after our in-memory snapshot was taken.
+        import json as _json
+
+        try:
+            with open(path, encoding="utf-8") as _f:
+                disk = _json.load(_f)
+        except (OSError, ValueError):
+            disk = {"cards": [], "seq": 0}
         mem = {c.get("id"): c for c in queue.get("cards", [])}
         for c in disk.get("cards", []):
             m = mem.get(c.get("id"))
@@ -516,7 +525,7 @@ def bounce_dead_running_cards(state_dir, pid_alive_fn=None):
         with open(event_path, "a") as f:
             f.write(json.dumps(evt) + "\n")
     if bounced:
-        save_json(os.path.join(state_dir, "QUEUE.json"), queue)
+        save_queue(state_dir, queue)
     return bounced
 
 

@@ -27,6 +27,7 @@ proves an unpinned verdict fails closed).
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import sys
@@ -50,6 +51,10 @@ FROZEN_BENCH = os.path.join(_REPO_ROOT, fz.BENCH_RELPATH)
 VALID_LOG = (
     "stage: adapter_applied, adapter: adapters/x\n"
     "summary: adapter-applied adapter-probe-differs tasks=18\n"
+    "leg_process_id: {leg_pid}\n"
+    "candidate_cache_id: {cache_id}\n"
+    "window_id: {window}\n"
+    "transport: {transport}\n"
 )
 
 
@@ -67,11 +72,24 @@ def _write_scores(tmp, name, passes):
     records = []
     for tid, (ap, bp) in passes.items():
         # scores.overall present (C-0033: the composer refuses empty legs)
+        # truncated=False (C-9038: missing truncation field reads NOT-pass)
         records.append(
-            dict(model="adapter", task_id=tid, passed=ap, scores=dict(overall=1.0 if ap else 0.0))
+            dict(
+                model="adapter",
+                task_id=tid,
+                passed=ap,
+                scores=dict(overall=1.0 if ap else 0.0),
+                truncated=False,
+            )
         )
         records.append(
-            dict(model="base", task_id=tid, passed=bp, scores=dict(overall=1.0 if bp else 0.0))
+            dict(
+                model="base",
+                task_id=tid,
+                passed=bp,
+                scores=dict(overall=1.0 if bp else 0.0),
+                truncated=False,
+            )
         )
     p = tmp / (name + "_scores.json")
     p.write_text(json.dumps(dict(task_ids=list(passes), records=records)))
@@ -81,7 +99,28 @@ def _write_scores(tmp, name, passes):
 def _write_leg(tmp, leg, passes, runner, markers=(True, True)):
     scores = _write_scores(tmp, leg, passes)
     log = tmp / (leg + ".log")
-    log.write_text(VALID_LOG)
+    # C-9117: stamp independence fields in both envelope and log for corroboration
+    leg_pid = f"pid-{leg}-{runner}"
+    cache_id = f"cache-{leg}"
+    window_id = f"win-{leg}"
+    transport = "slice" if "slice" in runner else "local"
+    log.write_text(
+        VALID_LOG.format(leg_pid=leg_pid, cache_id=cache_id, window=window_id, transport=transport)
+    )
+    # C-9110: candidates_vs_base_diff must be MEASURED with correct scores sha
+    scores_sha = hashlib.sha256(Path(scores).read_bytes()).hexdigest()
+    # C-9089/C-9119: checkpoint pin for model identity proof
+    pin_path = tmp / (leg + "_checkpoint_pin.json")
+    pin_path.write_text(
+        json.dumps(
+            dict(
+                checkpoint_id="ckpt-" + leg,
+                base_model="Qwen/Qwen3.8-27B",
+                sha256="abc123def456" + leg,
+                inventory_path="",
+            )
+        )
+    )
     env = dict(
         leg=leg,
         runner_mechanism=runner,
@@ -98,6 +137,24 @@ def _write_leg(tmp, leg, passes, runner, markers=(True, True)):
         adapter_probe_differs_marker=markers[1],
         leg_log=str(log),
         scores=str(scores),
+        leg_process_id=leg_pid,
+        candidate_cache_id=cache_id,
+        window_id=window_id,
+        transport=transport,
+        candidates_vs_base_diff={
+            "card": "C-9110",
+            "status": "MEASURED",
+            "reason": None,
+            "n_checked": len(passes),
+            "n_byte_match": 0,
+            "matching_task_ids": [],
+            "per_task": {tid: {"byte_match": False} for tid in passes},
+            "evidence_source": "candidate_sha256",
+            "scores_sha256": scores_sha,
+            "match_max_fraction": 0.5,
+            "generated_utc": "2026-09-20T00:00:00Z",
+        },
+        checkpoint_pin=str(pin_path),
     )
     p = tmp / (leg + ".json")
     p.write_text(json.dumps(env))

@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # =============================================================================
-# ASI2 launcher: Frontier-Verifier GSPO (FV-GSPO) training for Qwen3.6-27B.
+# ASI2 launcher: Frontier-Verifier GSPO (FV-GSPO) training for Qwen3.8-27B.
 #
 # Architecture
 # ------------
-#   NPU 0..N -> GRPO trainer (Qwen3.6-27B + LoRA, generates samples + trains)
+#   NPU 0..N -> GRPO trainer (Qwen3.8-27B + LoRA, generates samples + trains)
 #   CPU      -> Periodic checkpoint sync to NAS (/root/work/filestorage/grpo_checkpoints)
 #
 # FV-GSPO (docs/frontier-verifier-gspo-design-2026-08-04.md):
@@ -34,7 +34,7 @@ log() { printf '[%s] %s\n' "$(date '+%Y-%m-%dT%H:%M:%S%z')" "$*"; }
 
 # ---- paths ----
 NAS_ROOT="${NAS_ROOT:-/root/work/software/quantum-gpt}"
-MODEL_PATH="${MODEL_PATH:-/root/work/filestorage/Qwen3.6-27B}"
+MODEL_PATH="${MODEL_PATH:-/root/work/filestorage/Qwen3.8-27B}"
 CONFIG_FILE="${CONFIG_FILE:-$NAS_ROOT/configs/rl/qwen36_27b_fv_gspo_asi2.json}"
 RUN_ID="${RUN_ID:-$(date +%Y%m%dT%H%M%S)}"
 OUT="${OUT:-$NAS_ROOT/outputs/grpo-27b-selfeval-${RUN_ID}}"
@@ -477,19 +477,26 @@ echo "$!" > "$CHECKPOINT_PID_FILE"
 disown "$(cat "$CHECKPOINT_PID_FILE")" 2>/dev/null || true
 log "checkpoint sync daemon launched pid=$(cat "$CHECKPOINT_PID_FILE")"
 
+# ---- C-9122 grader-runtime preflight (fail-closed before trainer exec) ----
+TRAINER_PY="${TRAINER_PY:-python3}"
+if ! "$TRAINER_PY" harness/grader_runtime_preflight.py --interpreter "$TRAINER_PY"; then
+  log "C-9122 FAIL-CLOSED: grader-runtime preflight failed in $TRAINER_PY -- refusing to launch"
+  exit 3
+fi
+
 # ---- GRPO trainer ----
 if [[ "$NPU_DEVICE_MAP" == "balanced-layers" ]]; then
   log "launching GRPO trainer as SINGLE process with balanced-layers NPU sharding..."
   RUN_CMD=(
     env MASTER_ADDR=127.0.0.1 MASTER_PORT=29500 WORLD_SIZE=1 RANK=0 LOCAL_RANK=0
-    python3 training/grpo_trainer.py
+    "$TRAINER_PY" training/grpo_trainer.py
     --npu-device-map balanced-layers
     --npu-max-memory-gib "$NPU_MAX_MEMORY_GIB"
   )
   NUM_NPU=1
 else
   log "launching GRPO trainer on $NUM_NPU NPUs (torchrun DDP)..."
-  RUN_CMD=(torchrun --nproc_per_node="$NUM_NPU" training/grpo_trainer.py)
+  RUN_CMD=("$TRAINER_PY" -m torch.distributed.run --nproc_per_node="$NUM_NPU" training/grpo_trainer.py)
 fi
 
 nohup "${RUN_CMD[@]}" \

@@ -37,7 +37,9 @@ NAMED_LANDED_FIXES = {
 def _tracked(rel):
     proc = subprocess.run(
         ["git", "ls-files", "--error-unmatch", rel],
-        cwd=str(ROOT), capture_output=True, text=True,
+        cwd=str(ROOT),
+        capture_output=True,
+        text=True,
     )
     return proc.returncode == 0
 
@@ -45,8 +47,7 @@ def _tracked(rel):
 def test_named_landed_fixes_are_tracked_in_git():
     untracked = [p for p in NAMED_LANDED_FIXES if not _tracked(p)]
     assert not untracked, (
-        "landed fixes untracked in git (a tree sync can silently drop "
-        "them): %s" % sorted(untracked)
+        f"landed fixes untracked in git (a tree sync can silently drop them): {sorted(untracked)}"
     )
 
 
@@ -59,4 +60,4 @@ def test_guard_list_covers_the_card_named_families():
         "harness/tests/test_dep_graph_rebaseline_v7_canonical_spine_shells.py",
         "evals/runner/single_candidate_eval.py",
     ):
-        assert family in rels, "guard list lost a named family: %s" % family
+        assert family in rels, f"guard list lost a named family: {family}"

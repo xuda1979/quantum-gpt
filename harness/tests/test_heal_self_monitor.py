@@ -23,7 +23,13 @@ import qgh  # noqa: E402
 
 
 def _make_card(cid, status="ready", **extra):
-    c = H.new_card(card_id=cid, title="t", lane="fixer", why="w", acceptance=["a"])
+    c = H.new_card(
+        card_id=cid,
+        title="test zombie card",
+        lane="fixer",
+        why="test why",
+        acceptance=["test acceptance"],
+    )
     c["status"] = status
     c.update(extra)
     return c

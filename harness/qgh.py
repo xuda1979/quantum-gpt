@@ -38,6 +38,7 @@ import subprocess
 import sys
 import time
 from datetime import datetime, timedelta, timezone
+from functools import wraps
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import harness_lib as H  # noqa: E402
@@ -93,7 +94,9 @@ WORKER_MODEL = os.environ.get("QGH_WORKER_MODEL", WORKER_MODEL_DEFAULT)
 CRON_MARK = "qgh.py tick"
 MAX_LIVE_AGENTS = 10  # reduced from 100: cmri GLM-5.2 gateway rate-limits at high concurrency
 TICK_LOCK = os.path.join(STATE, "locks", "tick.lock")
-TICK_STALE_SEC = 1800  # a tick holding the lock >30min is wedged -> break it
+TICK_STALE_SEC = 1800
+QUEUE_LOCK = os.path.join(STATE, "locks", "QUEUE.json.lock")
+QUEUE_STALE_SEC = 1800  # C-9386: queue write lease (matches LOCK_STALE_S)  # a tick holding the lock >30min is wedged -> break it
 # A successful tick appends to STATUS.md; a CRASHING tick still touches
 # tick.log (the launchd stdout redirect catches the traceback) but NOT
 # STATUS.md. So STATUS.md mtime is the true "loop is making progress"
@@ -160,6 +163,28 @@ def release_lock(path):
         _rmtree(path)
 
 
+def _queue_locked(fn):
+    """C-9386: serialize a QUEUE.json read-modify-write under a file lock.
+
+    qgh card commands load->mutate->save the shared QUEUE.json. Concurrent
+    invocations without a lock lose each other's updates (the vaporizer).
+    Fail-closed: if the live lock cannot be taken, refuse rather than race.
+    A stale/dead-holder lock is taken over by the harness_lib lease protocol.
+    """
+
+    @wraps(fn)
+    def wrapper(*a, **k):
+        lock = H.acquire_lock(QUEUE_LOCK, stale_s=QUEUE_STALE_SEC)
+        if lock is None:
+            raise RuntimeError("queue busy: another qgh card op is mutating QUEUE.json")
+        try:
+            return fn(*a, **k)
+        finally:
+            H.release_lock(QUEUE_LOCK, lock)
+
+    return wrapper
+
+
 def default_goal():
     return {
         "objective": (
@@ -202,6 +227,7 @@ def cmd_goal(_args):
     print(json.dumps(goal, indent=1, ensure_ascii=False))
 
 
+@_queue_locked
 def cmd_seed(_args):
     """Seed the objective critical path. Idempotent by (id-key) title prefix."""
     queue = load_queue(STATE)
@@ -271,6 +297,7 @@ def cmd_seed(_args):
     print(f"seeded {n} new cards")
 
 
+@_queue_locked
 def cmd_card(args):
     queue = load_queue(STATE)
     card = new_card(
@@ -298,6 +325,7 @@ def cmd_card(args):
     print(card["id"])
 
 
+@_queue_locked
 def cmd_card_requeue(args):
     """C-0032: explicit bounced->ready requeue; the dep-deadlock exit."""
     queue = load_queue(STATE)
@@ -323,6 +351,7 @@ def cmd_card_requeue(args):
         sys.exit(1)  # fail closed: a refusal must never look like success
 
 
+@_queue_locked
 def cmd_card_remove(args):
     """C-9139: purge a card from the queue.  Refuses to purge a running
     card whose claimed_by pid is still alive (orphan guard).  Removes
@@ -1162,7 +1191,6 @@ def _reconcile_dep_blockers():
     queue = load_queue(STATE)
     changed = False
     dead_blockers = []
-    _dead_dep_orphans = set()  # card ids unblocked by dead-dep edge drop
     for c in queue["cards"]:
         if c["status"] != "ready":
             continue
@@ -1195,7 +1223,6 @@ def _reconcile_dep_blockers():
                 if dep_id in c["deps"]:
                     c["deps"] = [d for d in c["deps"] if d != dep_id]
                     changed = True
-                    _dead_dep_orphans.add(c["id"])
                     event(STATE, "dep_edge_dropped", {"blocker": dep_id, "unblocks": c["id"]})
                 if dep_id not in dead_blockers:
                     dead_blockers.append(dep_id)
@@ -1238,25 +1265,16 @@ def _reconcile_dep_blockers():
         # claimable ready work. A terminally dead blocker with healthy ready
         # cards elsewhere minted a planner card every tick (C-9111 minted on
         # 2026-09-18T05:50Z with 25 ready + 6 running on blocker C-9029).
-        # However, cards that were JUST unblocked by dropping a dead dep edge
-        # are not independent work -- they only became claimable because the
-        # blocker died. Count them separately so we still mint when the only
-        # "claimable" cards are dead-blocker orphans.
+        # C-9114: the reconciler only drops dep edges and tracks dead
+        # blockers. Minting is the tick top-up gate (planner_topup_needed),
+        # NOT the reconciler job -- a dead blocker with no dependents and
+        # zero claimable work is genuinely idle, and planner_topup_needed
+        # will fire on the next tick.
         n_claimable = claimable_ready_count(queue)
-        n_orphaned = sum(
-            1 for c in queue["cards"]
-            if c.get("status") == "ready"
-            and c.get("id") in _dead_dep_orphans
-        )
-        n_independent = n_claimable - n_orphaned
-        minted = False
-        if n_independent == 0:
-            _auto_plan(load_goal(STATE))
-            minted = True
         event(
             STATE,
             "dead_dep_escalated",
-            {"blockers": dead_blockers, "claimable_ready": n_claimable, "minted": minted},
+            dict(blockers=dead_blockers, claimable_ready=n_claimable, minted=False),
         )
     return changed, dead_blockers
 
@@ -1587,7 +1605,7 @@ def cmd_tick(_args):
             f"  GATE: {H.load_json(os.path.join(STATE, 'c9071', 'window_gate_go.json'), {}).get('verdict', 'NONE') if os.path.exists(os.path.join(STATE, 'c9071', 'window_gate_go.json')) else 'SKIP' if os.path.exists(os.path.join(STATE, 'c9071', 'window_gate_skip.json')) else 'NONE'}"
         )
         print(
-            f"  VERDICT: best={goal.get('best','?')} | target={goal.get('target_pass','?')} | status={goal.get('status','?')}"
+            f"  VERDICT: best={goal.get('best', '?')} | target={goal.get('target_pass', '?')} | status={goal.get('status', '?')}"
         )
         # C-9125: blocker analysis — what's preventing the next step?
         _blockers = []
@@ -1608,15 +1626,15 @@ def cmd_tick(_args):
         if running:
             for c in running[:10]:
                 print(
-                    f"    RUNNING: {c['id']} [{c.get('lane','?')}] {c.get('title','?')[:60]} bounce={c.get('bounce_count',0)}"
+                    f"    RUNNING: {c['id']} [{c.get('lane', '?')}] {c.get('title', '?')[:60]} bounce={c.get('bounce_count', 0)}"
                 )
         if ready:
             for c in ready[:10]:
-                print(f"    READY: {c['id']} [{c.get('lane','?')}] {c.get('title','?')[:60]}")
+                print(f"    READY: {c['id']} [{c.get('lane', '?')}] {c.get('title', '?')[:60]}")
         if blocked:
             for c in blocked[:5]:
                 deps = c.get("deps", [])
-                print(f"    BLOCKED: {c['id']} deps={deps} {c.get('title','?')[:50]}")
+                print(f"    BLOCKED: {c['id']} deps={deps} {c.get('title', '?')[:50]}")
         # C-9125: auto-diagnose /exec health on each box
         for _name, _port in (("ASI1", 20646), ("ASI2", 19004), ("ASI3", 20653)):
             _h = env_health.get(_name)

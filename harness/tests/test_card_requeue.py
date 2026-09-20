@@ -29,7 +29,7 @@ import harness_lib as H  # noqa: E402
 
 
 def make_card(**kw):
-    base = dict(title="t", lane="fixer", why="w", acceptance=["a"])
+    base = dict(title="test-card", lane="fixer", why="test-why", acceptance=["test-acc"])
     base.update(kw)
     return H.new_card(**base)
 
@@ -49,10 +49,10 @@ def mkq(*cards):
 
 class TestRequeuePath(unittest.TestCase):
     def test_bounced_dep_blocks_ready_child_and_requeue_is_the_exit(self):
-        dep = make_card(title="dep")
+        dep = make_card(title="dep-card1")
         bounce_three_times(dep)
         q = mkq(dep)  # add_card assigns the id BEFORE the child references it
-        child = make_card(title="child", deps=[dep["id"]])
+        child = make_card(title="child-card", deps=[dep["id"]])
         H.add_card(q, child)
         # TODAY (the deadlock): the ready child is undispatchable on its
         # bounced dep, and the bounced dep itself is undispatchable.
@@ -134,7 +134,7 @@ class TestRequeueCli(unittest.TestCase):
     def setUp(self):
         self.state = tempfile.mkdtemp(prefix="qgh-requeue-cli-")
         q = {"cards": [], "seq": 0}
-        dep = make_card(title="dep")
+        dep = make_card(title="dep-card1")
         bounce_three_times(dep)
         H.add_card(q, dep)
         other = make_card(title="never-bounced")

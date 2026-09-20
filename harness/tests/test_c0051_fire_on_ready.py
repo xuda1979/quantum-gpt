@@ -256,20 +256,22 @@ def test_main_cutoff_terminal_releases_lock_and_probes(tmp_path):
 # 3. main()'s stop path force-writes a same-second same-reason probe that
 #    overwrites the rich fail-closed record with a thin note.
 
+
 def test_pid_reuse_on_inflight_marker_fails_closed(tmp_path):
     mod, ctx = mk(tmp_path, health=dict(ready=True, pid=7))
     proc = subprocess.Popen(
         [sys.executable, "-c", "import time; time.sleep(60)"],
-        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
     )
     tok = None
     try:
         # Live pid whose lstart does NOT match the marker's record = REUSED
         # pid: the original dispatcher is gone, dispatch rc UNKNOWN.
         st = dict(
-            pid=os.getpid(), cutoff_utc=mod.now_iso(),
-            in_flight=dict(pid=proc.pid, ts=mod.now_iso(),
-                           lstart="Tue Jan  1 00:00:01 2001"),
+            pid=os.getpid(),
+            cutoff_utc=mod.now_iso(),
+            in_flight=dict(pid=proc.pid, ts=mod.now_iso(), lstart="Tue Jan  1 00:00:01 2001"),
         )
         mod.save_json(ctx.state_path, st)
         tok = mod.arm(ctx)  # arm must NOT drop the marker on pid_alive alone
@@ -286,18 +288,19 @@ def test_pid_reuse_on_inflight_marker_fails_closed(tmp_path):
 
 def test_dispatch_rechecks_lock_ownership_before_firing(tmp_path):
     mod, ctx = mk(
-        tmp_path, health=dict(ready=True, pid=7),
+        tmp_path,
+        health=dict(ready=True, pid=7),
         launcher_stdout="LEG_LAUNCHED step=1 log=/tmp/leg.log\n",
     )
     tok = mod.arm(ctx)
     foreign = subprocess.Popen(
         [sys.executable, "-c", "import time; time.sleep(60)"],
-        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
     )
     try:
         # Live foreign holder with a fresh lease: acquire_lock refuses.
-        mod.save_json(ctx.lock_path,
-                      dict(pid=foreign.pid, ts=mod.now_iso()))
+        mod.save_json(ctx.lock_path, dict(pid=foreign.pid, ts=mod.now_iso()))
         rc = mod.dispatch(ctx)
         assert rc == 4
         assert ctx._test["launcher_calls"] == []  # NO unserialized second leg
@@ -320,8 +323,7 @@ def test_dispatch_rechecks_lock_ownership_before_firing(tmp_path):
 def test_main_stop_probe_keeps_rich_payload_single_record(tmp_path):
     mod, ctx = mk(tmp_path, health=dict(ready=True, pid=7))
     dead = _dead_pid()
-    st = dict(pid=dead, cutoff_utc=mod.now_iso(),
-              in_flight=dict(pid=dead, ts=mod.now_iso()))
+    st = dict(pid=dead, cutoff_utc=mod.now_iso(), in_flight=dict(pid=dead, ts=mod.now_iso()))
     mod.save_json(ctx.state_path, st)
     rc = mod.main(
         ["--cutoff-mins", "1"],

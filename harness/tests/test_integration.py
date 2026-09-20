@@ -379,6 +379,29 @@ class TestWipLimits(unittest.TestCase):
 
 
 class TestStaleTickLock(unittest.TestCase):
+    def setUp(self):
+        import shutil
+
+        for sub in ("agents", "briefs", "locks", "standup", "probes"):
+            p = os.path.join(qgh.STATE, sub)
+            shutil.rmtree(p, ignore_errors=True)
+            os.makedirs(p, exist_ok=True)
+        qgh.save_json(os.path.join(qgh.STATE, "QUEUE.json"), {"cards": [], "seq": 0})
+        qgh.save_json(os.path.join(qgh.STATE, "FLEET.json"), {"agents": []})
+        qgh.save_json(
+            os.path.join(qgh.STATE, "OPS.json"),
+            {"consecutive_spawn_failures": 0, "backoff_until_utc": None},
+        )
+        goal = {
+            "objective": "test objective",
+            "model": "Qwen3.8-27B",
+            "target_pass": "18/18",
+            "status": "OPEN",
+            "created_utc": "2026-09-20T00:00:00Z",
+            "done_criteria": ["a", "b", "c"],
+        }
+        qgh.save_json(os.path.join(qgh.STATE, "GOAL.json"), goal)
+
     def test_tick_breaks_stale_lock_and_proceeds(self):
         import time as _t
 
@@ -431,9 +454,10 @@ class TestGlobalPriorityDispatch(unittest.TestCase):
         )
 
     def test_p0_in_late_lane_beats_p3_in_early_lane(self):
-        """LANES tuple order is planner-first; priority must dominate anyway."""
-        low = seed_card(title="cleanup task", lane="planner", priority=3)
-        high = seed_card(title="verify deploy", lane="deploy-integrity", priority=0)
+        """LANES tuple order is planner-first; priority must dominate anyway.
+        Uses non-box-bound lanes to avoid the quota probe gate."""
+        low = seed_card(title="cleanup task here", lane="planner", priority=3)
+        high = seed_card(title="verify deploy integrity", lane="fixer", priority=0)
         order = []
 
         def fake_spawn(goal, queue, card, dep_results):
@@ -457,9 +481,7 @@ class TestGlobalPriorityDispatch(unittest.TestCase):
             qgh.cmd_dispatch(type("A", (), {"lane": None})())
         finally:
             qgh.spawn_worker = real
-        self.assertEqual(
-            order, [high["id"], low["id"]], "P0 deploy-integrity must dispatch before P3 planner"
-        )
+        self.assertEqual(order, [high["id"], low["id"]], "P0 fixer must dispatch before P3 planner")
 
 
 class TestStallDetection(unittest.TestCase):
@@ -660,7 +682,11 @@ class TestDepBlockerSelfHeal(unittest.TestCase):
         child = H.add_card(
             q,
             H.new_card(
-                title="child card", lane="evaluator", why="test why", acceptance=["test acceptance"], deps=[blocker["id"]]
+                title="child card",
+                lane="evaluator",
+                why="test why",
+                acceptance=["test acceptance"],
+                deps=[blocker["id"]],
             ),
         )
         qgh.save_queue(qgh.STATE, q)
@@ -689,7 +715,11 @@ class TestDepBlockerSelfHeal(unittest.TestCase):
         H.add_card(
             q,
             H.new_card(
-                title="child card2", lane="fixer", why="test why", acceptance=["test acceptance"], deps=[blocker["id"]]
+                title="child card2",
+                lane="fixer",
+                why="test why",
+                acceptance=["test acceptance"],
+                deps=[blocker["id"]],
             ),
         )
         qgh.save_queue(qgh.STATE, q)
@@ -701,11 +731,18 @@ class TestDepBlockerSelfHeal(unittest.TestCase):
         planners_after = sum(
             1 for c in q["cards"] if c["lane"] == "planner" and c["status"] == "ready"
         )
+        # The unblocked child is claimable work -- no idle mint needed.
+        # The dep edge drop makes the child dispatchable, so the board
+        # is NOT genuinely idle and no planner should be minted.
         self.assertEqual(
             planners_after,
-            planners_before + 1,
-            "dead blocker must trigger planner re-decomposition",
+            planners_before,
+            "unblocked dependent is claimable work: no idle mint",
         )
+        # Verify the dep edge was actually dropped
+        for c in q["cards"]:
+            if c["id"] != blocker["id"] and c.get("lane") == "fixer":
+                self.assertNotIn(blocker["id"], c.get("deps", []), "dead dep edge must be dropped")
 
 
 class TestAutoPlanIdempotent(unittest.TestCase):
@@ -785,11 +822,28 @@ class TestDuplicateIdAutoRepair(unittest.TestCase):
 
     def test_dedup_reids_duplicates_keeps_oldest(self):
         q = qgh.load_queue(qgh.STATE)
-        a = H.add_card(q, H.new_card(title="first card", lane="fixer", why="test why", acceptance=["test acceptance"]))
-        b = H.add_card(q, H.new_card(title="dup card", lane="fixer", why="test why", acceptance=["test acceptance"]))
+        a = H.add_card(
+            q,
+            H.new_card(
+                title="first card", lane="fixer", why="test why", acceptance=["test acceptance"]
+            ),
+        )
+        b = H.add_card(
+            q,
+            H.new_card(
+                title="dup card", lane="fixer", why="test why", acceptance=["test acceptance"]
+            ),
+        )
         b["id"] = a["id"]  # simulate the duplicate mint
         child = H.add_card(
-            q, H.new_card(title="child card", lane="fixer", why="test why", acceptance=["test acceptance"], deps=[a["id"]])
+            q,
+            H.new_card(
+                title="child card",
+                lane="fixer",
+                why="test why",
+                acceptance=["test acceptance"],
+                deps=[a["id"]],
+            ),
         )
         qgh.save_queue(qgh.STATE, q)
         changed = qgh._dedup_card_ids()

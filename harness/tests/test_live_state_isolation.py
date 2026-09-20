@@ -17,6 +17,6 @@ def test_qgh_state_is_not_the_live_dir():
     live = os.path.join(
         os.path.dirname(os.path.dirname(os.path.abspath(qgh.__file__))), "harness", "state"
     )
-    assert os.path.abspath(qgh.STATE) != os.path.abspath(
-        live
-    ), f"qgh.STATE ({qgh.STATE}) must never resolve to the live dir ({live})"
+    assert os.path.abspath(qgh.STATE) != os.path.abspath(live), (
+        f"qgh.STATE ({qgh.STATE}) must never resolve to the live dir ({live})"
+    )

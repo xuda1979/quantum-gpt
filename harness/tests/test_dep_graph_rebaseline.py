@@ -73,7 +73,23 @@ def by_id(queue):
 class TestDepGraphRebaseline(unittest.TestCase):
     def setUp(self):
         _existing = set(c["id"] for c in load_live_queue().get("cards", []))
-        _required = {'C-0002', 'C-0005', 'C-0008', 'C-0010', 'C-0011', 'C-0015', 'C-0016', 'C-0029', 'C-0042', 'C-0051', 'C-0052', 'C-0053', 'C-0055', 'C-0059', 'C-0060'}
+        _required = {
+            "C-0002",
+            "C-0005",
+            "C-0008",
+            "C-0010",
+            "C-0011",
+            "C-0015",
+            "C-0016",
+            "C-0029",
+            "C-0042",
+            "C-0051",
+            "C-0052",
+            "C-0053",
+            "C-0055",
+            "C-0059",
+            "C-0060",
+        }
         _missing = _required - _existing
         if _missing:
             self.skipTest("historical cards purged: " + str(sorted(_missing)[:5]))
@@ -201,10 +217,18 @@ class TestSupersededIsNotDone(unittest.TestCase):
 
     def test_ready_child_on_superseded_dep_is_undispatchable(self):
         q = dict(cards=[], seq=0)
-        dep = H.new_card(title="dependency card", lane="fixer", why="test why", acceptance=["test acceptance"])
+        dep = H.new_card(
+            title="dependency card", lane="fixer", why="test why", acceptance=["test acceptance"]
+        )
         H.add_card(q, dep)
         dep["status"] = "superseded"
-        child = H.new_card(title="child card here", lane="fixer", why="test why", acceptance=["test acceptance"], deps=[dep["id"]])
+        child = H.new_card(
+            title="child card here",
+            lane="fixer",
+            why="test why",
+            acceptance=["test acceptance"],
+            deps=[dep["id"]],
+        )
         H.add_card(q, child)
         self.assertEqual(H.ready_cards(q), [])
 

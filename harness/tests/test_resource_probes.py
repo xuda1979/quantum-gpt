@@ -166,8 +166,8 @@ class TestDurableStateFiles(unittest.TestCase):
             health_fn=_fake_health(200),
             trainer_exec=_fake_exec("777 60 python3 grpo_trainer.py"),
         )
-        self.assertEqual(sorted(payloads), ["asi1", "asi2", "asi3", "trainer"])
-        for name in ("asi1", "asi2", "asi3", "trainer"):
+        self.assertEqual(sorted(payloads), ["asi1", "asi2", "asi3", "train_fire", "trainer"])
+        for name in ("asi1", "asi2", "asi3", "train_fire", "trainer"):
             path = os.path.join(d, "probes", name + ".json")
             data = json.load(open(path, encoding="utf-8"))
             self.assertTrue(data["ts"])  # ts stamped at write time
@@ -180,7 +180,7 @@ class TestDurableStateFiles(unittest.TestCase):
             rendered = qgh._probe_results()
         finally:
             qgh.STATE = old_state
-        for name in ("asi1", "asi2", "asi3", "trainer"):
+        for name in ("asi1", "asi2", "asi3", "train_fire", "trainer"):
             self.assertNotIn("NO PROBE YET", rendered[name], name)
             self.assertNotIn("STALE", rendered[name], name)
 

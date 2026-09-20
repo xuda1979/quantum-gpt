@@ -165,6 +165,11 @@ def compliant_verdict(**over):
             markers=dict(adapter_applied=True, adapter_probe_differs=True),
         ),
         per_task=per_task,
+        model_identity=dict(
+            status="PASS",
+            base_model="Qwen/Qwen3.8-27B",
+            sha256="a" * 64,
+        ),
         _file="verdict_step000100.json",
     )
     v.update(over)

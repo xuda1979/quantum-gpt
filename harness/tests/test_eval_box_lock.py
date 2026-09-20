@@ -92,7 +92,9 @@ class TestBriefCarriesBoxLease(unittest.TestCase):
 
     def test_brief_names_asi2_eval_lock(self):
         goal = dict(objective="18/18", target_pass="18/18")
-        card = H.new_card(title="leg", lane="evaluator", why="w", acceptance=["a"])
+        card = H.new_card(
+            title="eval leg card", lane="evaluator", why="test why", acceptance=["test acceptance"]
+        )
         brief = H.compose_brief(goal, card, dep_results=[])
         self.assertIn("asi2-eval.lock", brief, "leg brief must name the box lease")
         self.assertIn("acquire_lock", brief, "leg brief must name the helper")

@@ -54,7 +54,17 @@ def by_id(queue):
 class TestDepGraphRebaselineV2(unittest.TestCase):
     def setUp(self):
         _existing = set(c["id"] for c in load_live_queue().get("cards", []))
-        _required = {'C-0047', 'C-0052', 'C-0053', 'C-0056', 'C-0060', 'C-0061', 'C-0063', 'C-0065', 'C-0068'}
+        _required = {
+            "C-0047",
+            "C-0052",
+            "C-0053",
+            "C-0056",
+            "C-0060",
+            "C-0061",
+            "C-0063",
+            "C-0065",
+            "C-0068",
+        }
         _missing = _required - _existing
         if _missing:
             self.skipTest("historical cards purged: " + str(sorted(_missing)[:5]))
