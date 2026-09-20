@@ -1537,6 +1537,11 @@ def cmd_tick(_args):
                 event(STATE, "probes_pruned", {"count": _pruned})
         except Exception:
             pass
+        # C-9512: trim STATUS.md to prevent unbounded growth
+        try:
+            H.trim_status_file(STATE, keep=500)
+        except Exception:
+            pass
         # C-9133: a stale window_open artifact must re-arm the C-9098
         # sentinel WITHOUT a hand-run --rearm; otherwise every launch leg
         # re-SKIPs on window_open_stale (05:01:55Z) while ASI2 sits ready.

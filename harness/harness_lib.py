@@ -1909,3 +1909,30 @@ def prune_old_probes(state_dir, max_age_days=7):
         except OSError:
             pass
     return pruned
+
+
+def trim_status_file(state_dir, keep=500):
+    """C-9512: trim STATUS.md to the last `keep` lines to prevent unbounded growth.
+
+    STATUS.md is append-only and grows by 1 line per tick. The max tick#
+    in the file is used as a floor for tick numbering, so we preserve the
+    last `keep` lines (which always include the highest tick numbers).
+    Returns the number of lines pruned.
+    """
+    status_path = os.path.join(state_dir, "STATUS.md")
+    if not os.path.isfile(status_path):
+        return 0
+    try:
+        with open(status_path, encoding="utf-8") as f:
+            lines = f.readlines()
+    except OSError:
+        return 0
+    if len(lines) <= keep:
+        return 0
+    pruned = len(lines) - keep
+    try:
+        with open(status_path, "w", encoding="utf-8") as f:
+            f.writelines(lines[-keep:])
+    except OSError:
+        return 0
+    return pruned
