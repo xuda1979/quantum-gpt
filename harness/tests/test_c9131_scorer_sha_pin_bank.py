@@ -42,7 +42,7 @@ def _manifest_from_disk(_fz=None):
 def _full_verdict(holdout_sha, scorer_shas):
     """A verdict that satisfies every non-sha goal_done gate (C-9044 bank
     shape: two distinct legs, probe-differs both, 18-task per_task map,
-    proven Qwen3.8-27B identity)."""
+    proven Qwen3.8-27B identity, candidates-differ PASS on both legs)."""
     per_task = {
         ("quantum_task_%02d" % i): {"adapter_pass": True, "base_pass": (i == 0)} for i in range(18)
     }
@@ -66,6 +66,10 @@ def _full_verdict(holdout_sha, scorer_shas):
             "adapter_probe_differs_marker": True,
         },
         "per_task": per_task,
+        "candidates_vs_base_gate": {
+            "leg1": {"status": "PASS", "n_checked": 18, "n_byte_match": 0},
+            "leg2": {"status": "PASS", "n_checked": 18, "n_byte_match": 0},
+        },
         "model_identity": {
             "status": "PASS",
             "base_model": "Qwen/Qwen3.8-27B",

@@ -165,6 +165,10 @@ def compliant_verdict(**over):
             markers=dict(adapter_applied=True, adapter_probe_differs=True),
         ),
         per_task=per_task,
+        candidates_vs_base_gate={
+            "leg1": dict(status="PASS", n_checked=18, n_byte_match=0),
+            "leg2": dict(status="PASS", n_checked=18, n_byte_match=0),
+        },
         model_identity=dict(
             status="PASS",
             base_model="Qwen/Qwen3.8-27B",
@@ -234,6 +238,27 @@ class TestDoneCheckTwoLeg(unittest.TestCase):
         v2 = [compliant_verdict()]
         del v2[0]["leg1"]["markers"]["adapter_probe_differs"]
         done, _ = H.goal_done(self.goal, v2)
+        self.assertFalse(done)
+
+    def test_candidates_differ_gate_required_on_both_legs(self):
+        # C-9456: the final goal verdict must carry fail-closed
+        # candidates-differ evidence on BOTH legs. A leg with recorded
+        # UNKNOWN/FAIL candidates-vs-base evidence (e.g. probe could not
+        # resolve the artifact) must never retire the goal.
+        v = [compliant_verdict()]
+        v[0]["candidates_vs_base_gate"]["leg1"]["status"] = "UNKNOWN"
+        done, _ = H.goal_done(self.goal, v)
+        self.assertFalse(done)
+        v2 = [compliant_verdict()]
+        v2[0]["candidates_vs_base_gate"]["leg2"] = dict(status="FAIL",
+                                                        n_checked=18,
+                                                        n_byte_match=18)
+        done, _ = H.goal_done(self.goal, v2)
+        self.assertFalse(done)
+        # A verdict that never recorded the gate fails closed too.
+        v3 = [compliant_verdict()]
+        del v3[0]["candidates_vs_base_gate"]["leg1"]
+        done, _ = H.goal_done(self.goal, v3)
         self.assertFalse(done)
 
     def test_leg_identity_must_differ(self):

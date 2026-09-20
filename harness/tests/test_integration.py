@@ -263,6 +263,10 @@ def compliant_verdict():
             markers=dict(adapter_applied=True, adapter_probe_differs=True),
         ),
         per_task=per_task,
+        candidates_vs_base_gate={
+            "leg1": dict(status="PASS", n_checked=18, n_byte_match=0),
+            "leg2": dict(status="PASS", n_checked=18, n_byte_match=0),
+        },
         model_identity=dict(
             status="PASS",
             base_model="Qwen3.8-27B",
