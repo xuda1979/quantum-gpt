@@ -3,7 +3,7 @@
   "prompt_style": "direct",
   "created_at_utc": "2026-09-20T21:25:04.528269+00:00",
   "system_prompt": "You are solving a single evaluation task. Produce only the full contents of the requested Python candidate file. Do not add markdown fences, explanations, or surrounding commentary unless the task explicitly asks for it.",
-  "notes": "enriched holdout scorers (numeric failure details) \u2014 QA regen 2026-08-31",
+  "notes": "enriched holdout scorers (numeric failure details) — QA regen 2026-08-31",
   "tasks": [
     {
       "id": "quantum_gate_alias_normalization",
@@ -15,7 +15,7 @@
       "prompt_sha256": "ef10ee7261768283b8bb56e3832769e1b741b9035e7403e5dfcce614e594b546",
       "task_json_sha256": "f1cf1e1144aeef96acac9f527b6b3d96ea9c0c938121a48d9f2fc735599d9525",
       "task_json_file": "evals/tasks/quantum/gate_alias_normalization/task.json",
-      "test_file_sha256": "3b3c64c9dfd29dabe8ecc4ec34357ef45c3f5f0d996ad49de7f2aba3147005cb",
+      "test_file_sha256": "fafaf612e4e70afd499e6e9137672638d48fd00842c351cff8ff08e16a961c91",
       "test_file": "evals/tasks/quantum/gate_alias_normalization/tests.py"
     },
     {
@@ -54,7 +54,7 @@
       "prompt_sha256": "588fe7d95ffc06d6a439931c30c7a4dbc8ed800d28a1aa7f0d5d8f87514edd18",
       "task_json_sha256": "e1bea2e227a012ae8b066f9cac0e3534a971b56a11270f3c40ca85d23d60a8cd",
       "task_json_file": "evals/tasks/quantum/superdense_coding/task.json",
-      "test_file_sha256": "4747ca45097048b355153859c106e3b838f74f4ad7003090a83a6cb917dbc70d",
+      "test_file_sha256": "070a9fd15b68b036b12a874772f8c5b42a6c0d7ab15b6c79ac378b223732285a",
       "test_file": "evals/tasks/quantum/superdense_coding/tests.py"
     },
     {
@@ -67,7 +67,7 @@
       "prompt_sha256": "11c762af25a356d7660b5ca1366f0b7477ceff5a882673613ee1a21c58453745",
       "task_json_sha256": "e11f51422955dc03f3af9d5c44e7fc6e4e78391aa118a8477365a6c9700d690e",
       "task_json_file": "evals/tasks/quantum/grover_oracle_diffusion/task.json",
-      "test_file_sha256": "eca1461b210a9e9244be9876e7c4cc2ae0648beb6eb167c59247987a2fcc922c",
+      "test_file_sha256": "535592a4f4dc5f52d13e3b19c3f1fb508086ff9e13447bec5483fd20cb84f9c1",
       "test_file": "evals/tasks/quantum/grover_oracle_diffusion/tests.py"
     },
     {
@@ -80,7 +80,7 @@
       "prompt_sha256": "1216989fb5c3ba744f9fabb8506b62e73ebb3645767d78086daa641261f3c484",
       "task_json_sha256": "5f9a886b57dea7c2343663f55430e2fdf892edad16aced156833e810e233775d",
       "task_json_file": "evals/tasks/quantum/density_matrix_partial_trace/task.json",
-      "test_file_sha256": "74635792043ef4d847e71c92faeb6714e9e5280e08aa134460dcdf09508dcf81",
+      "test_file_sha256": "3a2679bd369ec3c8602947f5ec478f018c8104a1faf00246c58687b1cab75762",
       "test_file": "evals/tasks/quantum/density_matrix_partial_trace/tests.py"
     },
     {
@@ -106,7 +106,7 @@
       "prompt_sha256": "e05ed05baed56f4247e817944b1b9c894b83c2a5e8eebf904df7299c44e559ce",
       "task_json_sha256": "a2c224320181ebdc6c1768d2fc30f3ba04717f93da980b2c05ece51a88e906f2",
       "task_json_file": "evals/tasks/quantum/trotterized_hamiltonian_evolution/task.json",
-      "test_file_sha256": "7802b9d10e9f9584449130a9e03a4a3ed87154e5951fad4f9f02009512c88c62",
+      "test_file_sha256": "1b5f21ba3702fa989b2c01db61c4e9c4fd2957506cbf4500ede4739425c74534",
       "test_file": "evals/tasks/quantum/trotterized_hamiltonian_evolution/tests.py"
     },
     {
@@ -119,7 +119,7 @@
       "prompt_sha256": "d7bcc974d75179443447960d5f32c02e2e8a272f8ea938dcbe8ddae9e6421c28",
       "task_json_sha256": "a303ce83f1b8a3f9c4326dcda5e43aafaeaf2b84f68294b39eb690beb02a23e4",
       "task_json_file": "evals/tasks/quantum/quantum_channel_depolarizing/task.json",
-      "test_file_sha256": "eb0b6356b8dc70d2f31c15ea511b6b1d0f7a361bc364c058ec2ea5447b4b3cf3",
+      "test_file_sha256": "5adee424b8ef737350d5e8719237c5bd3d26b4f5ecf882ffca036113a33e24d8",
       "test_file": "evals/tasks/quantum/quantum_channel_depolarizing/tests.py"
     },
     {
@@ -197,7 +197,7 @@
       "prompt_sha256": "b9b57863cfc34811cb84f81c6ed9f7cb1988ceb01d4d90683bba0091ee09ade4",
       "task_json_sha256": "f9ebd7281b919c9c705645c93eaf340f7fb9b6321b81940f60492f50e49bb928",
       "task_json_file": "evals/tasks/quantum/qiskit_stabilizer_5qubit_code/task.json",
-      "test_file_sha256": "d933423d7d49169132b7d80065f40cd9439fba43a9d3eeb11f3cd78b5a9989c5",
+      "test_file_sha256": "ed2a9b2e928de2f551761d6001c4d2373acd30a66156fa52cc76c12f22983239",
       "test_file": "evals/tasks/quantum/qiskit_stabilizer_5qubit_code/tests.py"
     },
     {
@@ -223,7 +223,7 @@
       "prompt_sha256": "80b2e757c2176fddc5c45f2f30fc8deedac5e315f7b4ac96cc7352f9f990c6b7",
       "task_json_sha256": "cef961ca651f7d14be1de207da598be883f1b3df1f1aadbec677c7f7ae724d8c",
       "task_json_file": "evals/tasks/quantum/phase_register_roundtrip/task.json",
-      "test_file_sha256": "d147c73b4a979eab68f8a06c3b9b1e1df958ac3f38dfeab0a0cd198460847aac",
+      "test_file_sha256": "328bedb0304762c6ca9432777de7d3c99de45f84e1624086225fdbfc062db62b",
       "test_file": "evals/tasks/quantum/phase_register_roundtrip/tests.py"
     },
     {

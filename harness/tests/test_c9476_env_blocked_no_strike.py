@@ -1,5 +1,4 @@
 """C-9476 RED: BLOCKED with environmental text should not burn bounce."""
-import json
 import os
 import sys
 import unittest
