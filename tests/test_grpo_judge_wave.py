@@ -71,8 +71,8 @@ VOCAB = {
 EOS_ID = 60
 
 JUDGE_JSON = (
-    '{"correctness": 0.8, "runnability": 0.6, "result_correctness": 0.9, '
-    '"efficiency": 0.5, "quality": 0.7, "evidence": "ok"}'
+    '{"correctness_of_intent": 0.8, "runnability": 0.6, "result_correctness": 0.9, '
+    '"efficiency": 0.5, "structure_and_naming": 0.7, "evidence": "ok"}'
 )
 
 
@@ -104,10 +104,10 @@ def make_model() -> GPT2LMHeadModel:
 
 def test_parse_model_dim_scores_f6_string_aware_json() -> None:
     # a '}' inside a string value must not truncate the JSON block (F6)
-    text = 'prose {"correctness": 0.8, "evidence": "needs }} fix"}\ntrailing'
+    text = 'prose {"correctness_of_intent": 0.8, "evidence": "needs }} fix"}\ntrailing'
     scores = _parse_model_dim_scores(text)
     assert scores is not None
-    assert scores["correctness"] == pytest.approx(0.8)
+    assert scores["correctness_of_intent"] == pytest.approx(0.8)
     assert scores["runnability"] is None  # absent dim -> None, not a crash
 
 
@@ -197,8 +197,8 @@ def test_model_comprehensive_scores_runs_on_text_preprocessor_backend() -> None:
         "x = 1", task, "tests passed: True", judge, backend, args, "cpu"
     )
     assert scores is not None
-    assert scores["correctness"] == pytest.approx(0.8)
-    assert scores["quality"] == pytest.approx(0.7)
+    assert scores["correctness_of_intent"] == pytest.approx(0.8)
+    assert scores["structure_and_naming"] == pytest.approx(0.7)
     # the judge generate got the resolved EOS backstop + explicit KV cache
     assert judge.last_kwargs is not None
     assert judge.last_kwargs["eos_token_id"] == [EOS_ID]
@@ -247,23 +247,23 @@ def test_effective_judge_weights_calibration_gated() -> None:
     # calibrated). The r16 uniform fallback is removed.
     assert effective_judge_weights({}, model_judge_enabled=True) == {}
     # calibrated weights are preserved
-    calibrated = effective_judge_weights({"correctness": 0.8}, model_judge_enabled=True)
-    assert calibrated == {"correctness": 0.8}
+    calibrated = effective_judge_weights({"correctness_of_intent": 0.8}, model_judge_enabled=True)
+    assert calibrated == {"correctness_of_intent": 0.8}
     # disabled -> whatever was passed (legacy behavior)
     assert effective_judge_weights({}, model_judge_enabled=False) == {}
 
 
 def test_judge_composite_score_matches_blend_term() -> None:
     scores = {
-        "correctness": 0.8,
+        "correctness_of_intent": 0.8,
         "runnability": 0.6,
         "result_correctness": 0.9,
         "efficiency": 0.5,
-        "quality": 0.7,
+        "structure_and_naming": 0.7,
     }
     uniform = {dim: 1.0 for dim in MODEL_JUDGE_DIMENSIONS}
     composite = judge_composite_score(scores, uniform)
-    assert composite == pytest.approx((0.8 + 0.6 + 0.9 + 0.5 + 0.7) / 5.0)
+    assert composite == pytest.approx((0.8 + 0.6 + 0.9 + 0.5 + 0.7) / 10.0)
     # missing dims count as 0; no weights -> 0
     assert judge_composite_score({}, uniform) == 0.0
     assert judge_composite_score(scores, {}) == 0.0
@@ -287,11 +287,11 @@ def test_compose_policy_training_reward_judge_mass_calibration_gated() -> None:
         tiered_gamma=0.05,
     )
     scores = {
-        "correctness": 0.8,
+        "correctness_of_intent": 0.8,
         "runnability": 0.6,
         "result_correctness": 0.9,
         "efficiency": 0.5,
-        "quality": 0.7,
+        "structure_and_naming": 0.7,
     }
     calibrated = {dim: 1.0 for dim in MODEL_JUDGE_DIMENSIONS}
     reward = {
@@ -313,7 +313,7 @@ def test_compose_policy_training_reward_judge_mass_calibration_gated() -> None:
     total_cal = compose_policy_training_reward(
         reward, args, model_dim_scores=scores, judge_weights=calibrated
     )
-    judge_composite = (0.8 + 0.6 + 0.9 + 0.5 + 0.7) / 5.0
+    judge_composite = (0.8 + 0.6 + 0.9 + 0.5 + 0.7) / 10.0
     assert total_cal == pytest.approx(0.50 * 1.0 + 0.40 * 1.0 + 0.10 * judge_composite)
     # failing candidate: P=0; the shaped 0.5 feeds progress at weight
     # 0.45/0.75 (all other components 0) -> S = 0.45*0.5/0.75 = 0.3
@@ -395,7 +395,7 @@ def test_evaluate_candidate_records_judge_reward() -> None:
             judge_model=judge,
             judge_weights=calibrated,
         )
-    assert entry_cal["judge_reward"] == pytest.approx((0.8 + 0.6 + 0.9 + 0.5 + 0.7) / 5.0)
+    assert entry_cal["judge_reward"] == pytest.approx((0.8 + 0.6 + 0.9 + 0.5 + 0.7) / 10.0)
 
 
 # ---------------------------------------------------------------------------

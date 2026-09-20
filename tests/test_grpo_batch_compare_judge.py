@@ -49,12 +49,12 @@ def _single(d, v):
 
 
 BATCH_JSON = (
-    '{"candidate_1": {"correctness": 0.8, "runnability": 0.7, '
-    '"result_correctness": 0.9, "efficiency": 0.5, "quality": 0.7}, '
-    '"candidate_2": {"correctness": 0.3, "runnability": 0.4, '
-    '"result_correctness": 0.2, "efficiency": 0.1, "quality": 0.5}, '
-    '"candidate_3": {"correctness": 0.95, "runnability": 0.95, '
-    '"result_correctness": 1.0, "efficiency": 0.8, "quality": 0.9}}'
+    '{"candidate_1": {"correctness_of_intent": 0.8, "runnability": 0.7, '
+    '"result_correctness": 0.9, "efficiency": 0.5, "structure_and_naming": 0.7}, '
+    '"candidate_2": {"correctness_of_intent": 0.3, "runnability": 0.4, '
+    '"result_correctness": 0.2, "efficiency": 0.1, "structure_and_naming": 0.5}, '
+    '"candidate_3": {"correctness_of_intent": 0.95, "runnability": 0.95, '
+    '"result_correctness": 1.0, "efficiency": 0.8, "structure_and_naming": 0.9}}'
 )
 
 
@@ -62,34 +62,34 @@ def test_parse_batch_all_candidates_scored():
     scores = _parse_model_batch_dim_scores(BATCH_JSON, n=N)
     assert scores is not None
     # present candidates 1-3 parsed with clamped 0-1 dims
-    assert scores[0]["correctness"] == 0.8
-    assert scores[1]["correctness"] == 0.3
+    assert scores[0]["correctness_of_intent"] == 0.8
+    assert scores[1]["correctness_of_intent"] == 0.3
     assert scores[2]["result_correctness"] == 1.0
     # absent candidates (4..8) are judge-absent (None) -> fail-closed, NOT silent 0
     for i in range(3, N):
-        assert scores[i].get("correctness") is None
+        assert scores[i].get("correctness_of_intent") is None
 
 
 def test_parse_batch_malformed_returns_none_per_candidate():
     scores = _parse_model_batch_dim_scores("not json at all", n=N)
     # fail-closed: no candidate gets a fabricated score
-    assert scores is None or all(v.get("correctness") is None for v in scores.values())
+    assert scores is None or all(v.get("correctness_of_intent") is None for v in scores.values())
 
 
 def test_parse_batch_clamps_and_skips_bools():
     raw = (
         BATCH_JSON.replace("0.8", "1.7")
         .replace("0.3", "true")
-        .replace("0.7}", '0.7, "quality": 2.0}')
+        .replace("0.7}", '0.7, "structure_and_naming": 2.0}')
     )
     scores = _parse_model_batch_dim_scores(raw, n=N)
     assert scores is not None
     # 1.7 clamped to 1.0
-    assert scores[0]["correctness"] == 1.0
+    assert scores[0]["correctness_of_intent"] == 1.0
     # 'true' (bool) is NOT a numeric dim -> None
-    assert scores[1]["correctness"] is None
+    assert scores[1]["correctness_of_intent"] is None
     # 2.0 clamped to 1.0
-    assert scores[0]["quality"] == 1.0
+    assert scores[0]["structure_and_naming"] == 1.0
 
 
 def test_batch_scores_are_anchored_to_evidence_prompt():
@@ -118,18 +118,18 @@ def test_judge_mass_bounded_to_unit_interval():
         pass_reward=1.0,
         shaped_reward=0.5,
         model_dim_scores={
-            "correctness": 0.8,
+            "correctness_of_intent": 0.8,
             "runnability": 0.8,
             "result_correctness": 0.8,
             "efficiency": 0.8,
-            "quality": 0.8,
+            "structure_and_naming": 0.8,
         },
         dim_weights={
-            "correctness": 0.02,
+            "correctness_of_intent": 0.02,
             "runnability": 0.02,
             "result_correctness": 0.02,
             "efficiency": 0.02,
-            "quality": 0.02,
+            "structure_and_naming": 0.02,
         },
         mode="comprehensive",
         pass_mass=0.50,
@@ -151,18 +151,18 @@ def test_pass_only_part_of_comprehensive_score():
         pass_reward=1.0,
         shaped_reward=0.3,
         model_dim_scores={
-            "correctness": 0.5,
+            "correctness_of_intent": 0.5,
             "runnability": 0.5,
             "result_correctness": 0.5,
             "efficiency": 0.5,
-            "quality": 0.5,
+            "structure_and_naming": 0.5,
         },
         dim_weights={
-            "correctness": 0.05,
+            "correctness_of_intent": 0.05,
             "runnability": 0.05,
             "result_correctness": 0.05,
             "efficiency": 0.05,
-            "quality": 0.05,
+            "structure_and_naming": 0.05,
         },
         mode="comprehensive",
         pass_mass=0.50,
@@ -173,18 +173,18 @@ def test_pass_only_part_of_comprehensive_score():
         pass_reward=0.0,
         shaped_reward=0.9,
         model_dim_scores={
-            "correctness": 1.0,
+            "correctness_of_intent": 1.0,
             "runnability": 1.0,
             "result_correctness": 1.0,
             "efficiency": 1.0,
-            "quality": 1.0,
+            "structure_and_naming": 1.0,
         },
         dim_weights={
-            "correctness": 0.05,
+            "correctness_of_intent": 0.05,
             "runnability": 0.05,
             "result_correctness": 0.05,
             "efficiency": 0.05,
-            "quality": 0.05,
+            "structure_and_naming": 0.05,
         },
         mode="comprehensive",
         pass_mass=0.50,
@@ -285,8 +285,8 @@ def _fake_dp4_response(slot):
     # The judge answers ONLY the candidate presented in ``slot`` (1-based
     # position key); the client must un-permute it back to the ORIGINAL index.
     text = (
-        f'{{"candidate_{slot}": {{"correctness": 0.7, "runnability": 0.6, '
-        f'"result_correctness": 0.8, "efficiency": 0.5, "quality": 0.7}}}}'
+        f'{{"candidate_{slot}": {{"correctness_of_intent": 0.7, "runnability": 0.6, '
+        f'"result_correctness": 0.8, "efficiency": 0.5, "structure_and_naming": 0.7}}}}'
     )
     payload = {"content": [{"type": "text", "text": text}]}
 
@@ -336,9 +336,9 @@ def test_dp4_batch_judge_parses_candidate(monkeypatch):
     )
     assert out is not None
     # code_0 was the only answered candidate -> its score returns on index 0
-    assert out[0]["correctness"] == 0.7
+    assert out[0]["correctness_of_intent"] == 0.7
     # candidates dp4 did not include -> judge-absent (fail-closed), not 0
-    assert out[1]["correctness"] is None
+    assert out[1]["correctness_of_intent"] is None
 
 
 def test_dp4_batch_judge_fails_closed_on_error(monkeypatch):
@@ -391,10 +391,18 @@ def test_dp4_batch_judge_randomizes_order_and_remaps(monkeypatch):
         blocks = std_re.split(r"Candidate \d+:\n", captured["prompt"])
         slot = next(k for k in range(1, len(blocks)) if "code_3" in blocks[k])
         high = dict(
-            correctness=0.9, runnability=0.9, result_correctness=0.9, efficiency=0.9, quality=0.9
+            correctness_of_intent=0.9,
+            runnability=0.9,
+            result_correctness_of_intent=0.9,
+            efficiency=0.9,
+            structure_and_naming=0.9,
         )
         low = dict(
-            correctness=0.1, runnability=0.1, result_correctness=0.1, efficiency=0.1, quality=0.1
+            correctness_of_intent=0.1,
+            runnability=0.1,
+            result_correctness_of_intent=0.1,
+            efficiency=0.1,
+            structure_and_naming=0.1,
         )
         text = json.dumps({f"candidate_{k}": (high if k == slot else low) for k in range(1, N + 1)})
         payload = {"content": [{"type": "text", "text": text}]}
@@ -440,9 +448,9 @@ def test_dp4_batch_judge_randomizes_order_and_remaps(monkeypatch):
     )
     # (b) remap CORRECT: the high score returns on ORIGINAL index 3...
     assert out is not None
-    assert out[3]["correctness"] == 0.9, "scores must remap to original indices"
+    assert out[3]["correctness_of_intent"] == 0.9, "scores must remap to original indices"
     # ...never on the presentation slot (position-bias misattribution)
-    assert out[pos3]["correctness"] == 0.1
+    assert out[pos3]["correctness_of_intent"] == 0.1
 
 
 def test_dp4_batch_judge_prompt_is_plain_candidates_text(monkeypatch):
@@ -486,9 +494,9 @@ def test_dp4_batch_judge_prompt_is_plain_candidates_text(monkeypatch):
         endpoint="http://127.0.0.1:55080",
     )
     prompt = captured["prompt"]
-    assert (
-        "Candidate 1:\n```python\n" in prompt
-    ), "prompt must contain the plain rendered candidates (literal newline), not the tuple repr"
+    assert "Candidate 1:\n```python\n" in prompt, (
+        "prompt must contain the plain rendered candidates (literal newline), not the tuple repr"
+    )
     assert "code_" in prompt and "EXECUTABLE EVIDENCE: tests passed: True\n" in prompt
     assert "[0, 1, 2" not in prompt, "permutation list must never leak into the prompt"
 
@@ -519,18 +527,18 @@ def test_inprocess_batch_judge_remaps_shuffled_scores(monkeypatch):
             blocks = std_re.split(r"Candidate \d+:\n", captured["prompt"])
             slot = next(k for k in range(1, len(blocks)) if "code_3" in blocks[k])
             high = dict(
-                correctness=0.9,
+                correctness_of_intent=0.9,
                 runnability=0.9,
-                result_correctness=0.9,
+                result_correctness_of_intent=0.9,
                 efficiency=0.9,
-                quality=0.9,
+                structure_and_naming=0.9,
             )
             low = dict(
-                correctness=0.1,
+                correctness_of_intent=0.1,
                 runnability=0.1,
-                result_correctness=0.1,
+                result_correctness_of_intent=0.1,
                 efficiency=0.1,
-                quality=0.1,
+                structure_and_naming=0.1,
             )
             return json.dumps(
                 {f"candidate_{k}": (high if k == slot else low) for k in range(1, N + 1)}
@@ -558,8 +566,8 @@ def test_inprocess_batch_judge_remaps_shuffled_scores(monkeypatch):
     _orig_random_cls(42).shuffle(expected)
     pos3 = expected.index(3)
     assert out is not None
-    assert out[3]["correctness"] == 0.9, "in-process scores must un-permute"
-    assert out[pos3]["correctness"] == 0.1
+    assert out[3]["correctness_of_intent"] == 0.9, "in-process scores must un-permute"
+    assert out[pos3]["correctness_of_intent"] == 0.1
 
 
 # ---------------------------------------------------------------------------
@@ -625,10 +633,10 @@ def test_batch_dp4_judge_weights_uniform_when_uncalibrated():
     # uniform across all 5 dims, summing to exactly the judge mass 0.10
     assert set(w) == set(MODEL_JUDGE_DIMENSIONS)
     assert abs(sum(w.values()) - 0.10) < 1e-12
-    assert all(abs(v - 0.02) < 1e-12 for v in w.values())
+    assert all(abs(v - 0.01) < 1e-12 for v in w.values())
 
     # calibrated weights win when present
-    calib = {"correctness": 0.05, "runnability": 0.05}
+    calib = {"correctness_of_intent": 0.05, "runnability": 0.05}
     assert batch_dp4_judge_weights(args, calib) == calib
 
     # explicit zero judge mass -> judge contributes nothing
@@ -671,7 +679,7 @@ def test_dp4_batch_judge_uses_own_token_budget(monkeypatch):
 
     def fake_dp4(codes, evidences, task, *, endpoint, model, max_tokens):
         captured["max_tokens"] = max_tokens
-        return {0: {"correctness": 0.8}}
+        return {0: {"correctness_of_intent": 0.8}}
 
     monkeypatch.setattr("training.grpo_trainer._model_batch_dim_scores_dp4", fake_dp4)
     args = Namespace(
@@ -816,12 +824,12 @@ def test_unpermute_batch_scores_round_trip_with_randomized_render() -> None:
     for idx in range(8):
         expected = (perm.index(idx) + 1) / 10.0
         for dim in MODEL_JUDGE_DIMENSIONS:
-            assert remapped[idx][dim] == pytest.approx(
-                expected
-            ), f"original candidate {idx} misattributed: {remapped[idx][dim]} != {expected}"
+            assert remapped[idx][dim] == pytest.approx(expected), (
+                f"original candidate {idx} misattributed: {remapped[idx][dim]} != {expected}"
+            )
     # None stays None (fail-closed), and out-of-range positions are dropped
     assert _unpermute_batch_scores(None, perm) is None
-    assert _unpermute_batch_scores({99: {"correctness": 0.5}}, perm) == {}
+    assert _unpermute_batch_scores({99: {"correctness_of_intent": 0.5}}, perm) == {}
 
 
 def test_normalize_minmax_record_fields_pin_scale() -> None:
