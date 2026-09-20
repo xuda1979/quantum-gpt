@@ -389,9 +389,13 @@ WORKER_ENV_FILES = (
 
 
 def worker_command():
-    """bash: source credential files, then exec claude (pid stays the worker's)."""
+    """bash: source credential files, then exec claude (pid stays the worker's).
+
+    The brief is passed via stdin. Since the cmri GLM-5.2 proxy hangs on stdin
+    input, we read stdin into a variable and pass it as the --print argument.
+    """
     srcs = " ".join(f'[ -f "{f}" ] && source "{f}";' for f in WORKER_ENV_FILES)
-    return ["/bin/bash", "-c", f"{srcs} exec '{CLAUDE}' {CLAUDE_ARGS} --print"]
+    return ["/bin/bash", "-c", f"{srcs} exec '{CLAUDE}' {CLAUDE_ARGS} --print \"$(cat)\""]
 
 
 def dispatch_target_ok(queue, card, lanes=None, claim_in_progress=False):
@@ -554,11 +558,6 @@ def spawn_worker(goal, queue, card, dep_results):
         "budget_min": card["budget_min"],
         "status": "running",
     }
-    event(
-        STATE,
-        "dispatched",
-        {"card": card["id"], "lane": card["lane"], "pid": pid, "budget_min": card["budget_min"]},
-    )
     return entry
 
 
