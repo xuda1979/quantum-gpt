@@ -310,8 +310,7 @@ def is_terminal_card_id(state_dir, card_id):
     escaped = re.escape(card_id)
     # 1. reaped with non-null verdict (card field, verdict after)
     if re.search(
-        r'"kind":\s*"reaped".*?"card":\s*"' + escaped + r'".*?"verdict":\s*"(?!null)'
-        r'[^"]+"',
+        r'"kind":\s*"reaped".*?"card":\s*"' + escaped + r'".*?"verdict":\s*"(?!null)' r'[^"]+"',
         text,
     ):
         return True
@@ -1335,10 +1334,23 @@ def note_spawn_result(state_dir, ops, ok, card=None):
     if ok:
         e["consecutive"] = 0
         e["backoff_until_utc"] = None  # ONLY this card's own success clears it
+        # Also clear the global counter: a successful spawn proves the
+        # environment is healthy, so any stale global backoff is obsolete.
+        ops[CONSECUTIVE_SPAWN_FAIL_KEY] = 0
+        ops[BACKOFF_PATH_KEY] = None
     else:
         e["consecutive"] = e.get("consecutive", 0) + 1
         if e["consecutive"] >= SPAWN_FAIL_THRESHOLD:
             e["backoff_until_utc"] = (
+                datetime.now(timezone.utc) + timedelta(minutes=BACKOFF_MIN)
+            ).strftime("%Y-%m-%dT%H:%M:%SZ")
+        # Also increment the global counter so backoff_active() (which
+        # checks the global) can trip for any card's repeated failures.
+        # Without this, environmental deaths (API errors) increment only
+        # the per-card counter and the global backoff never arms.
+        ops[CONSECUTIVE_SPAWN_FAIL_KEY] = ops.get(CONSECUTIVE_SPAWN_FAIL_KEY, 0) + 1
+        if ops[CONSECUTIVE_SPAWN_FAIL_KEY] >= SPAWN_FAIL_THRESHOLD:
+            ops[BACKOFF_PATH_KEY] = (
                 datetime.now(timezone.utc) + timedelta(minutes=BACKOFF_MIN)
             ).strftime("%Y-%m-%dT%H:%M:%SZ")
     return ops
