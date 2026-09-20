@@ -241,7 +241,12 @@ if [[ "${RESUME_FROM:-}" != "" ]]; then
 fi
 if [[ "${ADAPTER_INIT:-}" != "" ]]; then
   RESUME_FLAGS+=(--adapter-init "$ADAPTER_INIT")
-  log "ADAPTER_INIT=$ADAPTER_INIT"
+  # C-9450: warm-continue must use the dispersion-collapse gate to prevent
+  # gradient updates on groups with near-zero reward variance (RMS < 0.01).
+  # Without this, warm-continue from a converged checkpoint wastes compute
+  # on zero-gradient groups and can degrade the adapter.
+  RESUME_FLAGS+=(--min-rms-for-update "${ASI3_SAPO_MIN_RMS_FOR_UPDATE:-0.01}")
+  log "ADAPTER_INIT=$ADAPTER_INIT (warm-continue, min-rms-for-update=${ASI3_SAPO_MIN_RMS_FOR_UPDATE:-0.01})"
 fi
 # SOFT-RESUME (2026-08-25, lane #20): --resume-state continues the exact
 # curriculum/router/temp/trust-region/repair state from a paused run's
