@@ -1,26 +1,24 @@
-# LAST TICK — 2026-09-21 07:22 CST (tick #116)
+# Tick #120 -- 2026-09-21 07:51 CST
 
-## Fleet: 3/3 UP
-- ASI1: pid72903, cmd47, idle, uptime 36751s
-- ASI2: pid95921, cmd159, idle, uptime 15465s
-- ASI3: pid50390, cmd734, idle, uptime 37290s
+## Fleet Health: 3/3 UP
+- ASI1 (20646): READY, pid72903, 47 cmds, idle
+- ASI2 (19004): READY, pid95921, 175 cmds, idle
+- ASI3 (20653): READY, pid50390, 785 cmds, idle
 - Keeper: pid1161 ALIVE (HEALING, headless_auth failed, daemons ok)
 
-## Test Suite
-- Prev suite #315: 112min stale → RELAUNCHED pid4563
-- Last result: 4715P/258F/7E/8S, verdict CONTAMINATED (co-tenant noise)
+## Test Suite #315: RUNNING
+- pid4563, chunk 23/27, ~29min old, actively writing
+- 23 chunks completed so far, no relaunch needed
 
-## Training
-- GRPO trainer pid47759 alive, ~12h runtime, 76% CPU
-- Root cause known: box python3=CPU torch, NPU unavailable
-- Warm-continue pending ASCEND launch env correction
+## Training: BLOCKED
+- pid47759 alive 71% CPU but stuck at step2
+- ASCEND/CANN env issue persists (C-9523 fix pending)
+- No warm-continue launched (box env not ready)
 
-## Agents: 2 live
-- C-0002 trainer-ops (pid99981)
-- C-Z fixer (pid99983)
+## Git: b61878a5
+- fix(review): correct test suite pass/fail detection
+- feat(harness): C-9538/9539 dedup auto-queue
+- fix(tests): skip artifact-dependent tests
 
-## Git: 9dd023f8
-- C-9536/9537 dead-running cleanup + auto_retire threshold=3
-
-## Verdict: NO USER ACTION NEEDED
-Harness autonomous. Suite running. Training active.
+## Verdict: NO USER ACTION
+Harness autonomous, suite running, training blocked on box env.
