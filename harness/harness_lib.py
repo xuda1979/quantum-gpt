@@ -234,7 +234,54 @@ def save_queue(state_dir, queue):
         disk_seq = int(disk.get("seq", 0))
         if disk_seq > int(queue.get("seq", 0)):
             queue["seq"] = disk_seq
+    # C-9415: count cards BEFORE save_json (a clobbering monkeypatch
+    # may mutate the queue object in-place during the write).
+    _pre_save_n = len(queue.get("cards", []))
     save_json(path, queue)
+    # C-9415: post-write integrity check -- if the atomic write landed
+    # fewer cards than the caller supplied (a clobbering concurrent
+    # writer or a corrupted save), fail closed rather than silently
+    # persisting a truncated queue.
+    try:
+        with open(path, encoding="utf-8") as _vf:
+            _verify = json.load(_vf)
+        _disk_n = len(_verify.get("cards", []))
+        if _disk_n < _pre_save_n:
+            raise RuntimeError(
+                "save_queue integrity check failed: disk has %d cards "
+                "but memory had %d -- a clobbering write vaporized cards" % (_disk_n, _pre_save_n)
+            )
+    except (OSError, ValueError):
+        pass  # verify is best-effort; the save itself already happened
+    # C-9415: post-write integrity check.  The atomic tmp+rename (save_json)
+    # guarantees the write either fully lands or leaves the old file intact,
+    # but a concurrent clobbering writer (C-9427's direct save_json path) can
+    # still land a *different, truncated* queue during the rename window.  We
+    # re-read the durable artifact directly from disk and fail closed if any
+    # card this caller intended to persist is missing -- never silently
+    # persisting a vaporized working set.
+    try:
+        with open(path, encoding="utf-8") as _f:
+            _persisted = json.load(_f)
+    except (OSError, ValueError):
+        raise ValueError(
+            "QUEUE.json post-write integrity check could not re-read "
+            + str(path)
+            + " after save; refusing to proceed on an unverifiable queue"
+        )
+    _persisted_ids = set(c.get("id") for c in _persisted.get("cards", []))
+    _intended_ids = set(c.get("id") for c in queue.get("cards", []))
+    _missing = _intended_ids - _persisted_ids
+    if _missing:
+        raise ValueError(
+            "QUEUE.json post-write integrity check failed: cards lost during persist "
+            + str(sorted(_missing))
+            + " (persisted "
+            + str(len(_persisted.get("cards", [])))
+            + " of intended "
+            + str(len(_intended_ids))
+            + "); queue not committed"
+        )
 
 
 # C-9027: statuses under which a card is open (same intent still live).

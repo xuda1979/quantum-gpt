@@ -46,9 +46,9 @@ def _tracked(rel):
 
 def test_named_landed_fixes_are_tracked_in_git():
     untracked = [p for p in NAMED_LANDED_FIXES if not _tracked(p)]
-    assert not untracked, (
-        f"landed fixes untracked in git (a tree sync can silently drop them): {sorted(untracked)}"
-    )
+    assert (
+        not untracked
+    ), f"landed fixes untracked in git (a tree sync can silently drop them): {sorted(untracked)}"
 
 
 def test_guard_list_covers_the_card_named_families():

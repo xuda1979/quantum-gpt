@@ -2,6 +2,7 @@
 file lock.  A concurrent writer holding the QUEUE lock must make a card command
 fail-closed (refuse to race) instead of doing a lost-update read-modify-write;
 and a successful command must release the lock so a later one proceeds."""
+
 import argparse
 import importlib
 import json
@@ -32,8 +33,7 @@ def _read_queue(state_dir):
 def test_card_command_fails_closed_when_queue_lock_held(tmp_path, monkeypatch):
     """A live QUEUE lock held by a concurrent writer must block a card command."""
     mod = _load_qgh(tmp_path, monkeypatch)
-    mod.H.save_json(os.path.join(str(tmp_path), "QUEUE.json"),
-                    {"cards": [], "seq": 0})
+    mod.H.save_json(os.path.join(str(tmp_path), "QUEUE.json"), {"cards": [], "seq": 0})
 
     # A concurrent writer holds the QUEUE lock (live, not stale).
     tok = mod.H.acquire_lock(mod.QUEUE_LOCK)
@@ -55,11 +55,15 @@ def test_card_command_fails_closed_when_queue_lock_held(tmp_path, monkeypatch):
 def test_card_command_releases_lock_after_success(tmp_path, monkeypatch):
     """After a successful (lock-free) card command, the QUEUE lock must be gone."""
     mod = _load_qgh(tmp_path, monkeypatch)
-    mod.H.save_json(os.path.join(str(tmp_path), "QUEUE.json"),
-                    {"cards": [], "seq": 0})
+    # Seed a bounced card so requeue has a valid target.
+    c = mod.H.new_card("test-card-for-requeue", "fixer", "goal edge", ["acceptance"], budget_min=5)
+    c["status"] = "bounced"
+    c["bounce_count"] = 1
+    q = {"cards": [c], "seq": 1}
+    mod.H.save_json(os.path.join(str(tmp_path), "QUEUE.json"), q)
     assert not os.path.exists(mod.QUEUE_LOCK), "precondition: queue lock absent"
 
-    mod.cmd_card_requeue(argparse.Namespace(ids=["C-9999"]))
+    mod.cmd_card_requeue(argparse.Namespace(ids=[c["id"]]))
     assert not os.path.exists(mod.QUEUE_LOCK), "command must release the queue lock"
     q = _read_queue(tmp_path)
-    assert q["seq"] == 0
+    assert q["seq"] >= 1

@@ -55,9 +55,9 @@ def test_brief_never_teaches_shell_redirection():
     # RED: the documented recipe was the echo double-chevron append,
     # denied at the permission layer in gate-degraded sessions.
     brief = H.compose_brief({"objective": "g"}, _card())
-    assert ">>" not in brief, (
-        "brief still teaches a shell >> heartbeat (denied in gate-degraded sessions)"
-    )
+    assert (
+        ">>" not in brief
+    ), "brief still teaches a shell >> heartbeat (denied in gate-degraded sessions)"
     assert "qgh.py heartbeat" in brief, "brief must name the python-append heartbeat route"
 
 
@@ -85,9 +85,9 @@ def test_instructed_heartbeat_records_progress_without_redirection():
     assert os.path.exists(hb_path), "heartbeat did not record progress"
     body = open(hb_path, encoding="utf-8").read()
     assert marker in body
-    assert time.time() - os.path.getmtime(hb_path) < H.STALL_MIN * 60, (
-        "recorded heartbeat is already stale"
-    )
+    assert (
+        time.time() - os.path.getmtime(hb_path) < H.STALL_MIN * 60
+    ), "recorded heartbeat is already stale"
 
 
 def test_spawn_precreates_progress_file_before_worker_starts(monkeypatch):

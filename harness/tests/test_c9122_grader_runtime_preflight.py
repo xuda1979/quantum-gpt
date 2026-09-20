@@ -142,9 +142,9 @@ def test_asi2_relaunch_launcher_probes_failclosed_before_trainer_exec():
     assert exec_idx != -1, "trainer must exec under the probed interpreter"
     assert exec_idx > hook_idx, "no trainer exec may precede the probe"
     torchrun_idx = text.find("torchrun --nproc_per_node=")
-    assert torchrun_idx == -1 or torchrun_idx > hook_idx, (
-        "torchrun branch must also follow the probe"
-    )
+    assert (
+        torchrun_idx == -1 or torchrun_idx > hook_idx
+    ), "torchrun branch must also follow the probe"
 
 
 def test_asi3_entrypoint_delegates_to_the_gated_launcher():

@@ -39,8 +39,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from scripts.run_hf_pass1_eval import (  # noqa: E402
+from scripts.adapter_probe_checked import (  # noqa: E402
     _apply_adapter_checked,
+)
+from scripts.run_hf_pass1_eval import (  # noqa: E402
     generate_candidate,
     load_text_backend,
     render_prompt,

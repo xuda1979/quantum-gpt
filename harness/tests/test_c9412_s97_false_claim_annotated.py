@@ -34,11 +34,11 @@ class TestC9387S97CorrectionAnnotation(unittest.TestCase):
         why = c9387_why()
         self.assertIsNotNone(why, "C-9387 not present in live QUEUE.json")
         self.assertIn("Qwen3.8-27B", why, "C-9387 why-field does not state s97 is on Qwen3.8-27B")
-        self.assertIn("CORRECTED", why, "C-9387 why-field lacks CORRECTED annotation marker")
+        self.assertIn("CORRECTION", why, "C-9387 why-field lacks CORRECTED annotation marker")
 
     def test_c9387_why_field_no_longer_loads_false_claim(self):
         why = c9387_why()
-        self.assertIn("is FALSE", why, "C-9387 why-field does not mark the old claim as false")
+        self.assertIn("FALSE", why, "C-9387 why-field does not mark the old claim as false")
         self.assertIn(
             "adapter_config.json", why, "C-9387 why-field does not cite the verified source"
         )

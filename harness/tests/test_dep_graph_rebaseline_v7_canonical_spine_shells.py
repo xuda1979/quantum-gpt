@@ -160,9 +160,9 @@ def guard_C9016_untouched(cards):
     # spine and carries no C-9056 annotation.
     c = cards["C-9016"]
     assert c.get("status") == "ready", "C-9016 must stay ready, got " + repr(c.get("status"))
-    assert "C-9056" not in (c.get("reason") or ""), (
-        "C-9016 must carry no C-9056 re-baseline note (different card)"
-    )
+    assert "C-9056" not in (
+        c.get("reason") or ""
+    ), "C-9016 must carry no C-9056 re-baseline note (different card)"
     for d in c.get("deps") or []:
         t = cards.get(d)
         assert t is not None and t.get("status") in LIVE_STATUSES, (

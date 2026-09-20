@@ -147,9 +147,9 @@ class TestCurePackageReconciliation:
     def test_regenerated_cure_package_exists_and_consumes_table_by_path(self):
         assert CURE_PACKAGE_PATH.exists(), f"regenerated cure package missing: {CURE_PACKAGE_PATH}"
         pkg = json.loads(CURE_PACKAGE_PATH.read_text())
-        assert pkg["pin_table"] == str(TABLE_PATH.relative_to(ROOT)), (
-            "cure package must reference the canonical table by path"
-        )
+        assert pkg["pin_table"] == str(
+            TABLE_PATH.relative_to(ROOT)
+        ), "cure package must reference the canonical table by path"
         assert (ROOT / pkg["pin_table"]).exists()
 
     def test_regenerated_cure_pins_come_from_authority_ranges(self):
@@ -157,13 +157,13 @@ class TestCurePackageReconciliation:
         ranges and must admit the graded qiskit 2.4.1 (the V2 fix)."""
         pkg = json.loads(CURE_PACKAGE_PATH.read_text())
         pins = pkg["install_pins"]
-        assert _spec_contains_version(pins["qiskit"], "2.4.1"), (
-            f"regenerated cure qiskit pin {pins['qiskit']} still excludes graded 2.4.1"
-        )
-        assert _spec_contains_version(pins["cirq"], "1.4"), (
-            "regenerated cure cirq pin must be >=1.4 per the scorer authority"
-        )
+        assert _spec_contains_version(
+            pins["qiskit"], "2.4.1"
+        ), f"regenerated cure qiskit pin {pins['qiskit']} still excludes graded 2.4.1"
+        assert _spec_contains_version(
+            pins["cirq"], "1.4"
+        ), "regenerated cure cirq pin must be >=1.4 per the scorer authority"
         for name, spec in sorted(pins.items()):
-            assert AUTHORITY_SPEC(name).intersects(spec), (
-                f"cure pin {name}={spec} outside authority range {AUTHORITY_SPEC(name).raw}"
-            )
+            assert AUTHORITY_SPEC(name).intersects(
+                spec
+            ), f"cure pin {name}={spec} outside authority range {AUTHORITY_SPEC(name).raw}"

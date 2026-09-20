@@ -167,9 +167,9 @@ def test_wrapper_budget_matches_banked_ceiling():
 
     leg1 = _load("scripts/run_holdout_leg1.py", "c9038_leg1")
     leg2 = _load("scripts/run_holdout_leg2.py", "c9038_leg2")
-    assert leg1.DEFAULT_MAX_NEW_TOKENS == ceiling, (
-        "leg1 wrapper budget must equal the banked ceiling"
-    )
-    assert leg2.DEFAULT_MAX_NEW_TOKENS == ceiling, (
-        "leg2 wrapper budget must equal the banked ceiling"
-    )
+    assert (
+        leg1.DEFAULT_MAX_NEW_TOKENS == ceiling
+    ), "leg1 wrapper budget must equal the banked ceiling"
+    assert (
+        leg2.DEFAULT_MAX_NEW_TOKENS == ceiling
+    ), "leg2 wrapper budget must equal the banked ceiling"

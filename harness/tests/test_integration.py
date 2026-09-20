@@ -867,8 +867,9 @@ class TestTransportGate(unittest.TestCase):
     def setUp(self):
         # Mock the quota probe so box-bound lanes are not gated by real API calls
         import unittest.mock as _mock
+
         self._quota_patcher = _mock.patch.object(
-            qgh.QPG, "probe_quota", return_value=dict(verdict="OK", detail="test mock")
+            qgh.QPG, "probe_quota", return_value=dict(verdict="ok", detail="test mock")
         )
         self._quota_patcher.start()
         for sub in ("agents", "briefs", "locks", "standup", "probes"):
@@ -930,6 +931,9 @@ class TestTransportGate(unittest.TestCase):
             os.path.join(qgh.STATE, "probes", "asi3.json"),
             {"ts": H.now_iso(), "status": "ready", "summary": "READY /health ready=true pid=999"},
         )
+        # Mock quota probe to allow dispatch (no API key in test env)
+        _real_probe = qgh.QPG.probe_quota
+        qgh.QPG.probe_quota = lambda **kw: dict(verdict="ok", detail="test mock", utc=H.now_iso())
         order = []
 
         def fake_spawn(goal, queue, card, dep_results):
@@ -953,6 +957,7 @@ class TestTransportGate(unittest.TestCase):
             qgh.cmd_dispatch(type("A", (), {"lane": None})())
         finally:
             qgh.spawn_worker = real
+            qgh.QPG.probe_quota = _real_probe
         self.assertEqual(len(order), 1, "box lanes must dispatch once transport is ready")
 
     def test_stale_wedged_probe_does_not_block_after_recovery(self):
@@ -996,6 +1001,8 @@ class TestTransportGate(unittest.TestCase):
 
         real_refresh = qgh._refresh_box_probe_best_effort
         real_spawn = qgh.spawn_worker
+        _real_probe = qgh.QPG.probe_quota
+        qgh.QPG.probe_quota = lambda **kw: dict(verdict="ok", detail="test mock", utc=H.now_iso())
 
         def fake_refresh(sd):
             # live re-measure: the box has rebooted and is NOT wedged now
@@ -1015,6 +1022,7 @@ class TestTransportGate(unittest.TestCase):
         finally:
             qgh._refresh_box_probe_best_effort = real_refresh
             qgh.spawn_worker = real_spawn
+            qgh.QPG.probe_quota = _real_probe
         self.assertEqual(len(order), 1, "recovered box must not stay gated by a stale wedged probe")
 
     def test_gate_stays_failsafe_when_probe_refresh_fails(self):

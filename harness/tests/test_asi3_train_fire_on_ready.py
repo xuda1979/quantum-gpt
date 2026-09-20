@@ -207,9 +207,9 @@ def test_nofire_no_retry_storm(tmp_path):
             **dead_probes(),
         )
     assert len(d.calls) == 0
-    assert len(list(probes_dir.glob("*.json"))) == 1, (
-        "repeated NOFIRE polls must update the SAME record, not spam probes/"
-    )
+    assert (
+        len(list(probes_dir.glob("*.json"))) == 1
+    ), "repeated NOFIRE polls must update the SAME record, not spam probes/"
 
 
 # --------------------------------------------------------------------------
