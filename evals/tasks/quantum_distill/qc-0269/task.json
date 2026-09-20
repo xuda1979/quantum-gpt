@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0269",
+  "name": "Implement the Quantum Fourier Transform on 4 qubits from scratch in Qiskit (Hada",
+  "task_prompt": "Implement the Quantum Fourier Transform on 4 qubits from scratch in Qiskit (Hadamards, controlled phases, swaps). Verify it against the exact DFT matrix using Operator. Provide a complete, self-contained program that runs as-is and prints its results."
+}

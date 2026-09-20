@@ -1,0 +1,255 @@
+[
+  {
+    "id": "quantum_amplitude_estimation_3bit",
+    "title": "Amplitude estimation via 3-bit QPE on Grover operator Q",
+    "expected_substrings": [
+      "Target amplitude = 0.1464",
+      "Estimated amplitude = ",
+      "Abs error = ",
+      "Converged: "
+    ],
+    "timeout": 120
+  },
+  {
+    "id": "quantum_vqd_h2_first_excited",
+    "title": "VQD for first excited state of H2 (parity-mapped, 2 active qubits)",
+    "expected_substrings": [
+      "VQE ground = ",
+      "VQD excited = ",
+      "Exact GS = ",
+      "Exact ES = ",
+      "GS error = ",
+      "ES error = "
+    ],
+    "timeout": 120
+  },
+  {
+    "id": "quantum_ite_heisenberg_3q",
+    "title": "One step of imaginary-time evolution on 3-qubit Heisenberg",
+    "expected_substrings": [
+      "ITE energy = ",
+      "Exact GS = ",
+      "Energy gap = ",
+      "State norm = "
+    ],
+    "timeout": 120
+  },
+  {
+    "id": "quantum_grover_3sat_4var",
+    "title": "Grover for 3-SAT with 4 variables and 2 satisfying assignments",
+    "expected_substrings": [
+      "Satisfying count = 2",
+      "Most likely = ",
+      "Valid: ",
+      "Peak prob = "
+    ],
+    "timeout": 120
+  },
+  {
+    "id": "quantum_walk_c5_coin_4step",
+    "title": "Discrete-time coined quantum walk on C5 for 4 steps",
+    "expected_substrings": [
+      "Steps = 4",
+      "P(0) = ",
+      "P(1) = ",
+      "P(2) = ",
+      "Total prob = "
+    ],
+    "timeout": 120
+  },
+  {
+    "id": "quantum_5qubit_code_encode",
+    "title": "Encode |0> into the 5-qubit [[5,1,3]] perfect code and verify stabilizers",
+    "expected_substrings": [
+      "Encoded statevector norm = 1.0000",
+      "g1 eigenvalue = +1",
+      "g2 eigenvalue = +1",
+      "g3 eigenvalue = +1",
+      "g4 eigenvalue = +1"
+    ],
+    "timeout": 120
+  },
+  {
+    "id": "quantum_kitaev_chain_6site",
+    "title": "Kitaev chain N=6: ground state, parity, BdG gap, Majorana overlap",
+    "expected_substrings": [
+      "Ground state energy = ",
+      "Ground state parity = ",
+      "BdG gap = ",
+      "Majorana overlap = "
+    ],
+    "timeout": 120
+  },
+  {
+    "id": "quantum_kernel_svm_2d_rymap",
+    "title": "Quantum kernel SVM with 2-qubit R_y feature map on synthetic 2D data",
+    "expected_substrings": [
+      "SVM alphas = [",
+      "Margin = ",
+      "Test predictions = [",
+      "Bias term = "
+    ],
+    "timeout": 120
+  },
+  {
+    "id": "quantum_pennylane_vqe_h2_shotbased",
+    "title": "PennyLane VQE on H2 with 4-qubit parity Hamiltonian",
+    "expected_substrings": [
+      "VQE energy = ",
+      "Optimal params = [",
+      "Converged: "
+    ],
+    "timeout": 120
+  },
+  {
+    "id": "quantum_qaoa_p2_maxcut_c6",
+    "title": "QAOA p=2 for MaxCut on C6: optimize and report approximation ratio",
+    "expected_substrings": [
+      "QAOA energy = ",
+      "QAOA cut value = ",
+      "Exact MaxCut = 5",
+      "Approx ratio = "
+    ],
+    "timeout": 120
+  },
+  {
+    "id": "quantum_vqls_4x4_cycle_laplacian",
+    "title": "VQLS for 4x4 cycle-graph Laplacian with Hadamard-test-free cost",
+    "expected_substrings": [
+      "VQLS cost = ",
+      "Solution fidelity = ",
+      "Relative residual = "
+    ],
+    "timeout": 120
+  },
+  {
+    "id": "quantum_qpe_t_gate_5bit",
+    "title": "QPE for T gate with 5-bit precision",
+    "expected_substrings": [
+      "True phase = 0.1250",
+      "Estimated phase = ",
+      "Most likely bitstring = ",
+      "Abs error = ",
+      "Converged: "
+    ],
+    "timeout": 120
+  },
+  {
+    "id": "quantum_cluster_state_entanglement_6q",
+    "title": "Von Neumann and Renyi-2 entropy of 6-qubit 1D cluster state",
+    "expected_substrings": [
+      "Statevector norm = 1.0000",
+      "Von Neumann entropy = ",
+      "Renyi-2 entropy = ",
+      "Largest Schmidt coeff = "
+    ],
+    "timeout": 120
+  },
+  {
+    "id": "quantum_depolarizing_holevo_fidelity",
+    "title": "Depolarizing channel: Holevo info + entanglement fidelity",
+    "expected_substrings": [
+      "Output state trace = 1.0000",
+      "Holevo info = ",
+      "Entanglement fidelity = ",
+      "Depolarizing p = 0.3000"
+    ],
+    "timeout": 120
+  },
+  {
+    "id": "quantum_zne_ghz_3qubit",
+    "title": "Zero-noise extrapolation on 3-qubit GHZ with depolarizing noise",
+    "expected_substrings": [
+      "Ideal expectation = 3.0000",
+      "Noisy (f=1) = ",
+      "Noisy (f=3) = ",
+      "Noisy (f=5) = ",
+      "Mitigated = ",
+      "Mitigation improvement = "
+    ],
+    "timeout": 120
+  },
+  {
+    "id": "quantum_trotter_heisenberg_3q",
+    "title": "Trotterized time evolution of 3-qubit Heisenberg with field",
+    "expected_substrings": [
+      "Total time = 0.4000",
+      "<X0>(t) = ",
+      "<Z0>(t) = ",
+      "State norm = 1.0000",
+      "Trotter steps = 4"
+    ],
+    "timeout": 120
+  },
+  {
+    "id": "quantum_signal_processing_x_squared",
+    "title": "QSP for f(x) = x^2 with 6 phase angles",
+    "expected_substrings": [
+      "Target f(0.7) = 0.4900",
+      "QSP (0,0) real = ",
+      "QSP (0,0) imag = ",
+      "Trace = ",
+      "Determinant = "
+    ],
+    "timeout": 120
+  },
+  {
+    "id": "quantum_schmidt_decomposition_4q",
+    "title": "Schmidt decomposition of 4-qubit state with non-trivial rank",
+    "expected_substrings": [
+      "State norm = 1.0000",
+      "Schmidt rank = ",
+      "Largest Schmidt coeff = ",
+      "Smallest nonzero Schmidt coeff = ",
+      "Entropy = "
+    ],
+    "timeout": 120
+  },
+  {
+    "id": "quantum_svm_iqplike_2d_8pts",
+    "title": "Quantum kernel SVM with IQP-like feature map on 8 synthetic 2D points",
+    "expected_substrings": [
+      "Training accuracy = ",
+      "Margin = ",
+      "Bias = ",
+      "Num support vectors = "
+    ],
+    "timeout": 120
+  },
+  {
+    "id": "quantum_circuit_learning_sine",
+    "title": "Quantum circuit learning for sine regression with parameterized observable",
+    "expected_substrings": [
+      "Training MSE = ",
+      "Optimal theta = ",
+      "Prediction at x=pi = ",
+      "Target at x=pi = 0.0000",
+      "Fit error at x=pi = "
+    ],
+    "timeout": 120
+  },
+  {
+    "id": "quantum_magic_state_distill_15to1",
+    "title": "15-to-1 T-magic-state distillation via [[15,1,3]] Reed-Muller code",
+    "expected_substrings": [
+      "Input error rate = 0.0100",
+      "Trials = 1000",
+      "Accepted = ",
+      "Output fidelity = ",
+      "Rejection rate = "
+    ],
+    "timeout": 120
+  },
+  {
+    "id": "quantum_bayesian_inference_3var",
+    "title": "Quantum Bayesian inference on a 3-variable binary network",
+    "expected_substrings": [
+      "P(A=1) = 0.3000",
+      "P(C=1) = ",
+      "P(A=1|C=1) = ",
+      "Quantum P(A=1|C=1) = ",
+      "Match: "
+    ],
+    "timeout": 120
+  }
+]

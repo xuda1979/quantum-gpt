@@ -1,0 +1,91 @@
+{
+  "schema_version": "eval-scorecard-v2",
+  "scored_at_utc": "2026-08-26T02:19:07.007992+00:00",
+  "candidate_map": "/Users/daxu/software/quantum-gpt/evals/runs/sapo_launchsim_eval_smoke/candidate-map.json",
+  "backend": null,
+  "prompt_style": "direct",
+  "prompt_version": "v2",
+  "public_eval_contract_sha256": "da435fd7467348824ecda45b4c24447db2db48e3397637dfe22ef538ed01072d",
+  "scorer_contract_sha256": "372a2073a427f0994c055fe6e98b9d9b61c20e2e0f75659808c9a1d3cdf4afe2",
+  "evaluation_runner_sha256": "97b5186207302723f47281a4ed1e19e3406518537031dd243cdd162d24063093",
+  "n_tasks": 2,
+  "failure_category_summary": {
+    "syntax": 2
+  },
+  "results": [
+    {
+      "id": "quantum_gate_alias_casefold_barrier",
+      "domain": "quantum",
+      "category": "api_normalization",
+      "name": "Gate alias casefold barrier",
+      "passed": false,
+      "details": [
+        "runner_exception: SyntaxError: invalid syntax (quantum_gate_alias_casefold_barrier.py, line 1)",
+        "traceback:",
+        "Traceback (most recent call last):",
+        "  File \"/Users/daxu/software/quantum-gpt/evals/runner/run_eval.py\", line 252, in run_task",
+        "    result = run_single_file_task(module, only_candidate_path)",
+        "  File \"/Users/daxu/software/quantum-gpt/evals/runner/run_eval.py\", line 157, in run_single_file_task",
+        "    return module.run_tests(str(candidate_path))",
+        "  File \"/Users/daxu/software/quantum-gpt/evals/tasks/quantum/gate_alias_casefold_barrier/tests.py\", line 13, in run_tests",
+        "    module = _load(candidate_path)",
+        "  File \"/Users/daxu/software/quantum-gpt/evals/tasks/quantum/gate_alias_casefold_barrier/tests.py\", line 8, in _load",
+        "    spec.loader.exec_module(module)",
+        "  File \"<frozen importlib._bootstrap_external>\", line 846, in exec_module",
+        "  File \"<frozen importlib._bootstrap_external>\", line 983, in get_code",
+        "  File \"<frozen importlib._bootstrap_external>\", line 913, in source_to_code",
+        "  File \"<frozen importlib._bootstrap>\", line 228, in _call_with_frames_removed",
+        "  File \"/Users/daxu/software/quantum-gpt/evals/runs/sapo_launchsim_eval_smoke/candidates/quantum_gate_alias_casefold_barrier.py\", line 1",
+        "    tok445 tok445 tok445 tok445 tok445 tok445 tok445 tok445 tok445 tok445 tok445 tok445 tok445 tok445 tok445 tok445",
+        "           ^",
+        "SyntaxError: invalid syntax"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/runs/sapo_launchsim_eval_smoke/candidates/quantum_gate_alias_casefold_barrier.py",
+      "candidate_sha256": "49ca07c74651b676c2657cd2a066474cb4037368857ab37380d429de9e80f4fd",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/runs/sapo_launchsim_eval_smoke/candidates/quantum_gate_alias_casefold_barrier.py"
+      },
+      "workspace_mode": false,
+      "source": "override",
+      "error_type": "SyntaxError",
+      "failure_category": "syntax"
+    },
+    {
+      "id": "quantum_error_detection_bit_flip",
+      "domain": "quantum",
+      "category": "debug_repair",
+      "name": "Quantum Bit-Flip Error Detection",
+      "passed": false,
+      "details": [
+        "runner_exception: SyntaxError: invalid syntax (quantum_error_detection_bit_flip.py, line 1)",
+        "traceback:",
+        "Traceback (most recent call last):",
+        "  File \"/Users/daxu/software/quantum-gpt/evals/runner/run_eval.py\", line 252, in run_task",
+        "    result = run_single_file_task(module, only_candidate_path)",
+        "  File \"/Users/daxu/software/quantum-gpt/evals/runner/run_eval.py\", line 157, in run_single_file_task",
+        "    return module.run_tests(str(candidate_path))",
+        "  File \"/Users/daxu/software/quantum-gpt/evals/tasks/quantum/error_detection_bit_flip/tests.py\", line 13, in run_tests",
+        "    module = _load(candidate_path)",
+        "  File \"/Users/daxu/software/quantum-gpt/evals/tasks/quantum/error_detection_bit_flip/tests.py\", line 8, in _load",
+        "    spec.loader.exec_module(module)",
+        "  File \"<frozen importlib._bootstrap_external>\", line 846, in exec_module",
+        "  File \"<frozen importlib._bootstrap_external>\", line 983, in get_code",
+        "  File \"<frozen importlib._bootstrap_external>\", line 913, in source_to_code",
+        "  File \"<frozen importlib._bootstrap>\", line 228, in _call_with_frames_removed",
+        "  File \"/Users/daxu/software/quantum-gpt/evals/runs/sapo_launchsim_eval_smoke/candidates/quantum_error_detection_bit_flip.py\", line 1",
+        "    tok445 tok445 tok445 tok445 tok445 tok445 tok445 tok445 tok445 tok445 tok445 tok445 tok445 tok445 tok445 tok445",
+        "           ^",
+        "SyntaxError: invalid syntax"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/runs/sapo_launchsim_eval_smoke/candidates/quantum_error_detection_bit_flip.py",
+      "candidate_sha256": "49ca07c74651b676c2657cd2a066474cb4037368857ab37380d429de9e80f4fd",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/runs/sapo_launchsim_eval_smoke/candidates/quantum_error_detection_bit_flip.py"
+      },
+      "workspace_mode": false,
+      "source": "override",
+      "error_type": "SyntaxError",
+      "failure_category": "syntax"
+    }
+  ]
+}

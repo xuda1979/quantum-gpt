@@ -1,0 +1,21 @@
+Task ID: quantum_grover_oracle_diffusion
+Task: Grover oracle and diffusion operator simulation
+Domain: quantum
+Category: algorithm_implementation
+Output file: candidate.py
+
+Required public API (signatures and docstrings only):
+def uniform_superposition(n_qubits: int) -> list[float]
+    """Return the uniform superposition state for n qubits."""
+def oracle(state: list[float], marked: int) -> list[float]
+    """Apply the Grover oracle: flip the sign of the marked basis state."""
+def diffusion(state: list[float]) -> list[float]
+    """Apply the Grover diffusion operator: 2|s><s| - I."""
+def grover_search(n_qubits: int, marked: int, iterations: int) -> list[float]
+    """Run Grover's search algorithm for a given number of iterations."""
+
+Implement the requested file. Hidden tests will verify behavior.
+Return only the complete Python source, without markdown fences or explanation.
+
+Write a Python file that passes the supplied tests.
+Return only the candidate file contents.

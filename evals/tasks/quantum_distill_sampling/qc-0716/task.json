@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3_sampling",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0716",
+  "name": "Here is a quantum coding exercise. Write a Qiskit quantum random number generato",
+  "task_prompt": "Here is a quantum coding exercise. Write a Qiskit quantum random number generator that produces 10 random integers in [0, 20) using measurements of qubits in superposition (rejection sampling for range correction). Give one complete script that runs end-to-end on its own and prints the outcome."
+}

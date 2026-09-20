@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3_sampling",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0778",
+  "name": "You are given the following quantum programming task. Write a standalone OpenQAS",
+  "task_prompt": "You are given the following quantum programming task. Write a standalone OpenQASM 3 program preparing an 6-qubit GHZ state with measurement, plus Python code that loads it with qiskit.qasm3 and samples 1000 shots. Give one complete script that runs end-to-end on its own and prints the outcome."
+}

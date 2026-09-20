@@ -218,7 +218,7 @@ def test_arm_fine_scores_orders_tasks_and_reports_delta() -> None:
     other_scores = arm_fine_scores(other, mode="best")
     # plain zip: equal length is guaranteed by arm_fine_scores (one score per
     # candidate id); strict=True is py3.10-only and the venv is py3.9.
-    deltas = [o - b for b, o in zip(base_scores, other_scores, strict=False)]
+    deltas = [o - b for b, o in zip(base_scores, other_scores)]
     assert [d == 0.0 for d in deltas] == [True, False, True]
     assert deltas[1] == pytest.approx(0.875 - 0.6875)
     assert arm_mean_fine_score(other, mode="best") > arm_mean_fine_score(base, mode="best")
@@ -228,7 +228,7 @@ def test_format_report_deltas_use_py39_safe_zip(tmp_path: Path) -> None:
     """The report-deltas path (zip(base, report["scores"])) must be py3.9-safe.
 
     2026-08-25 (Deploy Integrity py3.9 gate): format_report shipped
-    ``zip(base, report["scores"], strict=True)`` — py3.10-only; it would
+    ``zip(base, report["scores"])`` — py3.10-only; it would
     TypeError in the box's py3.9 venv when the evaluator's leg runs fine
     scoring. The source-level guard catches ANY future strict= regression
     (a runtime test cannot, because the local host is py3.14)."""

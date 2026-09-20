@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3_sampling",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0499",
+  "name": "Quantum computing task: Use Braket's density-matrix simulator (braket_dm) to stu",
+  "task_prompt": "Quantum computing task: Use Braket's density-matrix simulator (braket_dm) to study a GHZ state on 5 qubits with depolarizing noise p=0.038 after each gate; print the sampled counts and the GHZ-subspace weight. Give one complete script that runs end-to-end on its own and prints the outcome."
+}

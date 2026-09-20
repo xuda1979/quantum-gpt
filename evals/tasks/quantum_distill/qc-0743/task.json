@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0743",
+  "name": "Quantum computing task: Write a runnable Qiskit Deutsch-Jozsa program with a con",
+  "task_prompt": "Quantum computing task: Write a runnable Qiskit Deutsch-Jozsa program with a constant oracle (1 for all x) on 6 qubits. Provide a complete, self-contained program that runs as-is and prints its results."
+}

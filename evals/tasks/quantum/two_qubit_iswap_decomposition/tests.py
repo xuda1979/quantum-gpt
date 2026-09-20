@@ -13,10 +13,10 @@ def _load(candidate_path: str):
 def _approx_equal_matrices(a, b, tol=1e-9):
     if len(a) != len(b):
         return False
-    for row_a, row_b in zip(a, b, strict=False):
+    for row_a, row_b in zip(a, b):
         if len(row_a) != len(row_b):
             return False
-        for x, y in zip(row_a, row_b, strict=False):
+        for x, y in zip(row_a, row_b):
             if abs(x - y) > tol:
                 return False
     return True

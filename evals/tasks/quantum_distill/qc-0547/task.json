@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0547",
+  "name": "Quantum computing task: Implement the QFT manually in Cirq on 2 qubits and verif",
+  "task_prompt": "Quantum computing task: Implement the QFT manually in Cirq on 2 qubits and verify its unitary against cirq.qft using cirq.unitary(). Your answer must be the complete working code only, runnable from top to bottom."
+}

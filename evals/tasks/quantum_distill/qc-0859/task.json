@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0859",
+  "name": "Implement a Python function `shor9_decode(syndromes: list[tuple[int, int]]) -> l",
+  "task_prompt": "Implement a Python function `shor9_decode(syndromes: list[tuple[int, int]]) -> list[str]` that decodes the syndrome outcomes for the Shor 9-qubit code. The input `syndromes` is a list of 4 tuples, each containing two integer syndrome bits (0 or 1) representing the outcomes of the Z stabilizer measurements for each of the three blocks (first three tuples) and the X stabilizer measurements for the phase-flip part (last tuple). Specifically: syndromes[0] = (s1, s2) for block 1 (qubits 0-2), syndromes[1] = (s1, s2) for block 2 (qubits 3-5), syndromes[2] = (s1, s2) for block 3 (qubits 6-8), and syndromes[3] = (p1, p2) for the phase-flip stabilizers (X1X2X3X4X5X6 and X4X5X6X7X8X9). The function should return a list of strings, each being either 'X_i', 'Z_i', or 'I_i' indicating the correction to apply to qubit i (0-indexed). Use the provided lookup tables and handle all possible syndrome outcomes. If no correction is needed, return 'I_i' for all qubits. Ensure the function is robust and covers all syndrome combinations."
+}

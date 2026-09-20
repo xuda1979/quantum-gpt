@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0375",
+  "name": "You are given the following quantum programming task. Formulate MaxCut on the gr",
+  "task_prompt": "You are given the following quantum programming task. Formulate MaxCut on the graph with edges [(0, 4), (1, 2), (2, 3), (2, 5), (2, 6), (3, 4), (3, 5), (4, 6), (5, 6)] as a QUBO with dimod and solve it with SimulatedAnnealingSampler from dwave-samplers. Verify against brute force. Provide a complete, self-contained program that runs as-is and prints its results."
+}

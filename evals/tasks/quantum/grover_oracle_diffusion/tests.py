@@ -13,7 +13,7 @@ def _load(candidate_path: str):
 def _close_vec(a, b, tol=1e-9):
     if len(a) != len(b):
         return False
-    return all(abs(x - y) < tol for x, y in zip(a, b, strict=False))
+    return all(abs(x - y) < tol for x, y in zip(a, b))
 
 
 def run_tests(candidate_path: str) -> dict:

@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0200",
+  "name": "You are given the following quantum programming task. Implement VQE in Qiskit fo",
+  "task_prompt": "You are given the following quantum programming task. Implement VQE in Qiskit for the 3-site transverse-field Ising model H = -J*sum(Z_i Z_{i+1}) - h*sum(X_i) with J=0.87, h=1.16 (open boundary). Use StatevectorEstimator with a TwoLocal-style ansatz and scipy, and compare with exact diagonalization. Give one complete script that runs end-to-end on its own and prints the outcome."
+}

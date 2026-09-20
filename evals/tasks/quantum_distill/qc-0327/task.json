@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0327",
+  "name": "Quantum computing task: Implement VQE in Qiskit for the 4-site transverse-field ",
+  "task_prompt": "Quantum computing task: Implement VQE in Qiskit for the 4-site transverse-field Ising model H = -J*sum(Z_i Z_{i+1}) - h*sum(X_i) with J=0.75, h=0.57 (open boundary). Use StatevectorEstimator with a TwoLocal-style ansatz and scipy, and compare with exact diagonalization. Your answer must be the complete working code only, runnable from top to bottom."
+}

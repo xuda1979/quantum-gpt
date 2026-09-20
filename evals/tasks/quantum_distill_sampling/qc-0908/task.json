@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3_sampling",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0908",
+  "name": "Solve this quantum programming problem. Use Stim to generate a distance-7 repeti",
+  "task_prompt": "Solve this quantum programming problem. Use Stim to generate a distance-7 repetition code memory experiment (10 rounds, depolarizing noise 0.01), decode with PyMatching, and print the logical error rate over 20000 shots. Give one complete script that runs end-to-end on its own and prints the outcome."
+}

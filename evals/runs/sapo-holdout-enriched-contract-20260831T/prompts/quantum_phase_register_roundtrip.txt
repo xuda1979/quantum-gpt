@@ -1,0 +1,20 @@
+Task ID: quantum_phase_register_roundtrip
+Task: Phase register round-trip utility
+Domain: quantum
+Category: interface_contract
+Output file: candidate.py
+
+Public task specification:
+Use a most-significant-bit-first fixed-point phase register. phase_to_register_bits validates n_qubits > 0 and 0 <= phase < 1, computes floor(phase * 2**n_qubits), and returns exactly n_qubits binary digits. register_bits_to_phase validates a non-empty 0/1 list, interprets it as an unsigned MSB-first integer, and divides by 2**len(bits). Raise ValueError for invalid ranges, sizes, or bit values.
+
+Required public API (signatures and docstrings only):
+def phase_to_register_bits(phase: float, n_qubits: int) -> list[int]
+    """Map a fractional phase [0, 1) into a fixed-length register bit vector."""
+def register_bits_to_phase(bits: list[int]) -> float
+    """Recover the phase represented by a register bit vector."""
+
+Implement the requested file. Hidden tests will verify behavior.
+Return only the complete Python source, without markdown fences or explanation.
+
+Write a Python file that passes the supplied tests.
+Return only the candidate file contents.

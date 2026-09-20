@@ -1,0 +1,23 @@
+Write a complete, runnable Python program using numpy, qiskit, and scipy that:
+1. Defines a 4x4 matrix A as the weighted cycle graph Laplacian:
+   A = [[ 2, -1,  0, -1],
+        [-1,  2, -1,  0],
+        [ 0, -1,  2, -1],
+        [-1,  0, -1,   2]]
+   Decompose A as a linear combination of 2-qubit Pauli strings.
+2. Decompose the right-hand side b = [1, 1, 1, 1] / 2 as the state |+>|+>.
+3. Implements VQLS: find parameters alpha for the ansatz
+   U(alpha) = R_y(alpha_0) on q0, R_y(alpha_1) on q1, CNOT(0,1),
+              R_y(alpha_2) on q0, R_y(alpha_3) on q1
+   minimizing the cost
+     C = <psi| H |psi> / <b|b>
+   where |psi> = A U(alpha) |0>, and H = A^dagger A (via the Hadamard test
+   or direct statevector evaluation).
+4. Uses scipy.optimize.minimize (method='COBYLA', maxiter=500, tol=1e-6).
+5. Reconstructs the solution |x> = U(alpha*) |0>, normalizes it, and
+   computes the fidelity |<x_normalized| A^{-1} b_normalized>|^2.
+6. In `def main()`, prints exactly these lines (values rounded to 4 decimals):
+     VQLS cost = <final cost>
+     Solution fidelity = <fidelity>
+     Relative residual = <||A x - b|| / ||b||>
+Call main() under `if __name__ == "__main__":`.

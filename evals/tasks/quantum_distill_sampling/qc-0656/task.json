@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3_sampling",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0656",
+  "name": "Here is a quantum coding exercise. Implement quantum teleportation in Cirq using",
+  "task_prompt": "Here is a quantum coding exercise. Implement quantum teleportation in Cirq using deferred measurement (classically controlled ops on measurement keys) for the input state rx(2.21)|0>. Verify the receiver statistics against theory. Provide a complete, self-contained program that runs as-is and prints its results."
+}

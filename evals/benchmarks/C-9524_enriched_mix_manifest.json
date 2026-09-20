@@ -1,0 +1,26 @@
+{
+  "card": "C-9524",
+  "kind": "remediation_dataset_manifest",
+  "ts_utc": "2026-09-20T19:42:38Z",
+  "source_matrix": "harness/state/C-9518_overlap_matrix.txt",
+  "enriched_grpo_benchmark": "evals/benchmarks/quantum_grpo_training_v10_sapo_18holdout.txt",
+  "grpo_mix_tasks": 41,
+  "holdout_covered_in_mix": 18,
+  "sft_focus_dataset": "data/generated/omnicoder-quantum-focus-v1/train.jsonl",
+  "sft_focus_train_samples": 252,
+  "sft_focus_domains": {
+    "quantum": 202,
+    "software": 50
+  },
+  "category_gap_closed": {
+    "reasoning_superdense_coding": {
+      "v9_reasoning_tasks": 0,
+      "v10_superdense_tasks": [
+        "quantum_superdense_coding",
+        "quantum_superdense_pauli_router"
+      ],
+      "omnicoder_sft_superdense_samples": 17
+    }
+  },
+  "recommendation": "point next GRPO round BENCHMARK_FILE at v10 (18/18 holdout); add omnicoder-quantum-focus-v1 SFT to training mix per C-9518"
+}

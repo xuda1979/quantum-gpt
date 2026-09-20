@@ -1,0 +1,31 @@
+Task ID: quantum_error_detection_bit_flip
+Write a Python file that satisfies the public task contract; hidden tests will verify it.
+Return only the candidate file contents.
+
+Task: Quantum Bit-Flip Error Detection
+Domain: quantum
+Category: debug_repair
+Output file: candidate.py
+
+Public task specification:
+The function `bit_flip_code(initial_state, error_qubit)` should implement a 3-qubit bit-flip repetition code. It receives `initial_state` (0 or 1) for the logical qubit and `error_qubit` (0, 1, or 2) indicating which physical qubit gets a bit-flip error. It must return a dict with keys 'syndrome' (a 2-element list of ints) and 'corrected_state' (0 or 1, the recovered logical value). The current implementation has bugs in the syndrome extraction and correction logic. Fix them.
+
+Required public API (signatures and docstrings only):
+def bit_flip_code(initial_state: int, error_qubit: int) -> dict
+    """3-qubit bit-flip repetition code.
+
+Encodes logical qubit |initial_state> into 3 physical qubits,
+applies a bit-flip error on error_qubit, measures the syndrome,
+and corrects to recover the original logical state.
+
+Args:
+    initial_state: 0 or 1 — the logical qubit value to encode.
+    error_qubit: 0, 1, or 2 — which physical qubit receives the error.
+
+Returns:
+    dict with:
+        'syndrome': list[int] of length 2 — parity check results.
+        'corrected_state': int — recovered logical value (0 or 1)."""
+
+Implement the requested file. Hidden tests will verify behavior.
+Return only the complete Python source, without markdown fences or explanation.

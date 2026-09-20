@@ -1,0 +1,9 @@
+{
+  "id": "quantum_rl_v7_gapfill_gate_alias_normalization_drill",
+  "name": "Gate alias normalization drill (verbatim holdout grader)",
+  "domain": "quantum",
+  "category": "api_normalization",
+  "task_prompt": "Respond with a single runnable Python file using only the Python standard library. Define the required entry point with the EXACT name normalize_gate_sequence(gates); if that attribute is missing or misnamed the grader dies with AttributeError before running any case (observed holdout failure evidence: AttributeError: module 'candidate' has no attribute 'normalize_gate_sequence'). Enforced contract: canonicalize gate names case-insensitively AFTER stripping surrounding whitespace, preserving input order -- h and hadamard map to H, x and pauli_x map to X, cx and cnot map to CX. Exact grader cases: normalize_gate_sequence(['H', 'cx', 'x']) must equal ['H', 'CX', 'X']; normalize_gate_sequence([' hadamard ', 'CNOT', 'Pauli_X']) must equal ['H', 'CX', 'X']; normalize_gate_sequence(['h', 'h', 'cx']) must equal ['H', 'H', 'CX']; an empty input list returns an empty list. ValueError semantics: any unknown gate name MUST raise ValueError -- the grader calls normalize_gate_sequence(['swap']) and normalize_gate_sequence(['H', 'measure']) and requires ValueError specifically; returning a list, raising any other exception type, or swallowing the error all fail the case. Include assert-based self-tests that fail loudly, print nothing on success, and use no randomness or remote services.",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

@@ -3,7 +3,7 @@
 # validated against the holdout-adjacent set (v8_holdout_adjacent.txt).
 # Union = 18 holdout + 20 v8-adjacent + 3 v1-baseline continuity tasks = 41.
 # source=evals/benchmarks/quantum_grpo_training_v7_targeted_integrity.txt sha256=49e0598bdefe63feb3e70a54b3fad5945f539c310cc7b519b3efd4b24b8ca14e
-# task_contract_sha256=47b80ec34552ac3950b85b80671f043d18d4222f8a1ffd3916cb3676989d85d7
+# task_contract_sha256=472340c22321527ae5c443ccbbf1be0be618ebbd5d243fdacc7e5221de01f70a
 # targeted=41 deterministic=0 semantic=0
 # required_import_roots=
 # reference_execution_verified=true runs=3

@@ -1,0 +1,273 @@
+[
+  {
+    "id": "quantum_vqe_tfim_3qubit_2layer",
+    "title": "VQE for 3-qubit transverse-field Ising with 2-layer Ry-CX ansatz",
+    "expected_substrings": [
+      "VQE energy = ",
+      "Exact GS = ",
+      "Abs error = ",
+      "Converged: True"
+    ],
+    "timeout": 180
+  },
+  {
+    "id": "quantum_shor_n15_a7_qpe_order",
+    "title": "Shor's algorithm for N=15, a=7 via QPE — extract order and factor",
+    "expected_substrings": [
+      "a = 7",
+      "N = 15",
+      "Measured order r = ",
+      "Valid order: True",
+      "Factor found: 3"
+    ],
+    "timeout": 180
+  },
+  {
+    "id": "quantum_qaoa_p1_maxcut_cycle4",
+    "title": "QAOA p=1 for MaxCut on a 4-vertex cycle graph",
+    "expected_substrings": [
+      "QAOA max-cut value = ",
+      "Optimal max-cut = 4",
+      "Approx ratio = ",
+      "Converged: True"
+    ],
+    "timeout": 180
+  },
+  {
+    "id": "quantum_teleportation_random_state_fidelity",
+    "title": "Quantum teleportation of a random state — verify unit fidelity",
+    "expected_substrings": [
+      "Teleported state: random pure 1-qubit",
+      "Average fidelity = 1.0000",
+      "Classical limit = 0.6667",
+      "Beats classical: True",
+      "Perfect teleport: True"
+    ],
+    "timeout": 120
+  },
+  {
+    "id": "quantum_chsh_game_win_probability",
+    "title": "CHSH game: quantum strategy win probability and Tsirelson bound",
+    "expected_substrings": [
+      "CHSH quantum win prob = 0.8536",
+      "Classical best = 0.7500",
+      "Tsirelson S = 2.8284",
+      "Tsirelson bound = 2.8284",
+      "Saturates Tsirelson: True",
+      "Beats classical: True"
+    ],
+    "timeout": 60
+  },
+  {
+    "id": "quantum_grover_6qubit_3marked",
+    "title": "Grover's algorithm with 6 qubits, 3 marked items, optimal iterations",
+    "expected_substrings": [
+      "N = 64",
+      "M = 3 (marked: [3, 17, 42])",
+      "Iterations = ",
+      "Success prob = ",
+      "In marked set: True"
+    ],
+    "timeout": 120
+  },
+  {
+    "id": "quantum_qft_4qubit_input5",
+    "title": "4-qubit QFT on input state |5> — verify uniform output distribution",
+    "expected_substrings": [
+      "N = 16",
+      "Input state = |5>",
+      "QFT output overlap = ",
+      "All probs equal: True",
+      "Correct: True"
+    ],
+    "timeout": 60
+  },
+  {
+    "id": "quantum_ghz_5qubit_stabilizers",
+    "title": "5-qubit GHZ state — verify all stabilizers and entanglement",
+    "expected_substrings": [
+      "GHZ state: 5 qubits",
+      "<XXXXX> = +1.0000",
+      "<ZZIII> = +1.0000",
+      "All stabilizers +1: True",
+      "Single-qubit purity = 0.5000",
+      "Entangled: True",
+      "Valid GHZ: True"
+    ],
+    "timeout": 60
+  },
+  {
+    "id": "quantum_qpe_3qubit_s_gate_quarter",
+    "title": "QPE with 3 counting qubits for the S gate — estimate phase 1/4",
+    "expected_substrings": [
+      "Counting qubits = 3",
+      "Phase estimate = 0.2500",
+      "Exact phase = 0.2500",
+      "Correct: True"
+    ],
+    "timeout": 60
+  },
+  {
+    "id": "quantum_bernstein_vazirani_6bit",
+    "title": "Bernstein-Vazirani algorithm for a 6-bit hidden string",
+    "expected_substrings": [
+      "n = 6",
+      "Hidden string s = 101101",
+      "Recovered s = 101101",
+      "Probability = 1.0000",
+      "Correct: True"
+    ],
+    "timeout": 60
+  },
+  {
+    "id": "quantum_simon_period_011",
+    "title": "Simon's algorithm for a 3-bit period s=011 — recover the period",
+    "expected_substrings": [
+      "n = 3",
+      "Hidden period s = 011",
+      "Recovered s = 011",
+      "Non-trivial: True",
+      "Correct: True"
+    ],
+    "timeout": 120
+  },
+  {
+    "id": "quantum_bitflip_code_3qubit_x1",
+    "title": "3-qubit bit-flip code: encode, inject X error on qubit 1, decode, recover",
+    "expected_substrings": [
+      "Error applied: X on qubit 1",
+      "Syndrome (Z0Z1, Z1Z2) = (1, 1)",
+      "Corrected qubit = 1",
+      "Recovery fidelity = 1.000000",
+      "Correct: True"
+    ],
+    "timeout": 120
+  },
+  {
+    "id": "quantum_steane_x0_syndrome",
+    "title": "Steane [[7,1,3]] code: encode |1>_L, apply X on qubit 0, decode syndrome",
+    "expected_substrings": [
+      "Steane [[7,1,3]] code",
+      "Logical state = |1>_L",
+      "Error = X on qubit 0",
+      "Decoded error qubit = 0",
+      "Correct: True"
+    ],
+    "timeout": 120
+  },
+  {
+    "id": "quantum_random_walk_cycle4_2step",
+    "title": "Discrete-time coined quantum walk on a 4-cycle for 2 steps",
+    "expected_substrings": [
+      "Cycle nodes = 4",
+      "Steps = 2",
+      "Quantum total = 1.0000",
+      "TVD vs classical = ",
+      "Different from classical: True"
+    ],
+    "timeout": 60
+  },
+  {
+    "id": "quantum_counting_4qubit_3marked",
+    "title": "Quantum counting: estimate the number of marked items via QPE on Grover",
+    "expected_substrings": [
+      "N = 16",
+      "True M = 3",
+      "Counting qubits = 4",
+      "Estimated M = ",
+      "Rounded M = 3",
+      "Correct: True"
+    ],
+    "timeout": 180
+  },
+  {
+    "id": "quantum_wstate_4qubit_cascade",
+    "title": "Prepare a 4-qubit W state via cascaded rotations and verify symmetry",
+    "expected_substrings": [
+      "W-state: 4 qubits",
+      "One-excitation prob = 1.000000",
+      "Per-qubit probs = [0.25, 0.25, 0.25, 0.25]",
+      "Equal weights: True",
+      "Correct: True"
+    ],
+    "timeout": 60
+  },
+  {
+    "id": "quantum_tomography_bell_state",
+    "title": "Quantum state tomography on a Bell state — reconstruct rho and concurrence",
+    "expected_substrings": [
+      "Bell state: 2 qubits",
+      "Tomography Paulis = 16",
+      "Reconstruction fidelity = ",
+      "Concurrence = 1.000000",
+      "Entangled: True",
+      "Correct: True"
+    ],
+    "timeout": 120
+  },
+  {
+    "id": "quantum_vqls_2x2_diagonal",
+    "title": "Variational Quantum Linear Solver for a 2x2 diagonal system A x = b",
+    "expected_substrings": [
+      "System: A = diag(1, 2), b = |+>",
+      "VQLS theta = ",
+      "VQLS cost = ",
+      "Overlap with exact = ",
+      "Converged: True",
+      "Correct: True"
+    ],
+    "timeout": 120
+  },
+  {
+    "id": "quantum_graph_state_path5",
+    "title": "5-qubit path-graph state — verify all stabilizers and entanglement",
+    "expected_substrings": [
+      "Graph state: 5 qubits, path graph",
+      "All stabilizers +1: True",
+      "Single-qubit purity = 0.5000",
+      "Entangled: True",
+      "Valid graph state: True"
+    ],
+    "timeout": 60
+  },
+  {
+    "id": "quantum_kernel_zz_featuremap_2d",
+    "title": "Quantum kernel with ZZFeatureMap for 2D binary classification",
+    "expected_substrings": [
+      "Training points = 4",
+      "Feature dim = 2",
+      "Kernel diagonal = [1.0, 1.0, 1.0, 1.0]",
+      "Test predictions = [1, -1]",
+      "Test accuracy = 1.0000",
+      "Correct: True"
+    ],
+    "timeout": 120
+  },
+  {
+    "id": "quantum_boson_sampling_3x6",
+    "title": "Boson sampling: 3 photons in 6 modes, compute output distribution",
+    "expected_substrings": [
+      "Boson sampling: 3 photons in 6 modes",
+      "Input modes = [0, 1, 2]",
+      "Collision-free outputs = 20",
+      "Sum of collision-free probs = ",
+      "Most likely output = ",
+      "Valid: True"
+    ],
+    "timeout": 120
+  },
+  {
+    "id": "quantum_draper_adder_3plus2",
+    "title": "Draper adder: quantum circuit that computes 3 + 2 = 5 via QFT",
+    "expected_substrings": [
+      "a = 3",
+      "b = 2",
+      "n = 3",
+      "Register 1 (a) = 3",
+      "Register 2 (a+b) = 5",
+      "Expected sum = 5",
+      "Correct: True"
+    ],
+    "timeout": 60
+  }
+]

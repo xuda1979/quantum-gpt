@@ -68,7 +68,7 @@ def run_tests(candidate_path: str) -> dict:
                 f"correlator_count={len(correlators) if correlators else 0}, " "expected 4"
             )
         else:
-            for i, (got, exp) in enumerate(zip(correlators, expected_correlators, strict=False)):
+            for i, (got, exp) in enumerate(zip(correlators, expected_correlators)):
                 if abs(float(got) - exp) > 1e-12:
                     failures.append(f"correlator_{i}={float(got):.12f}, expected {exp:.12f}")
         s = result.get("s")

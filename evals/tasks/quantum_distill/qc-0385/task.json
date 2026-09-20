@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0385",
+  "name": "Implement a PennyLane QNode that applies a controlled-phase gate with a variable",
+  "task_prompt": "Implement a PennyLane QNode that applies a controlled-phase gate with a variable phase `phi` between qubits 0 and 1, starting from state |11⟩, and returns the expectation value of `PauliZ` on the control qubit. Use `default.qubit` and show the result for `phi=π/4`."
+}

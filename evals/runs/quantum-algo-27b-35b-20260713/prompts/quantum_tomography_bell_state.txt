@@ -1,0 +1,22 @@
+Write a complete, runnable Python program using numpy and qiskit that:
+1. Builds the Bell state |Phi+> = (|00> + |11>)/sqrt(2) via H(0) and CX(0,1).
+2. Computes the expectation values of all 16 Pauli operators in {I, X, Y, Z}^2
+   on this state using qiskit.quantum_info.SparsePauliOp.
+3. Reconstructs the 4x4 density matrix via
+   rho = (1/4) * sum_{P in {I,X,Y,Z}^2} <P> * P_matrix.
+4. Computes the reconstruction fidelity as
+   F = <psi|rho_reconstructed|psi> (real part).
+5. Computes the concurrence of the reconstructed density matrix:
+   C = max(0, lambda_1 - lambda_2 - lambda_3 - lambda_4), where lambda_i are
+   the square roots of the eigenvalues of rho * (Y (x) Y) * rho.conj() * (Y (x) Y),
+   sorted in decreasing order.
+6. In `def main()`, prints exactly:
+     Bell state: 2 qubits
+     Tomography Paulis = 16
+     Reconstruction fidelity = <value rounded to 6 decimals>
+     Concurrence = <value rounded to 6 decimals>
+     Entangled: <True|False>
+     Correct: <True|False>
+   where Entangled is True iff |concurrence - 1| < 1e-6, and Correct is True
+   iff fidelity > 0.9999 AND the state is entangled.
+Call main() under `if __name__ == "__main__":`.

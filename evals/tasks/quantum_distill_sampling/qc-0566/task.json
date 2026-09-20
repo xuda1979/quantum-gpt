@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3_sampling",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0566",
+  "name": "Here is a quantum coding exercise. Build a Qiskit Aer noise model with depolariz",
+  "task_prompt": "Here is a quantum coding exercise. Build a Qiskit Aer noise model with depolarizing error 0.01 on single-qubit gates and 0.0176 on CX. Run a 3-qubit GHZ circuit with 4096 shots and compare noisy vs ideal counts. The code must be a complete standalone script that can be executed directly and produces output."
+}

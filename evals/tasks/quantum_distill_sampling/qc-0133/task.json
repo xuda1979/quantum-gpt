@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3_sampling",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0133",
+  "name": "Quantum computing task: Implement unambiguous state discrimination of |0> and |+",
+  "task_prompt": "Quantum computing task: Implement unambiguous state discrimination of |0> and |+> in Qiskit via a Naimark dilation: construct the 3-outcome POVM as a 2-qubit unitary + measurement, run 16384 shots for each input, and report the conclusive/inconclusive statistics. Write the full runnable code (all imports included); executing it should print the results."
+}

@@ -1,0 +1,19 @@
+Write a complete, runnable Python program using numpy and qiskit that:
+1. Builds the 3-qubit Heisenberg Hamiltonian with open boundary conditions:
+   H = J*(X0X1 + X1X2 + Y0Y1 + Y1Y2 + Z0Z1 + Z1Z2) + h*(Z0 + Z1 + Z2)
+   with J=1.0, h=0.3. Use qiskit.quantum_info.SparsePauliOp.from_list.
+2. Implements one step of imaginary-time evolution of duration dt=0.1
+   applied to the initial state |++>:
+   |psi(dt)> = exp(-H*dt) |psi(0)> / || exp(-H*dt) |psi(0)> ||.
+   Compute exp(-H*dt) by diagonalizing the 8x8 H matrix.
+3. Computes the energy <psi(dt)|H|psi(dt)> after the imaginary-time step.
+4. Compares against the exact ground-state energy obtained from full
+   diagonalization of H.
+5. In `def main()`, prints exactly these lines (values rounded to 4 decimals):
+     ITE energy = <value>
+     Exact GS = <value>
+     Energy gap = <value>
+     State norm = <value>
+   where Energy gap = ITE energy - Exact GS (positive),
+   and State norm is the norm of exp(-H*dt)|psi(0)> before normalization.
+Call main() under `if __name__ == "__main__":`.

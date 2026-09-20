@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3_sampling",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0600",
+  "name": "You are given the following quantum programming task. Implement Grover's algorit",
+  "task_prompt": "You are given the following quantum programming task. Implement Grover's algorithm in Cirq for 4 qubits with marked state |0101>. Build the oracle and diffusion operator explicitly and print the probability of finding the target. Your answer must be the complete working code only, runnable from top to bottom."
+}

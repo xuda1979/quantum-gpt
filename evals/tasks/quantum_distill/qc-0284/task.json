@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0284",
+  "name": "Quantum computing task: Implement quantum phase estimation in Qiskit with 6 coun",
+  "task_prompt": "Quantum computing task: Implement quantum phase estimation in Qiskit with 6 counting qubits to estimate the phase of the eigenvalue exp(2*pi*i*0.40625) of a phase gate. Print the estimated phase and the error. Write the full runnable code (all imports included); executing it should print the results."
+}

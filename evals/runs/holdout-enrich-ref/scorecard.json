@@ -1,0 +1,357 @@
+{
+  "schema_version": "eval-scorecard-v2",
+  "scored_at_utc": "2026-08-24T14:10:15.150019+00:00",
+  "candidate_map": "/Users/daxu/software/quantum-gpt/evals/runs/holdout-enrich-ref/candidate-map.json",
+  "backend": null,
+  "prompt_style": "direct",
+  "prompt_version": "v2",
+  "public_eval_contract_sha256": "90d68ddfb9d99674075165c797887a5cb180b286e52d3ecebcc98f929174c5df",
+  "scorer_contract_sha256": "a9e619b682dc8359b3646fc1e5f2856bbab100ac66bc94900f5c06f2ec11eb2f",
+  "evaluation_runner_sha256": "97b5186207302723f47281a4ed1e19e3406518537031dd243cdd162d24063093",
+  "n_tasks": 18,
+  "failure_category_summary": {},
+  "results": [
+    {
+      "id": "quantum_gate_alias_normalization",
+      "domain": "quantum",
+      "category": "api_normalization",
+      "name": "Gate alias normalization repair",
+      "passed": true,
+      "details": [
+        "Gate alias normalization handles casing, whitespace, and invalid aliases"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/runs/holdout-enrich-ref/candidates/quantum_gate_alias_normalization.py",
+      "candidate_sha256": "b0ec0553d1da8f6eaf57a85f3185fbb6a9cd40d70292f87be81e19f4bd8b2fa8",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/runs/holdout-enrich-ref/candidates/quantum_gate_alias_normalization.py"
+      },
+      "workspace_mode": false,
+      "source": "override",
+      "error_type": null,
+      "failure_category": null
+    },
+    {
+      "id": "quantum_phase_estimation_circuit",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "name": "Quantum phase estimation unitary eigenvalue extraction",
+      "passed": true,
+      "details": [
+        "Phase estimation simulation correct for all test cases"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/runs/holdout-enrich-ref/candidates/quantum_phase_estimation_circuit.py",
+      "candidate_sha256": "0ed7b78ecaaf776fbf8a0dc9e7709d58d17d4ea52c617b6ee3e164686fbd1121",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/runs/holdout-enrich-ref/candidates/quantum_phase_estimation_circuit.py"
+      },
+      "workspace_mode": false,
+      "source": "override",
+      "error_type": null,
+      "failure_category": null
+    },
+    {
+      "id": "quantum_qaoa_maxcut",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "name": "QAOA MaxCut cost function and classical simulation",
+      "passed": true,
+      "details": [
+        "QAOA MaxCut functions correct for all test cases"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/runs/holdout-enrich-ref/candidates/quantum_qaoa_maxcut.py",
+      "candidate_sha256": "710ea354eb1d74d20d464f555428e2d78f77b1d0647cdfc6ab1543798335fe7c",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/runs/holdout-enrich-ref/candidates/quantum_qaoa_maxcut.py"
+      },
+      "workspace_mode": false,
+      "source": "override",
+      "error_type": null,
+      "failure_category": null
+    },
+    {
+      "id": "quantum_superdense_coding",
+      "domain": "quantum",
+      "category": "reasoning",
+      "name": "Superdense coding encode/decode",
+      "passed": true,
+      "details": [
+        "all message mappings round-trip correctly"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/runs/holdout-enrich-ref/candidates/quantum_superdense_coding.py",
+      "candidate_sha256": "92905569c9e8d2f4ca0f70f9316efe1a4c1d26ecf406ab1b6b8f3e3456248d15",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/runs/holdout-enrich-ref/candidates/quantum_superdense_coding.py"
+      },
+      "workspace_mode": false,
+      "source": "override",
+      "error_type": null,
+      "failure_category": null
+    },
+    {
+      "id": "quantum_grover_oracle_diffusion",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "name": "Grover oracle and diffusion operator simulation",
+      "passed": true,
+      "details": [
+        "Grover oracle and diffusion simulation correct for all test cases"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/runs/holdout-enrich-ref/candidates/quantum_grover_oracle_diffusion.py",
+      "candidate_sha256": "8b0496f1b2f2d671774a3ff5ae38bbd3a12764f64a187274b022eb1f0592a0e6",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/runs/holdout-enrich-ref/candidates/quantum_grover_oracle_diffusion.py"
+      },
+      "workspace_mode": false,
+      "source": "override",
+      "error_type": null,
+      "failure_category": null
+    },
+    {
+      "id": "quantum_density_matrix_partial_trace",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "name": "Density matrix construction and partial trace",
+      "passed": true,
+      "details": [
+        "Density matrix and partial trace operations correct for all test cases"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/runs/holdout-enrich-ref/candidates/quantum_density_matrix_partial_trace.py",
+      "candidate_sha256": "6ee4de0769c7dd49dfa317d83035cc870c83020b9094cac23d5724f6f30fbdc6",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/runs/holdout-enrich-ref/candidates/quantum_density_matrix_partial_trace.py"
+      },
+      "workspace_mode": false,
+      "source": "override",
+      "error_type": null,
+      "failure_category": null
+    },
+    {
+      "id": "quantum_error_correction_shor_9qubit",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "name": "Shor 9-qubit error correction code simulation",
+      "passed": true,
+      "details": [
+        "Shor 9-qubit error correction code correct for all test cases"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/runs/holdout-enrich-ref/candidates/quantum_error_correction_shor_9qubit.py",
+      "candidate_sha256": "704ae205c1689f1a422be5437f815d3f005cb3e6f9f18e14dce14108f0665bd2",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/runs/holdout-enrich-ref/candidates/quantum_error_correction_shor_9qubit.py"
+      },
+      "workspace_mode": false,
+      "source": "override",
+      "error_type": null,
+      "failure_category": null
+    },
+    {
+      "id": "quantum_trotterized_hamiltonian_evolution",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "name": "Trotterized Hamiltonian time evolution",
+      "passed": true,
+      "details": [
+        "Trotterized Hamiltonian evolution correct for all test cases"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/runs/holdout-enrich-ref/candidates/quantum_trotterized_hamiltonian_evolution.py",
+      "candidate_sha256": "cb084659cd843c33a2c9a9f1e3356aac39137df4b7e8685831b057fc419fa968",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/runs/holdout-enrich-ref/candidates/quantum_trotterized_hamiltonian_evolution.py"
+      },
+      "workspace_mode": false,
+      "source": "override",
+      "error_type": null,
+      "failure_category": null
+    },
+    {
+      "id": "quantum_channel_depolarizing",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "name": "Depolarizing quantum channel simulation",
+      "passed": true,
+      "details": [
+        "Quantum channel simulations correct for all test cases"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/runs/holdout-enrich-ref/candidates/quantum_channel_depolarizing.py",
+      "candidate_sha256": "a6dc2f09d5d1a26fa6a0a7c9bfee82f97277621c53e0cff451aa23148d2c53cc",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/runs/holdout-enrich-ref/candidates/quantum_channel_depolarizing.py"
+      },
+      "workspace_mode": false,
+      "source": "override",
+      "error_type": null,
+      "failure_category": null
+    },
+    {
+      "id": "quantum_ghz_state_witness",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "name": "GHZ state preparation and entanglement witness",
+      "passed": true,
+      "details": [
+        "GHZ/W state construction and entanglement witness correct for all test cases"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/runs/holdout-enrich-ref/candidates/quantum_ghz_state_witness.py",
+      "candidate_sha256": "7a6d4835c6cf027a323a720cd9698cf80560470c9c3aba7652965da3aeaac224",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/runs/holdout-enrich-ref/candidates/quantum_ghz_state_witness.py"
+      },
+      "workspace_mode": false,
+      "source": "override",
+      "error_type": null,
+      "failure_category": null
+    },
+    {
+      "id": "quantum_pennylane_vqe_h2",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "name": "PennyLane VQE ground-state energy of H2",
+      "passed": true,
+      "details": [
+        "PennyLane VQE H2 ansatz + Hamiltonian + optimizer all correct"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/runs/holdout-enrich-ref/candidates/quantum_pennylane_vqe_h2.py",
+      "candidate_sha256": "b8f8cd014abf677dd7f22e509043260db2e15ae2dc02f4bee0e6225bb44fd8b2",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/runs/holdout-enrich-ref/candidates/quantum_pennylane_vqe_h2.py"
+      },
+      "workspace_mode": false,
+      "source": "override",
+      "error_type": null,
+      "failure_category": null
+    },
+    {
+      "id": "quantum_cirq_qaoa_line",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "name": "Cirq QAOA on a 4-node line graph MaxCut",
+      "passed": true,
+      "details": [
+        "Cirq QAOA line graph circuit, sampling, and MaxCut value all correct"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/runs/holdout-enrich-ref/candidates/quantum_cirq_qaoa_line.py",
+      "candidate_sha256": "aea6da8e94971c8e55927452222394f2138313f48b63933af53ba34b14d1d2c7",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/runs/holdout-enrich-ref/candidates/quantum_cirq_qaoa_line.py"
+      },
+      "workspace_mode": false,
+      "source": "override",
+      "error_type": null,
+      "failure_category": null
+    },
+    {
+      "id": "quantum_braket_bell_state",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "name": "Amazon Braket Bell state preparation and parity check",
+      "passed": true,
+      "details": [
+        "Braket Bell circuit, sampling, and parity check all correct"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/runs/holdout-enrich-ref/candidates/quantum_braket_bell_state.py",
+      "candidate_sha256": "fb7234033efa1066d11b51ee6c87394af513bc72ee44f4b5f5cf1090f6006737",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/runs/holdout-enrich-ref/candidates/quantum_braket_bell_state.py"
+      },
+      "workspace_mode": false,
+      "source": "override",
+      "error_type": null,
+      "failure_category": null
+    },
+    {
+      "id": "quantum_qiskit_qft_entangled",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "name": "Qiskit QFT on a 3-qubit entangled GHZ state",
+      "passed": true,
+      "details": [
+        "Qiskit GHZ + QFT analytic interference pattern correct"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/runs/holdout-enrich-ref/candidates/quantum_qiskit_qft_entangled.py",
+      "candidate_sha256": "c7fdd0cdb37181a5d17ab9c2f9cbf2d7f41a877e45a58abed0bd89050cb280dd",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/runs/holdout-enrich-ref/candidates/quantum_qiskit_qft_entangled.py"
+      },
+      "workspace_mode": false,
+      "source": "override",
+      "error_type": null,
+      "failure_category": null
+    },
+    {
+      "id": "quantum_qiskit_stabilizer_5qubit_code",
+      "domain": "quantum",
+      "category": "quantum_error_correction",
+      "name": "Qiskit [[5,1,3]] five-qubit stabilizer code table",
+      "passed": true,
+      "details": [
+        "[[5,1,3]] stabilizers, symplectic matrix, and 15-distinct-syndrome property correct"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/runs/holdout-enrich-ref/candidates/quantum_qiskit_stabilizer_5qubit_code.py",
+      "candidate_sha256": "14a87a6d253e82f5d111e2ccdc68280e430d276a32b7139dc14e8ade5856154e",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/runs/holdout-enrich-ref/candidates/quantum_qiskit_stabilizer_5qubit_code.py"
+      },
+      "workspace_mode": false,
+      "source": "override",
+      "error_type": null,
+      "failure_category": null
+    },
+    {
+      "id": "quantum_pennylane_qml_iris_classification",
+      "domain": "quantum",
+      "category": "quantum_ml",
+      "name": "PennyLane quantum kernel logistic regression on Iris (2-class subset)",
+      "passed": true,
+      "details": [
+        "PennyLane quantum kernel + logistic regression on Iris 2-class subset correct"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/runs/holdout-enrich-ref/candidates/quantum_pennylane_qml_iris_classification.py",
+      "candidate_sha256": "07a41768e630254475d4f955449ff82bffeeb386811f011b464e23382ec171ee",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/runs/holdout-enrich-ref/candidates/quantum_pennylane_qml_iris_classification.py"
+      },
+      "workspace_mode": false,
+      "source": "override",
+      "error_type": null,
+      "failure_category": null
+    },
+    {
+      "id": "quantum_phase_register_roundtrip",
+      "domain": "quantum",
+      "category": "interface_contract",
+      "name": "Phase register round-trip utility",
+      "passed": true,
+      "details": [
+        "phase register round trips correctly"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/runs/holdout-enrich-ref/candidates/quantum_phase_register_roundtrip.py",
+      "candidate_sha256": "50ae4c6f5a6ffb9c3c5c276929cdc552a048c24f666e43463abbd21ca5f6da1b",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/runs/holdout-enrich-ref/candidates/quantum_phase_register_roundtrip.py"
+      },
+      "workspace_mode": false,
+      "source": "override",
+      "error_type": null,
+      "failure_category": null
+    },
+    {
+      "id": "quantum_binary_measurement_decoder",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "name": "Binary measurement decoder",
+      "passed": true,
+      "details": [
+        "binary measurement decoder enforces {0,1} registers and correct phase conversion"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/runs/holdout-enrich-ref/candidates/quantum_binary_measurement_decoder.py",
+      "candidate_sha256": "1b8212d589dca99823c60e4c58c3b6ac9e015f6f84238133ffff98a488ea572b",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/runs/holdout-enrich-ref/candidates/quantum_binary_measurement_decoder.py"
+      },
+      "workspace_mode": false,
+      "source": "override",
+      "error_type": null,
+      "failure_category": null
+    }
+  ]
+}

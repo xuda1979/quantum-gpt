@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0419",
+  "name": "Here is a quantum coding exercise. Write a Qiskit program that transpiles a 6-qu",
+  "task_prompt": "Here is a quantum coding exercise. Write a Qiskit program that transpiles a 6-qubit random circuit (depth 5) to the basis gates ['rz','sx','x','cx'] with a line coupling map at optimization levels 0-3, printing depth and CX count for each level. Your answer must be the complete working code only, runnable from top to bottom."
+}

@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0227",
+  "name": "Implement the Deutsch-Jozsa algorithm in Qiskit for the balanced function f(x) =",
+  "task_prompt": "Implement the Deutsch-Jozsa algorithm in Qiskit for the balanced function f(x) = x_0 (the bit x[0]) on 5 input qubits. Print the measurement outcome and the conclusion. Return the entire program in one piece, ready to run without any modification."
+}

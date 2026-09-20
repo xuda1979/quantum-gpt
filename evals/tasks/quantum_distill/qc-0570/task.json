@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0570",
+  "name": "Quantum computing task: Write a Qiskit program that builds a 3-qubit QFT circuit",
+  "task_prompt": "Quantum computing task: Write a Qiskit program that builds a 3-qubit QFT circuit, exports it to OpenQASM 2 and OpenQASM 3 strings, prints both, and re-imports the QASM 3 version to verify operator equivalence. The code must be a complete standalone script that can be executed directly and produces output."
+}

@@ -1,0 +1,43 @@
+Task ID: quantum_pennylane_qml_iris_classification
+Task: PennyLane quantum kernel logistic regression on Iris (2-class subset)
+Domain: quantum
+Category: quantum_ml
+Output file: candidate.py
+
+Public task specification:
+Use PennyLane with a two-qubit feature map: L2-normalize each four-feature vector (leaving the zero vector unchanged), apply RY(pi*x0) on wire 0, RY(pi*x1) on wire 1, CNOT 0->1, RY(pi*x2) on wire 0, and RY(pi*x3) on wire 1. Define kernel_value as |<psi(x1)|psi(x2)>|**2 and kernel_matrix by pairwise evaluation. Train full-batch kernel logistic regression and predict class 1 when sigmoid(K @ alpha) >= 0.5. iris_2class_subset returns a seed-deterministic balanced, separable dataset with shape (20, 4) and 20 binary labels. run_pipeline builds the 20x20 training kernel, trains the classifier, and returns {'accuracy': a float, 'n': 20}.
+
+Required public API (signatures and docstrings only):
+Module contract:
+Quantum kernel for binary Iris classification.
+
+A 2-qubit quantum kernel computed via the inner product of angle-encoded
+feature states. The kernel matrix is fed to a simple logistic regression
+to classify the Iris setosa vs. versicolor subset (the linearly separable
+two-class slice), demonstrating the quantum-kernel training loop without
+requiring a trainable variational ansatz.
+
+def angle_encode(x: np.ndarray, wires) -> None
+    """Angle-encode a 4-feature vector into 2 qubits (2 features per qubit)."""
+def kernel_circuit() -> qml.QNode
+def kernel_value(x1, x2) -> float
+    """Kernel = |<psi(x1)|psi(x2)>|^2 = probability of measuring |00>."""
+def kernel_matrix(X1: np.ndarray, X2: np.ndarray) -> np.ndarray
+def sigmoid(z: np.ndarray) -> np.ndarray
+def train_kernel_logreg(K: np.ndarray, y: np.ndarray, lr: float=0.1, epochs: int=200, seed: int=0) -> np.ndarray
+    """Train a kernel logistic regression with gradient descent.
+
+K: (n, n) kernel matrix. y: (n,) {0,1}. Returns alpha (n,).
+Prediction: sigmoid(K @ alpha)."""
+def predict(K: np.ndarray, alpha: np.ndarray) -> np.ndarray
+def iris_2class_subset(seed: int=0) -> tuple[np.ndarray, np.ndarray]
+    """Return a small synthetic 2-class 4-feature dataset that mimics the
+Iris setosa/versicolor split. Synthetic so the test does not need
+scikit-learn's data loader."""
+def run_pipeline() -> dict
+
+Implement the requested file. Hidden tests will verify behavior.
+Return only the complete Python source, without markdown fences or explanation.
+
+Write a Python file that passes the supplied tests.
+Return only the candidate file contents.

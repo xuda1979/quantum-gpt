@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0801",
+  "name": "Quantum computing task: Implement imaginary-time evolution classically (via scip",
+  "task_prompt": "Quantum computing task: Implement imaginary-time evolution classically (via scipy expm of -tau*H) to find the ground state of the 4-qubit transverse Ising model (J=1.02, h=0.76), and verify by overlapping the result with a Qiskit-exact eigenvector. Return the entire program in one piece, ready to run without any modification."
+}

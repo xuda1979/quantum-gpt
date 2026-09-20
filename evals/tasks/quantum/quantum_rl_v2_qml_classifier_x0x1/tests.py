@@ -28,13 +28,13 @@ def run_tests(candidate_path: str) -> dict:
         if len(test_x) != len(test_y) or len(test_x) < 4:
             failures.append(f"test_size={len(test_x)}, expected >= 4")
         wrong = 0
-        for x, y in zip(np.asarray(train_x), np.asarray(train_y), strict=False):
+        for x, y in zip(np.asarray(train_x), np.asarray(train_y)):
             if float(x[0]) * float(x[1]) > 0:
                 if float(y) != 1.0:
                     wrong += 1
             elif float(y) != 0.0:
                 wrong += 1
-        for x, y in zip(np.asarray(test_x), np.asarray(test_y), strict=False):
+        for x, y in zip(np.asarray(test_x), np.asarray(test_y)):
             if float(x[0]) * float(x[1]) > 0:
                 if float(y) != 1.0:
                     wrong += 1

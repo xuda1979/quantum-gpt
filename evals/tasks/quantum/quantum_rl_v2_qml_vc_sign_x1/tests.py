@@ -19,7 +19,7 @@ def run_tests(candidate_path: str) -> dict:
         if X.shape != (12, 2) or y.shape != (12,):
             failures.append(f"data_shape={X.shape}, labels={y.shape}, expected (12,2)/(12,)")
         expected_y = [0, 0, 1, 1, 0, 1, 0, 1, 0, 0, 1, 1]
-        wrong = int(sum(1 for a, b in zip(y.tolist(), expected_y, strict=False) if a != b))
+        wrong = int(sum(1 for a, b in zip(y.tolist(), expected_y) if a != b))
         if wrong != 0:
             failures.append(f"label_rule_mismatch={wrong}, expected 0 (x1>0)")
         Xt, yt, Xe, ye = module.train_test_split()

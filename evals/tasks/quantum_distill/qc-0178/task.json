@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0178",
+  "name": "Solve this quantum programming problem. Implement 8 steps of a discrete-time qua",
+  "task_prompt": "Solve this quantum programming problem. Implement 8 steps of a discrete-time quantum walk on a cycle of 0 nodes in Qiskit (position register + coin qubit, increment/decrement circuits), and print the final position distribution showing ballistic spread. Your answer must be the complete working code only, runnable from top to bottom."
+}

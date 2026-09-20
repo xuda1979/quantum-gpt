@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3_sampling",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0292",
+  "name": "You are given the following quantum programming task. Write a complete Simon's-a",
+  "task_prompt": "You are given the following quantum programming task. Write a complete Simon's-algorithm program in Qiskit (oracle with period '0010' plus classical GF(2) post-processing). The code must be a complete standalone script that can be executed directly and produces output."
+}

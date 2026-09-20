@@ -1,0 +1,20 @@
+Write a complete, runnable Python program using numpy and qiskit that:
+1. Implements Quantum Signal Processing (QSP) for the function f(x) = x^2
+   on the interval x in [-1, 1]. Use the signal operator
+     W(x) = [[x, i*sqrt(1-x^2)], [i*sqrt(1-x^2), -x]]
+   which can be realized by R_y(2*arcsin(x)) * Z.
+2. Use a precomputed sequence of 6 phase angles
+   phi = [0.5, -0.3, 0.8, -0.6, 0.2, -0.1]
+   (in radians) and build the QSP sequence:
+     Q(x) = e^{i*phi_0*Z} W(x) e^{i*phi_1*Z} W(x) ... e^{i*phi_5*Z}
+3. Compute Q(x) at x = 0.7. Read out the (0,0) entry of Q(x) and compare
+   it to f(x) = x^2 = 0.49.
+4. Compute the QSP unitary at x = 0.7 as a 2x2 matrix and report its
+   trace, determinant, and the absolute value of the (0,0) entry.
+5. In `def main()`, prints exactly these lines (values rounded to 4 decimals):
+     Target f(0.7) = 0.4900
+     QSP (0,0) real = <value>
+     QSP (0,0) imag = <value>
+     Trace = <value>
+     Determinant = <value>
+Call main() under `if __name__ == "__main__":`.

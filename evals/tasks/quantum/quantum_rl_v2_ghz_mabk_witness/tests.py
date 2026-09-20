@@ -62,7 +62,7 @@ def run_tests(candidate_path: str) -> dict:
         else:
             expected = [1.0, -1.0, -1.0, -1.0]
             names = ["XXX", "XYY", "YXY", "YYX"]
-            for name, got, exp in zip(names, corr, expected, strict=False):
+            for name, got, exp in zip(names, corr, expected):
                 if abs(got - exp) > 1e-9:
                     failures.append(f"{name.lower()}_correlator={got:.9f}, expected {exp:.1f}")
 

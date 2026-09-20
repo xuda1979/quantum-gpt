@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0024",
+  "name": "You are given the following quantum programming task. Write a runnable Qiskit De",
+  "task_prompt": "You are given the following quantum programming task. Write a runnable Qiskit Deutsch-Jozsa program with a balanced oracle (x_1 (the bit x[1])) on 2 qubits. The code must be a complete standalone script that can be executed directly and produces output."
+}

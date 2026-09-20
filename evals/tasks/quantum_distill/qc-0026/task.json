@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0026",
+  "name": "Here is a quantum coding exercise. Implement a quantum kernel in PennyLane: use ",
+  "task_prompt": "Here is a quantum coding exercise. Implement a quantum kernel in PennyLane: use angle embedding on 4 qubits, compute the kernel matrix K(x1,x2)=|<phi(x1)|phi(x2)>|^2 for 4 random 2D points via the adjoint trick, and verify K is symmetric with unit diagonal. The code must be a complete standalone script that can be executed directly and produces output."
+}

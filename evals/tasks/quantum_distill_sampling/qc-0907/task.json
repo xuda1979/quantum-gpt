@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3_sampling",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0907",
+  "name": "Create and measure an 4-qubit GHZ state in Qiskit. Print the counts. Provide a c",
+  "task_prompt": "Create and measure an 4-qubit GHZ state in Qiskit. Print the counts. Provide a complete, self-contained program that runs as-is and prints its results."
+}

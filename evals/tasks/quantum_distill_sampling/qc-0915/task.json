@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3_sampling",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0915",
+  "name": "Solve this quantum programming problem. Implement the SWAP test in Qiskit to est",
+  "task_prompt": "Solve this quantum programming problem. Implement the SWAP test in Qiskit to estimate |<psi|phi>|^2 between RY(0.372)|0> and RY(0.708)|0>. Compare the estimate from 16384 shots with the analytic overlap cos^2((0.372-0.708)/2). Return the entire program in one piece, ready to run without any modification."
+}

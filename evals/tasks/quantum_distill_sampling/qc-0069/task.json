@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3_sampling",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0069",
+  "name": "Write a qulacs program that builds an 5-qubit GHZ state, computes <Z...Z> with a",
+  "task_prompt": "Write a qulacs program that builds an 5-qubit GHZ state, computes <Z...Z> with an Observable, and samples 2000 measurement outcomes. Your answer must be the complete working code only, runnable from top to bottom."
+}

@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0130",
+  "name": "Implement a function `simulate_clifford_circuit(num_qubits, circuit)` using the ",
+  "task_prompt": "Implement a function `simulate_clifford_circuit(num_qubits, circuit)` using the binary tableau stabilizer formalism exactly as described in the documentation. The tableau should have 2*num_qubits rows and 2*num_qubits + 1 columns. Each row corresponds to a destabilizer (first num_qubits rows) or a stabilizer (last num_qubits rows). The initial state should be the zero state (|0⟩^⊗n): for each stabilizer row i (0-indexed row num_qubits + i), set x bits to all 0, z bits to the unit vector with 1 at position i, and sign bit to 0. For each destabilizer row i (row i), set x bits to all 0, z bits to 0, and sign bit to 0 except for row i which should have x bit = 1 at position i? Wait: The standard initial tableau for |0…0⟩: destabilizers: X_i (x=1 at i, z=0), stabilizers: Z_i (x=0, z=1 at i). Actually from Aaronson-Gottesman: For |0⟩⊗n, stabilizers: Z_i, destabilizers: X_i. So row i (destabilizer): x=1 at i, z=0 elsewhere, sign=0. Row i+n (stabilizer): x=0, z=1 at i, sign=0. Use that initialization.\n\nThe function should iterate over the circuit, applying the appropriate update rules for H, S, CNOT as given in the RAG excerpt. Each rule must compute the sign update using the original bit values **before** modifying x and z. The function returns the final tableau (list of lists of ints).\n\nAdditionally, write a simple test that creates a 2-qubit circuit to prepare the Bell state (|00⟩+|11⟩)/√2: start with |00⟩, apply H on qubit 0, then CNOT with control 0 and target 1. After simulation, manually check that the stabilizer rows of the resulting tableau correspond to the generators of the Bell state (e.g., X⊗X and Z⊗Z). Print the tableau and verify that the sign bits are 0."
+}

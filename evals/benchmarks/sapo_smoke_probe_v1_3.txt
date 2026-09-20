@@ -1,0 +1,5 @@
+# SAPO promotion-leg smoke probe: 3 representative holdout tasks
+# (string logic + cirq + qiskit). Order stable. 2026-08-27 audit T2.
+quantum_gate_alias_normalization
+quantum_cirq_qaoa_line
+quantum_qiskit_qft_entangled

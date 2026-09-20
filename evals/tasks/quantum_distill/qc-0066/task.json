@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0066",
+  "name": "You are given the following quantum programming task. Write a full QPE program i",
+  "task_prompt": "You are given the following quantum programming task. Write a full QPE program in Qiskit (4 ancilla qubits, target unitary P(2*pi*0.3125)) including the inverse QFT, and report the most likely phase estimate. Return the entire program in one piece, ready to run without any modification."
+}

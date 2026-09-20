@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0581",
+  "name": "Quantum computing task: Solve a 0/1 knapsack (values [3, 12, 2, 9, 6], weights [",
+  "task_prompt": "Quantum computing task: Solve a 0/1 knapsack (values [3, 12, 2, 9, 6], weights [3, 3, 1, 2, 1], capacity 10) by building a penalized QUBO in dimod (slack-variable encoding for the capacity constraint) and sampling with SimulatedAnnealingSampler. Compare to brute force. Provide a complete, self-contained program that runs as-is and prints its results."
+}

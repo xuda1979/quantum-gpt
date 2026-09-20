@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0793",
+  "name": "Implement the 3-qubit bit-flip syndrome decoder and a Pauli router as described ",
+  "task_prompt": "Implement the 3-qubit bit-flip syndrome decoder and a Pauli router as described in the documentation. Write two functions: (1) decode_syndrome(s1, s2) returning the qubit index to correct (0,1,2) or None; (2) pauli_router(m1, m2) returning the Pauli string ('I','X','Z','Y') according to the canonical mapping. Then write a function apply_correction(state, m1, m2) that applies the Pauli operation to the first qubit of a 2-qubit state (represented as a 4-element numpy array) in the 'ZX' convention (apply X then Z for Y). Provide a test that verifies the mapping for all (m1,m2) combinations."
+}

@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3_sampling",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0068",
+  "name": "Solve this quantum programming problem. Implement canonical quantum amplitude es",
+  "task_prompt": "Solve this quantum programming problem. Implement canonical quantum amplitude estimation in Qiskit with 5 evaluation qubits: the state preparation A = RY(0.589049) encodes amplitude sin^2(0.589049/2), build the Grover operator Q manually, run QPE, and compare the estimate with the true amplitude. The code must be a complete standalone script that can be executed directly and produces output."
+}

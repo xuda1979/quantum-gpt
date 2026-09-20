@@ -1,0 +1,26 @@
+Write a complete, runnable Python program using numpy and qiskit that:
+1. Encodes a logical |0> state into the 5-qubit [[5,1,3]] perfect code.
+   Use the standard encoding circuit:
+   - Start with |00000>
+   - Apply H to qubits 1, 2, 3, 4
+   - Apply CX(1,0), CX(2,0), CX(3,0), CX(4,0)
+   - Apply CZ(1,0), CZ(2,1), CZ(3,2), CZ(4,3), CZ(0,4)
+   - Apply CZ(2,0), CZ(3,1), CZ(4,2), CZ(0,3), CZ(1,4)
+   - Apply CZ(3,0), CZ(4,1), CZ(0,2), CZ(1,3), CZ(2,4)
+   - Apply CZ(4,0), CZ(0,1), CZ(1,2), CZ(2,3), CZ(3,4)
+   Use qubit 0 as the first physical qubit (qiskit index 0).
+2. Verifies the encoded state is a +1 eigenstate of all 4 stabilizer
+   generators of the 5-qubit code:
+     g1 = X Z Z X I
+     g2 = I X Z Z X
+     g3 = X I X Z Z
+     g4 = Z X I X Z
+3. In `def main()`, prints exactly these lines:
+     Encoded statevector norm = 1.0000
+     g1 eigenvalue = +1
+     g2 eigenvalue = +1
+     g3 eigenvalue = +1
+     g4 eigenvalue = +1
+   Use qiskit.quantum_info.Statevector and the .expectation_value method
+   on SparsePauliOp for each stabilizer.
+Call main() under `if __name__ == "__main__":`.

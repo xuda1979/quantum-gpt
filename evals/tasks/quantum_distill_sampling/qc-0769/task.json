@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3_sampling",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0769",
+  "name": "Here is a quantum coding exercise. Create and measure an 7-qubit GHZ state in Qi",
+  "task_prompt": "Here is a quantum coding exercise. Create and measure an 7-qubit GHZ state in Qiskit. Print the counts. Return the entire program in one piece, ready to run without any modification."
+}

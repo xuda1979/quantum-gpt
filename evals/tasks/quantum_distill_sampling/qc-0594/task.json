@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3_sampling",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0594",
+  "name": "Quantum computing task: Generate a rotated surface code memory experiment in Sti",
+  "task_prompt": "Quantum computing task: Generate a rotated surface code memory experiment in Stim (distance 3, 5 rounds, noise 0.01), decode with PyMatching, and compare logical error rates for distances 3 and 5 to show error suppression. Provide a complete, self-contained program that runs as-is and prints its results."
+}

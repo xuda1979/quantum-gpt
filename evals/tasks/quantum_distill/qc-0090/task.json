@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0090",
+  "name": "Using the RAG excerpt from `backends — ProjectQ 0.8.1.dev19 documentation`, impl",
+  "task_prompt": "Using the RAG excerpt from `backends — ProjectQ 0.8.1.dev19 documentation`, implement a Qiskit function that translates a Qiskit quantum circuit into the equivalent ProjectQ circuit structure (a list of `Command` objects). The function should accept a `QuantumCircuit` object from Qiskit, iterate over its instructions (including gates, measurements, and resets), and produce a list of strings that match the format produced by ProjectQ's `CircuitDrawer` or `CommandPrinter` backend. For each instruction, you must properly map Qiskit gate names to ProjectQ gate names (support at least `x`, `y`, `z`, `h`, `cx`, `swap`, `rx`, `rz`, `measure`, and `barrier`). Include a lightweight unit test that verifies the translation of a small circuit (two Hadamard gates followed by a CNOT and a measurement) and checks the output string against expected ProjectQ-style command strings. Output the final code as a single Python script that can be run with 'python3' and does not require external dependencies beyond `qiskit` and `projectq` installed."
+}

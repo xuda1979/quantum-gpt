@@ -1,0 +1,30 @@
+Write a complete, runnable Python program using numpy and qiskit that:
+1. Constructs the logical |0>_L of the Steane [[7,1,3]] code as the uniform
+   superposition over all 16 codewords of the [7,4,3] Hamming code. The
+   generator matrix is:
+   G = [[1,0,0,0,1,1,0],
+        [0,1,0,0,1,0,1],
+        [0,0,1,0,0,1,1],
+        [0,0,0,1,1,1,1]]
+   |0>_L = (1/sqrt(16)) * sum_{m in {0,1}^4} |m*G mod 2>.
+   |1>_L = X^{⊗7} |0>_L (apply X to all 7 qubits of |0>_L).
+2. Initializes a 7-qubit Statevector to |1>_L.
+3. Applies an X error to qubit 0.
+4. Computes the 3 Z-stabilizer expectation values of the Steane code:
+   - g1 = Z0Z1Z2Z3
+   - g2 = Z0Z1Z4Z5
+   - g3 = Z0Z2Z4Z6
+   using qiskit.quantum_info.SparsePauliOp. Each expectation value should be
+   ±1; a -1 means that stabilizer detected the error.
+5. The 3-bit Z-syndrome (s1, s2, s3) is the column of the parity-check matrix
+   H = [[1,0,1,0,1,0,1], [0,1,1,0,0,1,1], [0,0,0,1,1,1,1]] corresponding to
+   the error qubit. Decode the syndrome to identify which qubit was flipped.
+6. In `def main()`, prints exactly:
+     Steane [[7,1,3]] code
+     Logical state = |1>_L
+     Error = X on qubit 0
+     Z-stabilizer syndrome = (1, 0, 1)
+     Decoded error qubit = 0
+     Correct: True
+   (The syndrome and decoded qubit must match X on qubit 0.)
+Call main() under `if __name__ == "__main__":`.

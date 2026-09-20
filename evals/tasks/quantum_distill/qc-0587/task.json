@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0587",
+  "name": "You are given the following quantum programming task. Write a Qiskit program tha",
+  "task_prompt": "You are given the following quantum programming task. Write a Qiskit program that computes the entanglement entropy between the two qubits of the state CX(0,1)·(RY(1.879)⊗I)|00>, and compares it with the analytic value. Write the full runnable code (all imports included); executing it should print the results."
+}

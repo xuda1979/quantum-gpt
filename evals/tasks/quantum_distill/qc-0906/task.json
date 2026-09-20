@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0906",
+  "name": "Seed sample_id 74 attempt_index 85 seed_cycle 0 diversity_signature 01a417f8c720",
+  "task_prompt": "Seed sample_id 74 attempt_index 85 seed_cycle 0 diversity_signature 01a417f8c720: build a hard materials simulation workflow using VQE for a protein-side-chain packing toy model, constrained by shot-noise robustness, using MindSpore Quantum style interfaces with a CPU-only simulator fallback and a clear NPU boundary."
+}

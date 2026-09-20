@@ -84,7 +84,7 @@ def main():
     assert circuit.num_measurements == 0, "circuit must have no measurements"
     generators = stabilizer_generators()
     expected = ["XZ__", "ZXZ_", "_ZXZ", "__ZX"]
-    for g, want in zip(generators, expected, strict=False):
+    for g, want in zip(generators, expected):
         assert str(g) == "+" + want, f"generator {g} != +{want}"
     assert generator_invariants() == 4, "not every generator is invariant"
     assert combined_tableau_is_identity(), "combined tableau not identity"

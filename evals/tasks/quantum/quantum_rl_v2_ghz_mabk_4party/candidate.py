@@ -58,7 +58,7 @@ def mabk_correlators():
 
 def mabk_value():
     """M4 = 1/2 * (XXXX - YYYY + XXYY + XYYX + XYXY + YXXY + YXYX + YYXX)."""
-    evs = dict(zip(mabk_sign_convention(), mabk_correlators(), strict=False))
+    evs = dict(zip(mabk_sign_convention(), mabk_correlators()))
     total = 0.0
     for label, sign in mabk_sign_convention().items():
         total += sign * evs[label]
@@ -90,7 +90,7 @@ def mabk_violation():
 
 def main():
     evs = mabk_correlators()
-    for label, v in zip(mabk_sign_convention(), evs, strict=False):
+    for label, v in zip(mabk_sign_convention(), evs):
         print(label, v)
     m = mabk_value()
     print("M4 =", m, " violation =", mabk_violation())

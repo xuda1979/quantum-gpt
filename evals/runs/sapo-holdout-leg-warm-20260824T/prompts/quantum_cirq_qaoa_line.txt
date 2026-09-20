@@ -1,0 +1,26 @@
+Task ID: quantum_cirq_qaoa_line
+Write a Python file that satisfies the public task contract; hidden tests will verify it.
+Return only the candidate file contents.
+
+Task: Cirq QAOA on a 4-node line graph MaxCut
+Domain: quantum
+Category: algorithm_implementation
+Output file: candidate.py
+
+Required public API (signatures and docstrings only):
+Module contract:
+QAOA p=1 for the MaxCut of a 4-node line graph using Cirq.
+
+Line graph edges: (0,1), (1,2), (2,3). Optimal cut value is 3 (alternating
+bit assignment 0101 / 1010).
+
+def maxcut_line_edges() -> list[tuple[int, int]]
+def qaoa_line_circuit(gamma: float, beta: float) -> cirq.Circuit
+    """Build the p=1 QAOA circuit for the 4-node line MaxCut."""
+def measure_bitstrings(gamma: float, beta: float, repetitions: int=1000, seed: int=0) -> dict
+    """Sample bitstrings from the QAOA circuit and return a histogram."""
+def maxcut_value(bitstring: str, edges: list[tuple[int, int]]) -> int
+def best_maxcut_value(edges: list[tuple[int, int]], n: int) -> int
+
+Implement the requested file. Hidden tests will verify behavior.
+Return only the complete Python source, without markdown fences or explanation.

@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0715",
+  "name": "Quantum computing task: Build the graph state for the graph [(0, 4), (0, 5), (1,",
+  "task_prompt": "Quantum computing task: Build the graph state for the graph [(0, 4), (0, 5), (1, 2), (1, 4), (1, 5), (2, 5), (3, 5)] in Qiskit (H on all, CZ per edge) and verify every stabilizer K_v = X_v prod_{u in N(v)} Z_u has expectation +1 using StatevectorEstimator. Provide a complete, self-contained program that runs as-is and prints its results."
+}

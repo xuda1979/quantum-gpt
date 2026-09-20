@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3_sampling",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0524",
+  "name": "Quantum computing task: Implement the 3-qubit bit-flip code in Qiskit with dynam",
+  "task_prompt": "Quantum computing task: Implement the 3-qubit bit-flip code in Qiskit with dynamic circuits: encode RY(2.018)|0>, apply an X error on qubit 2, extract the syndrome with two ancillas, correct with if_test, and verify the decoded statistics over 4096 shots. Provide a complete, self-contained program that runs as-is and prints its results."
+}

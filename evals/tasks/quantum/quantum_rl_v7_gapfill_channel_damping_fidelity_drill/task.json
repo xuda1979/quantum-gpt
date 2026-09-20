@@ -1,0 +1,9 @@
+{
+  "id": "quantum_rl_v7_gapfill_channel_damping_fidelity_drill",
+  "name": "Depolarizing + amplitude-damping + channel fidelity drill (verbatim holdout grader)",
+  "domain": "quantum",
+  "category": "algorithm_implementation",
+  "task_prompt": "Respond with a single runnable Python file using only the Python standard library (math suffices; no numpy needed). Define every required function with the EXACT names locked by the grader's _REQUIRED_FUNCTIONS = ('depolarizing_channel', 'amplitude_damping_channel', 'channel_fidelity'); a missing or misnamed entry point fails immediately, before any numerical check. Enforced contracts (2x2 density matrices as nested row lists; every comparison uses tolerance 1e-6): depolarizing_channel(rho, p) returns (1-p) rho + p I/2 -- the grader checks p=0 returns the input unchanged, p=1 returns I/2, p=0.5 maps |0><0| to [[0.75, 0.0], [0.0, 0.25]] and |+><+| to [[0.5, 0.25], [0.25, 0.5]], and the output trace stays 1.0 at p=0.3. (The grader comment mentions the Pauli form (p/3)*(X rho X + Y rho Y + Z rho Z), but the ENFORCED expectations are exactly (1-p) rho + p I/2 -- implement the enforced form.) amplitude_damping_channel(rho, gamma) applies the Kraus pair K0 = [[1, 0], [0, sqrt(1-gamma)]] and K1 = [[0, sqrt(gamma)], [0, 0]] as rho_out = K0 rho K0^T + K1 rho K1^T (entries are real, so transpose is the adjoint); the grader checks gamma=0 returns the input, gamma=1 maps |1><1| to |0><0|, and gamma=0.5 maps |1><1| to [[0.5, 0.0], [0.0, 0.5]]. channel_fidelity(rho, sigma) must satisfy F(rho, rho) = 1.0, F(|0><0|, |1><1|) = 0.0, and F(|0><0|, I/2) = 0.5; for 2x2 states use F = Tr(rho sigma) + 2 sqrt(det(rho) det(sigma)). Include assert-based self-tests that fail loudly, print nothing on success, and use no randomness or remote services.",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

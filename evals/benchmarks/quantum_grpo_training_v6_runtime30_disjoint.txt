@@ -1,0 +1,47 @@
+# SAPO runtime-compatible: targeted tasks plus verified questions_and_code rows.
+# source=data/generated/quantum_dedup_1k_glm52_soft_distill_v3_verified_nologit_v3/questions_and_code.jsonl sha256=aac1bad21dc9f8dc2784176d04e477642fedebc00826207753aaef706e4cf365
+# task_contract_sha256=9b4514deeac13217df49ebed1a4b2b8ff92470314ff983d0e60bf2fdeb7528bb
+# targeted=10 deterministic=0 semantic=30
+# required_import_roots=cirq,networkx,numpy
+# reference_execution_verified=true runs=3
+# Reference code remains hidden; every qc task has an executable semantic harness.
+quantum_bitstring_maxcut_landscape
+quantum_circuit_depth_optimization
+quantum_circuit_phase_repair
+quantum_error_detection_bit_flip
+quantum_gate_alias_casefold_barrier
+quantum_measurement_bug_repair
+quantum_phase_measurement_register
+quantum_stabilizer_tableau_update_repair
+quantum_superdense_pauli_router
+quantum_teleportation_corrections
+qc-0293
+qc-0530
+qc-0656
+qc-0639
+qc-0070
+qc-0785
+qc-0898
+qc-0481
+qc-0316
+qc-0089
+qc-0368
+qc-0835
+qc-0022
+qc-0448
+qc-0795
+qc-0027
+qc-0104
+qc-0554
+qc-0421
+qc-0098
+qc-0696
+qc-0065
+qc-0029
+qc-0429
+qc-0719
+qc-0771
+qc-0062
+qc-0009
+qc-0905
+qc-0072

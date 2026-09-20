@@ -1,0 +1,18 @@
+Write a complete, runnable Python program using numpy and qiskit that:
+1. Prepares the 4-qubit state
+   |psi> = (1/sqrt(2)) * (|0000> + |1111>) + (1/sqrt(6)) * (|0011> + |1100>)
+   Verify normalization.
+2. Computes the Schmidt decomposition of |psi> across the bipartition
+   (q0, q1) | (q2, q3). Reshape the 16-element statevector into a 4x4
+   matrix M where row i corresponds to q0q1 and column j to q2q3.
+3. Performs SVD on M to get Schmidt coefficients {s_k}.
+4. Computes the Schmidt rank (number of nonzero coefficients, tolerance 1e-9).
+5. Computes the von Neumann entropy of the reduced density matrix
+   (sum_k s_k^2 log2 s_k^2).
+6. In `def main()`, prints exactly these lines (values rounded to 4 decimals):
+     State norm = 1.0000
+     Schmidt rank = <value>
+     Largest Schmidt coeff = <s_0>
+     Smallest nonzero Schmidt coeff = <last nonzero>
+     Entropy = <value>
+Call main() under `if __name__ == "__main__":`.

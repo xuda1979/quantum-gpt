@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3_sampling",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0218",
+  "name": "You are given the following quantum programming task. Implement Grover search in",
+  "task_prompt": "You are given the following quantum programming task. Implement Grover search in Q# for the 4-qubit marked state |1110>: write the oracle as a phase flip, the diffusion via within/apply, and a Python driver verifying the success rate over 500 shots. Give one complete script that runs end-to-end on its own and prints the outcome."
+}

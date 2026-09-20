@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3_sampling",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0180",
+  "name": "Solve this quantum programming problem. Implement the 3-qubit bit-flip code in Q",
+  "task_prompt": "Solve this quantum programming problem. Implement the 3-qubit bit-flip code in Qiskit with dynamic circuits: encode RY(2.109)|0>, apply an X error on qubit 0, extract the syndrome with two ancillas, correct with if_test, and verify the decoded statistics over 4096 shots. Provide a complete, self-contained program that runs as-is and prints its results."
+}

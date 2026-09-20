@@ -1,0 +1,17 @@
+Write a complete, runnable Python program using numpy, qiskit, and scipy that:
+1. Builds the transverse-field Ising Hamiltonian on 3 qubits:
+   H = -J*(Z0Z1 + Z1Z2) - h*(X0 + X1 + X2) with J=1.0, h=0.5
+   (use qiskit.quantum_info.SparsePauliOp).
+2. Implements a 2-layer Ry-CX ansatz: each layer applies Ry(theta_i) to each
+   qubit (3 parameters per layer) followed by a chain of CX(q, q+1).
+3. Uses scipy.optimize.minimize with method='COBYLA', maxiter=400, tol=1e-6,
+   starting from a small non-zero initial point, to minimize <psi|H|psi>.
+4. Independently computes the exact ground-state energy by diagonalizing the
+   8x8 Hamiltonian matrix built with numpy.kron.
+5. In `def main()`, prints exactly these lines (values rounded to 4 decimals):
+     VQE energy = <value>
+     Exact GS = <value>
+     Abs error = <value>
+     Converged: <True|False>
+   where Converged is True iff the absolute error is below 0.05.
+Call main() under `if __name__ == "__main__":`.

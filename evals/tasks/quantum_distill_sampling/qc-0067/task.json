@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3_sampling",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0067",
+  "name": "Here is a quantum coding exercise. Write a Q# operation that prepares an 6-qubit",
+  "task_prompt": "Here is a quantum coding exercise. Write a Q# operation that prepares an 6-qubit GHZ state using ApplyToEach and returns the measurement results as an array, with a Python driver printing the distribution over 1000 shots. Give one complete script that runs end-to-end on its own and prints the outcome."
+}

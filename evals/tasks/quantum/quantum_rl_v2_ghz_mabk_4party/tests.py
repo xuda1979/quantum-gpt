@@ -78,7 +78,7 @@ def run_tests(candidate_path: str) -> dict:
                 if isinstance(module.mabk_sign_convention(), dict)
                 else []
             )
-            for label, v in zip(labels, corr, strict=False):
+            for label, v in zip(labels, corr):
                 expected = 1.0 if label in ("XXXX", "YYYY") else -1.0
                 if abs(v - expected) > 1e-9:
                     failures.append(f"{label.lower()}_correlator={v:.9f}, expected {expected:.1f}")

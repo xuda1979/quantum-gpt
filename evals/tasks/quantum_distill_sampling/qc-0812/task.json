@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3_sampling",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0812",
+  "name": "Here is a quantum coding exercise. Use Stim's TableauSimulator to verify GHZ sta",
+  "task_prompt": "Here is a quantum coding exercise. Use Stim's TableauSimulator to verify GHZ stabilizer measurement statistics: prepare 7-qubit GHZ, measure the stabilizer X⊗...⊗X via an ancilla (Hadamard test pattern), and confirm it is deterministic +1 while individual Z measurements are random. Write the full runnable code (all imports included); executing it should print the results."
+}

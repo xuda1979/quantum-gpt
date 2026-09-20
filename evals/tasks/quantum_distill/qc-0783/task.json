@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0783",
+  "name": "Here is a quantum coding exercise. Simulate time evolution of the 3-site Heisenb",
+  "task_prompt": "Here is a quantum coding exercise. Simulate time evolution of the 3-site Heisenberg XXZ chain (Jx=Jy=1, Jz=0.85, open boundary) for time t=1.62 in Qiskit using first-order Trotterization with 60 steps. Start from the Neel state and compare <Z_0>(t) against exact evolution with scipy.linalg.expm. The code must be a complete standalone script that can be executed directly and produces output."
+}

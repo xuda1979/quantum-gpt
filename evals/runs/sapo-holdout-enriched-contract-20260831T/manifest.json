@@ -1,7 +1,7 @@
 {
   "prompt_version": "v2",
   "prompt_style": "direct",
-  "created_at_utc": "2026-09-20T21:21:10.580782+00:00",
+  "created_at_utc": "2026-09-20T21:25:04.528269+00:00",
   "system_prompt": "You are solving a single evaluation task. Produce only the full contents of the requested Python candidate file. Do not add markdown fences, explanations, or surrounding commentary unless the task explicitly asks for it.",
   "notes": "enriched holdout scorers (numeric failure details) \u2014 QA regen 2026-08-31",
   "tasks": [

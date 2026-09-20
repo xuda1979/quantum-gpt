@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0556",
+  "name": "Quantum computing task: Build an Ising chain of 10 spins with couplings J=0.64 (",
+  "task_prompt": "Quantum computing task: Build an Ising chain of 10 spins with couplings J=0.64 (ferromagnetic, h=0 except h_0=-0.57) in dimod, sample with SimulatedAnnealingSampler, and verify the ground state is fully aligned against the field on spin 0. Write the full runnable code (all imports included); executing it should print the results."
+}

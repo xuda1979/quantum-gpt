@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3_sampling",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0637",
+  "name": "Here is a quantum coding exercise. Write a complete Qiskit program that prepares",
+  "task_prompt": "Here is a quantum coding exercise. Write a complete Qiskit program that prepares a 5-qubit GHZ state and prints the measurement counts from 1000 shots. Provide a complete, self-contained program that runs as-is and prints its results."
+}

@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3_sampling",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0569",
+  "name": "You are given the following quantum programming task. Implement the quantum orde",
+  "task_prompt": "You are given the following quantum programming task. Implement the quantum order-finding core of Shor's algorithm in Qiskit to factor N=15 with base a=2: build controlled modular multiplication by permutation gates, run QPE, and extract the period with continued fractions to recover the factors. The code must be a complete standalone script that can be executed directly and produces output."
+}

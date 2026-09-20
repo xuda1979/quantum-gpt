@@ -1,0 +1,17 @@
+Task ID: quantum_gate_alias_normalization
+Task: Gate alias normalization repair
+Domain: quantum
+Category: api_normalization
+Output file: candidate.py
+
+Public task specification:
+Normalize a sequence of quantum gate names while preserving order. Strip surrounding whitespace and match names case-insensitively. Accept h and hadamard as H, x and pauli_x as X, and cx and cnot as CX. Return the canonical uppercase names as a list. Raise ValueError for any unknown gate name; an empty input sequence returns an empty list.
+
+Required public API (signatures and docstrings only):
+def normalize_gate_sequence(gates)
+
+Implement the requested file. Hidden tests will verify behavior.
+Return only the complete Python source, without markdown fences or explanation.
+
+Write a Python file that passes the supplied tests.
+Return only the candidate file contents.

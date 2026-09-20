@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3_sampling",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0470",
+  "name": "Solve this quantum programming problem. Create and measure an 3-qubit GHZ state ",
+  "task_prompt": "Solve this quantum programming problem. Create and measure an 3-qubit GHZ state in Qiskit. Print the counts. Provide a complete, self-contained program that runs as-is and prints its results."
+}

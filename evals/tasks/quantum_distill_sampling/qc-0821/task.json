@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3_sampling",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0821",
+  "name": "Quantum computing task: Implement quantum teleportation in Qiskit with dynamic c",
+  "task_prompt": "Quantum computing task: Implement quantum teleportation in Qiskit with dynamic circuits (if_test). Teleport the state RY(2.689)|0> and verify by measuring the receiver qubit in 2000 shots. The code must be a complete standalone script that can be executed directly and produces output."
+}

@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0126",
+  "name": "You are given the following quantum programming task. Implement VQE from scratch",
+  "task_prompt": "You are given the following quantum programming task. Implement VQE from scratch in Qiskit for the H2 molecular Hamiltonian (Pauli form, 2 qubits), with a hardware-efficient ansatz of depth 1 and a scipy optimizer. Verify against numpy eigenvalues. Return the entire program in one piece, ready to run without any modification."
+}

@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0439",
+  "name": "Here is a quantum coding exercise. Write a complete Simon's-algorithm program in",
+  "task_prompt": "Here is a quantum coding exercise. Write a complete Simon's-algorithm program in Qiskit (oracle with period '01011' plus classical GF(2) post-processing). Write the full runnable code (all imports included); executing it should print the results."
+}

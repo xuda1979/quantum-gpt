@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0046",
+  "name": "You are given the following quantum programming task. Write a Cirq program compu",
+  "task_prompt": "You are given the following quantum programming task. Write a Cirq program computing linear cross-entropy benchmarking (XEB) fidelity of random single-qubit-rotation + CZ circuits on 4 qubits, depth 16, comparing a noiseless sampler against the ideal probabilities (expected XEB ≈ 1). Provide a complete, self-contained program that runs as-is and prints its results."
+}

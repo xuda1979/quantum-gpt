@@ -25,7 +25,7 @@ def run_tests(candidate_path: str) -> dict:
     # Zero iterations returns unchanged
     s = module.uniform_initial_state(8)
     out0 = module.grover_state_after_iterations(s, [0], 0)
-    if not all(math.isclose(a, b, abs_tol=1e-12) for a, b in zip(s, out0, strict=False)):
+    if not all(math.isclose(a, b, abs_tol=1e-12) for a, b in zip(s, out0)):
         failures.append("0 iterations should return unchanged state")
 
     # Norm is preserved

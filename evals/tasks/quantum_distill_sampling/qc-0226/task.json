@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3_sampling",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0226",
+  "name": "You are given the following quantum programming task. Write a qulacs program tha",
+  "task_prompt": "You are given the following quantum programming task. Write a qulacs program that builds an 4-qubit GHZ state, computes <Z...Z> with an Observable, and samples 2000 measurement outcomes. The code must be a complete standalone script that can be executed directly and produces output."
+}

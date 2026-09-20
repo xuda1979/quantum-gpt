@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0160",
+  "name": "Quantum computing task: Implement the Bernstein-Vazirani algorithm in Qiskit to ",
+  "task_prompt": "Quantum computing task: Implement the Bernstein-Vazirani algorithm in Qiskit to recover the hidden string s = '101'. Show that a single oracle query suffices. Return the entire program in one piece, ready to run without any modification."
+}

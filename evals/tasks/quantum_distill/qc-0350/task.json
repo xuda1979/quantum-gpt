@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0350",
+  "name": "Using QuTiP, implement a function that verifies the complete positivity of a qua",
+  "task_prompt": "Using QuTiP, implement a function that verifies the complete positivity of a quantum map given as a Choi matrix. The function should take a `qutip.Qobj` representing the Choi operator and return a boolean indicating whether it is a valid Choi matrix (i.e., Hermitian, trace-preserving, and completely positive). Also write a simple test case: construct the Choi matrix of the identity channel on one qubit and confirm your function returns True."
+}

@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0288",
+  "name": "Using pytket and the pytket-qiskit extension, implement a function `optimise_qis",
+  "task_prompt": "Using pytket and the pytket-qiskit extension, implement a function `optimise_qiskit_circuit(qc: QuantumCircuit) -> QuantumCircuit` that takes a Qiskit `QuantumCircuit`, converts it to a pytket `Circuit`, applies the following optimisation passes in order: `RemoveRedundancies`, `CliffordSimp`, and `SynthesiseTK`, then converts the optimised circuit back to a Qiskit `QuantumCircuit`. Include a lightweight check that the function reduces the gate count for a simple test circuit (e.g., a 3-qubit GHZ state with redundant gates). Provide the full code and a brief rationale."
+}

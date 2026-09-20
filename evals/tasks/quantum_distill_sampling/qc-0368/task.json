@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3_sampling",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0368",
+  "name": "Quantum computing task: Solve MaxCut with QAOA (p=1) in Cirq for the graph [(0, ",
+  "task_prompt": "Quantum computing task: Solve MaxCut with QAOA (p=1) in Cirq for the graph [(0, 3), (1, 3), (2, 3)]: scan a grid of (gamma, beta) values, pick the best, sample the circuit and report the best cut. Your answer must be the complete working code only, runnable from top to bottom."
+}

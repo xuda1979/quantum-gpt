@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0055",
+  "name": "Quantum computing task: Write a Qiskit program that transpiles a 4-qubit random ",
+  "task_prompt": "Quantum computing task: Write a Qiskit program that transpiles a 4-qubit random circuit (depth 8) to the basis gates ['rz','sx','x','cx'] with a line coupling map at optimization levels 0-3, printing depth and CX count for each level. Your answer must be the complete working code only, runnable from top to bottom."
+}

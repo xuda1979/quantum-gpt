@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0266",
+  "name": "Use pytket to build a 6-qubit circuit of 2 layers (H + CX ladder + RZ), then opt",
+  "task_prompt": "Use pytket to build a 6-qubit circuit of 2 layers (H + CX ladder + RZ), then optimize it with FullPeepholeOptimise and rebase to {CX, Rz, H}. Print gate counts before and after. The code must be a complete standalone script that can be executed directly and produces output."
+}

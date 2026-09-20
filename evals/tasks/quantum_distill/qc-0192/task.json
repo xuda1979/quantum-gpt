@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0192",
+  "name": "Using Qiskit (v1.x API), implement a quantum circuit that prepares the Bell stat",
+  "task_prompt": "Using Qiskit (v1.x API), implement a quantum circuit that prepares the Bell state |Φ⁺⟩ = (|00⟩ + |11⟩)/√2. Then, using the Statevector simulator, compute the statevector and verify that the probabilities of measuring |00⟩ and |11⟩ are each 0.5. Additionally, compute the operator matrix of the circuit and confirm that it is unitary (i.e., U†U = I). Provide the complete Python code and the verification steps."
+}

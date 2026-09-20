@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0154",
+  "name": "Solve this quantum programming problem. Implement the Bernstein-Vazirani algorit",
+  "task_prompt": "Solve this quantum programming problem. Implement the Bernstein-Vazirani algorithm in Qiskit to recover the hidden string s = '011'. Show that a single oracle query suffices. Give one complete script that runs end-to-end on its own and prints the outcome."
+}

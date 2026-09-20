@@ -1,0 +1,25 @@
+Task ID: quantum_qaoa_maxcut
+Write a Python file that satisfies the public task contract; hidden tests will verify it.
+Return only the candidate file contents.
+
+Task: QAOA MaxCut cost function and classical simulation
+Domain: quantum
+Category: algorithm_implementation
+Output file: candidate.py
+
+Required public API (signatures and docstrings only):
+def maxcut_cost(bitstring: str, edges: list[tuple[int, int]]) -> int
+    """Compute the MaxCut cost for a given bitstring and edge list.
+
+An edge (u, v) contributes 1 to the cost if bitstring[u] != bitstring[v]."""
+def brute_force_maxcut(n_nodes: int, edges: list[tuple[int, int]]) -> tuple[str, int]
+    """Find the optimal MaxCut by exhaustive search over all 2^n bitstrings.
+
+Returns (best_bitstring, best_cost). Ties broken by lexicographically smallest bitstring."""
+def qaoa_cost_landscape(n_nodes: int, edges: list[tuple[int, int]]) -> list[tuple[str, int]]
+    """Return all bitstrings and their MaxCut costs, sorted descending by cost.
+
+Each entry is (bitstring, cost). Secondary sort: lexicographic ascending on bitstring."""
+
+Implement the requested file. Hidden tests will verify behavior.
+Return only the complete Python source, without markdown fences or explanation.

@@ -71,14 +71,14 @@ def classify(params, x, bias):
 def loss(params, bias, X, y):
     """Mean squared error against signed labels (+1/-1)."""
     total = 0.0
-    for xi, yi in zip(X, y, strict=False):
+    for xi, yi in zip(X, y):
         signed = 2.0 * float(yi) - 1.0
         total += (predict(params, xi, bias) - signed) ** 2
     return total / len(X)
 
 
 def accuracy(params, bias, X, y):
-    correct = sum(1 for xi, yi in zip(X, y, strict=False) if classify(params, xi, bias) == yi)
+    correct = sum(1 for xi, yi in zip(X, y) if classify(params, xi, bias) == yi)
     return correct / len(y)
 
 

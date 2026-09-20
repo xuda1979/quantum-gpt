@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3_sampling",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0421",
+  "name": "Here is a quantum coding exercise. Using Cirq, build an 3-qubit GHZ state and pr",
+  "task_prompt": "Here is a quantum coding exercise. Using Cirq, build an 3-qubit GHZ state and print its final statevector via simulate(), then sample it 4000 times. Give one complete script that runs end-to-end on its own and prints the outcome."
+}

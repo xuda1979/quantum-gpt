@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3_sampling",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0252",
+  "name": "Quantum computing task: Implement zero-noise extrapolation by hand in Qiskit: es",
+  "task_prompt": "Quantum computing task: Implement zero-noise extrapolation by hand in Qiskit: estimate <ZZ> of a Bell circuit under depolarizing noise (p=0.048 on CX), amplify noise via global unitary folding (factors 1, 3, 5), fit a linear extrapolation to zero noise, and compare with the ideal value 1.0. Write the full runnable code (all imports included); executing it should print the results."
+}

@@ -1,0 +1,23 @@
+Write a complete, runnable Python program using numpy and qiskit that:
+1. Implements the Bernstein-Vazirani oracle for a hidden 6-bit string s =
+   "101101". The oracle on n=6 input qubits plus 1 ancilla computes
+   f(x) = (s . x) mod 2 by applying CX(s_i, ancilla) for each i where s_i = 1.
+2. Builds the full BV circuit:
+   - Initialize the ancilla (qubit n) to |-> = (|0> - |1>)/sqrt(2) via X then H.
+   - Apply H to all n input qubits.
+   - Apply the oracle.
+   - Apply H to all n input qubits again.
+   - Measure all n input qubits.
+3. Simulate with qiskit.quantum_info.Statevector (remove final measurements
+   before evolving). The measurement of the n input qubits is deterministic
+   and equals the hidden string s (in qiskit's little-endian bit ordering).
+4. In `def main()`, prints exactly:
+     n = 6
+     Hidden string s = 101101
+     Top bitstring = <value>
+     Recovered s = <value>
+     Probability = <value rounded to 4 decimals>
+     Correct: <True|False>
+   where Correct is True iff the recovered string equals "101101" (after
+   accounting for qiskit's little-endian bit ordering).
+Call main() under `if __name__ == "__main__":`.

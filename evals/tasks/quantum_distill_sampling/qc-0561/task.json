@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3_sampling",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0561",
+  "name": "Solve this quantum programming problem. Write a full Qiskit teleportation progra",
+  "task_prompt": "Solve this quantum programming problem. Write a full Qiskit teleportation program using mid-circuit measurement and classically controlled corrections, teleporting RY(0.371)|0>. Your answer must be the complete working code only, runnable from top to bottom."
+}

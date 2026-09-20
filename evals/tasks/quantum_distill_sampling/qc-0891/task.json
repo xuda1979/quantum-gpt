@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3_sampling",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0891",
+  "name": "Implement the 3-qubit bit-flip code in Qiskit with dynamic circuits: encode RY(1",
+  "task_prompt": "Implement the 3-qubit bit-flip code in Qiskit with dynamic circuits: encode RY(1.545)|0>, apply an X error on qubit 1, extract the syndrome with two ancillas, correct with if_test, and verify the decoded statistics over 4096 shots. Return the entire program in one piece, ready to run without any modification."
+}

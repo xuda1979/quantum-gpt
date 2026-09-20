@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3_sampling",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0240",
+  "name": "Quantum computing task: Implement a Loschmidt echo test in Cirq: evolve 5 qubits",
+  "task_prompt": "Quantum computing task: Implement a Loschmidt echo test in Cirq: evolve 5 qubits with 3 layers of random rotations U, apply U^dagger, and verify the system returns to |0...0> with probability 1; then perturb one angle by 0.37 and report the echo decay. Return the entire program in one piece, ready to run without any modification."
+}

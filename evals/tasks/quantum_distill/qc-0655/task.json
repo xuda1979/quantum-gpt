@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0655",
+  "name": "You are given the following quantum programming task. Implement a data re-upload",
+  "task_prompt": "You are given the following quantum programming task. Implement a data re-uploading classifier in PennyLane (single qubit, 6 layers of RZ(x)RY(w) blocks) to fit the function f(x)=cos(2 x) on [0, 2pi] with mean-squared-error training; report final loss. Your answer must be the complete working code only, runnable from top to bottom."
+}

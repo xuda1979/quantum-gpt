@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0298",
+  "name": "Using only the four functions from the density matrix eval API (density_from_sta",
+  "task_prompt": "Using only the four functions from the density matrix eval API (density_from_state, tensor_product, partial_trace, purity), implement a Python function `product_state_partial_trace_check(state_a, state_b)` that takes two single-qubit state vectors (each as a list of 2 real numbers) and verifies that the partial trace of the composite density matrix over the second qubit yields the density matrix of the first qubit. Return True if they match within 1e-10, else False. Use only plain lists and no external libraries."
+}

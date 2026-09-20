@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0781",
+  "name": "Solve this quantum programming problem. Compare vanilla gradient descent with qu",
+  "task_prompt": "Solve this quantum programming problem. Compare vanilla gradient descent with quantum natural gradient (QNGOptimizer) in PennyLane on a 2-qubit variational energy minimization of H = Z0 + Z1. Print energy trajectories for 50 iterations. Return the entire program in one piece, ready to run without any modification."
+}

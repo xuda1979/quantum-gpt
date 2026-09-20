@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3_sampling",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0714",
+  "name": "Using OpenFermion and Cirq, implement a function that constructs the Fermi-Hubba",
+  "task_prompt": "Using OpenFermion and Cirq, implement a function that constructs the Fermi-Hubbard model Hamiltonian for a 1D chain with 4 sites, periodic boundary conditions, and interaction strength U = 4.0, hopping constant t = 1.0. Then, convert the fermionic Hamiltonian to a qubit Hamiltonian using the Jordan-Wigner transformation, compute its ground state energy via exact diagonalization (using numpy), and output both the qubit Hamiltonian and the ground state energy. Use `from openfermion import fermi_hubbard, get_sparse_operator, get_ground_state`."
+}

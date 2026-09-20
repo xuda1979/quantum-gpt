@@ -1,0 +1,17 @@
+Write a complete, runnable Python program using numpy, qiskit, and scipy that:
+1. Defines a 4-vertex cycle graph with edges (0,1), (1,2), (2,3), (3,0).
+2. Builds a QAOA circuit with p=1:
+   - Initial Hadamards on all 4 qubits.
+   - Cost layer: for each edge (i,j), apply CX(i,j), RZ(2*gamma, j), CX(i,j).
+   - Mixer layer: RX(2*beta, q) on every qubit.
+3. Computes the MaxCut objective from the statevector probabilities: for each
+   basis bitstring, count edges whose endpoints differ, weighted by probability.
+4. Uses scipy.optimize.minimize with method='COBYLA', maxiter=200, starting from
+   gamma=beta=0.5, to maximize the expected cut.
+5. In `def main()`, prints exactly:
+     QAOA max-cut value = <value rounded to 3 decimals>
+     Optimal max-cut = 4
+     Approx ratio = <value rounded to 3 decimals>
+     Converged: <True|False>
+   where Converged is True iff the approximation ratio exceeds 0.75.
+Call main() under `if __name__ == "__main__":`.

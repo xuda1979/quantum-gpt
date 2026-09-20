@@ -50,7 +50,7 @@ def run_tests(candidate_path: str) -> dict:
         if syndrome != "0000":
             failures.append(
                 f"syndrome_of('IIIII') must be '0000'; mismatched_bits="
-                f"{sum(a != b for a, b in zip(syndrome, '0000', strict=False))}, expected 0"
+                f"{sum(a != b for a, b in zip(syndrome, '0000'))}, expected 0"
             )
     except Exception as e:  # noqa: BLE001
         failures.append(f"syndrome_of() raised: {e}")
@@ -62,7 +62,7 @@ def run_tests(candidate_path: str) -> dict:
         if table.get("I") != "0000":
             failures.append(
                 f"single_qubit_error_table()['I'] = {table.get('I')!r}, expected '0000'; "
-                f"mismatched_bits={sum(a != b for a, b in zip(table.get('I'), '0000', strict=False))}, expected 0"
+                f"mismatched_bits={sum(a != b for a, b in zip(table.get('I'), '0000'))}, expected 0"
             )
         errs = {k: v for k, v in table.items() if k != "I"}
         if len(errs) != 15:

@@ -53,7 +53,7 @@ def run_tests(candidate_path: str) -> dict:
     else:
         expected = ["+XZ__", "+ZXZ_", "+_ZXZ", "+__ZX"]
         ok = 0
-        for g, want in zip(generators, expected, strict=False):
+        for g, want in zip(generators, expected):
             if isinstance(g, stim.PauliString) and str(g) == want:
                 ok += 1
         if ok != 4:

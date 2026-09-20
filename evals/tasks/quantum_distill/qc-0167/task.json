@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0167",
+  "name": "Quantum computing task: Using QuTiP, simulate T1 relaxation and T2 dephasing of ",
+  "task_prompt": "Quantum computing task: Using QuTiP, simulate T1 relaxation and T2 dephasing of a qubit (T1=13.5, T2=11.94): evolve |+> under both channels with mesolve and extract effective decay constants by fitting <sigma_x>(t) and excited-state population. Provide a complete, self-contained program that runs as-is and prints its results."
+}

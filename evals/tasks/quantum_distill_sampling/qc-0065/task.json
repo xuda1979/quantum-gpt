@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3_sampling",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0065",
+  "name": "Solve this quantum programming problem. Using Cirq, build an 6-qubit GHZ state a",
+  "task_prompt": "Solve this quantum programming problem. Using Cirq, build an 6-qubit GHZ state and print its final statevector via simulate(), then sample it 4000 times. Return the entire program in one piece, ready to run without any modification."
+}

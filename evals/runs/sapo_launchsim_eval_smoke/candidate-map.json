@@ -1,0 +1,4 @@
+{
+  "quantum_gate_alias_casefold_barrier": "candidates/quantum_gate_alias_casefold_barrier.py",
+  "quantum_error_detection_bit_flip": "candidates/quantum_error_detection_bit_flip.py"
+}

@@ -1,0 +1,28 @@
+Write a complete, runnable Python program using numpy and qiskit that:
+1. Builds the 5-qubit graph state on the path graph P_5 with edges
+   (0,1), (1,2), (2,3), (3,4):
+   - Apply H to all 5 qubits.
+   - Apply CZ to each edge.
+2. Simulate with qiskit.quantum_info.Statevector.
+3. Computes the 5 stabilizers of the graph state. For each vertex i, the
+   stabilizer is K_i = X_i * prod_{j in N(i)} Z_j, where N(i) is the set of
+   neighbours of i in the graph.
+4. Computes the expectation value of each stabilizer (should be +1 for a
+   genuine graph state).
+5. Computes the reduced density matrix of qubit 0 (trace out qubits 1..4) and
+   its purity. For a connected graph state, this should be 0.5 (maximally
+   mixed).
+6. In `def main()`, prints exactly:
+     Graph state: 5 qubits, path graph
+       <XZIII> = +1.0000
+       <ZXZII> = +1.0000
+       <IZXZI> = +1.0000
+       <IIZXZ> = +1.0000
+       <IIIZX> = +1.0000
+     All stabilizers +1: True
+     Single-qubit purity = 0.5000
+     Entangled: True
+     Valid graph state: True
+   (All five stabilizer expectation values must be +1.0000; Valid graph state
+   must be True.)
+Call main() under `if __name__ == "__main__":`.

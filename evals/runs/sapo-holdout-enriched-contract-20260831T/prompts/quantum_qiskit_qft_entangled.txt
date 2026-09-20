@@ -1,0 +1,33 @@
+Task ID: quantum_qiskit_qft_entangled
+Task: Qiskit QFT on a 3-qubit entangled GHZ state
+Domain: quantum
+Category: algorithm_implementation
+Output file: candidate.py
+
+Public task specification:
+Use Qiskit computational-basis statevector indexing. ghz_circuit prepares (|0...0> + |1...1>)/sqrt(2). qft_circuit implements the forward n-qubit QFT without final swaps. ghz_then_qft_circuit composes those circuits and ghz_then_qft_statevector returns its statevector. For n=3, the amplitude at integer basis index k is (1 + exp(2*pi*i*7*k/8))/4. amplitude_histogram uses zero-padded n-bit keys and includes exactly the amplitudes whose absolute value is greater than tol.
+
+Required public API (signatures and docstrings only):
+Module contract:
+QFT applied to a 3-qubit GHZ state.
+
+The QFT of (|000> + |111>)/sqrt(2) produces a known uniform-phase
+distribution; this module constructs the circuit and exposes a statevector
+inspector for testing.
+
+def ghz_circuit(n: int=3) -> QuantumCircuit
+    """Return an n-qubit GHZ state preparation circuit."""
+def qft_circuit(n: int=3) -> QuantumCircuit
+    """Return the n-qubit QFT circuit (without final swaps for in-place order)."""
+def ghz_then_qft_circuit(n: int=3) -> QuantumCircuit
+    """Compose GHZ preparation + QFT."""
+def ghz_then_qft_statevector(n: int=3) -> np.ndarray
+    """Return the final statevector of GHZ followed by QFT."""
+def amplitude_histogram(n: int=3, tol: float=1e-09) -> dict[str, complex]
+    """Return a {bitstring: amplitude} dict, dropping near-zero amplitudes."""
+
+Implement the requested file. Hidden tests will verify behavior.
+Return only the complete Python source, without markdown fences or explanation.
+
+Write a Python file that passes the supplied tests.
+Return only the candidate file contents.

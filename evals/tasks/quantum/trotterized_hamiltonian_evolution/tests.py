@@ -15,7 +15,7 @@ def _close_vec(a, b, tol=1e-6):
         return False
     if len(a) != len(b):
         return False
-    return all(abs(x - y) < tol for x, y in zip(a, b, strict=False))
+    return all(abs(x - y) < tol for x, y in zip(a, b))
 
 
 def _close_mat(a, b, tol=1e-6):
@@ -23,10 +23,10 @@ def _close_mat(a, b, tol=1e-6):
         return False
     if len(a) != len(b):
         return False
-    for ra, rb in zip(a, b, strict=False):
+    for ra, rb in zip(a, b):
         if len(ra) != len(rb):
             return False
-        for x, y in zip(ra, rb, strict=False):
+        for x, y in zip(ra, rb):
             if abs(x - y) > tol:
                 return False
     return True

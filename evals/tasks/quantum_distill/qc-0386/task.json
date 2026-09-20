@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0386",
+  "name": "Construct the W state on 3 qubits in Qiskit deterministically and verify the amp",
+  "task_prompt": "Construct the W state on 3 qubits in Qiskit deterministically and verify the amplitudes from the statevector. The code must be a complete standalone script that can be executed directly and produces output."
+}

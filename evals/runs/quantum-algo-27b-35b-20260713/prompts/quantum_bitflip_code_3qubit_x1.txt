@@ -1,0 +1,22 @@
+Write a complete, runnable Python program using numpy and qiskit that:
+1. Encodes a single-qubit state |psi> = sqrt(0.7)|0> + sqrt(0.3)|1> into the
+   3-qubit bit-flip code: (a|000> + b|111>). Use CX(0,1) and CX(0,2) after
+   initializing qubit 0 to |psi>.
+2. Applies a bit-flip (X) error to qubit 1.
+3. Performs syndrome measurement by introducing 2 ancilla qubits:
+   - ancilla 3 = parity of qubits 0 and 1 (Z0Z1 stabilizer): CX(0,3), CX(1,3)
+   - ancilla 4 = parity of qubits 1 and 2 (Z1Z2 stabilizer): CX(1,4), CX(2,4)
+   Then read the 2-bit syndrome (s0, s1) from the ancilla measurement outcomes.
+4. Decodes the syndrome: (1,0) -> X on qubit 0, (1,1) -> X on qubit 1,
+   (0,1) -> X on qubit 2, (0,0) -> no error.
+5. Applies the correction to a fresh run of (encode -> error -> correct) and
+   computes the fidelity |<encoded_state|final_state>|^2.
+6. In `def main()`, prints exactly:
+     Encoded (a,b) = (0.8367, 0.5477)
+     Error applied: X on qubit 1
+     Syndrome (Z0Z1, Z1Z2) = (1, 1)
+     Corrected qubit = 1
+     Recovery fidelity = 1.000000
+     Correct: True
+   (Values rounded as shown. Correct is True iff fidelity is within 1e-9 of 1.0.)
+Call main() under `if __name__ == "__main__":`.

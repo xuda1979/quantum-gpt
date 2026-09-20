@@ -1,0 +1,26 @@
+Write a complete, runnable Python program using only numpy that:
+1. Builds a 6x6 random unitary U via QR decomposition of a complex Gaussian
+   matrix (use numpy.random.default_rng(seed=42)). Correct the Q matrix by
+   multiplying each column by the phase of the corresponding diagonal entry
+   of R so that the result is a Haar-random unitary.
+2. Implements the matrix permanent via Ryser's algorithm.
+3. Computes the boson-sampling output probabilities for the input
+   configuration (photons in modes 0, 1, 2) and all collision-free
+   3-photon output configurations (there are C(6, 3) = 20 of them).
+   For each output configuration S, the probability is
+   P(S) = |Per(U[input_modes, S])|^2
+   (collision-free, so the denominator is 1).
+4. Sums the probabilities over all collision-free outputs (should be a
+   substantial fraction of 1 for ideal bosons).
+5. Identifies the most-likely output configuration and its probability.
+6. In `def main()`, prints exactly:
+     Boson sampling: 3 photons in 6 modes
+     Input modes = [0, 1, 2]
+     Collision-free outputs = 20
+     Sum of collision-free probs = <value rounded to 4 decimals>
+     Most likely output = <tuple of 3 mode indices>
+     Max prob = <value rounded to 4 decimals>
+     Valid: <True|False>
+   where Valid is True iff the total collision-free probability exceeds 0.5
+   AND the max probability is positive.
+Call main() under `if __name__ == "__main__":`.

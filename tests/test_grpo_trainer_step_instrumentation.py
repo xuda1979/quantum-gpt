@@ -301,7 +301,7 @@ def test_build_rollout_rewards_advantage_terms() -> None:
     expected_other = [(group_total - value) / 3.0 for value in raw]
     assert [float(records[i]["mean_other"]) for i in range(4)] == pytest.approx(expected_other)
     assert [float(records[i]["loo_raw"]) for i in range(4)] == pytest.approx(
-        [value - other for value, other in zip(raw, expected_other, strict=False)]
+        [value - other for value, other in zip(raw, expected_other)]
     )
     # mean_other(0) = (1.2 - 0.4)/3 = 0.2667; loo_raw(0) = 0.4 - 0.2667 = 0.1333;
     # loo_raw/0.31 = 0.43 -> clamped by the trainer to 0.15 in this fixture.

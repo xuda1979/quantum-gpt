@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3_sampling",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0015",
+  "name": "Write an OpenQASM 3 program using mid-circuit measurement and an if statement to",
+  "task_prompt": "Write an OpenQASM 3 program using mid-circuit measurement and an if statement to implement active qubit reset followed by an X gate conditioned on the outcome (quantum coin flip + correction), with Python verification via qiskit and AerSimulator. Provide a complete, self-contained program that runs as-is and prints its results."
+}

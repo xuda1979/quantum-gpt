@@ -1,0 +1,21 @@
+Write a complete, runnable Python program using numpy and qiskit that:
+1. Implements Grover's algorithm on n=6 qubits with M=3 marked items
+   (specifically integers 3, 17, 42).
+2. Builds the phase-flip oracle: for each marked integer m, flip the phase of
+   basis state |m>. Use X gates to convert 0 bits, then a multi-controlled
+   Z (decomposed as H-MCX-H on the last qubit), then undo the X gates.
+3. Builds the standard diffuser: H^n, X^n, multi-controlled Z, X^n, H^n.
+4. Uses the optimal iteration count
+   k = round((pi/4) * sqrt(N/M)) where N = 2^6 and M = 3.
+5. Simulate with qiskit.quantum_info.Statevector (no backend).
+6. Computes the total probability of measuring one of the marked states, and
+   identifies the single most-probable basis state.
+7. In `def main()`, prints exactly:
+     N = 64
+     M = 3 (marked: [3, 17, 42])
+     Iterations = <value>
+     Success prob = <value rounded to 4 decimals>
+     Top state = <value>
+     In marked set: <True|False>
+   where In marked set is True iff the most-probable state is one of 3, 17, 42.
+Call main() under `if __name__ == "__main__":`.

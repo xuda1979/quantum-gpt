@@ -1,0 +1,39 @@
+{
+  "prompt_version": "v2",
+  "prompt_style": "direct",
+  "created_at_utc": "2026-08-26T02:13:17.408865+00:00",
+  "system_prompt": "You are solving a single evaluation task. Produce only the full contents of the requested Python candidate file. Do not add markdown fences, explanations, or surrounding commentary unless the task explicitly asks for it.",
+  "system_prompt_sha256": "fe78ada343dca583e40b2d5d945103447ede225e0ae38cc2fec21254e8bf05dc",
+  "notes": null,
+  "tasks": [
+    {
+      "id": "quantum_gate_alias_casefold_barrier",
+      "name": "Gate alias casefold barrier",
+      "domain": "quantum",
+      "category": "api_normalization",
+      "prompt_file": "prompts/quantum_gate_alias_casefold_barrier.txt",
+      "prompt_sha256": "67156cb8e0d11722cd561e6428289c856d2850f85b7324e34e69892db5b86d84",
+      "task_json_file": "evals/tasks/quantum/gate_alias_casefold_barrier/task.json",
+      "task_json_sha256": "1a5051e565b764e985e89f217c1c7ccc8a22bfd51bb2d77b76d36ea59b8d9048",
+      "test_file": "evals/tasks/quantum/gate_alias_casefold_barrier/tests.py",
+      "test_file_sha256": "5feaa43a0f846f7d605e3b9ee6946ba4e4d53e61da07ed4ea7d40117218db661",
+      "candidate_file": "candidates/quantum_gate_alias_casefold_barrier.py"
+    },
+    {
+      "id": "quantum_error_detection_bit_flip",
+      "name": "Quantum Bit-Flip Error Detection",
+      "domain": "quantum",
+      "category": "debug_repair",
+      "prompt_file": "prompts/quantum_error_detection_bit_flip.txt",
+      "prompt_sha256": "efdb04d9b14bc2577639e28ee83fdb8740111a0c7a6113c2bb1aa3ad68f00c37",
+      "task_json_file": "evals/tasks/quantum/error_detection_bit_flip/task.json",
+      "task_json_sha256": "3cfefcacc05f774bc297cf523dc9facfb96c81ba2efd7397440d9dc73495fae8",
+      "test_file": "evals/tasks/quantum/error_detection_bit_flip/tests.py",
+      "test_file_sha256": "311688fed1cf708c6cbbe7854c724c422758526c1e6d13f12d1f1d1eb409e804",
+      "candidate_file": "candidates/quantum_error_detection_bit_flip.py"
+    }
+  ],
+  "public_eval_contract_sha256": "da435fd7467348824ecda45b4c24447db2db48e3397637dfe22ef538ed01072d",
+  "evaluation_runner_sha256": "97b5186207302723f47281a4ed1e19e3406518537031dd243cdd162d24063093",
+  "scorer_contract_sha256": "372a2073a427f0994c055fe6e98b9d9b61c20e2e0f75659808c9a1d3cdf4afe2"
+}

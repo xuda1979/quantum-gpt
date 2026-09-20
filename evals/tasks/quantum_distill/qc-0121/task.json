@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0121",
+  "name": "Quantum computing task: Simulate damped Rabi oscillations in QuTiP: qubit with H",
+  "task_prompt": "Quantum computing task: Simulate damped Rabi oscillations in QuTiP: qubit with H = 1.81/2 * sigma_x, decay rate gamma=0.389 via mesolve, plot-free output of <sigma_z>(t) at 100 time points. Provide a complete, self-contained program that runs as-is and prints its results."
+}

@@ -39,7 +39,7 @@ def test_asi1_archive_materialize_wrapper_accepts_runtime_bundle_options() -> No
         "direct",
     )
 
-    by_flag = dict(zip(command, command[1:], strict=False))
+    by_flag = dict(zip(command, command[1:]))
     assert command[:2] == ["node", str(ROOT / "browser-automation" / "huanxin_submit_task_run.js")]
     assert "--submit" not in command
     assert "name=ASI1" in by_flag["--url"]

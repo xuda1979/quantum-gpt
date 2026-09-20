@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0550",
+  "name": "Solve this quantum programming problem. Write a Braket program building an 3-qub",
+  "task_prompt": "Solve this quantum programming problem. Write a Braket program building an 3-qubit GHZ circuit, print the circuit diagram, and verify with the state_vector result type that only |0...0> and |1...1> have amplitude. Write the full runnable code (all imports included); executing it should print the results."
+}

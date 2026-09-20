@@ -1,0 +1,19 @@
+Write a complete, runnable Python program using numpy, qiskit, and scipy that:
+1. Defines a 2-qubit data encoding circuit:
+     U(x) = R_y(x) on q0, R_y(arcsin(x/4)*2) on q1, CNOT(0, 1), R_y(x) on q0
+   where x in [0, 2*pi].
+2. Trains a parameterized observable
+     M(theta) = cos(theta) * Z0 + sin(theta) * Z1
+   to fit the target function f_target(x) = sin(x) for x in {0, 0.5, 1.0, ..., 6.0}
+   (13 points).
+3. Minimizes the mean-squared error between <psi(x)|M(theta)|psi(x)> and
+   sin(x) using scipy.optimize.minimize (method='COBYLA', maxiter=300,
+   tol=1e-6).
+4. Computes the final MSE on the training points.
+5. In `def main()`, prints exactly these lines (values rounded to 4 decimals):
+     Training MSE = <value>
+     Optimal theta = <value>
+     Prediction at x=pi = <value>
+     Target at x=pi = <sin(pi) = 0.0000>
+     Fit error at x=pi = <abs(prediction - 0.0)>
+Call main() under `if __name__ == "__main__":`.

@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3_sampling",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0779",
+  "name": "Implement quantum teleportation in Qiskit with dynamic circuits (if_test). Telep",
+  "task_prompt": "Implement quantum teleportation in Qiskit with dynamic circuits (if_test). Teleport the state RY(1.953)|0> and verify by measuring the receiver qubit in 4000 shots. Provide a complete, self-contained program that runs as-is and prints its results."
+}

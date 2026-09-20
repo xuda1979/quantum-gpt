@@ -29,7 +29,7 @@ def test_asi1_agentic_grpo_task_defaults_to_fill_only() -> None:
     assert command[:2] == ["node", str(ROOT / "browser-automation" / "huanxin_submit_task_run.js")]
     assert "--submit" not in command
 
-    by_flag = dict(zip(command, command[1:], strict=False))
+    by_flag = dict(zip(command, command[1:]))
     assert "name=ASI1" in by_flag["--url"]
     assert by_flag["--task-name"] == "asi1-grpo-fast"
     assert by_flag["--image-name"] == "qwen3.5-27B-35B-122B-397B-031626-zx"

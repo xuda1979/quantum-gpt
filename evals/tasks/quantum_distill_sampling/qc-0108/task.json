@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3_sampling",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0108",
+  "name": "Here is a quantum coding exercise. Using Qiskit's StatevectorSampler, build a GH",
+  "task_prompt": "Here is a quantum coding exercise. Using Qiskit's StatevectorSampler, build a GHZ state on 5 qubits and report the sampled bitstring distribution (1000 shots). Write the full runnable code (all imports included); executing it should print the results."
+}

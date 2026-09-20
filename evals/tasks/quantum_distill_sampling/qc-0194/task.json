@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3_sampling",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0194",
+  "name": "Solve this quantum programming problem. Implement VQE in qulacs with a Parametri",
+  "task_prompt": "Solve this quantum programming problem. Implement VQE in qulacs with a ParametricQuantumCircuit and scipy for the Hamiltonian H = 0.84 Z0Z1 + 0.45 X0 + 0.45 X1; compare to exact diagonalization. Your answer must be the complete working code only, runnable from top to bottom."
+}

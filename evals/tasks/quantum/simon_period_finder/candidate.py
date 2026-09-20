@@ -31,7 +31,7 @@ def solve_simon_system(equations: list[tuple[int, int]], n: int) -> int:
         rows[pivot_row], rows[sel] = rows[sel], rows[pivot_row]
         for r in range(len(rows)):
             if r != pivot_row and rows[r][col] == 1:
-                rows[r] = [(a ^ b) for a, b in zip(rows[r], rows[pivot_row], strict=False)]
+                rows[r] = [(a ^ b) for a, b in zip(rows[r], rows[pivot_row])]
         pivots.append(col)
         pivot_row += 1
         if pivot_row == len(rows):

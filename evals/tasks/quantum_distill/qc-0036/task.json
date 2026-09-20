@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0036",
+  "name": "Quantum computing task: Implement QAOA (p=2) from scratch in Qiskit to solve Max",
+  "task_prompt": "Quantum computing task: Implement QAOA (p=2) from scratch in Qiskit to solve MaxCut on the graph with edges [(0, 1), (0, 2), (1, 2), (1, 4), (2, 3), (3, 4)]. Build the cost and mixer layers manually, optimize with scipy, and print the best cut found. Your answer must be the complete working code only, runnable from top to bottom."
+}

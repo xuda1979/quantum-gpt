@@ -1,0 +1,18 @@
+Task ID: quantum_superdense_coding
+Task: Superdense coding encode/decode
+Domain: quantum
+Category: reasoning
+Output file: candidate.py
+
+Public task specification:
+Implement the classical message-to-Pauli-label convention used by superdense coding. encode_message maps 00 to I, 01 to X, 10 to Z, and 11 to XZ. decode_message performs the exact inverse mapping. Raise ValueError for any unsupported two-bit message or operation label.
+
+Required public API (signatures and docstrings only):
+def encode_message(bits: str) -> str
+def decode_message(operation: str) -> str
+
+Implement the requested file. Hidden tests will verify behavior.
+Return only the complete Python source, without markdown fences or explanation.
+
+Write a Python file that passes the supplied tests.
+Return only the candidate file contents.

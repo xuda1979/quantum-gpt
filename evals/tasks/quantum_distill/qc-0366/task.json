@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0366",
+  "name": "You are given the following quantum programming task. Write the Bernstein-Vazira",
+  "task_prompt": "You are given the following quantum programming task. Write the Bernstein-Vazirani circuit for hidden string '1100011' directly in OpenQASM 3 (no Python circuit building - generate the QASM text), load it with qiskit.qasm3, and verify the recovered string. Give one complete script that runs end-to-end on its own and prints the outcome."
+}

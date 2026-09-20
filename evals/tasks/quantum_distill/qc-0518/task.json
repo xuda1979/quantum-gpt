@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0518",
+  "name": "Write a complete Qiskit Bernstein-Vazirani program for the secret string '000' a",
+  "task_prompt": "Write a complete Qiskit Bernstein-Vazirani program for the secret string '000' and print the recovered string. The code must be a complete standalone script that can be executed directly and produces output."
+}

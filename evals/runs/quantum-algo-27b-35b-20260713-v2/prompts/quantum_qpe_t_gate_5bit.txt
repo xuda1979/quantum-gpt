@@ -1,0 +1,18 @@
+Write a complete, runnable Python program using numpy and qiskit that:
+1. Implements the standard QPE circuit for the T gate (phase e^{i pi/4},
+   i.e. theta = 1/8) with t=5 evaluation qubits.
+   The unitary U = diag(1, e^{i*pi/4}) on the target qubit.
+2. Uses controlled-U^{2^k} gates for k=0..4 applied from the corresponding
+   evaluation qubit to the target. Use qiskit.quantum_info.Operator for U
+   and Operator(...).control(1) for the controlled-U.
+3. Apply the inverse QFT on the 5 evaluation qubits.
+4. Measure the evaluation register using StatevectorSampler with 8192 shots.
+5. Decode the most-likely bitstring m to the phase estimate phi = m / 2^t.
+6. In `def main()`, prints exactly these lines (values rounded to 4 decimals):
+     True phase = 0.1250
+     Estimated phase = <phi>
+     Most likely bitstring = <5-bit string>
+     Abs error = <abs(phi - 0.125)>
+     Converged: <True|False>
+   where Converged is True iff Abs error < 1/2^5 = 0.03125.
+Call main() under `if __name__ == "__main__":`.

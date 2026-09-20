@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3_sampling",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0017",
+  "name": "You are given the following quantum programming task. Write a self-contained Qis",
+  "task_prompt": "You are given the following quantum programming task. Write a self-contained Qiskit Grover search for the 4-qubit marked bitstring '1110', including the diffusion operator, and report the probability of measuring it. The code must be a complete standalone script that can be executed directly and produces output."
+}

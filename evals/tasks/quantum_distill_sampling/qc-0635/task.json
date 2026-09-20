@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3_sampling",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0635",
+  "name": "Implement Grover's algorithm from scratch in Qiskit (no library oracle helpers) ",
+  "task_prompt": "Implement Grover's algorithm from scratch in Qiskit (no library oracle helpers) to find the marked state |10011> among 32 states. Use the optimal number of iterations and print the success probability. Write the full runnable code (all imports included); executing it should print the results."
+}

@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0740",
+  "name": "Quantum computing task: Implement superdense coding in Qiskit to transmit the 2-",
+  "task_prompt": "Quantum computing task: Implement superdense coding in Qiskit to transmit the 2-bit message '00'. Verify with 2048 shots that the decoded message is correct. The code must be a complete standalone script that can be executed directly and produces output."
+}

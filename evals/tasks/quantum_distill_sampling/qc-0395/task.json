@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3_sampling",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0395",
+  "name": "Here is a quantum coding exercise. Write a qulacs program that builds an 6-qubit",
+  "task_prompt": "Here is a quantum coding exercise. Write a qulacs program that builds an 6-qubit GHZ state, computes <Z...Z> with an Observable, and samples 1000 measurement outcomes. Return the entire program in one piece, ready to run without any modification."
+}

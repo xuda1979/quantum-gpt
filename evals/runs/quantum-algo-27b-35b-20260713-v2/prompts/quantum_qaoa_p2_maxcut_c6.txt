@@ -1,0 +1,21 @@
+Write a complete, runnable Python program using numpy, qiskit, and scipy that:
+1. Defines the MaxCut problem on the cycle graph C6 (6 vertices, edges
+   (0,1),(1,2),(2,3),(3,4),(4,5),(5,0)). The cost Hamiltonian is
+   H_C = sum_{(i,j) in E} (1 - Z_i Z_j) / 2.
+2. Implements the QAOA ansatz with p=2 layers:
+   |psi(gamma, beta)> = e^{-i beta_2 H_M} e^{-i gamma_2 H_C}
+                       e^{-i beta_1 H_M} e^{-i gamma_1 H_C} |+>^6
+   where H_M = sum_i X_i is the mixer.
+3. Computes <H_C> as a function of (gamma_1, beta_1, gamma_2, beta_2)
+   via qiskit.quantum_info.Statevector.expectation_value.
+4. Optimizes the parameters with scipy.optimize.minimize (method='COBYLA',
+   maxiter=1000, tol=1e-6) starting from gamma=beta=[0.1, 0.2, 0.3, 0.4].
+5. Computes the exact MaxCut optimum (5 for C6: partition alternates).
+6. In `def main()`, prints exactly these lines (values rounded to 4 decimals):
+     QAOA energy = <negative of H_C, i.e. -<H_C>>
+     QAOA cut value = <(6 - <H_C>) / 2, rounded>
+     Exact MaxCut = 5
+     Approx ratio = <QAOA cut value / 5 rounded to 4 decimals>
+   where QAOA energy = -<H_C>, and QAOA cut value = (6 - <H_C>) / 2
+   (rounded to nearest integer).
+Call main() under `if __name__ == "__main__":`.

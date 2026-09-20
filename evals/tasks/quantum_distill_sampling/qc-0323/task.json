@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3_sampling",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0323",
+  "name": "Implement QAOA (p=3) from scratch in Qiskit to solve MaxCut on the graph with ed",
+  "task_prompt": "Implement QAOA (p=3) from scratch in Qiskit to solve MaxCut on the graph with edges [(0, 1), (0, 3), (1, 2), (2, 3)]. Build the cost and mixer layers manually, optimize with scipy, and print the best cut found. Provide a complete, self-contained program that runs as-is and prints its results."
+}

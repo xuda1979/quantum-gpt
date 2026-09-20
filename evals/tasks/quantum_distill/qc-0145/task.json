@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0145",
+  "name": "Implement VQE in Cirq (with sympy parameters and scipy) for the 2-qubit Hamilton",
+  "task_prompt": "Implement VQE in Cirq (with sympy parameters and scipy) for the 2-qubit Hamiltonian H = 1.19*Z0*Z1 + 0.93*X0 + 0.93*X1. Compare the optimized energy with exact diagonalization. Give one complete script that runs end-to-end on its own and prints the outcome."
+}

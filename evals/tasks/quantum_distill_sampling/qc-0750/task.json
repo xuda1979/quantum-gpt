@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3_sampling",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0750",
+  "name": "Using Qiskit's StatevectorSampler, build a GHZ state on 4 qubits and report the ",
+  "task_prompt": "Using Qiskit's StatevectorSampler, build a GHZ state on 4 qubits and report the sampled bitstring distribution (4096 shots). The code must be a complete standalone script that can be executed directly and produces output."
+}

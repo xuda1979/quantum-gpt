@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3_sampling",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0616",
+  "name": "You are given the following quantum programming task. Build a Qiskit Aer noise m",
+  "task_prompt": "You are given the following quantum programming task. Build a Qiskit Aer noise model with depolarizing error 0.0095 on single-qubit gates and 0.0261 on CX. Run a 3-qubit GHZ circuit with 8192 shots and compare noisy vs ideal counts. The code must be a complete standalone script that can be executed directly and produces output."
+}

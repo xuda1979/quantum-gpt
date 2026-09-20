@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0525",
+  "name": "Write a Python function `qft_circuit_matrix(n)` that constructs the unitary matr",
+  "task_prompt": "Write a Python function `qft_circuit_matrix(n)` that constructs the unitary matrix of the Quantum Fourier Transform (QFT) for `n` qubits using only NumPy. Follow the reference circuit description from the documentation: (1) for each qubit `q` from 0 (topmost) to `n-1`, apply a Hadamard gate on qubit `q`; (2) for each subsequent qubit `p > q`, apply a controlled-Phase (CP) gate with angle `2π / 2**(p - q + 1)`, controlled on qubit `p` and targeting qubit `q`; (3) after processing all qubits, apply SWAP gates between qubit `i` and qubit `n-1-i` for all `i < n//2` to fix the output ordering. Then implement a second function `verify_qft_circuit(n)` that computes your circuit matrix and the direct QFT matrix (use the provided `qft_matrix(n)` from the documentation), prints the maximum absolute elementwise difference (should be close to machine epsilon), and for `n=3` applies the circuit to the basis state |1⟩ (i.e., vector with one at index 1) and checks whether the phases of the resulting state are consistent with the expected pattern: `phases[k] = (2π * 1 * k / 2**n) mod 2π`. Provide all code in a single Python block that can be executed as-is."
+}

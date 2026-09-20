@@ -42,7 +42,7 @@ def run_tests(candidate_path: str) -> dict:
     else:
         expected = [np.sqrt(1 - p), np.sqrt(p / 3.0), np.sqrt(p / 3.0), np.sqrt(p / 3.0)]
         ok = 0
-        for k, want in zip(kraus, expected, strict=False):
+        for k, want in zip(kraus, expected):
             k = _mat(k)
             if k is not None and k.shape == (2, 2):
                 # a Pauli-scalar a*P has Frobenius norm |a|*sqrt(2)

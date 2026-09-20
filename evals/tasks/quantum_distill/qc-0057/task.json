@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0057",
+  "name": "Solve this quantum programming problem. Implement the Deutsch-Jozsa algorithm in",
+  "task_prompt": "Solve this quantum programming problem. Implement the Deutsch-Jozsa algorithm in Qiskit for the constant function f(x) = 1 for all x on 2 input qubits. Print the measurement outcome and the conclusion. Provide a complete, self-contained program that runs as-is and prints its results."
+}

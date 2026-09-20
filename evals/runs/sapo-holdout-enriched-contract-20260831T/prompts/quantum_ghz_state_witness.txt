@@ -1,0 +1,28 @@
+Task ID: quantum_ghz_state_witness
+Task: GHZ state preparation and entanglement witness
+Domain: quantum
+Category: algorithm_implementation
+Output file: candidate.py
+
+Required public API (signatures and docstrings only):
+def ghz_state(n_qubits: int) -> list[float]
+    """Construct the n-qubit GHZ state: (|00...0> + |11...1>) / sqrt(2).
+Returns a list of 2^n real amplitudes."""
+def w_state(n_qubits: int) -> list[float]
+    """Construct the n-qubit W state: equal superposition of all single-excitation
+basis states (|00..01> + |00..10> + ... + |10..00>) / sqrt(n)."""
+def ghz_witness_expectation(state: list[float], n_qubits: int) -> float
+    """Compute the expectation value of the GHZ entanglement witness:
+W = I/2 - |GHZ><GHZ|
+
+<W> = 1/2 - |<GHZ|state>|^2
+Negative value certifies GHZ-type entanglement."""
+def concurrence_2qubit(state: list[float]) -> float
+    """Compute the concurrence of a 2-qubit pure state |psi>.
+C = 2 |a*d - b*c| for state [a, b, c, d]."""
+
+Implement the requested file. Hidden tests will verify behavior.
+Return only the complete Python source, without markdown fences or explanation.
+
+Write a Python file that passes the supplied tests.
+Return only the candidate file contents.

@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0254",
+  "name": "Quantum computing task: Write a complete Qiskit Bernstein-Vazirani program for t",
+  "task_prompt": "Quantum computing task: Write a complete Qiskit Bernstein-Vazirani program for the secret string '0010011' and print the recovered string. Provide a complete, self-contained program that runs as-is and prints its results."
+}

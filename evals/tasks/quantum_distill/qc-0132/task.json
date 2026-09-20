@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0132",
+  "name": "In pytket, implement exp(-i*1.108*Z⊗Z) using a PauliExpBox, decompose it, and ve",
+  "task_prompt": "In pytket, implement exp(-i*1.108*Z⊗Z) using a PauliExpBox, decompose it, and verify the statevector matches the scipy matrix exponential applied to |++>. Write the full runnable code (all imports included); executing it should print the results."
+}

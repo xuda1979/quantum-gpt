@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3_sampling",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0202",
+  "name": "Solve this quantum programming problem. Implement Grover search in Q# for the 3-",
+  "task_prompt": "Solve this quantum programming problem. Implement Grover search in Q# for the 3-qubit marked state |000>: write the oracle as a phase flip, the diffusion via within/apply, and a Python driver verifying the success rate over 200 shots. Provide a complete, self-contained program that runs as-is and prints its results."
+}

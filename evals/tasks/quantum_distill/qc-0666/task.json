@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0666",
+  "name": "Here is a quantum coding exercise. Write a manual QFT circuit for 5 qubits in Qi",
+  "task_prompt": "Here is a quantum coding exercise. Write a manual QFT circuit for 5 qubits in Qiskit and check its unitary equals the DFT matrix up to numerical precision. Give one complete script that runs end-to-end on its own and prints the outcome."
+}

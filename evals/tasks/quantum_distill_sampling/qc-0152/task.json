@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3_sampling",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0152",
+  "name": "You are given the following quantum programming task. Implement Grover's algorit",
+  "task_prompt": "You are given the following quantum programming task. Implement Grover's algorithm from scratch in Qiskit (no library oracle helpers) to find the marked state |1100> among 16 states. Use the optimal number of iterations and print the success probability. Return the entire program in one piece, ready to run without any modification."
+}

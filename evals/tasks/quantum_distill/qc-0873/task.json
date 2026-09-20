@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0873",
+  "name": "Here is a quantum coding exercise. Using Qiskit quantum_info, prepare the state ",
+  "task_prompt": "Here is a quantum coding exercise. Using Qiskit quantum_info, prepare the state RY(0.811) on qubit 0 followed by CX(0,1), compute the reduced density matrix of qubit 0 via partial trace, and print its von Neumann entanglement entropy (base 2). Give one complete script that runs end-to-end on its own and prints the outcome."
+}

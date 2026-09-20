@@ -1,0 +1,32 @@
+Task ID: quantum_pennylane_vqe_h2
+Write a Python file that satisfies the public task contract; hidden tests will verify it.
+Return only the candidate file contents.
+
+Task: PennyLane VQE ground-state energy of H2
+Domain: quantum
+Category: algorithm_implementation
+Output file: candidate.py
+
+Public task specification:
+Implement a two-qubit PennyLane VQE for the frozen-core parity-mapped H2 Hamiltonian H = -0.4804 I(0) + 0.3435 Z(0) - 0.4347 Z(1) + 0.5716 Z(0)Z(1) + 0.0910 X(0)X(1) + 0.0910 Y(0)Y(1). vqe_circuit uses four parameters in this order: RY on wire 0, RY on wire 1, CNOT 0->1, RY on wire 0, RY on wire 1. run_vqe performs deterministic seeded variational minimization for the requested number of steps and returns {'energy': the final expectation as a float, 'params': the four final parameter values}; compute the result from the circuit and Hamiltonian rather than hard-coding an energy.
+
+Required public API (signatures and docstrings only):
+Module contract:
+VQE for the H2 molecule in a minimal STO-3G basis (2 qubits).
+
+Defines the fixed parity-mapping Hamiltonian and a compact variational
+ansatz without requiring the external OpenFermion/PySCF toolchain.
+
+def h2_hamiltonian() -> qml.Hamiltonian
+    """Return the parity-mapped H2 Hamiltonian in the frozen-core 2-qubit space.
+
+Coefficients are the canonical STO-3G values used in the PennyLane
+qchem tutorials. This avoids requiring the external OpenFermion/
+PySCF toolchain at test time."""
+def vqe_circuit(params, wires)
+    """Hardware-efficient ansatz: Ry on q0, Ry on q1, CNOT, Ry on q0, Ry on q1."""
+def run_vqe(steps: int=200, seed: int=42) -> dict
+    """Run VQE and return the optimized energy and final parameters."""
+
+Implement the requested file. Hidden tests will verify behavior.
+Return only the complete Python source, without markdown fences or explanation.

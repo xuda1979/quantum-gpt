@@ -25,7 +25,7 @@ def run_tests(candidate_path: str) -> dict:
         if bits != expected:
             failures.append(
                 f"phase_to_register_bits({phase}, {n_qubits}) -> {bits}, expected {expected}; "
-                f"mismatched_bits={sum(a != b for a, b in zip(bits, expected, strict=False))}, expected 0"
+                f"mismatched_bits={sum(a != b for a, b in zip(bits, expected))}, expected 0"
             )
 
     for phase, n_qubits, _ in cases:

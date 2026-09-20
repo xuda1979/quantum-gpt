@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0378",
+  "name": "Here is a quantum coding exercise. Use pytket to build a 4-qubit circuit of 3 la",
+  "task_prompt": "Here is a quantum coding exercise. Use pytket to build a 4-qubit circuit of 3 layers (H + CX ladder + RZ), then optimize it with FullPeepholeOptimise and rebase to {CX, Rz, H}. Print gate counts before and after. Provide a complete, self-contained program that runs as-is and prints its results."
+}

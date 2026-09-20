@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0324",
+  "name": "Solve this quantum programming problem. Implement the QFT manually in Cirq on 4 ",
+  "task_prompt": "Solve this quantum programming problem. Implement the QFT manually in Cirq on 4 qubits and verify its unitary against cirq.qft using cirq.unitary(). Write the full runnable code (all imports included); executing it should print the results."
+}

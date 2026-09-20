@@ -1,0 +1,32 @@
+# SAPO holdout-adjacent training: v7 targeted10 + 10 holdout-adjacent tasks.
+# source=evals/benchmarks/quantum_grpo_training_v7_targeted_integrity.txt sha256=49e0598bdefe63feb3e70a54b3fad5945f539c310cc7b519b3efd4b24b8ca14e
+# task_contract_sha256=47b80ec34552ac3950b85b80671f043d18d4222f8a1ffd3916cb3676989d85d7
+# targeted=20 deterministic=0 semantic=0
+# required_import_roots=
+# reference_execution_verified=true runs=3
+# The 10 added tasks exercise the same competence classes as the 10
+# frozen-holdout failures (partial trace, Shor code, Trotter, 2-qubit
+# depolarizing, VQE, QAOA landscape, Bell basis, QFT, stabilizers, QML)
+# on disjoint instances and contracts. Reference candidates validated
+# locally; near-miss candidates get graded numeric details (shaped>0).
+# Frozen holdout sapo_promotion_holdout_v1_18.txt is read-only.
+quantum_bitstring_maxcut_landscape
+quantum_circuit_depth_optimization
+quantum_circuit_phase_repair
+quantum_error_detection_bit_flip
+quantum_gate_alias_casefold_barrier
+quantum_measurement_bug_repair
+quantum_phase_measurement_register
+quantum_stabilizer_tableau_update_repair
+quantum_superdense_pauli_router
+quantum_teleportation_corrections
+quantum_three_qubit_entropy
+quantum_shor_phase_error_correction
+quantum_trotter_heisenberg_evolution
+quantum_depolarizing_entanglement_decay
+quantum_vqe_heisenberg_energy
+quantum_qaoa_ring4_landscape
+quantum_bell_basis_discrimination
+quantum_qft_periodic_state
+quantum_stabilizer_shor_generators
+quantum_qml_variational_classifier

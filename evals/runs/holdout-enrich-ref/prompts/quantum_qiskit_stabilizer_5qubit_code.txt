@@ -1,0 +1,37 @@
+Task ID: quantum_qiskit_stabilizer_5qubit_code
+Write a Python file that satisfies the public task contract; hidden tests will verify it.
+Return only the candidate file contents.
+
+Task: Qiskit [[5,1,3]] five-qubit stabilizer code table
+Domain: quantum
+Category: quantum_error_correction
+Output file: candidate.py
+
+Required public API (signatures and docstrings only):
+Module contract:
+[[5,1,3]] perfect code stabilizer generators and syndrome table.
+
+The five-qubit code is the smallest quantum error-correcting code that
+corrects any single-qubit error. This module exposes the four stabilizer
+generators as Pauli strings and a function that maps a single-qubit error
+(X/Y/Z on qubit 0..4) to its 4-bit syndrome.
+
+def stabilizer_generators() -> list[str]
+    """Return the four stabilizer generators of the [[5,1,3]] code.
+
+Each generator is a length-5 Pauli string over {I,X,Y,Z}, ordered
+qubit 0..4 left to right."""
+def stabilizer_matrix() -> np.ndarray
+    """Return the 4x10 binary symplectic matrix S = [Sx | Sz]."""
+def syndrome_of(error: str) -> str
+    """Compute the 4-bit syndrome of a length-5 Pauli error string.
+
+The syndrome is the bitwise XOR of the stabilizer generators that
+anticommute with the error."""
+def single_qubit_error_table() -> dict[str, str]
+    """Map every single-qubit Pauli error on every qubit to its syndrome.
+
+Keys are like 'X0', 'Y2', 'Z4'. The 'I' (no error) case maps to '0000'."""
+
+Implement the requested file. Hidden tests will verify behavior.
+Return only the complete Python source, without markdown fences or explanation.

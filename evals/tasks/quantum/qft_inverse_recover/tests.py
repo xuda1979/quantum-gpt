@@ -23,7 +23,7 @@ def run_tests(candidate_path: str) -> dict:
         fwd = module.qft_amplitudes(state)
         rec = module.inverse_qft_amplitudes(fwd)
         if not all(
-            math.isclose(abs(a - b), 0.0, abs_tol=1e-9) for a, b in zip(state, rec, strict=False)
+            math.isclose(abs(a - b), 0.0, abs_tol=1e-9) for a, b in zip(state, rec)
         ):
             failures.append(f"QFT^dagger . QFT != I for N={N}")
             break

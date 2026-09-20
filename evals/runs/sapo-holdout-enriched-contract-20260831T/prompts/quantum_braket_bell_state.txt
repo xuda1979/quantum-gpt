@@ -1,0 +1,25 @@
+Task ID: quantum_braket_bell_state
+Task: Amazon Braket Bell state preparation and parity check
+Domain: quantum
+Category: algorithm_implementation
+Output file: candidate.py
+
+Required public API (signatures and docstrings only):
+Module contract:
+Bell state on the local Braket simulator with parity verification.
+
+Uses the AWS-local `braket.devices.LocalSimulator` so the test does not
+require AWS credentials.
+
+def bell_circuit() -> Circuit
+    """Return a Bell-state circuit: H on q0, CNOT(0,1)."""
+def sample_bell_state(shots: int=1000, seed: int | None=None) -> dict
+    """Run the Bell circuit on the local simulator and return a histogram."""
+def parity_check(bitstring: str) -> int
+    """Return the parity (XOR) of a bitstring."""
+
+Implement the requested file. Hidden tests will verify behavior.
+Return only the complete Python source, without markdown fences or explanation.
+
+Write a Python file that passes the supplied tests.
+Return only the candidate file contents.

@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0450",
+  "name": "Quantum computing task: Write a Qiskit program that demonstrates violation of th",
+  "task_prompt": "Quantum computing task: Write a Qiskit program that demonstrates violation of the CHSH inequality using a Bell state and StatevectorEstimator with measurement angles 0, pi/2 for Alice and pi/4, -pi/4 for Bob. Print the CHSH value S and verify S > 2. Your answer must be the complete working code only, runnable from top to bottom."
+}

@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0018",
+  "name": "Here is a quantum coding exercise. Solve a 0/1 knapsack (values [7, 11, 9, 7, 2,",
+  "task_prompt": "Here is a quantum coding exercise. Solve a 0/1 knapsack (values [7, 11, 9, 7, 2, 8], weights [3, 2, 1, 1, 3, 7], capacity 11) by building a penalized QUBO in dimod (slack-variable encoding for the capacity constraint) and sampling with SimulatedAnnealingSampler. Compare to brute force. The code must be a complete standalone script that can be executed directly and produces output."
+}

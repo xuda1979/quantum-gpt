@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0723",
+  "name": "You are given the following quantum programming task. Write a runnable Qiskit De",
+  "task_prompt": "You are given the following quantum programming task. Write a runnable Qiskit Deutsch-Jozsa program with a constant oracle (1 for all x) on 5 qubits. Your answer must be the complete working code only, runnable from top to bottom."
+}

@@ -36,12 +36,11 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from training.compat import strict_zip  # py3.9-safe
-
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from training.compat import strict_zip  # py3.9-safe
 from training.grpo_utils import (  # noqa: E402
     MAX_MODEL_JUDGE_WEIGHT,
     MODEL_JUDGE_CALIBRATION_AUC,
@@ -195,11 +194,11 @@ def main(argv: list[str] | None = None) -> int:
             ("result_correctness", verifier_rate >= 0.999),
         ):
             score = scores.get(dim)
-            if isinstance(score, int | float) and not isinstance(score, bool):
+            if isinstance(score, (int, float)) and not isinstance(score, bool):
                 pairs[dim].append((label, min(1.0, max(0.0, float(score)))))
-        if isinstance(runtime_ms, int | float) and runtime_ms > 0:
+        if isinstance(runtime_ms, (int, float)) and runtime_ms > 0:
             eff = scores.get("efficiency")
-            if isinstance(eff, int | float) and not isinstance(eff, bool):
+            if isinstance(eff, (int, float)) and not isinstance(eff, bool):
                 efficiency_pairs.append((float(runtime_ms), min(1.0, max(0.0, float(eff)))))
 
     aucs: dict[str, float] = {}
