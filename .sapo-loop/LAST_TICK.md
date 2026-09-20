@@ -1,21 +1,26 @@
-TICK #115 — 2026-09-21 07:12 CST
-=== FLEET STATUS ===
-ASI1: UP pid=72903 cmd=47 idle
-ASI2: UP pid=95921 cmd=159 idle
-ASI3: UP pid=50390 cmd=727 idle
-Keeper: ALIVE pid=1161 (HEALING, headless_auth failed, daemons ok)
+# LAST TICK — 2026-09-21 07:22 CST (tick #116)
 
-=== TEST SUITE ===
-Suite#315: FRESH (102min ago) — no relaunch needed
-  4715 passed / 258 failed / 7 errors / 8 skipped
-  Verdict: CONTAMINATED (co-tenant noise, chunk08 missing)
+## Fleet: 3/3 UP
+- ASI1: pid72903, cmd47, idle, uptime 36751s
+- ASI2: pid95921, cmd159, idle, uptime 15465s
+- ASI3: pid50390, cmd734, idle, uptime 37290s
+- Keeper: pid1161 ALIVE (HEALING, headless_auth failed, daemons ok)
 
-=== TRAINING ===
-Root cause found: box python3=CPU torch -> NPU unavailable -> training stuck
-Fixer C-9523: correcting ASCEND/CANN python PATH for warm-continue
-Training paused pending env fix, fleet ready
-3 live agents: C-9535 (trainer-ops), C-9533 (verify), C-9531 (fixer)
+## Test Suite
+- Prev suite #315: 112min stale → RELAUNCHED pid4563
+- Last result: 4715P/258F/7E/8S, verdict CONTAMINATED (co-tenant noise)
 
-=== GIT ===
-HEAD: 621743c6 (v8 benchmark contract hash update)
-NO USER ACTION — harness autonomous, fixing ASCEND launch env toward 18/18
+## Training
+- GRPO trainer pid47759 alive, ~12h runtime, 76% CPU
+- Root cause known: box python3=CPU torch, NPU unavailable
+- Warm-continue pending ASCEND launch env correction
+
+## Agents: 2 live
+- C-0002 trainer-ops (pid99981)
+- C-Z fixer (pid99983)
+
+## Git: 9dd023f8
+- C-9536/9537 dead-running cleanup + auto_retire threshold=3
+
+## Verdict: NO USER ACTION NEEDED
+Harness autonomous. Suite running. Training active.
