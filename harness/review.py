@@ -31,7 +31,9 @@ def run_review(state_dir, repo_dir):
         )
         line = (r.stdout + r.stderr).strip().split("\n")[-1]
         print(f"  {line}")
-        if "failed" in line and "0 failed" not in line:
+        if "failed=0" in line or "0 failed" in line or "no failures" in line.lower():
+            passes.append("test suite green")
+        elif "failed" in line:
             findings.append(f"test suite: {line}")
         else:
             passes.append("test suite green")
