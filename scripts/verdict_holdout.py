@@ -13,6 +13,7 @@ Also emits per-category and per-task drill-down so the next manifest can target
 the classes the adapter loses on.
 """
 from __future__ import annotations
+
 import argparse
 import json
 from pathlib import Path
@@ -41,7 +42,7 @@ def composite(records: list[dict], n_tasks: int) -> float:
     """0.70*mean(rubric overall) + 0.30*pass@1 fraction over n_tasks (unseen counts score 0)."""
     total_pts = sum((r.get("scores") or {}).get("overall", 0.0) for r in records)
     passes = sum(1 for r in records if r.get("passed"))
-    n_seen = len(records)
+    len(records)
     # unseen tasks contribute their share of 0 for both rubric and pass
     rub_part = (total_pts / n_tasks) if n_tasks else 0.0
     pass_part = passes / n_tasks if n_tasks else 0.0
@@ -65,7 +66,8 @@ def verdict(eval_data: dict, *, n_tasks: int = 18) -> dict:
     for c in cats:
         ca = [r for r in adapter if r.get("category") == c]
         cb = [r for r in base if r.get("category") == c]
-        ca_p = sum(1 for r in ca if r.get("passed")); cb_p = sum(1 for r in cb if r.get("passed"))
+        ca_p = sum(1 for r in ca if r.get("passed"))
+        cb_p = sum(1 for r in cb if r.get("passed"))
         ca_r = _mean((r.get("scores") or {}).get("overall", 0.0) for r in ca)
         cb_r = _mean((r.get("scores") or {}).get("overall", 0.0) for r in cb)
         cat_rows.append({"category": c, "adapter_pass": ca_p, "base_pass": cb_p,
@@ -77,8 +79,10 @@ def verdict(eval_data: dict, *, n_tasks: int = 18) -> dict:
     task_ids = sorted(set(amap) | set(bmap))
     task_rows = []
     for t in task_ids:
-        a = amap.get(t); b = bmap.get(t)
-        a_p = bool(a and a.get("passed")); b_p = bool(b and b.get("passed"))
+        a = amap.get(t)
+        b = bmap.get(t)
+        a_p = bool(a and a.get("passed"))
+        b_p = bool(b and b.get("passed"))
         a_r = (a.get("scores") or {}).get("overall", 0.0) if a else 0.0
         task_rows.append({"task": t, "category": (a or b).get("category"),
                           "adapter_pass": a_p, "base_pass": b_p,
@@ -95,7 +99,7 @@ def verdict(eval_data: dict, *, n_tasks: int = 18) -> dict:
         "rubric_adapter": round(a_rub, 3),
         "rubric_base": round(b_rub, 3),
         "gains": [g["task"] for g in gains],
-        "losses": [l["task"] for l in losses],
+        "losses": [loss["task"] for loss in losses],
         "by_category": cat_rows,
         "by_task_wins": [t["task"] for t in task_rows if t["adapter_pass"]],
     }

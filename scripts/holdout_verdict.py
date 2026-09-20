@@ -45,11 +45,11 @@ if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 from harness.beats_base import BeatsBaseError  # noqa: E402
 from harness.beats_base import beats_base as pinned_beats_base  # noqa: E402
-from scripts.verdict_holdout import composite as pinned_composite  # noqa: E402
 from harness.harness_lib import is_qwen38_27b_model  # noqa: E402  # C-9119
 from scripts.candidates_differ_probe import (  # noqa: E402
     CANDIDATE_BASE_MATCH_MAX_FRACTION,  # C-9110 stated bar
 )
+from scripts.verdict_holdout import composite as pinned_composite  # noqa: E402
 
 MARKER_APPLIED = "adapter-applied"
 MARKER_PROBE_DIFFERS = "adapter-probe-differs"
@@ -80,52 +80,45 @@ INDEPENDENCE_FIELDS = (
     "leg_process_id", "candidate_cache_id", "window_id", "transport")
 INDEPENDENCE_BAR = "harness/state/leg2_independence_bar.md"
 
-
 class VerdictRejected(Exception):
     """A fail-closed input check failed; no verdict file may be written."""
-
 
 def _reject(msg):
     raise VerdictRejected(msg)
 
-
 def _read_json(path, what):
     p = Path(path)
     if not p.is_file():
-        _reject("%s missing: %s" % (what, p))
+        _reject(f"{what} missing: {p}")
     try:
         return json.loads(p.read_text(encoding="utf-8"))
     except (OSError, ValueError) as exc:
-        _reject("%s unparseable: %s (%s)" % (what, p, exc))
-
+        _reject(f"{what} unparseable: {p} ({exc})")
 
 def load_benchmark_ids(path):
     p = Path(path)
     if not p.is_file():
-        _reject("benchmark file missing: %s" % p)
+        _reject(f"benchmark file missing: {p}")
     ids = []
     for line in p.read_text(encoding="utf-8").splitlines():
         line = line.strip()
         if line and not line.startswith("#"):
             ids.append(line.split()[0])
     if not ids:
-        _reject("benchmark file has no task ids: %s" % p)
+        _reject(f"benchmark file has no task ids: {p}")
     return ids
-
 
 def _marker_check(env, leg_name, log_path):
     for key in ("adapter_applied_marker", "adapter_probe_differs_marker"):
         if env.get(key) is not True:
-            _reject("%s lacks %s=true" % (leg_name, key))
+            _reject(f"{leg_name} lacks {key}=true")
     log = Path(log_path)
     if not log.is_file():
-        _reject("%s leg_log missing: %s" % (leg_name, log))
+        _reject(f"{leg_name} leg_log missing: {log}")
     text = log.read_text(encoding="utf-8", errors="replace")
     for token, gate_safe in _MARKER_LOG_TOKENS:
         if token not in text:
-            _reject("%s leg_log lacks marker corroboration %s=true: %s"
-                    % (leg_name, gate_safe, log))
-
+            _reject(f"{leg_name} leg_log lacks marker corroboration {gate_safe}=true: {log}")
 
 def _independence_evidence(env, leg_name, log_path):
     """Card C-9117: per-field fail-closed independence evidence.
@@ -142,35 +135,33 @@ def _independence_evidence(env, leg_name, log_path):
         value = env.get(field)
         if not isinstance(value, str) or not value.strip():
             _reject("verdict_composer_refused_independence_evidence_"
-                    "missing: %s lacks %s (bar: %s)"
-                    % (leg_name, field, INDEPENDENCE_BAR))
+                    f"missing: {leg_name} lacks {field} (bar: {INDEPENDENCE_BAR})")
         if value.strip() not in text:
             _reject("verdict_composer_refused_independence_"
-                    "uncorroborated: %s log lacks %s corroboration "
-                    "(bar: %s)" % (leg_name, field, INDEPENDENCE_BAR))
+                    f"uncorroborated: {leg_name} log lacks {field} corroboration "
+                    f"(bar: {INDEPENDENCE_BAR})")
         evidence[field] = value.strip()
     return evidence
 
-
 def _passes_from_scores(scores, task_ids, leg_name):
     if not isinstance(scores, dict) or not isinstance(scores.get("records"), list):
-        _reject("%s scores lacks a records list" % leg_name)
+        _reject(f"{leg_name} scores lacks a records list")
     adapter = {}
     base = {}
     records_by_model = {"adapter": [], "base": []}
     fail_marks = dict(adapter=dict(), base=dict())
     for rec in scores["records"]:
         if not isinstance(rec, dict):
-            _reject("%s scores record is not an object" % leg_name)
+            _reject(f"{leg_name} scores record is not an object")
         model = rec.get("model")
         tid = rec.get("task_id")
         passed = rec.get("passed")
         if (model not in ("adapter", "base") or not isinstance(tid, str)
                 or not isinstance(passed, bool)):
-            _reject("%s scores record malformed: %r" % (leg_name, rec))
+            _reject(f"{leg_name} scores record malformed: {rec!r}")
         target = adapter if model == "adapter" else base
         if tid in target:
-            _reject("%s scores duplicate record: %s/%s" % (leg_name, model, tid))
+            _reject(f"{leg_name} scores duplicate record: {model}/{tid}")
         # C-9038: truncation fail-closed. A cap-cut completion is NOT-pass
         # by construction; a record with no usable truncation field is
         # NOT-pass too (fail-closed UNKNOWN); both carry a fail mark into
@@ -202,15 +193,12 @@ def _passes_from_scores(scores, task_ids, leg_name):
         extra = set(got) - expected
         if missing:
             if name == "base":
-                _reject("beats_base arithmetic input missing: %s base "
-                        "passes missing tasks: %s" % (leg_name, sorted(missing)))
-            _reject("%s %s passes missing tasks: %s"
-                    % (leg_name, name, sorted(missing)))
+                _reject(f"beats_base arithmetic input missing: {leg_name} base "
+                        f"passes missing tasks: {sorted(missing)}")
+            _reject(f"{leg_name} {name} passes missing tasks: {sorted(missing)}")
         if extra:
-            _reject("%s %s passes cover non-frozen tasks: %s"
-                    % (leg_name, name, sorted(extra)))
+            _reject(f"{leg_name} {name} passes cover non-frozen tasks: {sorted(extra)}")
     return adapter, base, records_by_model, fail_marks
-
 
 def _composite_of(records, total):
     """Composite tiebreak input, or None when no record is scored."""
@@ -220,7 +208,6 @@ def _composite_of(records, total):
         if isinstance(ov, (int, float)) and not isinstance(ov, bool):
             return pinned_composite(records, total)
     return None
-
 
 def _resolve_model_identity(env, leg_name):
     """C-9119: prove the evaluated adapter is a Qwen3.8-27B adapter.
@@ -256,7 +243,7 @@ def _resolve_model_identity(env, leg_name):
         pin = json.loads(Path(ref).read_text(encoding="utf-8"))
     except (OSError, ValueError) as exc:
         return refuse("model_identity_violation: checkpoint_pin_unreadable "
-                      "(%s)" % exc)
+                      f"({exc})")
     if not isinstance(pin, dict):
         return refuse("model_identity_violation: checkpoint_pin_unreadable "
                       "(not an object)")
@@ -273,18 +260,17 @@ def _resolve_model_identity(env, leg_name):
         cfg = Path(ckpt) / "adapter_config.json"
         if not cfg.is_file():
             return refuse("model_identity_violation: adapter_config_absent "
-                          "at pinned checkpoint %s" % ckpt)
+                          f"at pinned checkpoint {ckpt}")
         try:
             cfg_json = json.loads(cfg.read_text(encoding="utf-8"))
         except (OSError, ValueError) as exc:
             return refuse("model_identity_violation: adapter_config_"
-                          "unreadable (%s)" % exc)
+                          f"unreadable ({exc})")
         cfg_base = (cfg_json.get("base_model_name_or_path")
                     if isinstance(cfg_json, dict) else None)
         if cfg_base != base_model:
             return refuse("model_identity_violation: adapter_config_pin_"
-                          "disagreement (config=%r pin=%r)"
-                          % (cfg_base, base_model))
+                          f"disagreement (config={cfg_base!r} pin={base_model!r})")
         disk_sha = hashlib.sha256(cfg.read_bytes()).hexdigest()
         if isinstance(pin_sha, str) and pin_sha and disk_sha != pin_sha:
             return refuse("model_identity_violation: adapter_config_sha_"
@@ -298,7 +284,7 @@ def _resolve_model_identity(env, leg_name):
                       "sha_absent (identity unproven)")
     if not is_qwen38_27b_model(base_model):
         return refuse("model_identity_violation: base_model_mismatch "
-                      "(%r is not the Qwen3.8-27B family)" % base_model)
+                      f"({base_model!r} is not the Qwen3.8-27B family)")
     inv_path = pin.get("inventory_path")
     if isinstance(inv_path, str) and inv_path:
         try:
@@ -313,15 +299,14 @@ def _resolve_model_identity(env, leg_name):
                                   "base_model_absent")
         except (OSError, ValueError) as exc:
             return refuse("model_identity_violation: inventory_unreadable "
-                          "(%s)" % exc)
+                          f"({exc})")
     mi["status"] = "PASS"
     return mi
-
 
 def load_leg(path, total):
     env = _read_json(path, "leg envelope")
     if not isinstance(env, dict):
-        _reject("leg envelope not an object: %s" % path)
+        _reject(f"leg envelope not an object: {path}")
     leg_name = str(env.get("leg") or Path(path).name)
     _marker_check(env, leg_name, env.get("leg_log"))
     # Card C-9117: independence evidence is fail-closed per leg, same
@@ -335,16 +320,16 @@ def load_leg(path, total):
     budget = env.get("max_new_tokens")
     if (not isinstance(budget, int) or isinstance(budget, bool)
             or budget <= 0):
-        _reject("verdict_composer_refused_budget_unknown: %s envelope "
+        _reject(f"verdict_composer_refused_budget_unknown: {leg_name} envelope "
                 "lacks a usable max_new_tokens (fail-closed UNKNOWN, "
-                "cross-budget compose refused)" % leg_name)
+                "cross-budget compose refused)")
     if not env.get("benchmark"):
-        _reject("%s envelope lacks its benchmark path" % leg_name)
+        _reject(f"{leg_name} envelope lacks its benchmark path")
     ids = load_benchmark_ids(env["benchmark"])
     if len(ids) != total:
         _reject("%s benchmark has %d tasks; target requires %d"
                 % (leg_name, len(ids), total))
-    scores = _read_json(env.get("scores"), "%s scores" % leg_name)
+    scores = _read_json(env.get("scores"), f"{leg_name} scores")
     adapter, base, records_by_model, fail_marks = _passes_from_scores(
         scores, ids, leg_name)
     composite_adapter = _composite_of(records_by_model["adapter"], len(ids))
@@ -353,9 +338,9 @@ def load_leg(path, total):
     # an EMPTY leg result. Refuse it even when pass-counts differ (the
     # pinned metric would decide on pass-count and never notice the gap).
     if composite_adapter is None or composite_base is None:
-        _reject("verdict_composer_refused_empty: %s leg result has no "
+        _reject(f"verdict_composer_refused_empty: {leg_name} leg result has no "
                 "composite inputs (scores.overall absent from every "
-                "record)" % leg_name)
+                "record)")
     return {
         "env": env,
         "path": str(path),
@@ -381,7 +366,6 @@ def load_leg(path, total):
             env, leg_name, ids, env.get("scores")),
     }
 
-
 def _load_candidates_differ(env, leg_name, leg_path):
     """C-9059: resolve this leg's candidates_differ artifact.
 
@@ -397,10 +381,10 @@ def _load_candidates_differ(env, leg_name, leg_path):
         candidates.append(Path(ref))
     candidates.append(
         Path(leg_path).resolve().parent
-        / ("%s_candidates_differ.json" % leg_name))
+        / (f"{leg_name}_candidates_differ.json"))
     candidates.append(
         Path.cwd() / "outputs"
-        / ("%s_candidates_differ.json" % leg_name))
+        / (f"{leg_name}_candidates_differ.json"))
     art_path = next((c for c in candidates if c.is_file()), None)
     unknown = {
         "status": "UNKNOWN",
@@ -414,7 +398,7 @@ def _load_candidates_differ(env, leg_name, leg_path):
     try:
         art = json.loads(art_path.read_text(encoding="utf-8"))
     except (OSError, ValueError) as exc:
-        unknown["reason"] = "candidates_differ_artifact_unparseable: %s" % exc
+        unknown["reason"] = f"candidates_differ_artifact_unparseable: {exc}"
         unknown["ref"] = str(art_path)
         return unknown
     if (not isinstance(art, dict)
@@ -437,7 +421,6 @@ def _load_candidates_differ(env, leg_name, leg_path):
         "ref": str(art_path),
     }
 
-
 def compute_sha_pins():
     """C-0031: hash the ACTUAL frozen bench + scorer-chain files on disk
     so the verdict carries evidence of which scorer produced it. The
@@ -456,11 +439,10 @@ def compute_sha_pins():
     for rel in (BENCH_RELPATH,) + tuple(SCORER_CHAIN):
         p = root / rel
         if not p.is_file():
-            _reject("sha pin source missing: %s" % rel)
+            _reject(f"sha pin source missing: {rel}")
         hashes[rel] = hashlib.sha256(p.read_bytes()).hexdigest()
     return hashes[BENCH_RELPATH], dict(
         (rel, hashes[rel]) for rel in SCORER_CHAIN)
-
 
 def _load_candidates_vs_base(env, leg_name, ids, scores_path):
     """C-9110: validate the per-task candidate-vs-base byte-diff counts
@@ -480,8 +462,8 @@ def _load_candidates_vs_base(env, leg_name, ids, scores_path):
         unknown["reason"] = "candidates_vs_base_diff absent from envelope"
         return unknown
     if ev.get("status") != "MEASURED":
-        unknown["reason"] = ("leg-time differ evidence status is %r, "
-                             "not MEASURED" % (ev.get("status"),))
+        unknown["reason"] = ("leg-time differ evidence status is {!r}, "
+                             "not MEASURED".format(ev.get("status")))
         return unknown
     per_task = ev.get("per_task")
     if not isinstance(per_task, dict) or set(per_task) != set(ids):
@@ -507,18 +489,17 @@ def _load_candidates_vs_base(env, leg_name, ids, scores_path):
             Path(scores_path).read_bytes()).hexdigest()
     except OSError as exc:
         unknown["reason"] = ("scores file unreadable for the evidence "
-                             "tie: %s" % exc)
+                             f"tie: {exc}")
         return unknown
     if stamped != scores_sha:
-        unknown["reason"] = ("differ evidence scores_sha256 %r does not "
-                             "match the leg scores file %s (tamper or "
-                             "stale evidence)" % (stamped, scores_path))
+        unknown["reason"] = (f"differ evidence scores_sha256 {stamped!r} does not "
+                             f"match the leg scores file {scores_path} (tamper or "
+                             "stale evidence)")
         return unknown
     out = dict(ev)
     out.setdefault("match_max_fraction",
                    CANDIDATE_BASE_MATCH_MAX_FRACTION)
     return out
-
 
 def candidates_differ_gate(leg_name, evidence):
     """C-9110: the done-criteria candidate-vs-base differ GATE. Refuses
@@ -532,9 +513,9 @@ def candidates_differ_gate(leg_name, evidence):
     if not isinstance(evidence, dict) or evidence.get("status") != "MEASURED":
         reason = (evidence.get("reason")
                   if isinstance(evidence, dict) else "absent")
-        _reject("verdict_composer_refused_candidates_differ_unknown: %s "
+        _reject(f"verdict_composer_refused_candidates_differ_unknown: {leg_name} "
                 "carries no usable candidates-vs-base diff evidence "
-                "(%s); compose refuses fail-closed" % (leg_name, reason))
+                f"({reason}); compose refuses fail-closed")
     n = evidence["n_checked"]
     matching = sorted(evidence.get("matching_task_ids") or [])
     limit = int(n * frac)
@@ -547,40 +528,35 @@ def candidates_differ_gate(leg_name, evidence):
     return dict(status="PASS", n_checked=n, n_byte_match=len(matching),
                 limit=limit, max_fraction=frac, matching_task_ids=matching)
 
-
 def compose(leg1, leg2, target=DEFAULT_TARGET):
     parts = target.split("/", 1)
     if len(parts) != 2:
-        _reject("malformed target: %r" % target)
+        _reject(f"malformed target: {target!r}")
     try:
         total = int(parts[0])
         if int(parts[1]) != total:
-            _reject("target must be n/n: %r" % target)
+            _reject(f"target must be n/n: {target!r}")
     except ValueError:
-        _reject("malformed target: %r" % target)
+        _reject(f"malformed target: {target!r}")
     if leg1["ids"] != leg2["ids"]:
-        _reject("legs ran different benchmark task sets: %s vs %s"
-                % (leg1["env"].get("benchmark"), leg2["env"].get("benchmark")))
+        _reject("legs ran different benchmark task sets: {} vs {}".format(leg1["env"].get("benchmark"), leg2["env"].get("benchmark")))
     if leg1["mechanism"] == leg2["mechanism"]:
-        _reject("legs used the same runner mechanism %r; the second leg "
-                "is not an independent reconfirmation" % leg1["mechanism"])
+        _reject("legs used the same runner mechanism {!r}; the second leg "
+                "is not an independent reconfirmation".format(leg1["mechanism"]))
     # Card C-9117 leg2 independence bar -- three pairwise refusals:
     # distinct leg process; no shared candidate cache; distinct window
     # OR distinct transport (same BOTH = one execution channel).
     i1, i2 = leg1["independence"], leg2["independence"]
     if i1["leg_process_id"] == i2["leg_process_id"]:
         _reject("verdict_composer_refused_not_distinct_process: both "
-                "legs declare leg_process_id %r (bar: %s)"
-                % (i1["leg_process_id"], INDEPENDENCE_BAR))
+                "legs declare leg_process_id {!r} (bar: {})".format(i1["leg_process_id"], INDEPENDENCE_BAR))
     if i1["candidate_cache_id"] == i2["candidate_cache_id"]:
         _reject("verdict_composer_refused_shared_candidate_cache: both "
-                "legs declare candidate_cache_id %r (bar: %s)"
-                % (i1["candidate_cache_id"], INDEPENDENCE_BAR))
+                "legs declare candidate_cache_id {!r} (bar: {})".format(i1["candidate_cache_id"], INDEPENDENCE_BAR))
     if (i1["window_id"] == i2["window_id"]
             and i1["transport"] == i2["transport"]):
         _reject("verdict_composer_refused_same_window_and_transport: "
-                "both legs declare window_id %r transport %r (bar: %s)"
-                % (i1["window_id"], i1["transport"], INDEPENDENCE_BAR))
+                "both legs declare window_id {!r} transport {!r} (bar: {})".format(i1["window_id"], i1["transport"], INDEPENDENCE_BAR))
     # C-9046: a cross-budget pair is refused outright -- the beats_base
     # arithmetic over legs run at different token ceilings is not a
     # like-for-like comparison.
@@ -600,7 +576,7 @@ def compose(leg1, leg2, target=DEFAULT_TARGET):
         if leg1["adapter"][tid] != leg2["adapter"][tid]
         or leg1["base"][tid] != leg2["base"][tid])
     if disagree:
-        _reject("legs disagree on per-task pass: %s" % disagree)
+        _reject(f"legs disagree on per-task pass: {disagree}")
     a_pass = sum(1 for v in leg1["adapter"].values() if v)
     b_pass = sum(1 for v in leg1["base"].values() if v)
     # Pinned metric (card C-0013): pass-count primary; composite tiebreak
@@ -613,7 +589,7 @@ def compose(leg1, leg2, target=DEFAULT_TARGET):
             composite_adapter=leg1["composite_adapter"],
             composite_base=leg1["composite_base"])
     except BeatsBaseError as exc:
-        _reject("beats_base pinned metric refused: %s" % exc)
+        _reject(f"beats_base pinned metric refused: {exc}")
     beats_base = bool(beats)
     # C-0049: per-task fail-closed grading -- contained-poison evidence
     # from EITHER leg marks the task fail_closed in the verdict; pass
@@ -651,8 +627,7 @@ def compose(leg1, leg2, target=DEFAULT_TARGET):
     identity_violation = id1["violation"] or id2["violation"]
     if identity_violation is None and id1["base_model"] != id2["base_model"]:
         identity_violation = ("model_identity_violation: leg_base_model_"
-                              "disagreement (%r vs %r)"
-                              % (id1["base_model"], id2["base_model"]))
+                              "disagreement ({!r} vs {!r})".format(id1["base_model"], id2["base_model"]))
     model_admissible = identity_violation is None
     return {
         "pass_adapter": "%d/%d" % (a_pass, total),
@@ -671,7 +646,7 @@ def compose(leg1, leg2, target=DEFAULT_TARGET):
         "model_admissible": model_admissible,
         "model_identity_violation": identity_violation,
         "goal_done": ("YES" if (model_admissible and
-                                ("%d/%d" % (a_pass, total)) == target
+                                (f"{a_pass}/{total}") == target
                                 and beats_base) else "NO"),
         "goal_target": target,
         "adapter_applied_marker": leg1["env"].get("adapter_applied_marker"),
@@ -725,7 +700,6 @@ def compose(leg1, leg2, target=DEFAULT_TARGET):
         "composed_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
     }
 
-
 def write_verdict(verdict, out_path):
     """Atomic write; the verdict file appears whole or not at all."""
     out = Path(out_path)
@@ -744,23 +718,21 @@ def write_verdict(verdict, out_path):
         raise
     return out
 
-
 def compose_verdict(leg1_path, leg2_path, out_path, target=DEFAULT_TARGET):
     parts = target.split("/", 1)
     if len(parts) != 2:
-        _reject("malformed target: %r" % target)
+        _reject(f"malformed target: {target!r}")
     try:
         total = int(parts[0])
         if int(parts[1]) != total:
-            _reject("target must be n/n: %r" % target)
+            _reject(f"target must be n/n: {target!r}")
     except ValueError:
-        _reject("malformed target: %r" % target)
+        _reject(f"malformed target: {target!r}")
     leg1 = load_leg(leg1_path, total)
     leg2 = load_leg(leg2_path, total)
     verdict = compose(leg1, leg2, target)
     write_verdict(verdict, out_path)
     return verdict
-
 
 def main(argv=None):
     parser = argparse.ArgumentParser(
@@ -775,7 +747,7 @@ def main(argv=None):
     try:
         verdict = compose_verdict(args.leg1, args.leg2, args.out, args.target)
     except VerdictRejected as exc:
-        print("VERDICT_REJECTED: %s" % exc, file=sys.stderr)
+        print(f"VERDICT_REJECTED: {exc}", file=sys.stderr)
         return 1
     print(json.dumps({
         "stage": "verdict_written",
@@ -785,7 +757,6 @@ def main(argv=None):
         "meets_goal": verdict["meets_goal"],
     }))
     return 0
-
 
 if __name__ == "__main__":
     raise SystemExit(main())

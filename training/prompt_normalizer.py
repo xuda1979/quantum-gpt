@@ -34,7 +34,8 @@ _CANONICAL_OUTPUT_CONTRACT = (
     "- Return complete, executable Python code.\n"
     "- Implement every function in the required interface with the exact name and signature.\n"
     '- You may include helper functions, imports, and a ``if __name__ == "__main__"`` guard.\n'
-    "- Do not add explanations, tests, or demo code outside the implementation."
+    "- Do not add explanations, tests, examples, or demo code.\n"
+    "- Stop immediately after the final required Python statement."
 )
 
 # Header for the required interface section.

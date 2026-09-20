@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+
 def bit_register_to_int(bits: list[int]) -> int:
     if not bits:
         raise ValueError("bits must be non-empty")

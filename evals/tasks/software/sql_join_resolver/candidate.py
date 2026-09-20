@@ -8,6 +8,8 @@ with the requested columns. Column references may be qualified (`t.col`) or
 unqualified (`col`); unqualified columns must be unambiguous.
 """
 
+from __future__ import annotations
+
 from typing import Any
 
 

@@ -4,6 +4,8 @@ Sends the question + the model's prose answer to GLM5.2 and parses the
 JSON verdict. Used by every science task's tests.py.
 """
 
+from __future__ import annotations
+
 import json
 import os
 import re

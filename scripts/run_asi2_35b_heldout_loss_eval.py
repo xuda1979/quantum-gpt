@@ -12,17 +12,20 @@ from __future__ import annotations
 import argparse
 import gc
 import json
+import logging
 import sys
 import time
 from pathlib import Path
 from typing import Any
 
-import logging
-
 import torch
 import transformers
 from peft import PeftModel
-from transformers import AutoConfig, AutoModelForCausalLM, AutoProcessor, AutoTokenizer, PreTrainedTokenizerFast
+from transformers import (
+    AutoProcessor,
+    AutoTokenizer,
+    PreTrainedTokenizerFast,
+)
 
 # This transformers build logs ``Model config {config}`` at INFO during
 # AutoConfig.from_pretrained, which triggers PretrainedConfig.__repr__ ->
@@ -76,9 +79,9 @@ if str(ROOT) not in sys.path:
 
 from torch.utils.data import DataLoader
 
+from scripts.run_asi2_35b_pass1_eval import first_parameter_device, load_35b_model
 from training.qwen_sft_peft import ChatSftDataset, PaddingCollator, evaluate
 from training.text_preprocessor_backend import load_text_preprocessor_backend
-from scripts.run_asi2_35b_pass1_eval import load_35b_model, first_parameter_device
 
 
 def parse_args() -> argparse.Namespace:

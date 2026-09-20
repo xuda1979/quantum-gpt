@@ -132,6 +132,7 @@ def test_asi3_launch_fails_before_side_effects_when_payload_is_incomplete(tmp_pa
         {
             "ASI3_SAPO_ROOT": str(tmp_path / "missing-project"),
             "ASI3_SAPO_MODEL_PATH": str(tmp_path / "missing-model"),
+            "SAPO_RUN_POINTER": str(tmp_path / "run-pointer"),
             "RESUME_FROM": "/stale/metrics.jsonl",
             "ADAPTER_INIT": "/stale/adapter",
             "ASCEND_RT_VISIBLE_DEVICES": "7",
@@ -176,6 +177,7 @@ def _run_launcher_past_preflight(
             "ASI3_SAPO_OUT": str(tmp_path / "out"),
             "ASI3_SAPO_LOGDIR": str(tmp_path / "logs"),
             "ASI3_SAPO_RUN_ID": run_id,
+            "SAPO_RUN_POINTER": str(tmp_path / "run-pointer"),
         }
     )
     return subprocess.run(
@@ -355,6 +357,7 @@ def test_ai_sapo_entrypoint_forwards_ai_root_before_any_side_effect(tmp_path: Pa
         {
             "AI_SAPO_ROOT": str(missing_root),
             "AI_SAPO_MODEL_PATH": str(tmp_path / "ai-model"),
+            "SAPO_RUN_POINTER": str(tmp_path / "run-pointer"),
         }
     )
     completed = subprocess.run(
@@ -383,9 +386,9 @@ def test_sapo_launchers_fail_closed_for_semantic_stdout_reward() -> None:
 def test_promotion_eval_defaults_to_canonical_ai_model_tree() -> None:
     source = PROMOTION_LAUNCHER.read_text(encoding="utf-8")
 
-    assert 'SAPO_PROMOTION_ROOT="${SAPO_PROMOTION_ROOT:-/root/software/quantum-gpt}"' in source
-    assert "$SAPO_PROMOTION_ROOT/models/Qwen3.6-27B" in source
-    assert "/root/work/filestorage/Qwen3.6-27B" not in source
+    assert 'SAPO_PROMOTION_ROOT="${SAPO_PROMOTION_ROOT:-/root/work/software/quantum-gpt}"' in source
+    assert "/root/work/filestorage/Qwen3.8-27B" in source
+    assert "Qwen3.6-27B" not in source
 
 
 ASI2_LAUNCHER = ROOT / "scripts" / "asi2_launch_grpo_27b_selfeval.sh"

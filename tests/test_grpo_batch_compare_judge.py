@@ -494,9 +494,9 @@ def test_dp4_batch_judge_prompt_is_plain_candidates_text(monkeypatch):
         endpoint="http://127.0.0.1:55080",
     )
     prompt = captured["prompt"]
-    assert "Candidate 1:\n```python\n" in prompt, (
-        "prompt must contain the plain rendered candidates (literal newline), not the tuple repr"
-    )
+    assert (
+        "Candidate 1:\n```python\n" in prompt
+    ), "prompt must contain the plain rendered candidates (literal newline), not the tuple repr"
     assert "code_" in prompt and "EXECUTABLE EVIDENCE: tests passed: True\n" in prompt
     assert "[0, 1, 2" not in prompt, "permutation list must never leak into the prompt"
 
@@ -824,9 +824,9 @@ def test_unpermute_batch_scores_round_trip_with_randomized_render() -> None:
     for idx in range(8):
         expected = (perm.index(idx) + 1) / 10.0
         for dim in MODEL_JUDGE_DIMENSIONS:
-            assert remapped[idx][dim] == pytest.approx(expected), (
-                f"original candidate {idx} misattributed: {remapped[idx][dim]} != {expected}"
-            )
+            assert remapped[idx][dim] == pytest.approx(
+                expected
+            ), f"original candidate {idx} misattributed: {remapped[idx][dim]} != {expected}"
     # None stays None (fail-closed), and out-of-range positions are dropped
     assert _unpermute_batch_scores(None, perm) is None
     assert _unpermute_batch_scores({99: {"correctness_of_intent": 0.5}}, perm) == {}

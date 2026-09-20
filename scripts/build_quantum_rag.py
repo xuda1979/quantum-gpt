@@ -14,7 +14,6 @@ if str(ROOT) not in sys.path:
 
 from quantum_rag import QuantumRAGIndex, build_chunks_from_roots
 
-
 AUTHORITATIVE_ROOTS = [
     "AGENTS.md",
     "HEARTBEAT.md",

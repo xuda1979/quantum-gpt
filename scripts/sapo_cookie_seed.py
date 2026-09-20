@@ -148,6 +148,19 @@ def chrome_time_expiry() -> int:
     )
 
 
+def classify_security_rc(rc: int, stderr: str) -> str:
+    """Classify a macOS Security framework return code into a human-readable
+    failure class.  B-183 (2026-09-14): the old code collapsed every non-zero
+    rc into "keychain denied", sending diagnosis to the wrong theory when the
+    real problem was an absent keychain item (rc=44).
+    """
+    if rc == 44 or "could not be found" in stderr:
+        return "keychain item not found — Chrome safe-storage entry is absent"
+    if rc in (36, 51):
+        return "keychain access denied — auth/ACL refusal"
+    return f"keychain error rc={rc}: {stderr.strip() or 'no stderr'}"
+
+
 def storage_key() -> bytes:
     out = subprocess.run(
         ["security", "find-generic-password", "-w", "-s", "Chrome Safe Storage"],
@@ -155,7 +168,7 @@ def storage_key() -> bytes:
         text=True,
     )
     if out.returncode != 0:
-        sys.exit("keychain denied — cannot decrypt user cookies")
+        sys.exit(classify_security_rc(out.returncode, out.stderr))
     return out.stdout.strip().encode()
 
 

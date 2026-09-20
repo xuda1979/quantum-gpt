@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import math
 
 
@@ -53,9 +55,9 @@ def shor_decode(state: list[float]) -> int:
         b0 = (idx >> 6) & 7
         b1 = (idx >> 3) & 7
         b2 = idx & 7
-        cb0 = 7 if bin(b0).count('1') >= 2 else 0
-        cb1 = 7 if bin(b1).count('1') >= 2 else 0
-        cb2 = 7 if bin(b2).count('1') >= 2 else 0
+        cb0 = 7 if bin(b0).count("1") >= 2 else 0
+        cb1 = 7 if bin(b1).count("1") >= 2 else 0
+        cb2 = 7 if bin(b2).count("1") >= 2 else 0
         new_idx = (cb0 << 6) | (cb1 << 3) | cb2
         corrected[new_idx] += state[idx]
 
@@ -63,7 +65,7 @@ def shor_decode(state: list[float]) -> int:
     # Compare amplitude at |000 000 000> (index 0) with |111 000 000> (index 448).
     # |0_L>: these have the same sign.
     # |1_L>: these have opposite signs.
-    amp_000 = corrected[0]            # |000 000 000>
+    amp_000 = corrected[0]  # |000 000 000>
     amp_111 = corrected[0b111000000]  # |111 000 000>
 
     if abs(amp_000) < 1e-12 and abs(amp_111) < 1e-12:

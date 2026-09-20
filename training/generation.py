@@ -211,9 +211,16 @@ def build_generation_diagnostics(
     # completions are therefore labeled by their fence class only.
     eos_terminated = [
         bool(
-            ids.numel()
-            and int(ids.reshape(-1)[-1].item()) in eos_ids
-            and not has_closed_code_fence(response)
+            (
+                ids.numel()
+                and int(ids.reshape(-1)[-1].item()) in eos_ids
+                and not has_closed_code_fence(response)
+            )
+            or (
+                # eos_dangling: below cap, no fence, no explicit EOS token —
+                # vLLM re-encoded natural-EOS class, counted as EOS.
+                len(ids) < max_new_tokens and not has_closed_code_fence(response)
+            )
         )
         for ids, response in strict_zip(completion_token_ids, raw_responses)
     ]
@@ -226,7 +233,7 @@ def build_generation_diagnostics(
     # (2026-08-26 debug-lane follow-up 2) — the fence-stop just fired at the
     # boundary.
     truncated = [
-        bool(length >= max_new_tokens and not terminated and not fenced)
+        bool(not terminated and not fenced)
         for length, terminated, fenced in strict_zip(lengths, eos_terminated, fence_terminated)
     ]
     # 2026-08-26 (r10): a cap-run whose raw text contains ANY fence opener
@@ -351,7 +358,7 @@ def rollout_suppress_logits_processor(suppress_token_ids: set[int] | None):
     except ImportError:
         return None
 
-    return SuppressTokensLogitsProcessor(sorted(int(t) for t in suppress_token_ids))
+    return [SuppressTokensLogitsProcessor(sorted(int(t) for t in suppress_token_ids))]
 
 
 def append_fence_stop_markers(

@@ -143,10 +143,10 @@ def main():
 
     fam_count = Counter(m["key"].split("__")[1] for m in manifest)
     print("by family:", dict(fam_count))
-    fails = [l for l in log_lines if "OK " not in l]
+    fails = [line for line in log_lines if "OK " not in line]
     print(f"non-OK entries: {len(fails)}")
-    for l in fails[:40]:
-        print("  ", l.split("\n")[0])
+    for line in fails[:40]:
+        print("  ", line.split("\n")[0])
 
 
 if __name__ == "__main__":

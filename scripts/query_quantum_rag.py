@@ -14,7 +14,12 @@ if str(ROOT) not in sys.path:
 
 from quantum_rag.cache import AnswerCache, index_summary_hash
 from quantum_rag.eval import evaluate_answer
-from quantum_rag.generation import ChatCompletionsClient, ResponsesClient, build_rag_messages, format_retrieved_context
+from quantum_rag.generation import (
+    ChatCompletionsClient,
+    ResponsesClient,
+    build_rag_messages,
+    format_retrieved_context,
+)
 from quantum_rag.index import QuantumRAGIndex
 from quantum_rag.retrieval import QueryExpansionConfig, retrieve
 
@@ -176,7 +181,7 @@ def main() -> int:
         print(answer)
         if args.eval:
             eval_result = evaluate_answer(args.query, answer, retrieved)
-            print(f"\n--- Eval ---")
+            print("\n--- Eval ---")
             print(f"faithfulness: {eval_result.faithfulness_score:.3f}")
             print(f"relevance:    {eval_result.relevance_score:.3f}")
             print(f"groundedness: {eval_result.groundedness_score:.3f}")

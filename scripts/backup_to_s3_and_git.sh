@@ -38,6 +38,7 @@ done
 # ── S3 backup ─────────────────────────────────────────────────────────────
 if [[ $GIT_ONLY -eq 0 ]]; then
   echo "=== [$(date -u +%FT%TZ)] S3 backup starting ==="
+  _s3_fail=0
   source "$ROOT_DIR/scripts/iner_s3_env.sh"
   CONFIG_PATH="$(mktemp /tmp/iner-rclone-backup.XXXXXX)"
   trap 'rm -f "$CONFIG_PATH"' EXIT
@@ -69,23 +70,27 @@ if [[ $GIT_ONLY -eq 0 ]]; then
 
   # 1b. Adapters + run configs + metrics (the "important files").
   echo "--- outputs/ ---"
-  rclone copy "$ROOT_DIR/outputs/" "${INER_S3_ROOT}/outputs/" "${RCLONE_ARGS[@]}" 2>&1 | tail -5 || true
+  rclone copy "$ROOT_DIR/outputs/" "${INER_S3_ROOT}/outputs/" "${RCLONE_ARGS[@]}" 2>&1 | tail -5 || _s3_fail=1
 
   # 1c. Evaluation results: scorecards, manifests, candidate maps, generation logs.
   echo "--- evals/runs/ ---"
-  rclone copy "$ROOT_DIR/evals/runs/" "${INER_S3_ROOT}/evals/runs/" "${RCLONE_ARGS[@]}" 2>&1 | tail -5 || true
+  rclone copy "$ROOT_DIR/evals/runs/" "${INER_S3_ROOT}/evals/runs/" "${RCLONE_ARGS[@]}" 2>&1 | tail -5 || _s3_fail=1
 
   # 1d. Training configs / plans (small, but valuable).
   echo "--- training/ ---"
-  rclone copy "$ROOT_DIR/training/" "${INER_S3_ROOT}/training/" "${RCLONE_ARGS[@]}" 2>&1 | tail -5 || true
+  rclone copy "$ROOT_DIR/training/" "${INER_S3_ROOT}/training/" "${RCLONE_ARGS[@]}" 2>&1 | tail -5 || _s3_fail=1
 
   # 1e. Generated datasets (distillation seed questions + teacher responses).
   # These are small JSONL files (a few MB) but extremely valuable — expensive
   # to regenerate (requires teacher API calls). Explicitly include them here
   # so they are backed up to S3 alongside the code.
   echo "--- data/generated/ ---"
-  rclone copy "$ROOT_DIR/data/generated/" "${INER_S3_ROOT}/data/generated/" "${RCLONE_ARGS[@]}" 2>&1 | tail -5 || true
+  rclone copy "$ROOT_DIR/data/generated/" "${INER_S3_ROOT}/data/generated/" "${RCLONE_ARGS[@]}" 2>&1 | tail -5 || _s3_fail=1
 
+  if [ "$_s3_fail" = "1" ]; then
+    echo "=== S3 backup FAILED (one or more rclone copies failed) ===" >&2
+    exit 1
+  fi
   echo "=== S3 backup done ==="
 fi
 
@@ -115,10 +120,16 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>"
   fi
 
   # Push (best-effort; never force).
+  _git_fail=0
   if git rev-parse --abbrev-ref --symbolic-full-name '@{u}' >/dev/null 2>&1; then
-    git push origin "$BRANCH" 2>&1 | tail -5 || echo "push failed (offline?)"
+    git push origin "$BRANCH" 2>&1 | tail -5 || _git_fail=1
   else
-    echo "no upstream set for $BRANCH; skipping push"
+    echo "no upstream set for $BRANCH; skipping push" >&2
+    _git_fail=1
+  fi
+  if [ "$_git_fail" = "1" ]; then
+    echo "=== git sync FAILED (push rejected or no upstream) ===" >&2
+    exit 1
   fi
   echo "=== git sync done ==="
 fi

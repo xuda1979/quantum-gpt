@@ -113,8 +113,7 @@ def build_envelope(
 def _run_append(argv, log_path):
     with open(log_path, "a", encoding="utf-8") as fh:
         fh.write(
-            "\n[%s] RUN %s\n"
-            % (time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), " ".join(str(a) for a in argv))
+            "\n[{}] RUN {}\n".format(time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), " ".join(str(a) for a in argv))
         )
         fh.flush()
         return subprocess.call([str(a) for a in argv], stdout=fh, stderr=subprocess.STDOUT)
@@ -141,8 +140,8 @@ def main(argv=None):
 
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
-    log = out_dir / ("leg2_%s.log" % args.step)
-    scores = out_dir / ("leg2_%s_scores.json" % args.step)
+    log = out_dir / (f"leg2_{args.step}.log")
+    scores = out_dir / (f"leg2_{args.step}_scores.json")
 
     eval_rc = _run_append(
         sequential_argv(
@@ -223,9 +222,9 @@ def main(argv=None):
         transport=os.environ.get("ASI2_TRANSPORT", "direct-local"),
     )
     with open(log, "a", encoding="utf-8") as fh:
-        fh.write("independence: " + " ".join("%s=%s" % (k, indep[k]) for k in sorted(indep)) + "\n")
+        fh.write("independence: " + " ".join(f"{k}={indep[k]}" for k in sorted(indep)) + "\n")
     envelope.update(indep)
-    out = out_dir / ("holdout_leg2_%s.json" % args.step)
+    out = out_dir / (f"holdout_leg2_{args.step}.json")
     tmp = out.with_suffix(out.suffix + ".tmp")
     tmp.write_text(json.dumps(envelope, indent=2) + "\n", encoding="utf-8")
     tmp.replace(out)

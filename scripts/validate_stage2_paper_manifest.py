@@ -234,7 +234,7 @@ def main() -> int:
             return 1
 
     if args.emit_manifest:
-        by_id = {c["paper_id"]: c for c in cards}
+        {c["paper_id"]: c for c in cards}
         field_counts: dict[str, int] = {}
         qa_counts: dict[str, int] = {f"L{i}": 0 for i in range(7)}
         n_qa = 0

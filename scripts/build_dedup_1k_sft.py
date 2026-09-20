@@ -63,7 +63,7 @@ def signature(row):
 
 
 def load_jsonl(path):
-    return [json.loads(l) for l in path.read_text().splitlines() if l.strip()]
+    return [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
 
 
 def main():

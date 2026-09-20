@@ -26,7 +26,6 @@ if str(ROOT) not in sys.path:
 from quantum_rag.index import QuantumRAGIndex
 from quantum_rag.retrieval import QueryExpansionConfig, retrieve
 
-
 DEFAULT_ENV_FILE = ROOT / ".qwen36-rag-local.env"
 DEFAULT_SUMMARY_JSON = ROOT / "artifacts" / "quantum-rag" / "qwen36-quantum-docs-summary.json"
 DEFAULT_FETCH_MANIFEST = ROOT / "artifacts" / "quantum-rag" / "qwen36-docs-fetch-manifest.json"

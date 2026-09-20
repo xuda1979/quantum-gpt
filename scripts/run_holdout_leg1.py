@@ -153,14 +153,14 @@ def load_benchmark_ids(path):
     """Task ids of the frozen benchmark (same parse as holdout_verdict)."""
     p = Path(path)
     if not p.is_file():
-        raise ValueError("benchmark file missing: %s" % p)
+        raise ValueError(f"benchmark file missing: {p}")
     ids = []
     for line in p.read_text(encoding="utf-8").splitlines():
         line = line.strip()
         if line and not line.startswith("#"):
             ids.append(line.split()[0])
     if not ids:
-        raise ValueError("benchmark file has no task ids: %s" % p)
+        raise ValueError(f"benchmark file has no task ids: {p}")
     return ids
 
 
@@ -179,13 +179,13 @@ def merge_slice_scores(slice_paths, benchmark_ids):
         payload = json.loads(Path(path).read_text(encoding="utf-8"))
         rows = payload.get("records") if isinstance(payload, dict) else None
         if not isinstance(rows, list):
-            raise ValueError("slice scores lacks a records list: %s" % path)
+            raise ValueError(f"slice scores lacks a records list: {path}")
         for row in rows:
             if not isinstance(row, dict):
-                raise ValueError("slice record not an object: %s" % path)
+                raise ValueError(f"slice record not an object: {path}")
             key = (row.get("model"), row.get("task_id"))
             if key in seen:
-                raise ValueError("duplicate record across slices: %r" % (key,))
+                raise ValueError(f"duplicate record across slices: {key!r}")
             seen.add(key)
             records.append(row)
     expected = set()
@@ -195,9 +195,9 @@ def merge_slice_scores(slice_paths, benchmark_ids):
     missing = sorted(expected - seen)
     extra = sorted(seen - expected)
     if missing:
-        raise ValueError("merged scores missing records: %s" % missing)
+        raise ValueError(f"merged scores missing records: {missing}")
     if extra:
-        raise ValueError("merged scores cover non-frozen tasks: %s" % extra)
+        raise ValueError(f"merged scores cover non-frozen tasks: {extra}")
     return dict(
         created_utc=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         slices=[str(p) for p in slice_paths],
@@ -208,8 +208,7 @@ def merge_slice_scores(slice_paths, benchmark_ids):
 
 def _echo(fh, tag, argv):
     fh.write(
-        "[%s] %s %s\n"
-        % (time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), tag, " ".join(str(a) for a in argv))
+        "[{}] {} {}\n".format(time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), tag, " ".join(str(a) for a in argv))
     )
     fh.flush()
 
@@ -222,7 +221,7 @@ def _run_parallel(argvs, log_path):
     """
     with open(log_path, "a", encoding="utf-8") as fh:
         for i, argv in enumerate(argvs):
-            _echo(fh, "SLICE%d" % i, argv)
+            _echo(fh, f"SLICE{i}", argv)
         procs = [
             subprocess.Popen([str(a) for a in argv], stdout=fh, stderr=subprocess.STDOUT)
             for argv in argvs
@@ -263,8 +262,8 @@ def main(argv=None):
 
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
-    log = out_dir / ("leg1_%s.log" % args.step)
-    scores = out_dir / ("leg1_%s_scores.json" % args.step)
+    log = out_dir / (f"leg1_{args.step}.log")
+    scores = out_dir / (f"leg1_{args.step}_scores.json")
 
     try:
         ids = load_benchmark_ids(args.benchmark)
@@ -274,7 +273,7 @@ def main(argv=None):
         return 1
 
     slice_paths = [
-        out_dir / ("leg1_%s_slice%d_scores.json" % (args.step, i)) for i in range(len(slices))
+        out_dir / (f"leg1_{args.step}_slice{i}_scores.json") for i in range(len(slices))
     ]
     argvs = [
         slice_argv(
@@ -369,9 +368,9 @@ def main(argv=None):
         transport=os.environ.get("ASI2_TRANSPORT", "direct-local"),
     )
     with open(log, "a", encoding="utf-8") as fh:
-        fh.write("independence: " + " ".join("%s=%s" % (k, indep[k]) for k in sorted(indep)) + "\n")
+        fh.write("independence: " + " ".join(f"{k}={indep[k]}" for k in sorted(indep)) + "\n")
     envelope.update(indep)
-    out = out_dir / ("holdout_leg1_%s.json" % args.step)
+    out = out_dir / (f"holdout_leg1_{args.step}.json")
     _write_json(envelope, out)
     print(json.dumps(dict(stage="leg1_envelope_written", out=str(out))), flush=True)
     return 0

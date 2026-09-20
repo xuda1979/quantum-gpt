@@ -11,7 +11,10 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from training.runtime_overlay import apply_transformers_peft_compat_shims, configure_runtime_overlay_from_env
+from training.runtime_overlay import (
+    apply_transformers_peft_compat_shims,
+    configure_runtime_overlay_from_env,
+)
 
 configure_runtime_overlay_from_env()
 
@@ -21,8 +24,8 @@ from transformers import AutoConfig, AutoModelForCausalLM
 
 apply_transformers_peft_compat_shims(transformers)
 
-from training.model_backend import load_causal_lm_with_text_backend_preflight
 from training.manual_lora_merge import merge_lora_adapter_into_model
+from training.model_backend import load_causal_lm_with_text_backend_preflight
 from training.qwen_sft_peft import resolve_device
 
 

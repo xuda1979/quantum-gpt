@@ -330,13 +330,22 @@ def main(argv: list[str] | None = None) -> int:
     dpo_path = args.output / "repair_dpo.jsonl"
 
     records = _load_jsonl(args.queue)
-    if args.limit > 0:
-        records = records[: args.limit]
     if not records:
         print("no queue records; nothing to do", file=sys.stderr)
         return 0
 
-    seen_converted = {str(r.get("dedup_key", "")) for r in _load_jsonl(converted_path)}
+    seen_converted = {
+        str(r.get("dedup_key", ""))
+        for r in _load_jsonl(converted_path)
+        if r.get("converted") is True
+    }
+
+    # C-9515: apply limit AFTER skipping already-converted records, not before.
+    # Otherwise with limit=20 and 20 already-converted records at the front,
+    # the poll processes 0 new records instead of the 5 remaining.
+    if args.limit > 0:
+        unconverted = [r for r in records if str(r.get("dedup_key") or "") not in seen_converted]
+        records = unconverted[: args.limit]
     converted = 0
     rejected = 0
     skipped_no_task = 0
@@ -416,7 +425,8 @@ def main(argv: list[str] | None = None) -> int:
         converted_path.open("a", encoding="utf-8").write(
             json.dumps(conversion, sort_keys=True) + "\n"
         )
-        seen_converted.add(dedup_key)
+        if passed:
+            seen_converted.add(dedup_key)
         if not passed:
             rejected += 1
             continue

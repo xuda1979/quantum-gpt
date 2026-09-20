@@ -13,7 +13,7 @@ for node in tree.body:
     if isinstance(node, ast.ClassDef) and node.name == "Qwen3_5MoeExperts":
         cls_src = ast.get_source_segment(src, node)
 assert cls_src
-cls_src = "\n".join(l for l in cls_src.splitlines() if "use_experts_implementation" not in l)
+cls_src = "\n".join(line for line in cls_src.splitlines() if "use_experts_implementation" not in line)
 ACT2FN = {"silu": F.silu}
 ns = {"torch": torch, "nn": nn, "ACT2FN": ACT2FN}
 exec(cls_src, ns)

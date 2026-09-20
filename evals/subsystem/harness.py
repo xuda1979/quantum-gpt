@@ -185,7 +185,8 @@ def resolve_task_list(spec: str) -> list[str]:
 
 
 def find_task_json(task_id: str) -> Path:
-    suffix = task_id.split("_", 1)[1]
+    parts = task_id.split("_", 1)
+    suffix = parts[1] if len(parts) > 1 else ""
     for path in (ROOT / "evals" / "tasks").glob("*/*/task.json"):
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
@@ -703,7 +704,11 @@ def eval_model(
             d: {
                 "pass_at_1": round(v["pass_sum"] / v["n"], 4),
                 "n": v["n"],
-                "n_pass": sum(1 for r in records if r["domain"] == d and r.get("pass_at_1", 0) > 0),
+                "n_pass": sum(
+                    1
+                    for r in records
+                    if (r["domain"] or "unknown") == d and r.get("pass_at_1", 0) > 0
+                ),
             }
             for d, v in sorted(by_domain.items())
         },

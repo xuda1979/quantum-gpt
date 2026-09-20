@@ -12,7 +12,6 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-
 OUTPUT = Path("evals/benchmarks/qwen36_27b_user_rag_questions_v2.json")
 
 
@@ -222,7 +221,7 @@ def build_items() -> list[dict[str, object]]:
                 id_,
                 "quantum_coding_task",
                 concrete_query,
-                [f"evals/tasks/quantum/{task_dir}/", repair, f"docs/quantum_libraries/"],
+                [f"evals/tasks/quantum/{task_dir}/", repair, "docs/quantum_libraries/"],
                 terms,
                 minimum=min(3, len(terms)),
                 coding=True,

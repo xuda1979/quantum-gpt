@@ -20,7 +20,6 @@ from quantum_rag.generation import ChatCompletionsClient, ResponsesClient, build
 from quantum_rag.index import QuantumRAGIndex
 from quantum_rag.retrieval import QueryExpansionConfig, retrieve
 
-
 DEFAULT_MODEL_ALIAS = "quantum-intelligence-v0.1.0"
 
 
@@ -327,7 +326,7 @@ def make_handler(state: RAGCodexState) -> type[BaseHTTPRequestHandler]:
             self.end_headers()
             for event, payload in events:
                 data = json.dumps(payload, ensure_ascii=False)
-                self.wfile.write(f"event: {event}\ndata: {data}\n\n".encode("utf-8"))
+                self.wfile.write(f"event: {event}\ndata: {data}\n\n".encode())
                 self.wfile.flush()
             self.wfile.write(b"data: [DONE]\n\n")
             self.wfile.flush()

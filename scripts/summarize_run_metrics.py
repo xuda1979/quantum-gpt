@@ -9,7 +9,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-
 BASELINES: dict[str, Path] = {
     "semantic_v4_8npu_20step": Path("outputs/interface-prefix-semantic-v4-8npu-20step/metrics.json"),
     "semantic_v4_smoke20": Path("outputs/fast-lora-qwen25-1p5b-interface-prefix-semantic-v4-smoke20/metrics.json"),

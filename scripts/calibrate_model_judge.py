@@ -36,6 +36,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from training.compat import strict_zip  # py3.9-safe
+
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
@@ -56,8 +58,8 @@ def compute_auc(labels: list[bool], scores: list[float]) -> float | None:
     """
     if len(labels) != len(scores) or not labels:
         return None
-    positives = [(label, score) for label, score in zip(labels, scores, strict=True) if label]
-    negatives = [(label, score) for label, score in zip(labels, scores, strict=True) if not label]
+    positives = [(label, score) for label, score in strict_zip(labels, scores) if label]
+    negatives = [(label, score) for label, score in strict_zip(labels, scores) if not label]
     if not positives or not negatives:
         return None
     n_pos, n_neg = len(positives), len(negatives)
@@ -101,7 +103,7 @@ def compute_spearman_r(xs: list[float], ys: list[float]) -> float | None:
     rank_y = _ranks(ys)
     mean_x = statistics.fmean(rank_x)
     mean_y = statistics.fmean(rank_y)
-    cov = sum((x - mean_x) * (y - mean_y) for x, y in zip(rank_x, rank_y, strict=True))
+    cov = sum((x - mean_x) * (y - mean_y) for x, y in strict_zip(rank_x, rank_y))
     var_x = sum((x - mean_x) ** 2 for x in rank_x)
     var_y = sum((y - mean_y) ** 2 for y in rank_y)
     if var_x == 0.0 or var_y == 0.0:

@@ -12,7 +12,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-
 DEFAULT_BENCHMARK = Path("evals/benchmarks/qwen36_27b_rag_ab_manager_v1.json")
 DEFAULT_JSON = Path("reports/qwen36_27b_rag_ab_huanxin_ai_20260513.json")
 DEFAULT_MARKDOWN = Path("reports/qwen36_27b_rag_ab_huanxin_ai_20260513.md")

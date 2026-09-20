@@ -140,6 +140,14 @@ MIX_NEIGHBOR="${MIX_NEIGHBOR:-0.25}"
 MIX_REPLAY="${MIX_REPLAY:-0.25}"
 NEIGHBOR_WINDOW="${NEIGHBOR_WINDOW:-10}"
 CIRCUIT_BREAKER_WINDOW="${CIRCUIT_BREAKER_WINDOW:-10}"
+# B-232: crash-progress credit ON by default — candidates that crash after
+# printing numeric evidence get graded sub-near-miss (rung <=0.3) instead of
+# hard-zero, preserving gradient signal across restarts.
+CRASH_PROGRESS_CREDIT="${CRASH_PROGRESS_CREDIT:-1}"
+CRASH_CREDIT_FLAG=()
+if [[ "$CRASH_PROGRESS_CREDIT" == "1" ]]; then
+  CRASH_CREDIT_FLAG=(--crash-progress-credit)
+fi
 # 2026-08-20 recalibration (risk analysis reports/asi2_relaunch_risk_analysis_20260820.md):
 # the default trust region (reject at seq_kl>0.05 OR clip_fraction>0.50) silently
 # REVERTS every update once per-sequence ratios reach the clip edge at LR 2e-5 —
@@ -493,7 +501,7 @@ fi
 if [[ "$NPU_DEVICE_MAP" == "balanced-layers" ]]; then
   log "launching GRPO trainer as SINGLE process with balanced-layers NPU sharding..."
   RUN_CMD=(
-    env MASTER_ADDR=127.0.0.1 MASTER_PORT=29500 WORLD_SIZE=1 RANK=0 LOCAL_RANK=0
+    env PYTHONUNBUFFERED=1 MASTER_ADDR=127.0.0.1 MASTER_PORT=29500 WORLD_SIZE=1 RANK=0 LOCAL_RANK=0
     "$TRAINER_PY" training/grpo_trainer.py
     --npu-device-map balanced-layers
     --npu-max-memory-gib "$NPU_MAX_MEMORY_GIB"
@@ -501,7 +509,7 @@ if [[ "$NPU_DEVICE_MAP" == "balanced-layers" ]]; then
   NUM_NPU=1
 else
   log "launching GRPO trainer on $NUM_NPU NPUs (torchrun DDP)..."
-  RUN_CMD=("$TRAINER_PY" -m torch.distributed.run --nproc_per_node="$NUM_NPU" training/grpo_trainer.py)
+  RUN_CMD=(env PYTHONUNBUFFERED=1 "$TRAINER_PY" -m torch.distributed.run --nproc_per_node="$NUM_NPU" training/grpo_trainer.py)
 fi
 
 nohup "${RUN_CMD[@]}" \
@@ -572,6 +580,7 @@ nohup "${RUN_CMD[@]}" \
   --min-group-size "${MIN_GROUP_SIZE:-1}" \
   --reward-normalization "$REWARD_NORMALIZATION" \
   "${BATCH_COMPARATIVE_FLAG[@]}" \
+  "${CRASH_CREDIT_FLAG[@]}" \
   "${JUDGE_ARGS[@]}" \
   --model-judge-max-tokens 256 \
   "${RESUME_FLAGS[@]}" \

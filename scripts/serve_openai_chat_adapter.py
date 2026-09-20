@@ -19,20 +19,35 @@ REQUEST_LOG_PATH = Path("/tmp/quantum_codex_server_requests.log")
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from training.runtime_overlay import apply_transformers_peft_compat_shims, configure_runtime_overlay_from_env
+from training.runtime_overlay import (
+    apply_transformers_peft_compat_shims,
+    configure_runtime_overlay_from_env,
+)
 
 configure_runtime_overlay_from_env()
 
 import torch
 import transformers
-from transformers import AutoConfig, AutoModelForCausalLM, AutoProcessor, AutoTokenizer, PreTrainedTokenizerFast
+from transformers import (
+    AutoConfig,
+    AutoModelForCausalLM,
+    AutoProcessor,
+    AutoTokenizer,
+    PreTrainedTokenizerFast,
+)
 
 apply_transformers_peft_compat_shims(transformers)
 
 from evals.runner.candidate_sanitize import sanitize_candidate_text
-from training.model_backend import ensure_text_backend_preflight, load_causal_lm_with_text_backend_preflight
+from training.model_backend import (
+    ensure_text_backend_preflight,
+    load_causal_lm_with_text_backend_preflight,
+)
 from training.qwen_sft_peft import resolve_device
-from training.text_preprocessor_backend import TextPreprocessorBackend, load_text_preprocessor_backend
+from training.text_preprocessor_backend import (
+    TextPreprocessorBackend,
+    load_text_preprocessor_backend,
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -349,7 +364,7 @@ def make_handler(server_state: AdapterChatServer):
                 "model": model_name,
                 "choices": [{"index": 0, "delta": {"role": "assistant"}, "finish_reason": None}],
             }
-            self.wfile.write(f"data: {json.dumps(role_event, ensure_ascii=False)}\n\n".encode("utf-8"))
+            self.wfile.write(f"data: {json.dumps(role_event, ensure_ascii=False)}\n\n".encode())
             self.wfile.flush()
 
             for chunk in self._chunk_text(content, 256):
@@ -360,7 +375,7 @@ def make_handler(server_state: AdapterChatServer):
                     "model": model_name,
                     "choices": [{"index": 0, "delta": {"content": chunk}, "finish_reason": None}],
                 }
-                self.wfile.write(f"data: {json.dumps(event, ensure_ascii=False)}\n\n".encode("utf-8"))
+                self.wfile.write(f"data: {json.dumps(event, ensure_ascii=False)}\n\n".encode())
                 self.wfile.flush()
 
             final_event = {
@@ -370,7 +385,7 @@ def make_handler(server_state: AdapterChatServer):
                 "model": model_name,
                 "choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}],
             }
-            self.wfile.write(f"data: {json.dumps(final_event, ensure_ascii=False)}\n\n".encode("utf-8"))
+            self.wfile.write(f"data: {json.dumps(final_event, ensure_ascii=False)}\n\n".encode())
             self.wfile.write(b"data: [DONE]\n\n")
             self.wfile.flush()
 
@@ -383,7 +398,7 @@ def make_handler(server_state: AdapterChatServer):
                 nonlocal sequence_number
                 sequence_number += 1
                 event.setdefault("sequence_number", sequence_number)
-                self.wfile.write(f"data: {json.dumps(event, ensure_ascii=False)}\n\n".encode("utf-8"))
+                self.wfile.write(f"data: {json.dumps(event, ensure_ascii=False)}\n\n".encode())
                 self.wfile.flush()
 
             self.send_response(HTTPStatus.OK)

@@ -10,6 +10,8 @@ expressed in whole seconds. The aggregator returns:
 - the list of unparseable lines.
 """
 
+from __future__ import annotations
+
 import re
 from collections import Counter, defaultdict
 from datetime import datetime

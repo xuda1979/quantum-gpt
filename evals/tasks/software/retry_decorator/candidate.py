@@ -1,6 +1,9 @@
-import time
+from __future__ import annotations
+
 import functools
-from typing import Any, Callable
+import time
+from collections.abc import Callable
+from typing import Any
 
 
 def retry(
@@ -18,6 +21,7 @@ def retry(
 
     Raises the last exception if all attempts fail.
     """
+
     def decorator(func: Callable) -> Callable:
         @functools.wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
@@ -33,5 +37,7 @@ def retry(
                             time.sleep(delay)
                         delay *= backoff_factor
             raise last_exc  # type: ignore[misc]
+
         return wrapper
+
     return decorator

@@ -17,7 +17,9 @@ from pathlib import Path
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--codefirst-dir", type=Path, default=Path("data/generated/fast-mini-codefirst"))
+    parser.add_argument(
+        "--codefirst-dir", type=Path, default=Path("data/generated/fast-mini-codefirst")
+    )
     parser.add_argument(
         "--semantic-dir",
         type=Path,
@@ -43,11 +45,13 @@ def parse_args() -> argparse.Namespace:
 
 
 def load_jsonl(path: Path) -> list[dict]:
-    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    return [
+        json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()
+    ]
 
 
 def stable_score(example_id: str, seed_tag: str) -> float:
-    digest = hashlib.sha256(f"{seed_tag}:{example_id}".encode("utf-8")).hexdigest()
+    digest = hashlib.sha256(f"{seed_tag}:{example_id}".encode()).hexdigest()
     value = int(digest[:16], 16)
     return value / float(16**16 - 1)
 
@@ -81,7 +85,7 @@ def rewrite_split(
     }
 
     with out_path.open("w", encoding="utf-8") as handle:
-        for code_row, semantic_row in zip(code_rows, semantic_rows):
+        for code_row, semantic_row in zip(code_rows, semantic_rows, strict=False):
             code_id = code_row["example_id"]
             semantic_id = semantic_row["example_id"]
             if code_id != semantic_id:

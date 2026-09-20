@@ -8,6 +8,8 @@ resorting to a full parsing library. The extractor must:
 - coerce integer-looking values to int when `coerce_int=True`
 """
 
+from __future__ import annotations
+
 import re
 
 

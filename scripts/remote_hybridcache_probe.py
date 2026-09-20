@@ -11,7 +11,10 @@ if str(ROOT) not in sys.path:
 
 print(f"root_in_path={sys.path[0]}")
 
-from training.runtime_overlay import apply_transformers_peft_compat_shims, configure_runtime_overlay_from_env
+from training.runtime_overlay import (
+    apply_transformers_peft_compat_shims,
+    configure_runtime_overlay_from_env,
+)
 
 configure_runtime_overlay_from_env()
 

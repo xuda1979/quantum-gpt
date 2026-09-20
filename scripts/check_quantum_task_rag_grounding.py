@@ -13,16 +13,15 @@ import argparse
 import json
 import re
 import sys
+from collections.abc import Iterable
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Iterable
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from quantum_rag import QuantumRAGIndex, QueryExpansionConfig, build_chunks_from_roots, retrieve
-
 
 DEFAULT_TASK_ROOT = ROOT / "evals" / "tasks" / "quantum"
 DEFAULT_DOC_ROOT = ROOT / "docs" / "quantum_libraries"

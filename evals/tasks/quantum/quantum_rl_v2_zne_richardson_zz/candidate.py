@@ -17,6 +17,8 @@ scale) report linear and quadratic intercepts with a binomial bootstrap
 uncertainty; no brittle per-draw improvement assertion is made.
 """
 
+from __future__ import annotations
+
 import numpy as np
 from qiskit import QuantumCircuit
 from qiskit_aer import AerSimulator

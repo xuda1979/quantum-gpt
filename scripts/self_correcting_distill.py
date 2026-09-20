@@ -35,7 +35,6 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import ast
 import hashlib
 import importlib.util
 import json
@@ -49,9 +48,8 @@ import time
 import traceback
 import urllib.error
 import urllib.request
-import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from threading import Lock
 from typing import Any

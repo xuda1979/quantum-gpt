@@ -21,9 +21,15 @@ Environment:
   LIMIT=N     Override --limit
 """
 from __future__ import annotations
-import argparse, json, os, subprocess, sys, time
-from pathlib import Path
+
+import argparse
+import json
+import os
+import subprocess
+import time
 from datetime import datetime, timezone
+from pathlib import Path
+
 
 def now_utc() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")

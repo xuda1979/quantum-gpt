@@ -9,6 +9,8 @@ Provides a single entry point `run_with_retry` that:
 - raises the last exception after all retries are exhausted.
 """
 
+from __future__ import annotations
+
 import asyncio
 from collections.abc import Awaitable, Callable
 

@@ -49,4 +49,8 @@ export ASI3_SAPO_GREEDY_ROLLOUT_FRACTION="${AI_SAPO_GREEDY_ROLLOUT_FRACTION:-${A
 export ASI3_SAPO_ENTROPY_FLOOR_WEIGHT="${AI_SAPO_ENTROPY_FLOOR_WEIGHT:-${ASI3_SAPO_ENTROPY_FLOOR_WEIGHT:-0.01}}"
 export ASI3_SAPO_JUDGE_DP4_MAX_TOKENS="${AI_SAPO_JUDGE_DP4_MAX_TOKENS:-${ASI3_SAPO_JUDGE_DP4_MAX_TOKENS:-4096}}"
 
+# Derive the run budget pointer from the run pointer (B-164 hermeticity).
+run_pointer="${SAPO_RUN_POINTER:-$ROOT_DIR/.sapo-loop/.run_pointer}"
+export SAPO_RUN_POINTER="$run_pointer"
+export RUN_BUDGET_FILE="$(dirname "$run_pointer")/.run_budget"
 exec bash "$ROOT_DIR/scripts/asi3_launch_grpo_direct.sh" "$@"

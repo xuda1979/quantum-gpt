@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+
 def phase_to_register_bits(phase: float, n_qubits: int) -> list[int]:
     """
     Map a fractional phase [0, 1) into a fixed-length register bit vector.

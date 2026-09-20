@@ -1206,7 +1206,7 @@ SYSTEM_PROMPT = (
     # caused EOS-collapse (n=1, ids=[248046]). The eval "direct" style avoids this by
     # saying "Produce only the full contents" (no "stop immediately" suppressor).
     "You are solving a single evaluation task. Produce only the full contents of the requested Python candidate file. "
-    "Do not add markdown fences, explanations, or surrounding commentary unless the task explicitly asks for it."
+    "Do not include Markdown fences, explanations, or surrounding commentary unless the task explicitly asks for it. Stop immediately after the final required Python statement. Do not add explanations, tests, examples, or demo code."
 )
 
 
@@ -5307,13 +5307,43 @@ def main() -> int:
     # comparative judge is enabled, the dp4 endpoint is mandatory — fail-closed,
     # never the (removed) in-process self-judge fallback.
     validate_batch_judge_config(args)
-    # B-219: a configured judge mass with no scorer behind it used to start
-    # silently dark -- refuse it before any load happens.
-    validate_reward_judge_wiring(args)
     if args.max_adaptive_new_tokens is None:
         args.max_adaptive_new_tokens = args.max_new_tokens
     if args.max_adaptive_new_tokens < args.max_new_tokens:
         raise ValueError("--max-adaptive-new-tokens must be >= --max-new-tokens")
+    # Early output dir guard (before any expensive validation):
+    _early_metrics = Path(args.output_dir) / "grpo_step_metrics.jsonl"
+    if (
+        _early_metrics.exists()
+        and not args.overwrite_output_dir
+        and not (args.resume_from or args.resume_state)
+    ):
+        raise SystemExit(
+            f"Output dir already contains {_early_metrics.name}; pass "
+            "--overwrite-output-dir to start fresh."
+        )
+    # Early resume-state guard:
+    if args.resume_state and not args.adapter_init:
+        raise ValueError(
+            "--resume-state requires --adapter-init: the soft-resume must "
+            "continue from the paused checkpoint's weights; restoring the "
+            "curriculum/router state over fresh weights would be a silent "
+            "policy rewind"
+        )
+    # Early resume-state JSON validation:
+    if args.resume_state:
+        try:
+            import json as _json
+
+            _json.loads(Path(args.resume_state).read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError) as _e:
+            raise SystemExit(f"--resume-state file {args.resume_state} is not valid JSON: {_e}")
+        else:
+            _rs = json.loads(Path(args.resume_state).read_text(encoding="utf-8"))
+            if _rs.get("version", 1) != 1:
+                raise SystemExit(
+                    f"--resume-state has unsupported version {_rs.get('version')} (expected 1)"
+                )
     # 2026-08-26 (canary): fail fast on a clearly-LOCAL --model-name that
     # cannot possibly load — a typo'd path otherwise burns minutes in the
     # preprocessor/load phases before failing. Bare names and org/name hub
@@ -5719,6 +5749,9 @@ def main() -> int:
                     ensure_ascii=False,
                 )
             )
+    # B-219: a configured judge mass with no scorer behind it used to start
+    # silently dark -- refuse it before any load happens.
+    validate_reward_judge_wiring(args)
     model = AutoModelForCausalLM.from_pretrained(args.model_name, **model_kwargs)
     if rank == 0:
         print(

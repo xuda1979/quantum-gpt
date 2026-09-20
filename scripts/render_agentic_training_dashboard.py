@@ -13,40 +13,27 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
-
-def load_json(path: Path) -> dict[str, Any] | None:
-    if not path.exists():
-        return None
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except Exception:
-        return None
-    return payload if isinstance(payload, dict) else None
-
-
-def load_jsonl(path: Path) -> list[dict[str, Any]]:
-    if not path.exists():
-        return []
-    rows: list[dict[str, Any]] = []
-    for line in path.read_text(encoding="utf-8").splitlines():
-        if not line.strip():
-            continue
-        try:
-            payload = json.loads(line)
-        except Exception:
-            continue
-        if isinstance(payload, dict):
-            rows.append(payload)
-    return rows
-
-
-def load_metrics_payload(path: Path) -> dict[str, Any] | None:
-    payload = load_json(path)
-    if payload is None:
-        return None
-    if "metrics" not in payload or not isinstance(payload.get("metrics"), list):
-        return None
-    return payload
+from scripts.dashboard_display_text import (
+    format_display_value,
+    zh_counter_key,
+    zh_detail,
+    zh_gate_text,
+    zh_label,
+    zh_status,
+    zh_value,
+    zh_visible_text,
+)
+from scripts.dashboard_parsing import (
+    as_float,
+    file_sha256,
+    fmt,
+    load_json,
+    load_jsonl,
+    load_metrics_payload,
+    pct,
+    short_sha,
+    summarize_log_events,
+)
 
 
 def load_text_tail(path: Path, *, max_chars: int = 12000) -> str:
@@ -72,42 +59,6 @@ def parse_json_events_from_text(text: str) -> list[dict[str, Any]]:
         if isinstance(payload, dict) and payload.get("stage"):
             events.append(payload)
     return events
-
-
-def summarize_log_events(events: list[dict[str, Any]]) -> dict[str, Any]:
-    stage_counts = Counter(str(event.get("stage")) for event in events if event.get("stage"))
-    latest_by_stage: dict[str, dict[str, Any]] = {}
-    for event in events:
-        stage = str(event.get("stage") or "")
-        if stage:
-            latest_by_stage[stage] = event
-    step_events = [
-        event for event in events if event.get("stage") in {"training_step_summary", "训练步摘要"}
-    ]
-    latest_step = step_events[-1] if step_events else {}
-    return {
-        "event_count": len(events),
-        "stage_counts": dict(sorted(stage_counts.items())),
-        "latest_training_step": latest_step.get("step"),
-        "latest_training_reward": (
-            (latest_step.get("reward") or {}).get("mean_reward") if latest_step else None
-        ),
-        "latest_training_pass_rate": (
-            (latest_step.get("reward") or {}).get("pass_rate") if latest_step else None
-        ),
-        "latest_training_loss": latest_step.get("loss") if latest_step else None,
-        "latest_task": latest_step.get("task") if latest_step else None,
-        "latest_checkpoint": (
-            latest_by_stage.get("checkpoint_saved") or latest_by_stage.get("检查点已保存") or {}
-        ).get("checkpoint_dir"),
-        "latest_online_eval": latest_by_stage.get("online_eval_complete")
-        or latest_by_stage.get("在线评测完成")
-        or None,
-        "latest_training_completed": latest_by_stage.get("training_completed")
-        or latest_by_stage.get("训练完成")
-        or None,
-        "latest_by_stage": latest_by_stage,
-    }
 
 
 def sanitize_url(value: Any) -> str:
@@ -335,45 +286,6 @@ def checkpoints_from_training_log_events(events: list[dict[str, Any]]) -> list[d
     return checkpoints
 
 
-def as_float(value: Any, default: float = 0.0) -> float:
-    try:
-        if value is None:
-            return default
-        return float(value)
-    except (TypeError, ValueError):
-        return default
-
-
-def pct(value: Any) -> str:
-    if value is None:
-        return "待产生"
-    return f"{100.0 * as_float(value):.1f}%"
-
-
-def fmt(value: Any, digits: int = 4) -> str:
-    if value is None:
-        return "待产生"
-    if isinstance(value, float):
-        return f"{value:.{digits}f}"
-    return str(value)
-
-
-def file_sha256(path: Path) -> str | None:
-    if not path.exists() or not path.is_file():
-        return None
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
-def short_sha(value: str | None) -> str:
-    if not value:
-        return "未写入"
-    return value[:12]
-
-
 def discover_runs(outputs_dir: Path) -> list[Path]:
     if not outputs_dir.exists():
         return []
@@ -550,150 +462,6 @@ def build_research_system_status(
     }
 
 
-DISPLAY_LABELS = {
-    "run_manifest": "运行配置记录",
-    "metrics": "训练指标",
-    "live_status": "实时状态",
-    "online_eval_history": "在线评测历史",
-    "agentic_traces": "智能体轨迹",
-    "structured_training_log": "结构化训练日志",
-    "job_health": "任务健康状态",
-    "failure_report": "失败报告",
-    "safety_report": "安全报告",
-    "metrics_present": "已经产生训练指标",
-    "optimizer_updated": "优化器已经更新",
-    "reward_signal_nonzero": "奖励信号有效",
-    "no_context_overflow": "没有上下文溢出",
-    "agent_writes_or_finalizes": "智能体会编辑或总结",
-    "online_eval_recorded": "已经记录在线评测",
-    "no_live_alerts": "没有实时告警",
-    "job_heartbeat_fresh": "任务心跳新鲜",
-    "no_unsafe_tool_events": "没有不安全工具事件",
-    "mean_reward": "平均奖励",
-    "reward_signal_std": "奖励信号波动",
-    "pass_rate": "训练通过率",
-    "loss": "损失",
-    "quantum_pass_rate": "量子评测通过率",
-    "software_pass_rate": "软件工程评测通过率",
-    "agentic_pass_rate": "智能体评测通过率",
-    "mean_total_reward": "评测平均奖励",
-    "event_count": "日志事件总数",
-    "stage_counts": "事件类型计数",
-    "latest_training_step": "最新训练步",
-    "latest_training_reward": "最新训练奖励",
-    "latest_training_pass_rate": "最新训练通过率",
-    "latest_training_loss": "最新训练损失",
-    "latest_task": "最新任务",
-    "latest_checkpoint": "最新检查点",
-    "latest_online_eval": "最新在线评测",
-    "latest_training_completed": "训练完成记录",
-    "training_step_summary": "训练步摘要",
-    "checkpoint_saved": "检查点已保存",
-    "online_eval_complete": "在线评测完成",
-    "training_completed": "训练完成",
-    "context_overflow": "上下文溢出",
-    "missing_metrics": "缺少训练指标",
-    "alert_asi1_task_running_waiting_for_metrics": "ASI1 任务运行中但等待指标",
-    "alert_asi1_task_failed_before_metrics": "ASI1 任务在指标前失败",
-    "alert_asi1_task_completed_waiting_for_artifact_fetch": "ASI1 任务完成但等待工件抓取",
-    "alert_asi1_task_submitted": "ASI1 任务已提交",
-    "termination_final_answer": "轨迹正常完成",
-    "final_answer": "完成回答",
-    "turn_budget": "回合预算耗尽",
-    "read_file": "读文件",
-    "write_file": "写文件",
-    "run_tests": "跑测试",
-    "search_repo": "搜索仓库",
-    "legacy_metrics": "旧格式指标",
-    "assertion_failure": "断言失败",
-    "timeout": "超时",
-    "environment": "环境",
-    "huanxin_task_name": "焕新任务名",
-    "huanxin_task_id": "焕新任务编号",
-    "huanxin_task_status": "焕新任务状态",
-    "huanxin_use_time": "焕新运行时长",
-    "last_metric_age_sec": "指标年龄（秒）",
-    "last_log_age_sec": "日志年龄（秒）",
-    "npu_visible": "可见 NPU",
-    "npu_util": "NPU 利用率",
-    "npu_mem_used": "NPU 内存占用",
-    "checkpoint_step": "检查点步数",
-    "checkpoint_dir": "检查点目录",
-    "checkpoint_saved_count": "已保存检查点数",
-    "checkpoint_interval_seconds": "检查点间隔（秒）",
-    "checkpoint_progress_text": "检查点进度",
-    "model_name": "模型",
-    "benchmark_file": "训练任务集",
-    "holdout_file": "留出集",
-    "online_eval_benchmark_file": "在线评测集",
-    "dataset_sha256": "数据指纹",
-    "model_sha256": "模型指纹",
-    "adapter_sha256": "适配器指纹",
-    "metrics_sha256": "指标指纹",
-    "live_status_sha256": "实时状态指纹",
-    "manifest_sha256": "配置指纹",
-    "trace_sha256": "轨迹指纹",
-    "run_id": "运行编号",
-    "planned_steps": "计划步数",
-    "unsafe_tool_events": "不安全工具事件",
-    "prompt_injection_events": "提示注入事件",
-    "secrets_events": "秘密访问事件",
-    "destructive_command_blocks": "破坏性命令拦截",
-    "summary": "摘要",
-    "failure_stage": "失败阶段",
-    "exact_blocker": "精确阻塞",
-    "blocker": "阻塞",
-    "blocker_text": "阻塞详情",
-    "startup_diagnosis": "启动诊断",
-    "status": "状态",
-    "task_name": "任务名",
-    "task_id": "任务编号",
-    "train_domain_min": "训练领域下限",
-    "eval_domain_min": "评测领域下限",
-    "eval_task_disjoint": "评测任务隔离",
-    "software_replay_min": "软件回放下限",
-    "quantum": "量子编码",
-    "software": "软件工程",
-    "agentic": "智能体任务",
-    "train_domain_counts": "训练领域计数",
-    "eval_domain_counts": "评测领域计数",
-    "train_rows": "训练样本数",
-    "eval_rows": "评测样本数",
-    "holdout_policy": "留出策略",
-    "path": "路径",
-    "run_count": "运行数",
-    "latest_update": "最近更新",
-    "runs": "评测运行数",
-    "benchmarks": "基准数",
-    "tasks": "任务数",
-    "datasets": "数据集数",
-    "files": "文件数",
-    "train_dev_url": "训练开发环境地址",
-    "browser_daemon_state": "浏览器守护状态",
-    "startup_state": "启动状态",
-    "current_url": "当前页面",
-    "shell_endpoint_summary": "终端入口摘要",
-    "command_channel_recent_success": "命令通道最近成功",
-    "command_channel_transport": "命令通道方式",
-    "command_channel_age_seconds": "命令通道年龄（秒）",
-    "task_status_code": "任务状态码",
-    "task_status": "任务状态",
-    "use_time": "运行时长",
-    "remote_root": "远程项目根目录",
-    "remote_path": "远程输出路径",
-    "fetch_env": "抓取环境",
-    "fetched_files": "已抓取文件数",
-    "rank_started": "已启动 rank 数",
-    "rank_completed": "已完成 rank 数",
-    "world_size": "分布式规模",
-    "accelerator_log_seen": "加速卡日志可见",
-    "boot": "启动标记",
-    "start": "rank 启动标记",
-    "done": "rank 完成标记",
-    "before_distributed": "分布式启动前标记",
-    "after_distributed": "分布式返回后标记",
-}
-
 STATUS_LABELS = {
     "active": "训练中",
     "running": "运行中",
@@ -724,221 +492,6 @@ HEALTH_LABELS = {
     "No obvious blockers in local artifacts": "本地工件中没有明显阻塞",
 }
 
-DETAIL_REPLACEMENTS = {
-    "step metric row(s)": "条训练步指标",
-    "updated step(s)": "步已更新",
-    "std not recorded": "未记录奖励波动",
-    "latest_reward": "最新奖励",
-    "pass_rate": "通过率",
-    "latest_std": "最新波动",
-    "pending held-out eval": "等待留出评测",
-    "waiting for first metric heartbeat": "等待第一条指标心跳",
-    "final metric captured": "已捕获最终指标",
-    "write_file/final_answer observed": "观察到编辑或完成回答",
-    "unsafe_tool_events": "不安全工具事件",
-}
-
-EVENT_STAGE_LABELS = {
-    "training_step_summary": "训练步摘要",
-    "checkpoint_saved": "检查点已保存",
-    "online_eval_complete": "在线评测完成",
-    "training_completed": "训练完成",
-}
-
-STATUS_VALUE_LABELS = {
-    "authenticated": "已认证",
-    "unknown": "未知",
-    "ready": "就绪",
-    "healthy": "健康",
-    "standalone": "独立通道",
-    "queued": "排队中",
-    "running": "运行中",
-    "failed": "失败",
-    "completed": "已完成",
-    "ended": "已结束",
-}
-
-
-def zh_label(value: Any) -> str:
-    text = "" if value is None else str(value)
-    return DISPLAY_LABELS.get(text, text.replace("_", " "))
-
-
-def zh_value(value: Any) -> str:
-    if isinstance(value, (dict, list, tuple)):
-        return format_display_value(value)
-    text = "" if value is None else str(value)
-    if text.strip().lower() in {"n/a", "none", "null", "<n/a>"}:
-        return "暂无数据"
-    return STATUS_VALUE_LABELS.get(text.lower(), text)
-
-
-def zh_counter_key(value: Any) -> str:
-    text = "" if value is None else str(value)
-    return DISPLAY_LABELS.get(text, EVENT_STAGE_LABELS.get(text, text.replace("_", " ")))
-
-
-def zh_detail(value: Any) -> str:
-    raw = "" if value is None else str(value)
-    for old, new in DETAIL_REPLACEMENTS.items():
-        raw = raw.replace(old, new)
-    return raw
-
-
-def zh_visible_text(value: Any) -> str:
-    if isinstance(value, (dict, list, tuple)):
-        return format_display_value(value)
-    raw = "" if value is None else str(value)
-    if raw.strip().lower() in {"n/a", "none", "null", "<n/a>"}:
-        return "暂无数据"
-    status_value = STATUS_VALUE_LABELS.get(raw.lower())
-    if status_value:
-        return status_value
-    replacements = [
-        ("elapsed=", "运行时长="),
-        ("huanxin_status_code=", "焕新状态码="),
-        ("stage=", "阶段="),
-        (
-            "User-code markers show the launcher reached torchrun, so this is not a platform startup failure. The trainer returned before writing step metrics or the launcher did not capture the real torchrun error.",
-            "用户训练代码标记显示启动器已经进入 torchrun，所以这不是平台启动失败。训练器在写入训练步指标前退出，或启动器没有捕获真实 torchrun 错误。",
-        ),
-        (
-            "ASI1 task reached torchrun but returned without GRPO metrics.",
-            "ASI1 任务已经进入 torchrun，但没有返回 GRPO 指标。",
-        ),
-        ("ASI1 task failed before metrics.", "ASI1 任务在产生指标前失败。"),
-        ("ASI1 task failed before GRPO metrics were emitted.", "ASI1 任务在产生 GRPO 指标前失败。"),
-        (
-            "ASI1 full Qwen3.6-27B LoRA GRPO task was not created.",
-            "ASI1 完整 Qwen3.6-27B LoRA GRPO 任务未创建成功。",
-        ),
-        (
-            "ASI1 wheel-embedded LoRA GRPO task was not created.",
-            "ASI1 内嵌 wheel 的 LoRA GRPO 任务未创建成功。",
-        ),
-        (
-            "Huanxin task create API rejected the oversized embedded-runtime payload before a training pod was launched.",
-            "焕新任务创建接口在训练 Pod 启动前拒绝了过大的内嵌运行时载荷。",
-        ),
-        (
-            "Huanxin task create API rejected the submitted codeContents payload before a training pod was launched.",
-            "焕新任务创建接口在训练 Pod 启动前拒绝了提交的执行命令载荷。",
-        ),
-        (
-            "Huanxin rejected the embedded-runtime codeContents payload before pod launch",
-            "焕新在 Pod 启动前拒绝了内嵌运行时执行命令载荷",
-        ),
-        ("encoded bytes across", "编码字节，分布在"),
-        ("Direct create fallback returned HTTP", "直接创建兜底返回 HTTP"),
-        ("Response:", "响应："),
-        (
-            "Huanxin rejected the 1.4 MB codeContents payload before pod launch. Short 6.4 KB task creation works, so wheel/repo materialization must happen outside codeContents.",
-            "焕新在 Pod 启动前拒绝了 1.4 MB 的 codeContents 载荷。6.4 KB 短任务可以创建，因此 wheel 和仓库物化必须放在 codeContents 之外。",
-        ),
-        (
-            "User-code markers and dependency probes ran, so the Huanxin task path is executing. Install the missing dependency in the task image or embed a wheelhouse in the submitted task.",
-            "用户代码标记和依赖探针已经执行，说明焕新任务路径可运行。需要在任务镜像中安装缺失依赖，或在提交任务中挂载/物化 wheelhouse。",
-        ),
-        (
-            "reached user code but failed because Python dependency",
-            "已进入用户代码，但由于 Python 依赖",
-        ),
-        ("is missing", "缺失而失败"),
-        ("task create failed", "任务创建失败"),
-        ("submit_failed", "提交失败"),
-        ("create_failed", "创建失败"),
-        ("is ended; waiting for GRPO/eval artifacts.", "已结束；正在等待 GRPO 或评测工件。"),
-        ("is failed; waiting for GRPO/eval artifacts.", "已失败；正在等待 GRPO 或评测工件。"),
-        ("is running; waiting for GRPO/eval artifacts.", "运行中；正在等待 GRPO 或评测工件。"),
-        ("is starting; waiting for GRPO/eval artifacts.", "启动中；正在等待 GRPO 或评测工件。"),
-        ("is unknown; waiting for GRPO/eval artifacts.", "状态未知；正在等待 GRPO 或评测工件。"),
-        (
-            "Huanxin emitted the platform sshd startup warning before user-code markers.",
-            "焕新在用户训练代码标记出现前产生平台启动告警。",
-        ),
-        (
-            "Huanxin emitted the platform sshd startup warning before user-code markers; if no later marker appears, treat this as an image/entrypoint compatibility failure.",
-            "焕新在用户训练代码标记出现前产生平台启动告警；如果后续没有训练标记，应视为镜像或入口兼容性问题。",
-        ),
-        (
-            "Fix reward variance before scaling: lower min-reward-std or diversify rollouts/tasks.",
-            "扩容前先修复奖励信号：降低最小奖励波动门槛，或增加轨迹和任务多样性。",
-        ),
-        (
-            "Raise max sequence length or shrink prompt/file observations; current trajectories overflow context.",
-            "提高序列长度，或缩短提示和文件观察；当前轨迹有上下文溢出。",
-        ),
-        (
-            "Strengthen rollout nudges or rejection-sampled SFT so trajectories write_file/final_answer.",
-            "加强轨迹提示或拒绝采样 SFT，让轨迹真正编辑代码并给出总结。",
-        ),
-        (
-            "Run a lightweight held-out eval after the smoke survives memory and update gates.",
-            "冒烟训练通过内存和更新门槛后，运行轻量级留出评测。",
-        ),
-        (
-            "Fetch or start remote training artifacts so reward, pass rate, KL, loss, and eval curves become live.",
-            "抓取或启动远程训练工件，让奖励、通过率、KL、损失和评测曲线变成实时。",
-        ),
-        (
-            "Chart reward components and add behavior/recovery rewards only if objective rewards remain flat.",
-            "先画奖励分量；只有客观奖励持续不动时，再增加行为或恢复奖励。",
-        ),
-        (
-            "Promote to the next canary rung: longer 1-NPU run, then multi-NPU smoke with the same gates.",
-            "进入下一档金丝雀：更长的单 NPU 训练，然后用同样门槛做多 NPU 冒烟。",
-        ),
-        ("No step metrics yet", "还没有训练步指标"),
-        ("No optimizer updates yet", "还没有优化器更新"),
-        ("Low reward variance", "奖励信号波动太低"),
-        ("Context overflow", "发生上下文溢出"),
-        ("Read-only trajectories", "轨迹只读，未编辑或总结"),
-        ("Failure report present", "存在失败报告"),
-        ("Checkpoint record present", "存在检查点记录"),
-        ("Stale job heartbeat", "任务心跳过期"),
-        ("No obvious blockers in local artifacts", "本地工件中没有明显阻塞"),
-        ("pre_python_task_startup", "训练脚本启动前"),
-        ("missing_metrics", "缺少训练指标"),
-        ("no_optimizer_updates", "优化器未更新"),
-        ("low_reward_signal", "奖励信号过低"),
-        ("read_only_loop", "只读循环"),
-        ("tests_before_patch", "先测试但未修补"),
-        ("context_overflow", "上下文溢出"),
-        ("final_answer", "完成回答"),
-        ("turn_budget", "回合预算耗尽"),
-        ("read_file", "读文件"),
-        ("write_file", "写文件"),
-        ("run_tests", "跑测试"),
-        ("huanxin_task_create_failed", "焕新任务创建失败"),
-        ("dependency_probe", "依赖探针"),
-        ("training_step_summary", "训练步摘要"),
-        ("checkpoint_saved", "检查点已保存"),
-        ("online_eval_complete", "在线评测完成"),
-        ("training_completed", "训练完成"),
-        ("assertion_failure", "断言失败"),
-        ("timeout", "超时"),
-        ("authenticated", "已认证"),
-        ("standalone", "独立通道"),
-        ("healthy", "健康"),
-        ("ready", "就绪"),
-        ("running", "运行中"),
-        ("pending", "等待中"),
-        ("failed", "失败"),
-        ("submitted", "已提交"),
-        ("submit_failed", "提交失败"),
-        ("starting", "启动中"),
-        ("unknown", "未知"),
-        ("ended", "已结束"),
-    ]
-    for old, new in replacements:
-        raw = raw.replace(old, new)
-    return raw.replace("<N/A>", "暂无数据").replace("N/A", "暂无数据")
-
-
-def zh_status(value: Any) -> str:
-    text = "" if value is None else str(value)
-    return STATUS_LABELS.get(text.lower(), text)
-
 
 def zh_bool(value: Any) -> str:
     if value is True:
@@ -946,10 +499,6 @@ def zh_bool(value: Any) -> str:
     if value is False:
         return "否"
     return display_text(value, "未采集")
-
-
-def zh_gate_text(passed: bool) -> str:
-    return "通过" if passed else "未通过"
 
 
 def zh_health_item(item: Any) -> str:
@@ -1099,28 +648,6 @@ def counter_items(payload: dict[str, Any], *, empty: str = "暂无记录") -> st
         f"<li><strong>{html.escape(zh_counter_key(key))}</strong>：{html.escape(format_display_value(value))}</li>"
         for key, value in sorted(payload.items())
     )
-
-
-def format_display_value(value: Any, *, empty: str = "暂无数据") -> str:
-    if value is None or value == "":
-        return empty
-    if isinstance(value, bool):
-        return zh_bool(value)
-    if isinstance(value, dict):
-        parts = []
-        for key, child in sorted(value.items()):
-            if child in (None, "", {}, []):
-                continue
-            parts.append(f"{zh_label(key)}={format_display_value(child, empty=empty)}")
-        return "；".join(parts) if parts else empty
-    if isinstance(value, (list, tuple)):
-        parts = [
-            format_display_value(item, empty=empty)
-            for item in value
-            if item not in (None, "", {}, [])
-        ]
-        return "，".join(parts) if parts else empty
-    return zh_visible_text(value)
 
 
 def artifact_file_label(value: str) -> str:

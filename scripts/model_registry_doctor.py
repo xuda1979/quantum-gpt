@@ -159,7 +159,7 @@ def format_human(report: dict[str, Any]) -> str:
         flags.append("reachable" if r["weights_reachable"] else "UNREACHABLE")
         flags.append("backed-up" if r["offsite_backup"] else "no-offsite-backup")
         loc = (
-            ", ".join(f"{l.get('kind')}:{l.get('uri')}" for l in r["storage_locations"])
+            ", ".join(f"{loc.get('kind')}:{loc.get('uri')}" for loc in r["storage_locations"])
             or "(no storage recorded)"
         )
         lines.append(f"  - {r['label']}")

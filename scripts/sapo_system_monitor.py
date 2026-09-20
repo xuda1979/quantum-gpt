@@ -9,7 +9,12 @@ daemon /exec transport. Session-independent: run with nohup.
 
 Usage: nohup python3 scripts/sapo_system_monitor.py [scan_s] >/dev/null 2>&1 &
 """
-import argparse, json, os, re, time, urllib.request
+import argparse
+import json
+import os
+import re
+import time
+import urllib.request
 
 RUN = "/root/work/software/quantum-gpt/outputs/sapo-27b-ai-20260913T233607Z"
 BP = RUN + "/grpo_step_metrics.jsonl"
@@ -64,17 +69,19 @@ def eval_status():
     done = post(EVAL, "ls -t /root/work/software/quantum-gpt/outputs/reeval_latest_*.json 2>/dev/null | head -4")
     sl = [b.split("/")[-1].replace("reeval_latest_", "s").replace("reeval_", "")
           for b in done.strip().splitlines()[:4]]
-    return "eval:[%s]%s" % (",".join(sl), scoring)
+    return "eval:[{}]{}".format(",".join(sl), scoring)
 
 
 def main():
-    ap = argparse.ArgumentParser(); ap.add_argument("scan", nargs="?", type=int, default=120)
+    ap = argparse.ArgumentParser()
+    ap.add_argument("scan", nargs="?", type=int, default=120)
     scan = ap.parse_args().scan
     os.makedirs(os.path.dirname(LOG), exist_ok=True)
     last_ck = -1
     while True:
         try:
-            st = last_step(); ck = ckpt_count()
+            st = last_step()
+            ck = ckpt_count()
             alerts = []
             if st and st.get("lr") is not None and st["lr"] < CFG_LR:
                 alerts.append(f"LR_BLEED lr={st['lr']}<cfg{CFG_LR}")

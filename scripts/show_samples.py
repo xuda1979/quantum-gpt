@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Print explicit samples from train and eval JSONL files."""
-import json, sys
+import json
+
 
 def show(path, label, indices):
     with open(path) as f:

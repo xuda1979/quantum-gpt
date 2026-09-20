@@ -36,6 +36,7 @@ train_dev_url_for() {
 # restarts every 2-7 min, i.e. always faster than the 900s timeout.
 # The timestamps now persist to disk and survive a process restart.
 BOOTSTATE="${SAPO_HEARTBEAT_BOOTSTATE:-/tmp/huanxin_boot_timers.txt}"
+PLATFORM_ERR_COOLDOWN_S="${SAPO_HEARTBEAT_PLATFORM_ERR_COOLDOWN_S:-1800}"
 boot_get() {  # $1 = env name -> epoch seconds, empty when absent
   [ -f "$BOOTSTATE" ] || return 0
   awk -v k="$1" '$1==k {v=$2} END {if (v!="") print v}' "$BOOTSTATE" 2>/dev/null
@@ -62,13 +63,20 @@ bootval_for() {  # numeric epoch, or 0 when absent/corrupt (fail closed to first
 # environments could ever converge (the ~105m dark state). UNKNOWN is now its
 # own state and it is INERT: it logs and never fires.
 ACTION=""
-action_for_state() {  # $1 = daemon_state state -> sets global ACTION
-  case "${1:-unknown}" in
+action_for_state() {  # $1 = "state authfail [pterm]", $2 = pterm flag (optional)
+  local _st="${1:-unknown}"
+  local _pterm="${2:-0}"
+  case "$_st" in
     ready)   ACTION=clear ;;
     booting) ACTION=timer ;;
     unknown) ACTION=inert ;;
     down)    ACTION=restart ;;
-    error)   ACTION=restart ;;
+    error)
+      if [ "$_pterm" = "1" ]; then
+        ACTION=platform_hold
+      else
+        ACTION=restart
+      fi ;;
     *)       ACTION=inert ;;
   esac
 }
@@ -86,11 +94,36 @@ action_for_state() {  # $1 = daemon_state state -> sets global ACTION
 # restarts in 36 min, each with a keeper kick in the same minute, all three
 # daemons dark throughout. os.setsid() in a pre-exec (what the helper does)
 # makes each daemon a session leader, immune to that teardown.
+daemon_is_midboot() {
+  local env="$1"
+  local st st0
+  st="$(daemon_state "$env" 2>/dev/null || echo unknown)"
+  st0="${st%% *}"
+  # booting, down (listener not bound yet), and error (state flips during boot)
+  # are all valid mid-boot states when a fresh boot timer exists (B-183).
+  case "$st0" in
+    booting|down|error) ;;
+    *) return 1 ;;
+  esac
+  local boot_epoch boot_age
+  boot_epoch="$(boot_get "$env")"
+  [ -n "$boot_epoch" ] && [ "$boot_epoch" -gt 0 ] 2>/dev/null || return 1
+  boot_age=$(( $(date +%s) - boot_epoch ))
+  if [ "$boot_age" -lt 300 ] 2>/dev/null; then
+    return 0
+  fi
+  return 1
+}
+
 seed_and_restart() {
   E="$1"
   log "$E: cookie bridge + restart"
   pid=$(pgrep -f "huanxin_browser_daemon.js --env $E" | head -1)
-  [ -n "$pid" ] && kill "$pid" 2>/dev/null
+  if [ -n "$pid" ] && daemon_is_midboot "$E"; then
+    log "$E: daemon is mid-boot (booting, <300s) -- skipping kill"
+  elif [ -n "$pid" ]; then
+    kill "$pid" 2>/dev/null
+  fi
   sleep 4
   /usr/bin/python3 "$QG/scripts/sapo_cookie_seed.py" >> "$LOG" 2>&1 || log "$E: cookie seed FAILED (user Chrome login needed?)"
   NODE_BIN="$(command -v node || ls /Users/daxu/.local/share/fnm/node-versions/*/installation/bin/node 2>/dev/null | tail -1)"
@@ -123,7 +156,8 @@ try:
     err = str(d.get('startupError') or '')
     st = 'ready' if d.get('ready') else ('error' if d.get('startupState')=='error' else 'booting')
     af = 1 if ('login_required' in err or 'auth expired' in err) else 0
-    print(st, af)
+    pterm = 1 if ('shell endpoint' in err and 'no terminal' in err) else 0
+    print(st, af, pterm)
 except Exception:
     print('unknown', 0)"
 }
@@ -166,10 +200,10 @@ while true; do
     # not to `down`, which would restart a daemon that is only booting.
     ds="$(daemon_state "$port")"
     set -- ${ds:-unknown 0}
-    st="${1:-unknown}"; authfail="${2:-0}"
+    st="${1:-unknown}"; authfail="${2:-0}"; pterm="${3:-0}"
     bootval="$(bootval_for "$E")"
     needs_restart=0
-    action_for_state "$st"
+    action_for_state "$st" "$pterm"
     # action_for_state sets the GLOBAL $ACTION (declared at the top of this file).
     # This read was lowercase "$action", which never exists — so under `set -u`
     # the heartbeat aborted on EVERY tick ("line 173: action: unbound variable")
@@ -187,6 +221,14 @@ while true; do
           log "$E: booting >15m -> wedged"; needs_restart=1
         fi ;;
       restart) needs_restart=1 ;;
+      platform_hold)
+        _pboot="$(bootval_for "$E")"
+        if [ "$_pboot" -gt 0 ] && [ $(( $(date +%s) - _pboot )) -gt "$PLATFORM_ERR_COOLDOWN_S" ] 2>/dev/null; then
+          log "$E: platform_hold cooldown expired (${PLATFORM_ERR_COOLDOWN_S}s) -> restart"
+          needs_restart=1
+        else
+          log "$E: platform_hold (shell endpoint failure, cooldown ${PLATFORM_ERR_COOLDOWN_S}s)"
+        fi ;;
       inert) log "$E: probe UNKNOWN (fork/transport) - no action taken" ;;
     esac
     [ "$authfail" = "1" ] && needs_restart=1

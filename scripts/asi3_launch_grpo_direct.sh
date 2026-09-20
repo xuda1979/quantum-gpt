@@ -37,6 +37,11 @@ export RUN_ID="${ASI3_SAPO_RUN_ID:-$(date +%Y%m%dT%H%M%S)}"
 export OUT="${ASI3_SAPO_OUT:-$NAS_ROOT/outputs/sapo-27b-ai-${RUN_ID}}"
 export NAS_CHECKPOINT_ROOT="${ASI3_SAPO_CHECKPOINT_ROOT:-$NAS_ROOT/outputs/checkpoints/qwen36_27b_sapo_ai}"
 export LOGDIR="${ASI3_SAPO_LOGDIR:-$NAS_ROOT/logs/sapo_27b_ai}"
+# Derive the run budget pointer from the run pointer (B-164 hermeticity).
+# SAPO_RUN_POINTER redirects the live .sapo-loop/ pointer for test isolation;
+# the budget pointer lives in the same directory.
+run_pointer="${SAPO_RUN_POINTER:-$NAS_ROOT/.sapo-loop/.run_pointer}"
+export RUN_BUDGET_FILE="$(dirname "$run_pointer")/.run_budget"
 export DEVICE="npu"
 
 # Qwen3.6-27B does not fit as one DDP replica per card. balanced-layers is a
@@ -149,6 +154,7 @@ export ENTROPY_TOKEN_CAP="${ASI3_SAPO_ENTROPY_TOKEN_CAP:-256}"
 # here or a persistent-webshell export silently redirects the repair
 # conversion ledger -> count_repair_conversions() sees 0 -> the
 # all_fail_without_repair breaker false-trips (2026-08-24 bug-hunt).
+export REPAIR_CONVERTED_JSONL="${ASI3_SAPO_REPAIR_CONVERTED_JSONL:-$OUT/repair_stage/repair_converted.jsonl}"
 # B-241 (2026-09-15): pin the repair sidecar's tasks dir so the sidecar AND
 # the ensure-script relaunch inherit the launcher path instead of the
 # sidecar's REPO_ROOT-relative fallback (which diverges from NAS_ROOT on the
@@ -160,6 +166,10 @@ export FV_GSPO_TASKS_DIR="${ASI3_SAPO_TASKS_DIR:-$NAS_ROOT/evals/tasks}"
 export TRAINER_PY="${ASI3_SAPO_TRAINER_PY:-/usr/local/python3.11.14/bin/python3}"
 # B-163/B-159 (2026-09-13): crash-progress credit default.
 export CRASH_PROGRESS_CREDIT="${ASI3_SAPO_CRASH_PROGRESS_CREDIT:-${CRASH_PROGRESS_CREDIT:-1}}"
+# C-9511 (2026-09-20): pin min-rms-for-update so ambient ASI3_SAPO_MIN_RMS_FOR_UPDATE
+# cannot silently change warm-continue gating; default 0.01 per user mandate.
+export MIN_RMS_FOR_UPDATE="${ASI3_SAPO_MIN_RMS_FOR_UPDATE:-0.01}"
+export ASI3_SAPO_MIN_RMS_FOR_UPDATE="${ASI3_SAPO_MIN_RMS_FOR_UPDATE:-0.01}"
 
 # Pin the less frequently changed knobs too; stale generic values must never
 # mutate a supposedly canonical ASI3 SAPO launch.

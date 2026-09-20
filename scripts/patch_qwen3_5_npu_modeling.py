@@ -56,7 +56,7 @@ def find_modeling_path():
         "modeling_qwen3_5.py",
     )
     if not os.path.exists(path):
-        raise SystemExit("modeling file not found at %s" % path)
+        raise SystemExit(f"modeling file not found at {path}")
     return path
 
 
@@ -64,17 +64,17 @@ def main():
     path = find_modeling_path()
     src = open(path, encoding="utf-8").read()
     if MARKER in src:
-        print("ALREADY_PATCHED %s" % path)
+        print(f"ALREADY_PATCHED {path}")
         return 0
     if OLD not in src:
-        print("ANCHOR_NOT_FOUND in %s -- modeling source differs; not patched" % path)
+        print(f"ANCHOR_NOT_FOUND in {path} -- modeling source differs; not patched")
         return 2
     src = src.replace(OLD, NEW, 1)
     open(path, "w", encoding="utf-8").write(src)
     import ast
 
     ast.parse(open(path, encoding="utf-8").read())
-    print("PATCHED_OK %s" % path)
+    print(f"PATCHED_OK {path}")
     return 0
 
 

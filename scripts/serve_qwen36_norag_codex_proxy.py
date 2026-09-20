@@ -6,7 +6,6 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-import time
 import urllib.error
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -23,7 +22,6 @@ from scripts.serve_qwen36_rag_codex_proxy import (
     responses_payload,
     streaming_events,
 )
-
 
 DEFAULT_MODEL_ALIAS = "qwen3.6-27b-norag"
 
@@ -87,7 +85,7 @@ def make_handler(state: NoRAGCodexState) -> type[BaseHTTPRequestHandler]:
             self.end_headers()
             for event, payload in events:
                 data = json.dumps(payload, ensure_ascii=False)
-                self.wfile.write(f"event: {event}\ndata: {data}\n\n".encode("utf-8"))
+                self.wfile.write(f"event: {event}\ndata: {data}\n\n".encode())
                 self.wfile.flush()
             self.wfile.write(b"data: [DONE]\n\n")
             self.wfile.flush()

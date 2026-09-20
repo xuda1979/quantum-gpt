@@ -55,8 +55,8 @@ def _open_upstream_with_retry(url, headers, body, opener, *,
     pre-built ``urllib.request.Request`` (matches urllib's real interface AND
     simple test double fakes).
     """
-    import urllib.error
     import time as _t
+    import urllib.error
     last_err = None
     attempts_used = 0
     start = _t.monotonic()
@@ -169,7 +169,7 @@ def _log_judge_call(*, success: bool, info: dict) -> None:
 def main():
     with open(JWT_PATH) as f:
         jwt = f.read().strip()
-    assert len(jwt.split(".")) == 3, "JWT at %s malformed" % JWT_PATH
+    assert len(jwt.split(".")) == 3, f"JWT at {JWT_PATH} malformed"
     srv = ThreadingHTTPServer(("127.0.0.1", 56238), Handler)
     print("box anthropic translator on :56238 -> dp4 direct", flush=True)
     srv.serve_forever()

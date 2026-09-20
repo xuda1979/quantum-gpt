@@ -50,7 +50,7 @@ def load_jsonl(path: Path) -> list[dict[str, Any]]:
 
 
 def stable_hex(example_id: str, seed_tag: str) -> str:
-    return hashlib.sha256(f"{seed_tag}:{example_id}".encode("utf-8")).hexdigest()
+    return hashlib.sha256(f"{seed_tag}:{example_id}".encode()).hexdigest()
 
 
 def stable_bucket(example_id: str, seed_tag: str) -> float:

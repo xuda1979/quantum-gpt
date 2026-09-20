@@ -12,7 +12,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_DOCS_DIR = ROOT / "docs" / "quantum_libraries"
 DEFAULT_OUTPUT = ROOT / "data" / "seed" / "quantum_rag_seed_questions.jsonl"

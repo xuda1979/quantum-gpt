@@ -121,7 +121,7 @@ def run_sample(code: str, timeout: int = 60):
 
 
 def main():
-    rows = [json.loads(l) for l in open(SRC) if l.strip()]
+    rows = [json.loads(line) for line in open(SRC) if line.strip()]
     kept, rejected = [], []
     for idx, r in enumerate(rows):
         eid = r["example_id"]

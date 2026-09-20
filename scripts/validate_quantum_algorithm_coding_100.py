@@ -54,7 +54,7 @@ def main() -> int:
     parser.add_argument("--only", default=None, help="substring filter on example_id")
     args = parser.parse_args()
 
-    rows = [json.loads(l) for l in args.dataset.read_text().splitlines() if l.strip()]
+    rows = [json.loads(line) for line in args.dataset.read_text().splitlines() if line.strip()]
     failures = []
     for i, row in enumerate(rows, 1):
         eid = row.get("example_id", f"row{i}")

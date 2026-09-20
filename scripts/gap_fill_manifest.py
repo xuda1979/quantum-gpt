@@ -9,7 +9,9 @@ curated exemplars into the v9 training manifest, converting the existing
 1->2 passes into a sustained climb toward 18/18.
 """
 from __future__ import annotations
-import argparse, json
+
+import argparse
+import json
 from pathlib import Path
 
 MIN_CODE_CHARS = 60  # below this = empty/garbage candidate, not a gap target

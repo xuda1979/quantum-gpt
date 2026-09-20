@@ -4,6 +4,8 @@ Uses the AWS-local `braket.devices.LocalSimulator` so the test does not
 require AWS credentials.
 """
 
+from __future__ import annotations
+
 from braket.circuits import Circuit
 from braket.devices import LocalSimulator
 
