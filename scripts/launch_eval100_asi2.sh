@@ -9,7 +9,7 @@ mkdir -p logs outputs
 
 nohup python3 scripts/eval_100_reeval.py --mode gen --which "$WHICH" \
   --devices 0,1,2,3 --n 100 --shard-idx 0 --shard-total 1 \
-  --max-new-tokens 1536 --batch-size 4 \
+  --max-new-tokens 4096 --batch-size 4 \
   --out "outputs/eval100_${WHICH}.jsonl" \
   > "logs/eval100_${WHICH}.log" 2>&1 &
 echo "${WHICH} pid=$!" | tee -a logs/eval100_launch.log

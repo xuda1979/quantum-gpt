@@ -1162,6 +1162,7 @@ def _reconcile_dep_blockers():
     queue = load_queue(STATE)
     changed = False
     dead_blockers = []
+    _dead_dep_orphans = set()  # card ids unblocked by dead-dep edge drop
     for c in queue["cards"]:
         if c["status"] != "ready":
             continue
@@ -1194,6 +1195,7 @@ def _reconcile_dep_blockers():
                 if dep_id in c["deps"]:
                     c["deps"] = [d for d in c["deps"] if d != dep_id]
                     changed = True
+                    _dead_dep_orphans.add(c["id"])
                     event(STATE, "dep_edge_dropped", {"blocker": dep_id, "unblocks": c["id"]})
                 if dep_id not in dead_blockers:
                     dead_blockers.append(dep_id)
@@ -1232,13 +1234,23 @@ def _reconcile_dep_blockers():
     if changed:
         save_queue(STATE, queue)
     if dead_blockers:
-        # C-9114: escalation mints ONLY when the board holds no claimable
-        # ready work. A terminally dead blocker with healthy ready cards
-        # elsewhere minted a planner card every tick (C-9111 minted on
+        # C-9114: escalation mints ONLY when the board holds no INDEPENDENTLY
+        # claimable ready work. A terminally dead blocker with healthy ready
+        # cards elsewhere minted a planner card every tick (C-9111 minted on
         # 2026-09-18T05:50Z with 25 ready + 6 running on blocker C-9029).
+        # However, cards that were JUST unblocked by dropping a dead dep edge
+        # are not independent work -- they only became claimable because the
+        # blocker died. Count them separately so we still mint when the only
+        # "claimable" cards are dead-blocker orphans.
         n_claimable = claimable_ready_count(queue)
+        n_orphaned = sum(
+            1 for c in queue["cards"]
+            if c.get("status") == "ready"
+            and c.get("id") in _dead_dep_orphans
+        )
+        n_independent = n_claimable - n_orphaned
         minted = False
-        if n_claimable == 0:
+        if n_independent == 0:
             _auto_plan(load_goal(STATE))
             minted = True
         event(
