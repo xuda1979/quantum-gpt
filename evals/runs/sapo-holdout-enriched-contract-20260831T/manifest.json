@@ -1,9 +1,9 @@
 {
   "prompt_version": "v2",
   "prompt_style": "direct",
-  "created_at_utc": "2026-09-20T21:25:04.528269+00:00",
+  "created_at_utc": "2026-09-20T22:44:32.330370+00:00",
   "system_prompt": "You are solving a single evaluation task. Produce only the full contents of the requested Python candidate file. Do not add markdown fences, explanations, or surrounding commentary unless the task explicitly asks for it.",
-  "notes": "enriched holdout scorers (numeric failure details) — QA regen 2026-08-31",
+  "notes": "enriched holdout scorers (numeric failure details) \u2014 QA regen 2026-08-31",
   "tasks": [
     {
       "id": "quantum_gate_alias_normalization",
@@ -243,5 +243,5 @@
   "system_prompt_sha256": "fe78ada343dca583e40b2d5d945103447ede225e0ae38cc2fec21254e8bf05dc",
   "evaluation_runner_sha256": "fe7e934ccba7975790782bc6cdba6e2e1fc6a8945c8e4d86d9053541eb2d687d",
   "public_eval_contract_sha256": "e3c53b2e1cdd4823a42f7b69cc9bf407936821ec550a837d13b7030507ce413d",
-  "scorer_contract_sha256": "a2056c6006bb113691eeca334afe775a9ed416c6f88b81be5fb6af947984d1c8"
+  "scorer_contract_sha256": "34fc2e3edb7aaca4b7181b023847aa4d2e0259be78edb46965666db67bdf4e5a"
 }

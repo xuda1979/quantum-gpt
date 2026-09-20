@@ -138,6 +138,13 @@ def _suite_status():
 
 
 def _events_analysis():
+    """C-9531: count productivity from real event kinds.
+
+    EVENTS.jsonl never emits kind="done"/"bounce"/"fail" — completion appears
+    as "reaped" with verdict="DONE", bounces as "gate_bounced", and env deaths
+    as "spawn_failed_env". The old matcher looked for ghost kinds, so it always
+    reported done=0 -> a false "0% completion rate" in every standup.
+    """
     ef = _state_dir() / "EVENTS.jsonl"
     done = bounce = dispatch = fail = 0
     if ef.exists():
@@ -147,11 +154,11 @@ def _events_analysis():
                 k = ev.get("kind", "")
                 if k == "dispatched":
                     dispatch += 1
-                elif k == "done":
+                elif k == "reaped" and ev.get("verdict") == "DONE":
                     done += 1
-                elif k == "bounce":
+                elif k == "gate_bounced":
                     bounce += 1
-                elif "fail" in k or "dead" in k:
+                elif k == "spawn_failed_env" or k == "dead_dep_escalated":
                     fail += 1
             except Exception:
                 pass

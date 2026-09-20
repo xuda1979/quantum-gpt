@@ -1367,7 +1367,19 @@ def load_goal(state_dir):
 
 
 def scan_verdicts(repo_root, limit=12):
-    """Newest verdict JSONs in outputs/ (fail-closed eval artifacts)."""
+    """Newest verdict JSONs in outputs/ (fail-closed eval artifacts).
+
+    C-9532: skip verdicts already marked superseded:true. Legacy pre-pin
+    verdicts (verdict_step000097_leg4.json & friends, written before the
+    scorer embedded holdout_sha256/scorer_shas) are marked superseded by
+    C-0040 and can never satisfy the done-check; surfacing them as the
+    newest verdicts made the goal_done preflight blame scorer_sha_pins_missing
+    on an obsolete, already-superseded file. A superseded verdict is by
+    definition non-canonical, so it is never presented as a goal candidate.
+    Fail-closed preserved: a FRESH (superseded unset/false) unpinned verdict
+    is still surfaced and still fails the done-check with
+    scorer_sha_pins_missing.
+    """
     out_dir = os.path.join(repo_root, "outputs")
     verdicts = []
     if os.path.isdir(out_dir):
@@ -1382,9 +1394,13 @@ def scan_verdicts(repo_root, limit=12):
         cands.sort(reverse=True)
         for _, p in cands[:limit]:
             d = load_json(p, {})
-            if d:
-                d["_file"] = os.path.basename(p)
-                verdicts.append(d)
+            if not d:
+                continue
+            if d.get("superseded") is True:
+                # C-9532: deprecated verdict can never retire the goal.
+                continue
+            d["_file"] = os.path.basename(p)
+            verdicts.append(d)
     return verdicts
 
 

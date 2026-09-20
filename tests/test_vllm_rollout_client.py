@@ -132,7 +132,10 @@ def test_health_cache_holds_10s_force_bypasses_and_fails_closed(monkeypatch):
         hits.append(1)
         return _FakeResp(b"{}", status=200)
 
-    monkeypatch.setattr(mod.urllib.request, "urlopen", ok_probe)
+    class _FakeOpener:
+        def open(self, req, timeout=None):
+            return ok_probe(req, timeout=timeout)
+    monkeypatch.setattr(mod, "opener_factory", lambda: _FakeOpener())
     t = {"now": 1000.0}
     monkeypatch.setattr(mod.time, "time", lambda: t["now"])
 
@@ -150,7 +153,10 @@ def test_health_cache_holds_10s_force_bypasses_and_fails_closed(monkeypatch):
         hits.append(1)
         raise urllib.error.URLError("down")
 
-    monkeypatch.setattr(mod.urllib.request, "urlopen", down_probe)
+    class _FakeOpener2:
+        def open(self, req, timeout=None):
+            return down_probe(req, timeout=timeout)
+    monkeypatch.setattr(mod, "opener_factory", lambda: _FakeOpener2())
     t["now"] = 1021.0
     assert client.is_up() is False  # probe failure cached as False
     t["now"] = 1029.0  # still inside the 10s window after the failed probe
@@ -162,6 +168,6 @@ def test_health_cache_holds_10s_force_bypasses_and_fails_closed(monkeypatch):
     assert len(hits) == 4
 
     t["now"] = 1040.0
-    monkeypatch.setattr(mod.urllib.request, "urlopen", ok_probe)
+    monkeypatch.setattr(mod, "opener_factory", lambda: _FakeOpener())
     assert client.is_up(force=True) is True  # force bypasses the cache
     assert len(hits) == 5

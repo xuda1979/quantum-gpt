@@ -1,6 +1,6 @@
 # SAPO RL training from quantum_rl_questions_v2.jsonl: waves 1-6 gap-fill lineage = 56 tasks.
 # source=quantum_rl_questions_v2.jsonl sha256=c2eebd37f2ac920aec04126cb656deb62a93ee8cebbcdb055befc0690cbcd68e
-# task_contract_sha256=605d0a6e9ebdd0d32af12e2554f05b862b21b2053a079d880f588c44e7958d14
+# task_contract_sha256=f134e3e68334bb331f8839b20eff167d58b397cc84f1a58c0c1c71b2a2d7e374
 # targeted=56 deterministic=0 semantic=0
 # required_import_roots=
 # reference_execution_verified=true runs=3
