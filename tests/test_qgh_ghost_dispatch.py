@@ -174,3 +174,84 @@ def test_reaped_bounced_is_terminal(tmp_path, monkeypatch):
     assert mod.H.is_terminal_card_id(str(tmp_path), "C-0010") is True, (
         "C-0010 was reaped with verdict=BOUNCED -- terminal"
     )
+
+
+def test_card_purged_is_terminal(tmp_path, monkeypatch):
+    """A card_purged event must be detected as terminal by
+    is_terminal_card_id.  card_purged uses 'id' field, not 'card'."""
+    mod = _load_qgh(tmp_path, monkeypatch)
+    _write_events(
+        mod,
+        tmp_path,
+        [
+            {
+                "ts": "2026-09-20T06:02:00Z",
+                "kind": "card_purged",
+                "id": "C-9001",
+                "reason": "duplicate",
+            },
+        ],
+    )
+    assert mod.H.is_terminal_card_id(str(tmp_path), "C-9001") is True, (
+        "C-9001 was purged -- is_terminal_card_id must return True"
+    )
+
+
+def test_card_purged_in_history_terminal_ids(tmp_path, monkeypatch):
+    """history_terminal_card_ids must include ids with card_purged events.
+    Without this, save_queue could resurrect a purged card from disk."""
+    mod = _load_qgh(tmp_path, monkeypatch)
+    _write_events(
+        mod,
+        tmp_path,
+        [
+            {
+                "ts": "2026-09-20T06:02:00Z",
+                "kind": "card_purged",
+                "id": "C-9211",
+                "reason": "duplicate of C-9195",
+            },
+        ],
+    )
+    terminal_ids = mod.H.history_terminal_card_ids(str(tmp_path))
+    assert "C-9211" in terminal_ids, (
+        "C-9211 was purged -- history_terminal_card_ids must include it"
+    )
+
+
+def test_card_done_is_terminal(tmp_path, monkeypatch):
+    """A card_done event must be detected as terminal by is_terminal_card_id."""
+    mod = _load_qgh(tmp_path, monkeypatch)
+    _write_events(
+        mod,
+        tmp_path,
+        [
+            {
+                "ts": "2026-09-20T08:00:00Z",
+                "kind": "card_done",
+                "card": "C-0050",
+            },
+        ],
+    )
+    assert mod.H.is_terminal_card_id(str(tmp_path), "C-0050") is True, (
+        "C-0050 has card_done event -- is_terminal_card_id must return True"
+    )
+
+
+def test_card_voided_is_terminal(tmp_path, monkeypatch):
+    """A card_voided event must be detected as terminal by is_terminal_card_id."""
+    mod = _load_qgh(tmp_path, monkeypatch)
+    _write_events(
+        mod,
+        tmp_path,
+        [
+            {
+                "ts": "2026-09-20T08:00:00Z",
+                "kind": "card_voided",
+                "card": "C-0060",
+            },
+        ],
+    )
+    assert mod.H.is_terminal_card_id(str(tmp_path), "C-0060") is True, (
+        "C-0060 has card_voided event -- is_terminal_card_id must return True"
+    )

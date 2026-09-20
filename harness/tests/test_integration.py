@@ -19,7 +19,7 @@ import qgh  # noqa: E402  (binds STATE to the temp dir above)
 
 
 def make_card(**kw):
-    base = dict(title="t", lane="fixer", why="w", acceptance=["a"])
+    base = dict(title="test card", lane="fixer", why="test why", acceptance=["test acceptance"])
     base.update(kw)
     return H.new_card(**base)
 
@@ -34,10 +34,10 @@ def seed_card(**kw):
     c = H.add_card(
         q,
         H.new_card(
-            title=kw.pop("title", "t"),
+            title=kw.pop("title", "test card"),
             lane=kw.pop("lane", "fixer"),
-            why=kw.pop("why", "w"),
-            acceptance=["a"],
+            why=kw.pop("why", "test why"),
+            acceptance=["test acceptance"],
             **kw,
         ),
     )
@@ -330,9 +330,9 @@ class TestWipLimits(unittest.TestCase):
 
     def test_dispatch_never_exceeds_wip_or_global_cap(self):
         for i in range(6):
-            seed_card(title=f"f{i}", lane="fixer")
+            seed_card(title=f"fixer card {i}", lane="fixer")
         for i in range(3):
-            seed_card(title=f"e{i}", lane="evaluator")
+            seed_card(title=f"eval card {i}", lane="evaluator")
         spawned = {"n": 0}
 
         def fake_spawn(goal, queue, card, dep_results):
@@ -420,7 +420,7 @@ class TestGlobalPriorityDispatch(unittest.TestCase):
 
     def test_p0_in_late_lane_beats_p3_in_early_lane(self):
         """LANES tuple order is planner-first; priority must dominate anyway."""
-        low = seed_card(title="cleanup", lane="planner", priority=3)
+        low = seed_card(title="cleanup task", lane="planner", priority=3)
         high = seed_card(title="verify deploy", lane="deploy-integrity", priority=0)
         order = []
 
@@ -638,7 +638,7 @@ class TestDepBlockerSelfHeal(unittest.TestCase):
         )
 
     def test_env_bounced_blocker_requeues_and_unblocks_child(self):
-        blocker = seed_card(title="box leg", lane="evaluator")
+        blocker = seed_card(title="box leg task", lane="evaluator")
         q = qgh.load_queue(qgh.STATE)
         b = H.find_card(q, blocker["id"])
         b["status"] = "bounced"  # terminal
@@ -648,7 +648,7 @@ class TestDepBlockerSelfHeal(unittest.TestCase):
         child = H.add_card(
             q,
             H.new_card(
-                title="child", lane="evaluator", why="w", acceptance=["a"], deps=[blocker["id"]]
+                title="child card", lane="evaluator", why="test why", acceptance=["test acceptance"], deps=[blocker["id"]]
             ),
         )
         qgh.save_queue(qgh.STATE, q)
@@ -677,7 +677,7 @@ class TestDepBlockerSelfHeal(unittest.TestCase):
         H.add_card(
             q,
             H.new_card(
-                title="child2", lane="fixer", why="w", acceptance=["a"], deps=[blocker["id"]]
+                title="child card2", lane="fixer", why="test why", acceptance=["test acceptance"], deps=[blocker["id"]]
             ),
         )
         qgh.save_queue(qgh.STATE, q)
@@ -773,11 +773,11 @@ class TestDuplicateIdAutoRepair(unittest.TestCase):
 
     def test_dedup_reids_duplicates_keeps_oldest(self):
         q = qgh.load_queue(qgh.STATE)
-        a = H.add_card(q, H.new_card(title="first", lane="fixer", why="w", acceptance=["a"]))
-        b = H.add_card(q, H.new_card(title="dup", lane="fixer", why="w", acceptance=["a"]))
+        a = H.add_card(q, H.new_card(title="first card", lane="fixer", why="test why", acceptance=["test acceptance"]))
+        b = H.add_card(q, H.new_card(title="dup card", lane="fixer", why="test why", acceptance=["test acceptance"]))
         b["id"] = a["id"]  # simulate the duplicate mint
         child = H.add_card(
-            q, H.new_card(title="child", lane="fixer", why="w", acceptance=["a"], deps=[a["id"]])
+            q, H.new_card(title="child card", lane="fixer", why="test why", acceptance=["test acceptance"], deps=[a["id"]])
         )
         qgh.save_queue(qgh.STATE, q)
         changed = qgh._dedup_card_ids()

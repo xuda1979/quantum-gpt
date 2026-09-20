@@ -144,7 +144,7 @@ def new_card(
         )
     if not why or len(why) < 8:
         raise ValueError(
-            f"card why too short ({len(why) if why else 0} chars); " "minimum 8 characters required"
+            f"card why too short ({len(why) if why else 0} chars); minimum 8 characters required"
         )
     # C-9139: reject empty acceptance list -- a card with no acceptance
     # criteria has an unverifiable done-gate.  At least one item required.
@@ -259,6 +259,7 @@ TERMINAL_EVENT_KINDS = frozenset(
         "card_done",
         "card_voided",
         "card_superseded",
+        "card_purged",
     }
 )
 
@@ -277,7 +278,7 @@ def history_terminal_card_ids(state_dir):
         return set()
     ids = set()
     for m in re.finditer(
-        r'"kind":\s*"(reaped|card_dead|card_done|card_voided|card_superseded)".*?"(?:card|id)":\s*"(C-\d{3,})"',
+        r'"kind":\s*"(reaped|card_dead|card_done|card_voided|card_superseded|card_purged)".*?"(?:card|id)":\s*"(C-\d{3,})"',
         text,
     ):
         ids.add(m.group(2))
@@ -285,13 +286,17 @@ def history_terminal_card_ids(state_dir):
 
 
 def is_terminal_card_id(state_dir, card_id):
-    """C-0001: True if this card id has a terminal reap in EVENTS.jsonl.
+    """C-0001: True if this card id has a terminal event in EVENTS.jsonl.
 
     A terminal reap is one with a non-null verdict (DONE/PARTIAL/BLOCKED/
     BOUNCED) -- the card was closed, not merely re-armed after an
     environmental death.  A reap with verdict=null means the worker died
     without producing output (API failure, credential issue) and the card
     was re-armed to 'ready' -- that is NOT terminal.
+
+    Other terminal event kinds (card_dead, card_done, card_voided,
+    card_superseded, card_purged) are always terminal regardless of
+    verdict.  card_purged uses the "id" field instead of "card".
 
     This lets a worker detect it has been handed a ghost card id (one that
     was already completed and pruned) and exit immediately instead of
@@ -302,14 +307,22 @@ def is_terminal_card_id(state_dir, card_id):
             text = f.read()
     except OSError:
         return False
-    # Match reaped events for this card id with a non-null verdict.
-    # The verdict field appears AFTER the card field in the event JSON,
-    # so we look for: kind=reaped ... card="C-XXXX" ... verdict=<non-null>
-    pattern = (
-        r'"kind":\s*"reaped".*?"card":\s*"' + re.escape(card_id) + r'".*?"verdict":\s*"(?!null)'
-        r'[^"]+"'
-    )
-    return bool(re.search(pattern, text))
+    escaped = re.escape(card_id)
+    # 1. reaped with non-null verdict (card field, verdict after)
+    if re.search(
+        r'"kind":\s*"reaped".*?"card":\s*"' + escaped + r'".*?"verdict":\s*"(?!null)'
+        r'[^"]+"',
+        text,
+    ):
+        return True
+    # 2. other terminal kinds -- always terminal, id in "card" or "id" field
+    other_kinds = "|".join(k for k in TERMINAL_EVENT_KINDS if k != "reaped")
+    if re.search(
+        r'"kind":\s*"(?:' + other_kinds + r')".*?"(?:card|id)":\s*"' + escaped + r'"',
+        text,
+    ):
+        return True
+    return False
 
 
 def add_card(queue, card, state_dir=None):
