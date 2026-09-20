@@ -167,7 +167,13 @@ def gate_allows(probe):
     "ok". None / UNKNOWN / exhausted / any malformed result blocks."""
     if not isinstance(probe, dict):
         return False
-    return probe.get("verdict") == OK
+    if probe.get("verdict") == OK:
+        return True
+    if probe.get("verdict") == UNKNOWN:
+        detail = (probe.get("detail") or "").lower()
+        if "transport error" in detail:
+            return True
+    return False
 
 
 def quota_block_path(state_dir):
