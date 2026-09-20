@@ -144,15 +144,12 @@ def new_card(
         )
     if not why or len(why) < 8:
         raise ValueError(
-            f"card why too short ({len(why) if why else 0} chars); "
-            "minimum 8 characters required"
+            f"card why too short ({len(why) if why else 0} chars); " "minimum 8 characters required"
         )
     # C-9139: reject empty acceptance list -- a card with no acceptance
     # criteria has an unverifiable done-gate.  At least one item required.
     if not acceptance or len(acceptance) == 0:
-        raise ValueError(
-            "card acceptance list is empty; at least one criterion required"
-        )
+        raise ValueError("card acceptance list is empty; at least one criterion required")
     # C-9001: reject placeholder acceptance items -- acceptance=['a'] is
     # content-free and makes the done-gate unverifiable.  Each item must
     # be at least 8 chars to describe a real acceptance criterion.
@@ -201,13 +198,19 @@ def save_queue(state_dir, queue):
         for c in disk.get("cards", []):
             m = mem.get(c.get("id"))
             if m is None:
-                # C-9136: card exists on disk but NOT in the in-memory copy.
-                # It was added by a concurrent writer after this copy was
-                # loaded.  Preserving it prevents the lost-update vaporizer
-                # that silently dropped ready cards (C-9125/C-9128/C-9129/
-                # C-9130 vanished 2026-09-20T04:51-05:15Z with no archive
-                # event).  Append the disk version unchanged.
-                queue.setdefault("cards", []).append(c)
+                # C-9135/C-9136: card exists on disk but NOT in the
+                # in-memory copy.  It was added by a concurrent writer
+                # after this copy was loaded.  Preserve it ONLY if it
+                # has no terminal event (reaped/card_dead/card_done/
+                # card_voided/card_superseded) in EVENTS.jsonl -- a
+                # terminal card was intentionally removed and must not
+                # be resurrected.  This prevents the lost-update
+                # vaporizer that silently dropped ready cards
+                # (C-9125/C-9128/C-9129/C-9130 vanished
+                # 2026-09-20T04:51-05:15Z with no archive event).
+                _terminal = history_terminal_card_ids(state_dir)
+                if c.get("id") not in _terminal:
+                    queue.setdefault("cards", []).append(c)
                 continue
             for field in ("title", "lane"):
                 if field in c and field in m and c[field] != m[field]:
@@ -246,6 +249,69 @@ def history_card_ids(state_dir):
     return set(re.findall(r"C-\d{3,}", text))
 
 
+# C-9135: terminal event kinds that mark a card as done -- a card with
+# one of these events is NOT preserved by the save_queue merge (it was
+# intentionally removed from the working set).
+TERMINAL_EVENT_KINDS = frozenset(
+    {
+        "reaped",
+        "card_dead",
+        "card_done",
+        "card_voided",
+        "card_superseded",
+    }
+)
+
+
+def history_terminal_card_ids(state_dir):
+    """C-9135: card ids that have a terminal event in EVENTS.jsonl.
+
+    A terminal event (reaped, card_dead, card_done, card_voided,
+    card_superseded) means the card is no longer live -- save_queue
+    should NOT resurrect it from disk during the lost-update merge.
+    """
+    try:
+        with open(os.path.join(state_dir, "EVENTS.jsonl"), encoding="utf-8") as f:
+            text = f.read()
+    except OSError:
+        return set()
+    ids = set()
+    for m in re.finditer(
+        r'"kind":\s*"(reaped|card_dead|card_done|card_voided|card_superseded)".*?"(?:card|id)":\s*"(C-\d{3,})"',
+        text,
+    ):
+        ids.add(m.group(2))
+    return ids
+
+
+def is_terminal_card_id(state_dir, card_id):
+    """C-0001: True if this card id has a terminal reap in EVENTS.jsonl.
+
+    A terminal reap is one with a non-null verdict (DONE/PARTIAL/BLOCKED/
+    BOUNCED) -- the card was closed, not merely re-armed after an
+    environmental death.  A reap with verdict=null means the worker died
+    without producing output (API failure, credential issue) and the card
+    was re-armed to 'ready' -- that is NOT terminal.
+
+    This lets a worker detect it has been handed a ghost card id (one that
+    was already completed and pruned) and exit immediately instead of
+    spinning on a non-existent card.
+    """
+    try:
+        with open(os.path.join(state_dir, "EVENTS.jsonl"), encoding="utf-8") as f:
+            text = f.read()
+    except OSError:
+        return False
+    # Match reaped events for this card id with a non-null verdict.
+    # The verdict field appears AFTER the card field in the event JSON,
+    # so we look for: kind=reaped ... card="C-XXXX" ... verdict=<non-null>
+    pattern = (
+        r'"kind":\s*"reaped".*?"card":\s*"' + re.escape(card_id) + r'".*?"verdict":\s*"(?!null)'
+        r'[^"]+"'
+    )
+    return bool(re.search(pattern, text))
+
+
 def add_card(queue, card, state_dir=None):
     # C-9027 (1): decompose-class dedupe -- a second OPEN "Queue nearly
     # empty" card is the C-9021/C-9023 double-mint (the incident card
@@ -262,6 +328,20 @@ def add_card(queue, card, state_dir=None):
                     f"duplicate open decompose-class card {title!r} (live id {c.get('id')}); "
                     "new intent requires a new id"
                 )
+    # C-9135: seq must exceed the max id ever seen in EVENTS.jsonl so a
+    # fresh queue (seq=0) never re-mints a pruned card id below the
+    # history max (e.g. C-9999 in history would be ignored, minting
+    # C-0001 below it).  Bump seq to the history max BEFORE the +1 so
+    # the allocated id always exceeds it.
+    if state_dir:
+        _hist_max = 0
+        for _hid in history_card_ids(state_dir):
+            try:
+                _hist_max = max(_hist_max, int(_hid.split("-")[1]))
+            except (ValueError, IndexError):
+                pass
+        if _hist_max > int(queue.get("seq", 0)):
+            queue["seq"] = _hist_max
     queue["seq"] = int(queue.get("seq", 0)) + 1
     card["id"] = card["id"] or f"C-{queue['seq']:04d}"
     # C-9027 (2): a stale on-disk seq (a lost update left seq=9020 while
@@ -376,10 +456,8 @@ def bounce_dead_running_cards(state_dir, pid_alive_fn=None):
     Returns a list of bounced card ids."""
     if pid_alive_fn is None:
         pid_alive_fn = pid_alive
-    queue = load_json(os.path.join(state_dir, "QUEUE.json"),
-                      {"cards": [], "seq": 0})
-    fleet = load_json(os.path.join(state_dir, "FLEET.json"),
-                      {"agents": []})
+    queue = load_json(os.path.join(state_dir, "QUEUE.json"), {"cards": [], "seq": 0})
+    fleet = load_json(os.path.join(state_dir, "FLEET.json"), {"agents": []})
     # Gather card ids with at least one live running worker
     live_cards = set()
     for a in fleet.get("agents", []):
@@ -417,8 +495,12 @@ def bounce_dead_running_cards(state_dir, pid_alive_fn=None):
         bounced.append(c["id"])
         # Record event
         event_path = os.path.join(state_dir, "events.jsonl")
-        evt = {"ts": now_iso(), "kind": "dead_worker_requeued",
-               "card": c["id"], "reason": "all_workers_dead_deadline_expired"}
+        evt = {
+            "ts": now_iso(),
+            "kind": "dead_worker_requeued",
+            "card": c["id"],
+            "reason": "all_workers_dead_deadline_expired",
+        }
         with open(event_path, "a") as f:
             f.write(json.dumps(evt) + "\n")
     if bounced:
@@ -1069,19 +1151,19 @@ def load_banked_scorer_sha_pins(state_dir=None):
     """C-9131: the banked pins, or None when nothing is banked yet.
     Fail-closed: a malformed bank raises ValueError -- a half-written or
     tampered-shape bank must never silently read as 'no pins required'."""
-    path = os.path.join(
-        state_dir or _default_harness_state_dir(), SCORER_SHA_PIN_BANK_NAME)
+    path = os.path.join(state_dir or _default_harness_state_dir(), SCORER_SHA_PIN_BANK_NAME)
     if not os.path.isfile(path):
         return None
-    with open(path, "r", encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         bank = json.load(f)
-    if (not isinstance(bank, dict)
-            or not isinstance(bank.get("holdout_sha256"), str)
-            or not bank.get("holdout_sha256")
-            or not isinstance(bank.get("scorer_shas"), dict)
-            or not bank.get("scorer_shas")
-            or not all(isinstance(v, str) and v
-                       for v in bank["scorer_shas"].values())):
+    if (
+        not isinstance(bank, dict)
+        or not isinstance(bank.get("holdout_sha256"), str)
+        or not bank.get("holdout_sha256")
+        or not isinstance(bank.get("scorer_shas"), dict)
+        or not bank.get("scorer_shas")
+        or not all(isinstance(v, str) and v for v in bank["scorer_shas"].values())
+    ):
         raise ValueError("scorer_sha_pin_bank_malformed: " + path)
     return bank
 
@@ -1373,7 +1455,7 @@ def compute_metrics(state_dir, window_min=60):
 
 
 # ----------------------------------------------------------------------------- progress
-def render_progress(goal, queue, fleet, tick_no, verdicts=None, probes=None):
+def render_progress(goal, queue, fleet, tick_no, verdicts=None, probes=None, state_dir=None):
     """Concise, human-readable progress report published to repo root every
     tick so the project's progress is VISIBLE (not buried in state/standup/).
     The harness must self-report — a working loop that nobody can see is a
@@ -1518,8 +1600,14 @@ def render_progress(goal, queue, fleet, tick_no, verdicts=None, probes=None):
     # Work review section
     try:
         from harness.work_review import render_work_review
+
         L.append("")
-        L.append(render_work_review(state_dir=state_dir, repo_root=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+        L.append(
+            render_work_review(
+                state_dir=state_dir,
+                repo_root=os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            )
+        )
     except Exception:
         pass
     return "\n".join(L) + "\n"
@@ -1619,8 +1707,7 @@ def render_standup(goal, queue, fleet, tick_no, verdicts=None, probes=None, stat
             for cid in armed:
                 e = by_card.get(cid) or dict()
                 L.append(
-                    "- CARD BACKOFF ARMED: %s until %s (consecutive env-deaths: %s)"
-                    % (cid, e.get("backoff_until_utc"), e.get("consecutive"))
+                    f"- CARD BACKOFF ARMED: {cid} until {e.get('backoff_until_utc')} (consecutive env-deaths: {e.get('consecutive')})"
                 )
         else:
             L.append("- none armed")
@@ -1661,8 +1748,14 @@ def render_standup(goal, queue, fleet, tick_no, verdicts=None, probes=None, stat
     # Work review section — productivity, commits, blockers, path to 18/18
     try:
         from harness.work_review import render_work_review
+
         L.append("")
-        L.append(render_work_review(state_dir=state_dir, repo_root=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+        L.append(
+            render_work_review(
+                state_dir=state_dir,
+                repo_root=os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            )
+        )
     except Exception:
         pass
     return "\n".join(L)
