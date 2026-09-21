@@ -3354,17 +3354,29 @@ def training_watch_eval_truth():
             timeout=15,
         )
         _push.read()
-        r = _url.urlopen(
-            _url.Request(
-                "http://127.0.0.1:20653/exec",
-                data=_json.dumps({"command": "python3 /tmp/tw_eval.py 2>&1 | base64"}).encode(),
-                headers={"Content-Type": "application/json"},
-            ),
-            timeout=20,
-        )
-        out = _json.loads(r.read()).get("output", "")
-        decoded = _b64_mod.b64decode("".join(out.split())).decode("utf-8", "replace")
-        d = _json.loads(decoded)
+        d = None
+        for _attempt in range(2):
+            try:
+                r = _url.urlopen(
+                    _url.Request(
+                        "http://127.0.0.1:20653/exec",
+                        data=_json.dumps({"command": "python3 /tmp/tw_eval.py 2>&1 | base64"}).encode(),
+                        headers={"Content-Type": "application/json"},
+                    ),
+                    timeout=20,
+                )
+                out = _json.loads(r.read()).get("output", "")
+                d = _json.loads(
+                    _b64_mod.b64decode("".join(out.split())).decode("utf-8", "replace")
+                )
+                break
+            except Exception:
+                if _attempt == 0:
+                    import time as _time
+
+                    _time.sleep(2)
+        if d is None:
+            return None
         from harness_lib import eval_truth_summary
 
         t = eval_truth_summary(d.get("eval_rows", []))
@@ -3436,25 +3448,41 @@ def training_watch():
             timeout=15,
         )
         _push.read()
-        r = _url.urlopen(
-            _url.Request(
-                "http://127.0.0.1:20653/exec",
-                data=_json.dumps({"command": "python3 /tmp/tw_summary.py 2>&1 | base64"}).encode(),
-                headers={"Content-Type": "application/json"},
-            ),
-            timeout=20,
-        )
-        out = _json.loads(r.read()).get("output", "")
-        b64 = "".join(out.split())
-        if not b64 or "c9591_no_script" in out:
-            alarms = [
-                {"kind": "TRAINING-UNMEASURABLE", "detail": "tw_summary script missing on box"}
-            ]
-        else:
+
+        def _fetch_summary():
+            r = _url.urlopen(
+                _url.Request(
+                    "http://127.0.0.1:20653/exec",
+                    data=_json.dumps({"command": "python3 /tmp/tw_summary.py 2>&1 | base64"}).encode(),
+                    headers={"Content-Type": "application/json"},
+                ),
+                timeout=20,
+            )
+            out = _json.loads(r.read()).get("output", "")
+            b64 = "".join(out.split())
+            if not b64 or "c9591_no_script" in out:
+                return None
             import base64 as _b64
 
-            decoded = _b64.b64decode(b64).decode("utf-8", "replace")
-            d = _json.loads(decoded)
+            return _json.loads(_b64.b64decode(b64).decode("utf-8", "replace"))
+
+        # transport is flaky (intermittent empty exec responses): 2 attempts
+        d = None
+        for _attempt in range(2):
+            try:
+                d = _fetch_summary()
+                if d:
+                    break
+            except Exception:
+                if _attempt == 0:
+                    import time as _time
+
+                    _time.sleep(2)
+        if not d:
+            alarms = [
+                {"kind": "TRAINING-UNMEASURABLE", "detail": "summary fetch failed twice (transport flake)"}
+            ]
+        else:
             run = d.get("run", "unknown")
             rows = d.get("rows", [])
             last_mtime = d.get("mtime")
