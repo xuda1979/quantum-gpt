@@ -151,6 +151,52 @@ def call_dp4(body_text: str, timeout_s: int = 250) -> str:
         return json.dumps({"error": {"message": repr(exc)[:200], "type": "watcher_error"}})
 
 
+def call_zhipu_fallback(body_text: str, timeout_s: int = 250) -> str:
+    """Judge fallback (user directive 2026-09-21): when dp4 fails, judge with
+    Zhipu GLM-5.3-Flash (open.bigmodel.cn native Anthropic endpoint). Returns
+    the same response shape the trainer parses; metadata marks the fallback.
+    """
+    try:
+        req_body = json.loads(body_text)
+    except Exception:
+        req_body = {}
+    req_body["model"] = os.environ.get("SAPO_ZHIPU_MODEL", "glm-5.3-flash")
+    req = urllib.request.Request(
+        os.environ.get("SAPO_ZHIPU_URL", "https://open.bigmodel.cn/api/anthropic/v1/messages"),
+        data=json.dumps(req_body).encode("utf-8"),
+        headers={
+            "Content-Type": "application/json",
+            "x-api-key": os.environ.get("ZHIPU_API_KEY", ""),
+            "anthropic-version": "2023-06-01",
+        },
+    )
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    try:
+        with opener.open(req, timeout=timeout_s) as resp:
+            text = resp.read().decode("utf-8")
+        # annotate: judge model that actually scored this
+        try:
+            parsed = json.loads(text)
+            parsed.setdefault("metadata", {})["judge_model"] = "zhipu-glm-5.3-flash-fallback"
+            return json.dumps(parsed)
+        except Exception:
+            return text
+    except Exception as exc:
+        return json.dumps(
+            {"error": {"message": repr(exc)[:200], "type": "zhipu_fallback_error"}}
+        )
+
+
+def is_dp4_failure(resp_text: str) -> bool:
+    try:
+        parsed = json.loads(resp_text)
+    except Exception:
+        return True
+    if isinstance(parsed, dict) and parsed.get("error"):
+        return True
+    return False
+
+
 def has_resp(req_path: str) -> bool:
     resp_path = resp_for(req_path)
     return daemon_exec(f"[ -f '{resp_path}' ] && echo yes").strip() == "yes"
@@ -199,6 +245,9 @@ def tick(immediate: bool = False) -> int:
             continue
         log("judging {}".format(req_path.rsplit("/", 1)[-1]))
         resp = call_dp4(body)
+        if is_dp4_failure(resp):
+            log("dp4 judge failed -> zhipu GLM-5.3-Flash fallback")
+            resp = call_zhipu_fallback(body)
         stage(resp_for(req_path), resp)
         log("staged {}".format(resp_for(req_path).rsplit("/", 1)[-1]))
         processed += 1
