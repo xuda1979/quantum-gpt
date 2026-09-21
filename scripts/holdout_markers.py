@@ -80,7 +80,10 @@ def compute_holdout_markers(text, adapter):
     applied_stages = events.get(STAGE_APPLIED, [])
     probe_stages = events.get(STAGE_PROBE_DIFFERS, [])
 
-    adapter_exists = bool(adapter) and Path(adapter).is_file()
+    # PEFT LoRA adapters are saved as a DIRECTORY (adapter_config.json +
+    # adapter_model.safetensors), so existence accepts file or dir; fail-closed
+    # keeps requiring the adapter to actually EXIST on disk.
+    adapter_exists = bool(adapter) and Path(adapter).exists()
 
     adapter_applied = adapter_exists and expected in applied_stages
     adapter_probe_differs = bool(probe_stages) and expected in probe_stages
