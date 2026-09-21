@@ -103,3 +103,42 @@ class TestEvalTruthSummary(unittest.TestCase):
 
     def test_empty_is_none(self):
         self.assertIsNone(eval_truth_summary([]))
+
+
+from harness.harness_lib import best_checkpoint_update, best_checkpoint_warm_start
+
+
+class TestBestCheckpointRegistry(unittest.TestCase):
+    def test_first_verdict_becomes_best(self):
+        best = best_checkpoint_update(None, {"checkpoint": "ck31", "n_passes": 4,
+                                             "n_tasks": 18, "beats_base": True})
+        self.assertEqual(best["checkpoint"], "ck31")
+        self.assertEqual(best["n_passes"], 4)
+
+    def test_higher_pass_count_promotes(self):
+        cur = {"checkpoint": "ck31", "n_passes": 4, "n_tasks": 18}
+        new = best_checkpoint_update(cur, {"checkpoint": "ck45", "n_passes": 6,
+                                           "n_tasks": 18, "beats_base": True})
+        self.assertEqual(new["checkpoint"], "ck45")
+
+    def test_lower_or_equal_does_not_promote(self):
+        cur = {"checkpoint": "ck45", "n_passes": 6, "n_tasks": 18}
+        for n in (6, 3):
+            new = best_checkpoint_update(cur, {"checkpoint": "ckX", "n_passes": n,
+                                               "n_tasks": 18})
+            self.assertEqual(new["checkpoint"], "ck45")
+
+    def test_fail_closed_requires_full_tasks(self):
+        with self.assertRaises(ValueError):
+            best_checkpoint_update(None, {"checkpoint": "ck", "n_passes": 18,
+                                          "n_tasks": None})
+
+    def test_warm_start_prefers_registry_over_stale(self):
+        best = {"checkpoint": "/outputs/run/step_000045_adapter",
+                "n_passes": 6, "n_tasks": 18}
+        picked = best_checkpoint_warm_start(best, "/outputs/old/step_000027_adapter")
+        self.assertEqual(picked, "/outputs/run/step_000045_adapter")
+
+    def test_warm_start_falls_back_when_no_best(self):
+        picked = best_checkpoint_warm_start(None, "/outputs/old/step_000027_adapter")
+        self.assertEqual(picked, "/outputs/old/step_000027_adapter")

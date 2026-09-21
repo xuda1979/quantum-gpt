@@ -1319,10 +1319,19 @@ def auto_queue_training(state_dir):
         )
         if _bounced_trainer_count >= 3:
             return None
+        # Best-checkpoint registry (user directive: warm-start from the BEST
+        # holdout-verified checkpoint, not just the latest).
+        best = load_json(os.path.join(state_dir, "BEST_CHECKPOINT.json"), None)
+        best_note = ""
+        if best and best.get("checkpoint"):
+            best_note = (f" WARM-START from best verified checkpoint "
+                         f"{best['checkpoint']} (measured {best['n_passes']}/"
+                         f"{best['n_tasks']} on frozen holdout) — do NOT warm-start "
+                         f"from a weaker/latest-only checkpoint.")
         card = new_card(
             title="Auto: launch/resume GRPO training with v10 benchmark (18/18 holdout coverage) toward 18/18",
             lane="trainer-ops",
-            why="No training running and goal is OPEN. v10 benchmark covers all 18 holdout tasks (unlike v9 which has 0 overlap). Use --min-rms-for-update 0.01 for warm-continue.",
+            why="No training running and goal is OPEN. v10 benchmark covers all 18 holdout tasks (unlike v9 which has 0 overlap). Use --min-rms-for-update 0.01 for warm-continue." + best_note,
             acceptance=[
                 "Launch GRPO training on ASI3 using v10 benchmark (quantum_grpo_training_v10_sapo_18holdout.txt)",
                 "Use --min-rms-for-update 0.01 for warm-continue training",

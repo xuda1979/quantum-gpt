@@ -2406,13 +2406,13 @@ def training_watch_alarms(rows, now_s, last_mtime, stale_s=1200):
         except (TypeError, ValueError):
             return None
 
-# LOG-STALE: log not written for > stale_s.
-# C-9596 durable unfreeze: fixed stale_s (1200s) false-flags a healthy
-# ~34min/step advancing trainer (C-9581). Escalate the freeze bound to
-# ~2 expected per-step cadences when real metric rows exist (a genuine
-# producing run), so a slow-but-advancing trainer is not destructively
-# killed mid-step. A trainer stuck on the SAME step for ~2 cadences with
-# no advancement still flags TRUE LOG-STALE.
+    # LOG-STALE: log not written for > stale_s.
+    # C-9596 durable unfreeze: fixed stale_s (1200s) false-flags a healthy
+    # ~34min/step advancing trainer (C-9581). Escalate the freeze bound to
+    # ~2 expected per-step cadences when real metric rows exist (a genuine
+    # producing run), so a slow-but-advancing trainer is not destructively
+    # killed mid-step. A trainer stuck on the SAME step for ~2 cadences with
+    # no advancement still flags TRUE LOG-STALE.
     try:
         if last_mtime and now_s - float(last_mtime) > stale_s:
             bound = stale_s
@@ -2488,3 +2488,29 @@ def eval_truth_summary(eval_rows):
     last_step = eval_rows[-1].get("step")
     return {"step": last_step, "n_passes": n_passes,
             "n_candidates": len(eval_rows)}
+
+
+def best_checkpoint_update(current, verdict):
+    """Promote a new best checkpoint from a fail-closed holdout verdict.
+
+    verdict must carry checkpoint, n_passes, n_tasks (truthy — fail-closed
+    against unmeasured tasks) and beats_base truthy to be eligible.
+    Promotion strictly requires n_passes > current's. Never mutates current.
+    """
+    if not verdict.get("n_tasks"):
+        raise ValueError("fail-closed: verdict missing measured n_tasks")
+    if not verdict.get("beats_base"):
+        return dict(current) if current else None
+    if current is None or verdict["n_passes"] > current.get("n_passes", -1):
+        return {"checkpoint": verdict["checkpoint"],
+                "n_passes": verdict["n_passes"],
+                "n_tasks": verdict["n_tasks"],
+                "source": verdict.get("source", "holdout-verdict")}
+    return dict(current)
+
+
+def best_checkpoint_warm_start(best, fallback_adapter):
+    """Warm-start path: best verified checkpoint if registered, else fallback."""
+    if best and best.get("checkpoint"):
+        return best["checkpoint"]
+    return fallback_adapter
