@@ -1363,7 +1363,13 @@ def auto_eval_on_checkpoint(queue, checkpoint_name, run_dir, fast_score=None, cu
     """
     for c in queue.get("cards", []):
         title = c.get("title", "")
-        if checkpoint_name in title and c.get("lane") == "evaluator":
+        # C-9590 lesson: only a LIVE (ready/running) eval card blocks a fresh
+        # eval — dead/bounced/done cards must never starve new checkpoints.
+        if (
+            checkpoint_name in title
+            and c.get("lane") == "evaluator"
+            and c.get("status") in ("ready", "running")
+        ):
             return None
     if fast_score is not None:
         import fast_pass_gate as FPG
@@ -3840,7 +3846,8 @@ def refresh_trainer_probe(state_dir=None, outputs_dir=None):
 
         sd = state_dir or STATE
         od = outputs_dir or os.path.join(REPO, "outputs")
-        p = resource_probes.probe_trainer_files(od)
+        asi3_port = resource_probes.DAEMON_PORTS["asi3"]
+        p = resource_probes.probe_trainer_box_aware(asi3_port, od)
         rec = dict(
             ts=now_iso(),
             status=p.get("status"),
