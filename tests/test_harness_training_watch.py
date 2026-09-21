@@ -82,3 +82,24 @@ class TestTrainingWatchAlarms(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+from harness.harness_lib import eval_truth_summary
+
+
+class TestEvalTruthSummary(unittest.TestCase):
+    def test_counts_passes_not_candidates(self):
+        rows = [{"step": 31, "passed": False}, {"step": 31, "passed": False},
+                {"step": 31, "passed": True}]
+        t = eval_truth_summary(rows)
+        self.assertEqual(t["n_passes"], 1)
+        self.assertEqual(t["n_candidates"], 3)
+
+    def test_all_fail_is_zero_not_candidates(self):
+        rows = [{"step": 32, "passed": False} for _ in range(4)]
+        t = eval_truth_summary(rows)
+        self.assertEqual(t["n_passes"], 0)  # NOT 4 — the C-9590 lesson
+        self.assertEqual(t["n_candidates"], 4)
+
+    def test_empty_is_none(self):
+        self.assertIsNone(eval_truth_summary([]))

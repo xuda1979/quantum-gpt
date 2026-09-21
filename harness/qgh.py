@@ -3307,6 +3307,50 @@ def auto_eval_scan():
         pass  # best-effort, never break the tick
 
 
+def training_watch_eval_truth():
+    """Fetch measured eval ground truth (passed counts) from the live run.
+    Returns {'run','step','n_passes','n_candidates'} or None. Never raises.
+    """
+    try:
+        import json as _json
+        import base64 as _b64_mod
+        import urllib.request as _url
+        _script_b64 = _b64_mod.b64encode(
+            "import json,glob,os\n"
+            "ds=sorted(glob.glob('/root/work/software/quantum-gpt/outputs/sapo-27b-ai-*'),"
+            "key=os.path.getmtime)\n"
+            "d=ds[-1] if ds else ''\n"
+            "ev=os.path.join(d,'eval_results.jsonl') if d else ''\n"
+            "ev_rows=[]\n"
+            "try:\n"
+            "    ev_rows=[json.loads(l) for l in open(ev).read().strip().splitlines()]\n"
+            "except Exception:\n"
+            "    pass\n"
+            "ev_small=[{'step':r.get('step'),'passed':bool(r.get('passed'))} for r in ev_rows]\n"
+            "print(json.dumps({'run':os.path.basename(d),'eval_rows':ev_small}))\n".encode()).decode()
+        _push = _url.urlopen(_url.Request(
+            "http://127.0.0.1:20653/exec",
+            data=_json.dumps({"command":
+                f"echo {_script_b64} | base64 -d > /tmp/tw_eval.py"}).encode(),
+            headers={"Content-Type": "application/json"}), timeout=15)
+        _push.read()
+        r = _url.urlopen(_url.Request(
+            "http://127.0.0.1:20653/exec",
+            data=_json.dumps({"command":
+                "python3 /tmp/tw_eval.py 2>&1 | base64"}).encode(),
+            headers={"Content-Type": "application/json"}), timeout=20)
+        out = _json.loads(r.read()).get("output", "")
+        decoded = _b64_mod.b64decode("".join(out.split())).decode("utf-8", "replace")
+        d = _json.loads(decoded)
+        from harness.harness_lib import eval_truth_summary
+        t = eval_truth_summary(d.get("eval_rows", []))
+        if t:
+            t["run"] = d.get("run", "unknown")
+        return t
+    except Exception:
+        return None
+
+
 def training_watch():
     """Full-training-process monitor (C-9556): fetch metrics tail from the
     live ASI3 run, compute alarms (DEAD-SIGNAL/NO-OP/PASS-RATE-ZERO/LOG-STALE/
@@ -3340,6 +3384,20 @@ def training_watch():
             "'entropy_mean','seq_kl_after')} for r in rows]\n"
             "print(json.dumps({'run':os.path.basename(d),'mtime':m,"
             "'now':time.time(),'rows':small}))\n".encode()).decode()
+        # measured eval ground truth: per-row passed flags from eval_results.jsonl
+        _script_b64 = _b64_mod.b64encode(
+            "import json,os\n"
+            "d=sorted(glob.glob('/root/work/software/quantum-gpt/outputs/sapo-27b-ai-*'),"
+            "key=os.path.getmtime)[-1] if glob.glob("
+            "'/root/work/software/quantum-gpt/outputs/sapo-27b-ai-*') else ''\n"
+            "ev=os.path.join(d,'eval_results.jsonl') if d else ''\n"
+            "ev_rows=[]\n"
+            "try:\n"
+            "    ev_rows=[json.loads(l) for l in open(ev).read().strip().splitlines()]\n"
+            "except Exception:\n"
+            "    pass\n"
+            "ev_small=[{'step':r.get('step'),'passed':bool(r.get('passed'))} for r in ev_rows]\n"
+            "print(json.dumps({'run':os.path.basename(d),'eval_rows':ev_small}))\n".encode()).decode()
         _push = _url.urlopen(_url.Request(
             "http://127.0.0.1:20653/exec",
             data=_json.dumps({"command":
@@ -3379,6 +3437,28 @@ def training_watch():
             detail = "; ".join(a["kind"] + ": " + a["detail"][:80] for a in fresh)
             append_status_line(
                 f"- training_watch [{run}]: {detail}")
+
+        # --- measurement-integrity: emit MEASURED pass counts every cycle so
+        # unverified "X/18 milestone" claims are visibly contradicted by the
+        # ground truth (C-9590 lesson: n_candidates misread as pass count).
+        try:
+            ev = training_watch_eval_truth()
+            if ev:
+                ops2 = load_ops(STATE)
+                key = f"{ev['run']}:{ev['step']}:{ev['n_passes']}"
+                if ops2.get("tw_last_eval_truth") != key:
+                    ops2["tw_last_eval_truth"] = key
+                    save_ops(STATE, ops2)
+                    append_status_line(
+                        f"- MEASURED [{ev['run']}]: checkpoint step {ev['step']} "
+                        f"eval = {ev['n_passes']}/{ev['n_candidates']} tasks passed "
+                        f"(ground truth from eval_results.jsonl; any conflicting "
+                        f"'X/18 milestone' claim without this signature is FALSE)")
+                    event(STATE, "measured_eval_truth",
+                          {"run": ev["run"], "step": ev["step"],
+                           "n_passes": ev["n_passes"], "n_candidates": ev["n_candidates"]})
+        except Exception:
+            pass
     except Exception as _tw_exc:
         import os as _os
         if _os.environ.get("TW_DEBUG"):

@@ -2406,11 +2406,23 @@ def training_watch_alarms(rows, now_s, last_mtime, stale_s=1200):
         except (TypeError, ValueError):
             return None
 
-    # LOG-STALE: log not written for > stale_s
+# LOG-STALE: log not written for > stale_s.
+# C-9596 durable unfreeze: fixed stale_s (1200s) false-flags a healthy
+# ~34min/step advancing trainer (C-9581). Escalate the freeze bound to
+# ~2 expected per-step cadences when real metric rows exist (a genuine
+# producing run), so a slow-but-advancing trainer is not destructively
+# killed mid-step. A trainer stuck on the SAME step for ~2 cadences with
+# no advancement still flags TRUE LOG-STALE.
     try:
         if last_mtime and now_s - float(last_mtime) > stale_s:
-            alarms.append({"kind": "LOG-STALE",
-                           "detail": f"log stale {int(now_s - float(last_mtime))}s > {stale_s}s"})
+            bound = stale_s
+            if rows:
+                cadence = DurableTrainerHealth.DEFAULT_STEP_CADENCE_S
+                freeze = cadence * DurableTrainerHealth.STALL_AFTER_MISSED_CADENCES
+                bound = max(stale_s, freeze)
+            if last_mtime and now_s - float(last_mtime) >= bound:
+                alarms.append({"kind": "LOG-STALE",
+                               "detail": f"log stale {int(now_s - float(last_mtime))}s >= {bound}s (cadence-aware)"})
     except (TypeError, ValueError):
         pass
 
@@ -2462,3 +2474,17 @@ def append_status_line(line):
             f.write(line.rstrip("\n") + "\n")
     except Exception:
         pass
+
+
+def eval_truth_summary(eval_rows):
+    """Ground-truth pass counts from eval_results.jsonl rows.
+
+    Returns {'step': last_step, 'n_passes': int, 'n_candidates': int} or None.
+    Fail-closed: counts ONLY rows where passed is truthy — never candidates.
+    """
+    if not eval_rows:
+        return None
+    n_passes = sum(1 for r in eval_rows if r.get("passed"))
+    last_step = eval_rows[-1].get("step")
+    return {"step": last_step, "n_passes": n_passes,
+            "n_candidates": len(eval_rows)}
