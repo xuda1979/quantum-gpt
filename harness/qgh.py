@@ -1324,14 +1324,17 @@ def auto_queue_training(state_dir):
         best = load_json(os.path.join(state_dir, "BEST_CHECKPOINT.json"), None)
         best_note = ""
         if best and best.get("checkpoint"):
-            best_note = (f" WARM-START from best verified checkpoint "
-                         f"{best['checkpoint']} (measured {best['n_passes']}/"
-                         f"{best['n_tasks']} on frozen holdout) — do NOT warm-start "
-                         f"from a weaker/latest-only checkpoint.")
+            best_note = (
+                f" WARM-START from best verified checkpoint "
+                f"{best['checkpoint']} (measured {best['n_passes']}/"
+                f"{best['n_tasks']} on frozen holdout) — do NOT warm-start "
+                f"from a weaker/latest-only checkpoint."
+            )
         card = new_card(
             title="Auto: launch/resume GRPO training with v10 benchmark (18/18 holdout coverage) toward 18/18",
             lane="trainer-ops",
-            why="No training running and goal is OPEN. v10 benchmark covers all 18 holdout tasks (unlike v9 which has 0 overlap). Use --min-rms-for-update 0.01 for warm-continue." + best_note,
+            why="No training running and goal is OPEN. v10 benchmark covers all 18 holdout tasks (unlike v9 which has 0 overlap). Use --min-rms-for-update 0.01 for warm-continue."
+            + best_note,
             acceptance=[
                 "Launch GRPO training on ASI3 using v10 benchmark (quantum_grpo_training_v10_sapo_18holdout.txt)",
                 "Use --min-rms-for-update 0.01 for warm-continue training",
@@ -1364,6 +1367,7 @@ def auto_eval_on_checkpoint(queue, checkpoint_name, run_dir, fast_score=None, cu
             return None
     if fast_score is not None:
         import fast_pass_gate as FPG
+
         gate = FPG.FastPassGate(current_best=current_best)
         allowed, best, reason = gate.gate(checkpoint=checkpoint_name, fast_score=fast_score)
         if not allowed:
@@ -3321,37 +3325,48 @@ def training_watch_eval_truth():
     Returns {'run','step','n_passes','n_candidates'} or None. Never raises.
     """
     try:
-        import json as _json
         import base64 as _b64_mod
+        import json as _json
         import urllib.request as _url
+
         _script_b64 = _b64_mod.b64encode(
-            "import json,glob,os\n"
-            "ds=sorted(glob.glob('/root/work/software/quantum-gpt/outputs/sapo-27b-ai-*'),"
-            "key=os.path.getmtime)\n"
-            "d=ds[-1] if ds else ''\n"
-            "ev=os.path.join(d,'eval_results.jsonl') if d else ''\n"
-            "ev_rows=[]\n"
-            "try:\n"
-            "    ev_rows=[json.loads(l) for l in open(ev).read().strip().splitlines()]\n"
-            "except Exception:\n"
-            "    pass\n"
-            "ev_small=[{'step':r.get('step'),'passed':bool(r.get('passed'))} for r in ev_rows]\n"
-            "print(json.dumps({'run':os.path.basename(d),'eval_rows':ev_small}))\n".encode()).decode()
-        _push = _url.urlopen(_url.Request(
-            "http://127.0.0.1:20653/exec",
-            data=_json.dumps({"command":
-                f"echo {_script_b64} | base64 -d > /tmp/tw_eval.py"}).encode(),
-            headers={"Content-Type": "application/json"}), timeout=15)
+            b"import json,glob,os\n"
+            b"ds=sorted(glob.glob('/root/work/software/quantum-gpt/outputs/sapo-27b-ai-*'),"
+            b"key=os.path.getmtime)\n"
+            b"d=ds[-1] if ds else ''\n"
+            b"ev=os.path.join(d,'eval_results.jsonl') if d else ''\n"
+            b"ev_rows=[]\n"
+            b"try:\n"
+            b"    ev_rows=[json.loads(l) for l in open(ev).read().strip().splitlines()]\n"
+            b"except Exception:\n"
+            b"    pass\n"
+            b"ev_small=[{'step':r.get('step'),'passed':bool(r.get('passed'))} for r in ev_rows]\n"
+            b"print(json.dumps({'run':os.path.basename(d),'eval_rows':ev_small}))\n"
+        ).decode()
+        _push = _url.urlopen(
+            _url.Request(
+                "http://127.0.0.1:20653/exec",
+                data=_json.dumps(
+                    {"command": f"echo {_script_b64} | base64 -d > /tmp/tw_eval.py"}
+                ).encode(),
+                headers={"Content-Type": "application/json"},
+            ),
+            timeout=15,
+        )
         _push.read()
-        r = _url.urlopen(_url.Request(
-            "http://127.0.0.1:20653/exec",
-            data=_json.dumps({"command":
-                "python3 /tmp/tw_eval.py 2>&1 | base64"}).encode(),
-            headers={"Content-Type": "application/json"}), timeout=20)
+        r = _url.urlopen(
+            _url.Request(
+                "http://127.0.0.1:20653/exec",
+                data=_json.dumps({"command": "python3 /tmp/tw_eval.py 2>&1 | base64"}).encode(),
+                headers={"Content-Type": "application/json"},
+            ),
+            timeout=20,
+        )
         out = _json.loads(r.read()).get("output", "")
         decoded = _b64_mod.b64decode("".join(out.split())).decode("utf-8", "replace")
         d = _json.loads(decoded)
-        from harness.harness_lib import eval_truth_summary
+        from harness_lib import eval_truth_summary
+
         t = eval_truth_summary(d.get("eval_rows", []))
         if t:
             t["run"] = d.get("run", "unknown")
@@ -3368,63 +3383,76 @@ def training_watch():
     Never raises — best-effort, must not break the tick.
     """
     try:
-        import json as _json
         import base64 as _b64_mod
+        import json as _json
         import urllib.request as _url
-        from harness.harness_lib import training_watch_alarms, append_status_line
+
+        from harness_lib import append_status_line, training_watch_alarms
 
         # Box-side summary script (pushed once to /tmp/tw_summary.py): the exec
         # transport front-truncates long outputs, so raw metric rows are lossy.
         # The script emits a tiny JSON {run, mtime, now, rows[12 compact]}.
         _script_b64 = _b64_mod.b64encode(
-            "import json,glob,os,time\n"
-            "ds=sorted(glob.glob('/root/work/software/quantum-gpt/outputs/sapo-27b-ai-*'),"
-            "key=os.path.getmtime)\n"
-            "d=ds[-1] if ds else ''\n"
-            "f=os.path.join(d,'grpo_step_metrics.jsonl') if d else ''\n"
-            "rows=[]\n"
-            "m=None\n"
-            "try:\n"
-            "    m=os.stat(f).st_mtime\n"
-            "    rows=[json.loads(l) for l in open(f).read().strip().splitlines()[-12:]]\n"
-            "except Exception:\n"
-            "    pass\n"
-            "small=[{k:r.get(k) for k in ('step','mean_reward','pass_rate',"
-            "'entropy_mean','seq_kl_after')} for r in rows]\n"
-            "print(json.dumps({'run':os.path.basename(d),'mtime':m,"
-            "'now':time.time(),'rows':small}))\n".encode()).decode()
+            b"import json,glob,os,time\n"
+            b"ds=sorted(glob.glob('/root/work/software/quantum-gpt/outputs/sapo-27b-ai-*'),"
+            b"key=os.path.getmtime)\n"
+            b"d=ds[-1] if ds else ''\n"
+            b"f=os.path.join(d,'grpo_step_metrics.jsonl') if d else ''\n"
+            b"rows=[]\n"
+            b"m=None\n"
+            b"try:\n"
+            b"    m=os.stat(f).st_mtime\n"
+            b"    rows=[json.loads(l) for l in open(f).read().strip().splitlines()[-12:]]\n"
+            b"except Exception:\n"
+            b"    pass\n"
+            b"small=[{k:r.get(k) for k in ('step','mean_reward','pass_rate',"
+            b"'entropy_mean','seq_kl_after')} for r in rows]\n"
+            b"print(json.dumps({'run':os.path.basename(d),'mtime':m,"
+            b"'now':time.time(),'rows':small}))\n"
+        ).decode()
         # measured eval ground truth: per-row passed flags from eval_results.jsonl
         _script_b64 = _b64_mod.b64encode(
-            "import json,os\n"
-            "d=sorted(glob.glob('/root/work/software/quantum-gpt/outputs/sapo-27b-ai-*'),"
-            "key=os.path.getmtime)[-1] if glob.glob("
-            "'/root/work/software/quantum-gpt/outputs/sapo-27b-ai-*') else ''\n"
-            "ev=os.path.join(d,'eval_results.jsonl') if d else ''\n"
-            "ev_rows=[]\n"
-            "try:\n"
-            "    ev_rows=[json.loads(l) for l in open(ev).read().strip().splitlines()]\n"
-            "except Exception:\n"
-            "    pass\n"
-            "ev_small=[{'step':r.get('step'),'passed':bool(r.get('passed'))} for r in ev_rows]\n"
-            "print(json.dumps({'run':os.path.basename(d),'eval_rows':ev_small}))\n".encode()).decode()
-        _push = _url.urlopen(_url.Request(
-            "http://127.0.0.1:20653/exec",
-            data=_json.dumps({"command":
-                f"echo {_script_b64} | base64 -d > /tmp/tw_summary.py"}).encode(),
-            headers={"Content-Type": "application/json"}), timeout=15)
+            b"import json,os\n"
+            b"d=sorted(glob.glob('/root/work/software/quantum-gpt/outputs/sapo-27b-ai-*'),"
+            b"key=os.path.getmtime)[-1] if glob.glob("
+            b"'/root/work/software/quantum-gpt/outputs/sapo-27b-ai-*') else ''\n"
+            b"ev=os.path.join(d,'eval_results.jsonl') if d else ''\n"
+            b"ev_rows=[]\n"
+            b"try:\n"
+            b"    ev_rows=[json.loads(l) for l in open(ev).read().strip().splitlines()]\n"
+            b"except Exception:\n"
+            b"    pass\n"
+            b"ev_small=[{'step':r.get('step'),'passed':bool(r.get('passed'))} for r in ev_rows]\n"
+            b"print(json.dumps({'run':os.path.basename(d),'eval_rows':ev_small}))\n"
+        ).decode()
+        _push = _url.urlopen(
+            _url.Request(
+                "http://127.0.0.1:20653/exec",
+                data=_json.dumps(
+                    {"command": f"echo {_script_b64} | base64 -d > /tmp/tw_summary.py"}
+                ).encode(),
+                headers={"Content-Type": "application/json"},
+            ),
+            timeout=15,
+        )
         _push.read()
-        r = _url.urlopen(_url.Request(
-            "http://127.0.0.1:20653/exec",
-            data=_json.dumps({"command":
-                "python3 /tmp/tw_summary.py 2>&1 | base64"}).encode(),
-            headers={"Content-Type": "application/json"}), timeout=20)
+        r = _url.urlopen(
+            _url.Request(
+                "http://127.0.0.1:20653/exec",
+                data=_json.dumps({"command": "python3 /tmp/tw_summary.py 2>&1 | base64"}).encode(),
+                headers={"Content-Type": "application/json"},
+            ),
+            timeout=20,
+        )
         out = _json.loads(r.read()).get("output", "")
         b64 = "".join(out.split())
         if not b64 or "c9591_no_script" in out:
-            alarms = [{"kind": "TRAINING-UNMEASURABLE",
-                       "detail": "tw_summary script missing on box"}]
+            alarms = [
+                {"kind": "TRAINING-UNMEASURABLE", "detail": "tw_summary script missing on box"}
+            ]
         else:
             import base64 as _b64
+
             decoded = _b64.b64decode(b64).decode("utf-8", "replace")
             d = _json.loads(decoded)
             run = d.get("run", "unknown")
@@ -3438,14 +3466,16 @@ def training_watch():
         seen = ops.setdefault("training_watch_fired", {})
         fresh = [a for a in alarms if seen.get(a["kind"]) != run]
         for a in fresh:
-            event(STATE, "training_alarm_" + a["kind"].lower().replace("-", "_"),
-                  {"run": run, "detail": a["detail"]})
+            event(
+                STATE,
+                "training_alarm_" + a["kind"].lower().replace("-", "_"),
+                {"run": run, "detail": a["detail"]},
+            )
             seen[a["kind"]] = run
         if fresh:
             save_ops(STATE, ops)
             detail = "; ".join(a["kind"] + ": " + a["detail"][:80] for a in fresh)
-            append_status_line(
-                f"- training_watch [{run}]: {detail}")
+            append_status_line(f"- training_watch [{run}]: {detail}")
 
         # --- measurement-integrity: emit MEASURED pass counts every cycle so
         # unverified "X/18 milestone" claims are visibly contradicted by the
@@ -3462,19 +3492,30 @@ def training_watch():
                         f"- MEASURED [{ev['run']}]: checkpoint step {ev['step']} "
                         f"eval = {ev['n_passes']}/{ev['n_candidates']} tasks passed "
                         f"(ground truth from eval_results.jsonl; any conflicting "
-                        f"'X/18 milestone' claim without this signature is FALSE)")
-                    event(STATE, "measured_eval_truth",
-                          {"run": ev["run"], "step": ev["step"],
-                           "n_passes": ev["n_passes"], "n_candidates": ev["n_candidates"]})
+                        f"'X/18 milestone' claim without this signature is FALSE)"
+                    )
+                    event(
+                        STATE,
+                        "measured_eval_truth",
+                        {
+                            "run": ev["run"],
+                            "step": ev["step"],
+                            "n_passes": ev["n_passes"],
+                            "n_candidates": ev["n_candidates"],
+                        },
+                    )
         except Exception:
             pass
     except Exception as _tw_exc:
         import os as _os
+
         if _os.environ.get("TW_DEBUG"):
             import traceback as _tb
+
             _tb.print_exc()
         else:
             event(STATE, "training_watch_error", {"err": repr(_tw_exc)[:200]})
+
 
 def cmd_tick(_args):
     # C-9125: clean up stale tick lock if it's a directory (the acquire_lock
