@@ -2546,7 +2546,7 @@ def worker_env():
     """
     return {
         "PATH": os.environ.get("PATH", "/usr/bin:/bin:/usr/local/bin"),
-        "HOME": os.environ.get("HOME", "/tmp"),
+        "HOME": os.environ.get("HOME") or os.path.expanduser("~"),
         "TMPDIR": os.environ.get("TMPDIR", "/tmp"),
     }
 
@@ -3173,7 +3173,7 @@ def _spawn_rearm_detached(state_dir):
     os.makedirs(log_dir, exist_ok=True)
     env = {
         "PATH": os.environ.get("PATH", "/usr/bin:/bin:/usr/local/bin"),
-        "HOME": os.environ.get("HOME", "/tmp"),
+        "HOME": os.environ.get("HOME") or os.path.expanduser("~"),
         "TMPDIR": os.environ.get("TMPDIR", "/tmp"),
     }
     log_path = os.path.join(log_dir, "rearm.log")
