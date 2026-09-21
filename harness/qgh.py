@@ -744,6 +744,24 @@ def auto_cleanup_stale_running(state_dir):
                 cleaned += 1
         if cleaned:
             save_queue(state_dir, queue)
+        # Also clean up fleet entries with dead PIDs (zombies)
+        try:
+            fleet = load_fleet(state_dir)
+            fleet_cleaned = 0
+            for a in fleet.get("agents", []):
+                if a.get("status") != "running":
+                    continue
+                pid = a.get("pid")
+                if pid and not pid_alive(pid):
+                    a["status"] = "stopped"
+                    a["stopped_utc"] = now_iso()
+                    fleet_cleaned += 1
+            if fleet_cleaned:
+                save_fleet(state_dir, fleet)
+                cleaned += fleet_cleaned
+        except Exception:
+            pass
+        if cleaned:
             try:
                 event(state_dir, "stale_running_cleaned", {"count": cleaned})
             except Exception:
