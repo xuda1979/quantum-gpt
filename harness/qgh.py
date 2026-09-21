@@ -3975,6 +3975,7 @@ def main():
         "metrics",
         "heal",
         "review",
+        "progress",
     ):
         s = sub.add_parser(name.replace("-", "_") if False else name)
         s.set_defaults(func=globals()["cmd_" + name.replace("-", "_")])
@@ -4431,6 +4432,76 @@ def dispatch_target_ok(queue, card, lanes=None, claim_in_progress=False):
 def cmd_goal(_args):
     goal = load_goal(STATE)
     print(json.dumps(goal, indent=1, ensure_ascii=False))
+
+
+def cmd_progress(_args):
+    """C-9542: Concise progress summary toward 18/18."""
+    goal = load_goal(STATE)
+    verdicts = scan_verdicts(REPO)
+    done, vfile = goal_done(goal, verdicts)
+
+    # Best pass count from verdicts
+    best_pass = 0
+    best_verdict = None
+    for v in verdicts:
+        pa = v.get("pass_adapter", "0/18")
+        try:
+            n = int(str(pa).split("/")[0])
+            if n > best_pass:
+                best_pass = n
+                best_verdict = v
+        except (ValueError, IndexError):
+            pass
+
+    # Also check loop_state score_history for best known
+    loop_state = load_json(os.path.join(STATE, "loop_state.json"), {})
+    score_history = loop_state.get("score_history", [])
+    for h in score_history:
+        pa = h.get("pass_adapter", "0/18")
+        try:
+            n = int(str(pa).split("/")[0])
+            if n > best_pass:
+                best_pass = n
+        except (ValueError, IndexError):
+            pass
+
+    # Queue status
+    queue = load_queue(STATE)
+    cards = queue.get("cards", [])
+    by_status = {}
+    for c in cards:
+        s = c.get("status", "?")
+        by_status[s] = by_status.get(s, 0) + 1
+
+    # Fleet status
+    fleet = load_fleet(STATE)
+    agents = fleet.get("agents", [])
+    alive_workers = sum(
+        1 for a in agents if a.get("status") == "running" and pid_alive(a.get("pid"))
+    )
+
+    print("=" * 60)
+    print("PROGRESS TOWARD 18/18")
+    print("=" * 60)
+    print(f"Goal status: {goal.get('status', 'OPEN')}")
+    print(f"Best pass:   {best_pass}/18")
+    if best_verdict:
+        print(f"Best verdict: {best_verdict.get('_file', '?')}")
+        print(f"  beats_base: {best_verdict.get('beats_base', '?')}")
+    print(f"Score history entries: {len(score_history)}")
+    for h in score_history[-3:]:
+        print(
+            f"  {h.get('checkpoint', '?')}: {h.get('pass_adapter', '?')} beats={h.get('beats_base', '?')}"
+        )
+    print()
+    print(f"Queue: {by_status}")
+    print(f"Fleet: {alive_workers} live workers (of {len(agents)} total)")
+    print(f"Done: {done}")
+    if done:
+        print(f"GOAL ACHIEVED via {vfile}")
+    else:
+        print("GOAL NOT YET ACHIEVED")
+    print("=" * 60)
 
 
 @_queue_locked
