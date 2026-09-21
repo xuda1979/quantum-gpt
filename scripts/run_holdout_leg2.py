@@ -90,6 +90,21 @@ def sequential_argv(
     return argv
 
 
+def detach_from_caller_setsid():
+    """C-9595: put THIS leg runner into its own session/process-group so a
+    worker reap kill_pid (os.killpg on the worker's pgid) cannot cascade-kill
+    the runner BEFORE it writes the envelope (the recurring ASI2 dead-leg
+    "scored but no envelope"). See run_holdout_leg1.py for the full rationale.
+    Idempotent; fail-closed on error (never abort a runnable leg).
+    """
+    try:
+        if os.getpgid(0) == os.getpid():
+            return
+        os.setsid()
+    except (OSError, ValueError, PermissionError):
+        return
+
+
 def build_envelope(
     leg, mechanism, box, adapter, base_model, benchmark, leg_log, scores, max_new_tokens=None
 ):
@@ -113,10 +128,16 @@ def build_envelope(
 def _run_append(argv, log_path):
     with open(log_path, "a", encoding="utf-8") as fh:
         fh.write(
-            "\n[{}] RUN {}\n".format(time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), " ".join(str(a) for a in argv))
+            "\n[{}] RUN {}\n".format(
+                time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), " ".join(str(a) for a in argv)
+            )
         )
         fh.flush()
-        return subprocess.call([str(a) for a in argv], stdout=fh, stderr=subprocess.STDOUT)
+        # C-9582: detached (start_new_session) so a worker reap killpg cannot
+        # kill an in-flight leg / probe.
+        return subprocess.call(
+            [str(a) for a in argv], stdout=fh, stderr=subprocess.STDOUT, start_new_session=True
+        )
 
 
 def main(argv=None):
@@ -130,6 +151,12 @@ def main(argv=None):
     parser.add_argument("--out-dir", default="outputs/eval_leg2")
     parser.add_argument("--box", default="ASI2")
     parser.add_argument("--benchmark", default=str(ROOT / DEFAULT_BENCHMARK))
+    # C-9585: reproducibility seed. The same --seed across two runs lets a
+    # "re-run beats_base on the same seed twice -> identical" assertion be
+    # made (C-9568: envelopes previously carried NO seed, so beats_base was
+    # not reproducibly attributable). Fail-closed default: an explicit seed
+    # so a leg is never silently run without one recorded.
+    parser.add_argument("--seed", default="leg2-default-seed")
     parser.add_argument("--device", default="npu")
     parser.add_argument("--device-map", default="balanced-layers")
     parser.add_argument("--npu-max-memory-gib", type=int, default=54)
@@ -137,6 +164,11 @@ def main(argv=None):
     parser.add_argument("--probe-max-new-tokens", type=int, default=8)
     parser.add_argument("--harness-timeout", type=int, default=300)
     args = parser.parse_args(argv)
+
+    # C-9595: detach from the calling (worker) process-group BEFORE doing any
+    # work so a worker reap killpg cannot kill this runner before it writes
+    # its envelope (the recurring ASI2 stalled-kill).
+    detach_from_caller_setsid()
 
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -200,6 +232,9 @@ def main(argv=None):
         scores=scores,
         max_new_tokens=args.max_new_tokens,
     )
+    # C-9585: record the --seed so the same seed can be re-run identically
+    # (reproducible beats_base; the C-9568 envelope seed gap).
+    envelope["seed"] = args.seed
     # C-9432: markers derived from probe stage evidence (fail-closed); the
     # fail-closed probe only emits the adapter_applied / adapter_probe_differs
     # stage events after it actually verified the adapter applies and the

@@ -88,6 +88,33 @@ def compute_slices(n_tasks, parts=N_SLICES):
     return slices
 
 
+def detach_from_caller_setsid():
+    """C-9595: put THIS leg runner into its own session/process-group so a
+    worker reap kill_pid (os.killpg on the worker's pgid) cannot cascade-kill
+    the runner BEFORE it merges slice scores and writes the envelope.
+
+    C-9589 detached each SLICE/PROBE leaf (start_new_session=True) so a slice
+    survives a worker reap, but the RUNNER itself is still a child of the
+    worker (any python/bash tool the worker spawns shares the worker's session);
+    when the reaper killpg-reaps a stalled worker, the runner is cascade-killed
+    even though its detached slices finished and wrote their score files --
+    the recurring ASI2 dead-leg signature: "scored but no envelope". Calling
+    setsid() at the top of main() moves the runner out of the caller's pgid.
+
+    Idempotent and fail-closed-on-error: if already a session leader
+    (pgid==pid) there is nothing to do; if setsid is unavailable we keep
+    running rather than crash the leg.
+    """
+    try:
+        if os.getpgid(0) == os.getpid():
+            return  # already a session/group leader -> already protected
+        os.setsid()
+    except (OSError, ValueError, PermissionError):
+        # Best-effort: never let a detach failure abort a leg we could still
+        # run to completion in the caller's group.
+        return
+
+
 def slice_argv(
     base_model,
     adapter,
@@ -208,7 +235,9 @@ def merge_slice_scores(slice_paths, benchmark_ids):
 
 def _echo(fh, tag, argv):
     fh.write(
-        "[{}] {} {}\n".format(time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), tag, " ".join(str(a) for a in argv))
+        "[{}] {} {}\n".format(
+            time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), tag, " ".join(str(a) for a in argv)
+        )
     )
     fh.flush()
 
@@ -222,8 +251,19 @@ def _run_parallel(argvs, log_path):
     with open(log_path, "a", encoding="utf-8") as fh:
         for i, argv in enumerate(argvs):
             _echo(fh, f"SLICE{i}", argv)
+        # C-9582: detach each slice into its own session/process group so the
+        # harness reaper's kill_pid (os.killpg on the worker's own pgid) cannot
+        # cascade-kill an in-flight ~70min leg when the 40min worker budget
+        # expires. A full leg finishing after the worker is reaped must still
+        # write its envelope; that only survives if the leg slices are NOT in
+        # the worker's process group.
         procs = [
-            subprocess.Popen([str(a) for a in argv], stdout=fh, stderr=subprocess.STDOUT)
+            subprocess.Popen(
+                [str(a) for a in argv],
+                stdout=fh,
+                stderr=subprocess.STDOUT,
+                start_new_session=True,
+            )
             for argv in argvs
         ]
         return [p.wait() for p in procs]
@@ -232,7 +272,11 @@ def _run_parallel(argvs, log_path):
 def _run_append(argv, log_path):
     with open(log_path, "a", encoding="utf-8") as fh:
         _echo(fh, "RUN", argv)
-        return subprocess.call([str(a) for a in argv], stdout=fh, stderr=subprocess.STDOUT)
+        # C-9582: detached (start_new_session) so a worker reap killpg cannot
+        # kill the probe/append step of an in-flight leg.
+        return subprocess.call(
+            [str(a) for a in argv], stdout=fh, stderr=subprocess.STDOUT, start_new_session=True
+        )
 
 
 def _write_json(payload, out):
@@ -252,6 +296,12 @@ def main(argv=None):
     parser.add_argument("--out-dir", default="outputs/eval_leg1")
     parser.add_argument("--box", default="ASI2")
     parser.add_argument("--benchmark", default=str(ROOT / DEFAULT_BENCHMARK))
+    # C-9585: reproducibility seed. The same --seed across two runs lets a
+    # "re-run beats_base on the same seed twice -> identical" assertion be
+    # made (C-9568: envelopes previously carried NO seed, so beats_base was
+    # not reproducibly attributable). Fail-closed default: an explicit seed
+    # so a leg is never silently run without one recorded.
+    parser.add_argument("--seed", default="leg1-default-seed")
     parser.add_argument("--device", default="npu")
     parser.add_argument("--device-map", default="balanced-layers")
     parser.add_argument("--npu-max-memory-gib", type=int, default=54)
@@ -259,6 +309,12 @@ def main(argv=None):
     parser.add_argument("--probe-max-new-tokens", type=int, default=8)
     parser.add_argument("--harness-timeout", type=int, default=300)
     args = parser.parse_args(argv)
+
+    # C-9595: detach from the calling (worker) process-group BEFORE doing any
+    # work so a worker reap killpg cannot kill this runner mid-merge, after
+    # scores are written but before the envelope is (the recurring ASI2
+    # stalled-kill). The runner then survives to write its envelope.
+    detach_from_caller_setsid()
 
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -272,9 +328,7 @@ def main(argv=None):
         print(json.dumps(dict(stage="leg1_benchmark_invalid", error=str(exc))), flush=True)
         return 1
 
-    slice_paths = [
-        out_dir / (f"leg1_{args.step}_slice{i}_scores.json") for i in range(len(slices))
-    ]
+    slice_paths = [out_dir / (f"leg1_{args.step}_slice{i}_scores.json") for i in range(len(slices))]
     argvs = [
         slice_argv(
             args.base_model,
@@ -346,6 +400,9 @@ def main(argv=None):
         scores=scores,
         max_new_tokens=args.max_new_tokens,
     )
+    # C-9585: record the --seed so the same seed can be re-run identically
+    # (reproducible beats_base; the C-9568 envelope seed gap).
+    envelope["seed"] = args.seed
     # C-9432: markers derived from probe stage evidence (fail-closed); the
     # fail-closed probe only emits the adapter_applied / adapter_probe_differs
     # stage events after it actually verified the adapter applies and the
