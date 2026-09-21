@@ -3512,6 +3512,34 @@ def training_watch():
             detail = "; ".join(a["kind"] + ": " + a["detail"][:80] for a in fresh)
             append_status_line(f"- training_watch [{run}]: {detail}")
 
+        # --- box liveness: /health "ready" can LIE (daemon up, session dead).
+        # Only an /exec echo round-trip proves the box answers. Alarm
+        # BOX-EXEC-DEAD when exec fails (deduped via ops state).
+        for _name, _port in (("ASI1", 20646), ("ASI2", 19004), ("ASI3", 20653)):
+            try:
+                _r = _url.urlopen(_url.Request(
+                    f"http://127.0.0.1:{_port}/exec",
+                    data=_json.dumps({"command": "echo BOX_ALIVE_PROBE"}).encode(),
+                    headers={"Content-Type": "application/json"}), timeout=10)
+                _ok = "BOX_ALIVE_PROBE" in _json.loads(_r.read()).get("output", "")
+            except Exception:
+                _ok = False
+            _ops3 = load_ops(STATE)
+            _key = f"box_exec_dead_{_name}"
+            if not _ok:
+                if not _ops3.get(_key):
+                    _ops3[_key] = True
+                    save_ops(STATE, _ops3)
+                    append_status_line(
+                        f"- ⚠️ BOX-EXEC-DEAD {_name}: exec round-trip FAILED — "
+                        f"box cannot work. USER ACTION likely required "
+                        f"(console re-login) if authDrift; keeper cannot fix auth.")
+                    event(STATE, "box_exec_dead", {"box": _name})
+            elif _ops3.get(_key):
+                _ops3[_key] = False
+                save_ops(STATE, _ops3)
+                append_status_line(f"- ✅ BOX-EXEC-RECOVERED {_name}: exec round-trip OK")
+
         # --- measurement-integrity: emit MEASURED pass counts every cycle so
         # unverified "X/18 milestone" claims are visibly contradicted by the
         # ground truth (C-9590 lesson: n_candidates misread as pass count).
