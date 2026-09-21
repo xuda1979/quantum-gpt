@@ -1238,6 +1238,7 @@ BUDGET: {budget} min hard deadline — you will be stopped; report what you have
 HEARTBEAT (mandatory): after every meaningful step run
   python3 harness/qgh.py heartbeat {cid} "what you just did"   # heartbeat file: {hb}
 A worker whose heartbeat file goes stale >{stall} min is treated as STALLED and killed.
+PROGRESS: best known pass_adapter is 3/18 on the 18-task quantum holdout. Target is 18/18 + beats_base. Every card must advance toward this goal.
 RULES:
 - TDD: RED test first, smallest fix, GREEN + touched suites. A fix without a test is rejected.
 - Touch ONLY what this card needs. Shared dirs (training/ scripts/ configs/ evals/) need
