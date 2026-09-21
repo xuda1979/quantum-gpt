@@ -1300,6 +1300,105 @@ class GoalProgressTracker:
         )
 
 
+def recompute_goal_done_preflight(goal, verdicts):
+    """C-9545: Recompute goal_done preflight checks, return violation report."""
+    violations = []
+    target = goal.get("target_pass", "18/18")
+    best_pass = "0/18"
+    best_verdict = None
+    for v in verdicts:
+        pa = v.get("pass_adapter", "0/18")
+        try:
+            n = int(str(pa).split("/")[0])
+            bn = int(str(best_pass).split("/")[0])
+            if n > bn:
+                best_pass = pa
+                best_verdict = v
+        except (ValueError, IndexError):
+            pass
+    if best_verdict is None:
+        violations.append({"violation_type": "no_verdict", "detail": "no verdicts found"})
+        return {
+            "total_violations": len(violations),
+            "violations": violations,
+            "pass_adapter": best_pass,
+        }
+    v = best_verdict
+    if str(v.get("pass_adapter", "")) != target:
+        violations.append(
+            {
+                "violation_type": "pass_adapter_mismatch",
+                "detail": "got " + str(v.get("pass_adapter")) + ", need " + target,
+            }
+        )
+    if not v.get("beats_base"):
+        violations.append(
+            {"violation_type": "beats_base_false", "detail": "beats_base is not true"}
+        )
+    if not v.get("scorer_version"):
+        violations.append(
+            {"violation_type": "scorer_version_missing", "detail": "no scorer_version tag"}
+        )
+    if v.get("adapter_applied_marker") is not True:
+        violations.append(
+            {
+                "violation_type": "adapter_applied_marker_false",
+                "detail": "adapter_applied_marker is not True",
+            }
+        )
+    if not v.get("adapter_probe_differs_marker"):
+        violations.append(
+            {
+                "violation_type": "probe_differs_marker_missing",
+                "detail": "adapter_probe_differs_marker absent or false",
+            }
+        )
+    leg1 = v.get("leg1")
+    leg2 = v.get("leg2")
+    if not isinstance(leg1, dict) or not isinstance(leg2, dict):
+        violations.append(
+            {"violation_type": "missing_legs", "detail": "need both leg1 and leg2 as dicts"}
+        )
+    else:
+        for leg_name, leg in [("leg1", leg1), ("leg2", leg2)]:
+            if not _leg_probe_differs(leg):
+                violations.append(
+                    {
+                        "violation_type": "probe_differs_" + leg_name,
+                        "detail": leg_name + " missing adapter_probe_differs",
+                    }
+                )
+    return {
+        "total_violations": len(violations),
+        "violations": violations,
+        "pass_adapter": best_pass,
+    }
+
+
+def apply_goal_done_transition(state_dir, goal, verdicts):
+    """C-9545: Apply the goal_done transition if preflight passes."""
+    pf = recompute_goal_done_preflight(goal, verdicts)
+    if pf["total_violations"] > 0:
+        return False
+    goal = dict(goal)
+    goal["status"] = "DONE"
+    from datetime import datetime, timezone
+
+    # Find the winning verdict file
+    verdict_sha = None
+    target = goal.get("target_pass", "18/18")
+    for v in verdicts:
+        if str(v.get("pass_adapter", "")) == target and v.get("beats_base"):
+            verdict_sha = v.get("_file")
+            break
+    goal["achieved"] = {
+        "ts": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "verdict_sha": verdict_sha,
+    }
+    save_json(os.path.join(state_dir, "GOAL.json"), goal)
+    return True
+
+
 # ----------------------------------------------------------------------------- done-check
 def load_goal(state_dir):
     return load_json(os.path.join(state_dir, "GOAL.json"), {})

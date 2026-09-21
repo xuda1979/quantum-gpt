@@ -2538,6 +2538,19 @@ def worker_command():
     ]
 
 
+def worker_env():
+    """C-9547: Build the worker environment with the REAL HOME.
+
+    The claude wrapper resolves the claude binary via $HOME/.local/bin/claude.
+    A /tmp fallback orphans that lookup and causes env-blocked spawn failures.
+    """
+    return {
+        "PATH": os.environ.get("PATH", "/usr/bin:/bin:/usr/local/bin"),
+        "HOME": os.environ.get("HOME", "/tmp"),
+        "TMPDIR": os.environ.get("TMPDIR", "/tmp"),
+    }
+
+
 def spawn_worker(goal, queue, card, dep_results):
     """Spawn one headless claude worker for a card. Returns fleet entry or None.
 
@@ -2577,11 +2590,7 @@ def spawn_worker(goal, queue, card, dep_results):
     card["claimed_by"] = "pending"
     # Minimal deterministic env: workers get credentials from the sourced files,
     # never from whatever session happened to run the tick.
-    env = {
-        "PATH": os.environ.get("PATH", "/usr/bin:/bin:/usr/local/bin"),
-        "HOME": os.environ.get("HOME", "/tmp"),
-        "TMPDIR": os.environ.get("TMPDIR", "/tmp"),
-    }
+    env = worker_env()
     proc = subprocess.Popen(
         worker_command(),
         stdin=open(brief_path),
