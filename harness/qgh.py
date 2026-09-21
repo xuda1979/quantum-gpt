@@ -1338,12 +1338,13 @@ def auto_queue_training(state_dir):
 
 
 # ----------------------------------------------------------------------------- auto-eval
-def auto_eval_on_checkpoint(queue, checkpoint_name, run_dir):
+def auto_eval_on_checkpoint(queue, checkpoint_name, run_dir, fast_score=None, current_best=None):
     """When training produces a new checkpoint, automatically queue an eval
     card to measure progress toward 18/18.
 
-    Returns a new card dict if one should be created, or None if an eval
-    card for this checkpoint already exists (dedup).
+    Returns a new card dict if one should be created, or None if the
+    checkpoint already has an eval card (dedup) or fails the C-9584
+    fast-pass pre-gate (fast_score provided but not greater than current best).
 
     This is the core automation primitive: train -> checkpoint -> eval ->
     verdict -> (if <18/18) -> continue training -> (if 18/18) -> done-check.
@@ -1351,6 +1352,12 @@ def auto_eval_on_checkpoint(queue, checkpoint_name, run_dir):
     for c in queue.get("cards", []):
         title = c.get("title", "")
         if checkpoint_name in title and c.get("lane") == "evaluator":
+            return None
+    if fast_score is not None:
+        import fast_pass_gate as FPG
+        gate = FPG.FastPassGate(current_best=current_best)
+        allowed, best, reason = gate.gate(checkpoint=checkpoint_name, fast_score=fast_score)
+        if not allowed:
             return None
     card = new_card(
         title=f"Auto-eval checkpoint {checkpoint_name} from {run_dir}",
@@ -3300,6 +3307,86 @@ def auto_eval_scan():
         pass  # best-effort, never break the tick
 
 
+def training_watch():
+    """Full-training-process monitor (C-9556): fetch metrics tail from the
+    live ASI3 run, compute alarms (DEAD-SIGNAL/NO-OP/PASS-RATE-ZERO/LOG-STALE/
+    ENTROPY-LOW/SEQ-KL-HIGH/TRAINING-UNMEASURABLE), emit to EVENTS + STATUS.
+    Dedupes by kind per run so an alarm fires once, not every tick.
+    Never raises — best-effort, must not break the tick.
+    """
+    try:
+        import json as _json
+        import base64 as _b64_mod
+        import urllib.request as _url
+        from harness.harness_lib import training_watch_alarms, append_status_line
+
+        # Box-side summary script (pushed once to /tmp/tw_summary.py): the exec
+        # transport front-truncates long outputs, so raw metric rows are lossy.
+        # The script emits a tiny JSON {run, mtime, now, rows[12 compact]}.
+        _script_b64 = _b64_mod.b64encode(
+            "import json,glob,os,time\n"
+            "ds=sorted(glob.glob('/root/work/software/quantum-gpt/outputs/sapo-27b-ai-*'),"
+            "key=os.path.getmtime)\n"
+            "d=ds[-1] if ds else ''\n"
+            "f=os.path.join(d,'grpo_step_metrics.jsonl') if d else ''\n"
+            "rows=[]\n"
+            "m=None\n"
+            "try:\n"
+            "    m=os.stat(f).st_mtime\n"
+            "    rows=[json.loads(l) for l in open(f).read().strip().splitlines()[-12:]]\n"
+            "except Exception:\n"
+            "    pass\n"
+            "small=[{k:r.get(k) for k in ('step','mean_reward','pass_rate',"
+            "'entropy_mean','seq_kl_after')} for r in rows]\n"
+            "print(json.dumps({'run':os.path.basename(d),'mtime':m,"
+            "'now':time.time(),'rows':small}))\n".encode()).decode()
+        _push = _url.urlopen(_url.Request(
+            "http://127.0.0.1:20653/exec",
+            data=_json.dumps({"command":
+                f"echo {_script_b64} | base64 -d > /tmp/tw_summary.py"}).encode(),
+            headers={"Content-Type": "application/json"}), timeout=15)
+        _push.read()
+        r = _url.urlopen(_url.Request(
+            "http://127.0.0.1:20653/exec",
+            data=_json.dumps({"command":
+                "python3 /tmp/tw_summary.py 2>&1 | base64"}).encode(),
+            headers={"Content-Type": "application/json"}), timeout=20)
+        out = _json.loads(r.read()).get("output", "")
+        b64 = "".join(out.split())
+        if not b64 or "c9591_no_script" in out:
+            alarms = [{"kind": "TRAINING-UNMEASURABLE",
+                       "detail": "tw_summary script missing on box"}]
+        else:
+            import base64 as _b64
+            decoded = _b64.b64decode(b64).decode("utf-8", "replace")
+            d = _json.loads(decoded)
+            run = d.get("run", "unknown")
+            rows = d.get("rows", [])
+            last_mtime = d.get("mtime")
+            now_s = d.get("now")
+            alarms = training_watch_alarms(rows, now_s or 0, last_mtime)
+        if not alarms:
+            return
+        ops = load_ops(STATE)
+        seen = ops.setdefault("training_watch_fired", {})
+        fresh = [a for a in alarms if seen.get(a["kind"]) != run]
+        for a in fresh:
+            event(STATE, "training_alarm_" + a["kind"].lower().replace("-", "_"),
+                  {"run": run, "detail": a["detail"]})
+            seen[a["kind"]] = run
+        if fresh:
+            save_ops(STATE, ops)
+            detail = "; ".join(a["kind"] + ": " + a["detail"][:80] for a in fresh)
+            append_status_line(
+                f"- training_watch [{run}]: {detail}")
+    except Exception as _tw_exc:
+        import os as _os
+        if _os.environ.get("TW_DEBUG"):
+            import traceback as _tb
+            _tb.print_exc()
+        else:
+            event(STATE, "training_watch_error", {"err": repr(_tw_exc)[:200]})
+
 def cmd_tick(_args):
     # C-9125: clean up stale tick lock if it's a directory (the acquire_lock
     # O_EXCL mechanism can't take over a directory-based lock, so a killed
@@ -3386,6 +3473,7 @@ def cmd_tick(_args):
             event(STATE, "auto_retire_error", {"err": repr(_ret_exc)[:160]})
         # auto-eval: scan for new training checkpoints and queue eval cards
         auto_eval_scan()
+        training_watch()
         # C-9541: alert when training is running but no checkpoints produced
         try:
             _ops_post = load_ops(STATE)

@@ -1164,12 +1164,13 @@ def auto_queue_training(state_dir):
 
 
 # ----------------------------------------------------------------------------- auto-eval
-def auto_eval_on_checkpoint(queue, checkpoint_name, run_dir):
+def auto_eval_on_checkpoint(queue, checkpoint_name, run_dir, fast_score=None, current_best=None):
     """When training produces a new checkpoint, automatically queue an eval
     card to measure progress toward 18/18.
 
-    Returns a new card dict if one should be created, or None if an eval
-    card for this checkpoint already exists (dedup).
+    Returns a new card dict if one should be created, or None if the
+    checkpoint already has an eval card (dedup) or fails the C-9584
+    fast-pass pre-gate (fast_score provided but not greater than current best).
 
     This is the core automation primitive: train -> checkpoint -> eval ->
     verdict -> (if <18/18) -> continue training -> (if 18/18) -> done-check.
@@ -1177,6 +1178,12 @@ def auto_eval_on_checkpoint(queue, checkpoint_name, run_dir):
     for c in queue.get("cards", []):
         title = c.get("title", "")
         if checkpoint_name in title and c.get("lane") == "evaluator":
+            return None
+    if fast_score is not None:
+        import fast_pass_gate as FPG
+        gate = FPG.FastPassGate(current_best=current_best)
+        allowed, best, reason = gate.gate(checkpoint=checkpoint_name, fast_score=fast_score)
+        if not allowed:
             return None
     card = new_card(
         title=f"Auto-eval checkpoint {checkpoint_name} from {run_dir}",
@@ -1266,6 +1273,58 @@ class StallDetector:
         return self.is_stalled()
 
 
+class DurableTrainerHealth:
+    """C-9596: durable unfreeze for the ASI3 trainer.
+
+    Root cause (C-9581): the fixed 1800s file-freshness "stale-step"
+    threshold false-flags a HEALTHY advancing trainer whose generation step
+    takes ~34min (2048-tok, group4). Probed mid-step, its eval_results.jsonl
+    is >1800s old, so it reads "stale>1800s" and the harness destructively
+    relaunches a healthy run.
+
+    Durable unfreeze: a trainer is healthy (NOT stalled) while it is
+    demonstrably ADVANCING (high-water step increased) OR its file evidence
+    is still inside the realistic per-step cadence (default ~34min measured).
+    Only flag a true stall when the step has missed ~2 expected cadences with
+    no advancement. Fail closed: a never-observed trainer is not prematurely
+    killed, and an unparseable timestamp reads stalled.
+    """
+
+    DEFAULT_STEP_CADENCE_S = 2040
+    STALL_AFTER_MISSED_CADENCES = 2
+
+    def __init__(self, cadence_s=None):
+        self._cadence_s = cadence_s or self.DEFAULT_STEP_CADENCE_S
+        self._last_step = None
+        self._last_step_ts = None
+        self._last_advanced = False
+
+    def observe(self, step, timestamp_iso):
+        advanced = self._last_step is not None and step > self._last_step
+        self._last_advanced = advanced
+        self._last_step = step
+        self._last_step_ts = timestamp_iso
+        return advanced
+
+    def is_stalled(self, current_time=None):
+        if self._last_step is None or self._last_step_ts is None:
+            return False
+        if self._last_advanced:
+            return False
+        if current_time is None:
+            age = age_min(self._last_step_ts)
+        else:
+            ref = parse_iso(current_time) if isinstance(current_time, str) else current_time
+            age = age_min(self._last_step_ts, ref)
+        if age is None:
+            return True
+        age_s = age * 60.0
+        return age_s > (self._cadence_s * self.STALL_AFTER_MISSED_CADENCES)
+
+    def should_restart(self, current_time=None):
+        return self.is_stalled(current_time=current_time)
+
+
 class GoalProgressTracker:
     """C-9540: Track best pass count and detect goal-level stalls."""
 
@@ -1334,6 +1393,14 @@ def recompute_goal_done_preflight(goal, verdicts):
     if not v.get("beats_base"):
         violations.append(
             {"violation_type": "beats_base_false", "detail": "beats_base is not true"}
+        )
+    if v.get("superseded"):
+        violations.append(
+            {
+                "violation_type": "verdict_superseded",
+                "detail": "verdict is superseded; a superseded 18/18 verdict "
+                "cannot retire the goal (fail-closed)",
+            }
         )
     if not v.get("scorer_version"):
         violations.append(
@@ -2316,3 +2383,82 @@ def trim_status_file(state_dir, keep=500):
     except OSError:
         return 0
     return pruned
+
+
+def training_watch_alarms(rows, now_s, last_mtime, stale_s=1200):
+    """Full-training-process alarm computation (C-9556).
+
+    rows: list of metric dicts (oldest→newest) from grpo_step_metrics.jsonl.
+    now_s/last_mtime: epoch seconds for log-freshness.
+    Returns a list of {kind, detail} alarms. Empty list = healthy.
+    fail-closed: no rows => TRAINING-UNMEASURABLE.
+    """
+    alarms = []
+    if not rows:
+        alarms.append({"kind": "TRAINING-UNMEASURABLE",
+                       "detail": "no grpo_step_metrics rows"})
+        return alarms
+
+    def _f(row, key):
+        try:
+            v = row.get(key)
+            return float(v) if v is not None else None
+        except (TypeError, ValueError):
+            return None
+
+    # LOG-STALE: log not written for > stale_s
+    try:
+        if last_mtime and now_s - float(last_mtime) > stale_s:
+            alarms.append({"kind": "LOG-STALE",
+                           "detail": f"log stale {int(now_s - float(last_mtime))}s > {stale_s}s"})
+    except (TypeError, ValueError):
+        pass
+
+    last3 = rows[-3:]
+    rewards = [_f(r, "mean_reward") for r in last3]
+    passes = [_f(r, "pass_rate") for r in last3]
+
+    # DEAD-SIGNAL: 3 consecutive zero-reward AND zero-pass steps
+    if (len(rewards) == 3 and all(r == 0.0 for r in rewards)
+            and all(p == 0.0 for p in passes)):
+        alarms.append({"kind": "DEAD-SIGNAL",
+                       "detail": f"3 consecutive zero-reward/zero-pass steps "
+                                 f"({rows[-3].get('step')}..{rows[-1].get('step')})"})
+
+    # NO-OP: last two rewards identical (flat) and nonzero (else DEAD-SIGNAL class)
+    if len(rows) >= 2:
+        r1, r2 = _f(rows[-2], "mean_reward"), _f(rows[-1], "mean_reward")
+        if r1 is not None and r1 == r2 and r1 != 0.0:
+            alarms.append({"kind": "NO-OP",
+                           "detail": f"flat mean_reward {r1} over 2 steps"})
+
+    # PASS-RATE-ZERO: >=10 rows all pass_rate 0
+    recent = rows[-10:]
+    if (len(recent) == 10
+            and all(_f(r, "pass_rate") == 0.0 for r in recent)):
+        alarms.append({"kind": "PASS-RATE-ZERO",
+                       "detail": f"pass_rate 0 for last {len(recent)} steps "
+                                 f"({recent[0].get('step')}..{recent[-1].get('step')})"})
+
+    # ENTROPY-LOW: latest entropy < 0.08
+    ent = _f(rows[-1], "entropy_mean")
+    if ent is not None and ent < 0.08:
+        alarms.append({"kind": "ENTROPY-LOW", "detail": f"entropy_mean {ent} < 0.08"})
+
+    # SEQ-KL-HIGH: latest seq_kl_after > 0.30 (prior gate was 0.25; 0.30 = hard)
+    kl = _f(rows[-1], "seq_kl_after")
+    if kl is not None and kl > 0.30:
+        alarms.append({"kind": "SEQ-KL-HIGH", "detail": f"seq_kl_after {kl} > 0.30"})
+
+    return alarms
+
+
+def append_status_line(line):
+    """Append one line to .sapo-loop/STATUS.md (best-effort, never raises)."""
+    try:
+        from pathlib import Path as _P
+        p = _P(_P(__file__).resolve().parent.parent) / ".sapo-loop" / "STATUS.md"
+        with open(p, "a", encoding="utf-8") as f:
+            f.write(line.rstrip("\n") + "\n")
+    except Exception:
+        pass
