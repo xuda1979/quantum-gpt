@@ -3478,6 +3478,7 @@ def training_watch():
                     import time as _time
 
                     _time.sleep(2)
+        run = "unknown"
         if not d:
             alarms = [
                 {"kind": "TRAINING-UNMEASURABLE", "detail": "summary fetch failed twice (transport flake)"}
