@@ -2514,3 +2514,67 @@ def best_checkpoint_warm_start(best, fallback_adapter):
     if best and best.get("checkpoint"):
         return best["checkpoint"]
     return fallback_adapter
+
+
+def objective_stagnation_alarm(banked_best_pass, banked_date, current_date, stale_days=3):
+    """STRATEGIC-STAGNATION alarm: holdout score hasn't improved in N days.
+
+    This is the most important alarm in the harness. It fires when the
+    objective (holdout pass count) hasn't improved, regardless of how
+    much infrastructure work or training has happened.
+    """
+    from datetime import datetime
+    d1 = datetime.fromisoformat(banked_date)
+    d2 = datetime.fromisoformat(current_date)
+    days = (d2 - d1).days
+    if days >= stale_days:
+        return {"kind": "STRATEGIC-STAGNATION",
+                "detail": f"holdout best ({banked_best_pass}/18) unchanged for {days} days. "
+                          f"The current approach is NOT working. "
+                          f"Requires strategy change, not more of the same."}
+    return None
+
+
+def check_pipeline_config_consistency(configs):
+    """Validate that training, eval, and inference configs are aligned.
+
+    Catches stupid mistakes like:
+    - Training rollout uses 2048 tokens but eval uses 4096
+    - Training benchmark differs from eval holdout
+    - Model paths differ across pipeline stages
+
+    Returns list of {field, issue, detail} dicts. Empty = all consistent.
+    """
+    issues = []
+    # max_new_tokens: all stages must match
+    token_fields = {k: v for k, v in configs.items() if "max_new_tokens" in k}
+    if len(token_fields) > 1:
+        vals = set(token_fields.values())
+        if len(vals) > 1:
+            issues.append({
+                "field": "max_new_tokens",
+                "issue": "MISMATCH across pipeline stages",
+                "detail": str(token_fields),
+            })
+    # benchmark: training benchmark may differ from eval holdout by design,
+    # but if both reference the same holdout file they must match
+    bench_fields = {k: v for k, v in configs.items() if "benchmark" in k}
+    if len(bench_fields) > 1:
+        vals = set(bench_fields.values())
+        if len(vals) > 1:
+            issues.append({
+                "field": "benchmark",
+                "issue": "MISMATCH across pipeline stages",
+                "detail": str(bench_fields),
+            })
+    # model path: all stages must use the same base model
+    model_fields = {k: v for k, v in configs.items() if "model" in k and "tokens" not in k}
+    if len(model_fields) > 1:
+        vals = set(model_fields.values())
+        if len(vals) > 1:
+            issues.append({
+                "field": "model_path",
+                "issue": "MISMATCH across pipeline stages",
+                "detail": str(model_fields),
+            })
+    return issues

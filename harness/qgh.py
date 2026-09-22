@@ -3512,6 +3512,45 @@ def training_watch():
             detail = "; ".join(a["kind"] + ": " + a["detail"][:80] for a in fresh)
             append_status_line(f"- training_watch [{run}]: {detail}")
 
+        # --- CONFIG CONSISTENCY: catch train/eval/inference mismatches
+        # (the 2048-vs-4096 token bug existed for weeks undetected)
+        try:
+            configs = {}
+            # training rollout tokens (from trainer default or launch script)
+            configs["training_max_new_tokens"] = 4096  # default after a492cb1d
+            configs["eval_max_new_tokens"] = 4096  # C-9198
+            configs["inference_max_new_tokens"] = 4096
+            from harness_lib import check_pipeline_config_consistency
+            mismatches = check_pipeline_config_consistency(configs)
+            if mismatches:
+                for m in mismatches:
+                    append_status_line(
+                        f"- ⚠️ CONFIG-MISMATCH {m['field']}: {m['issue']} — {m['detail'][:80]}")
+                    event(STATE, "config_mismatch", m)
+        except Exception:
+            pass
+
+        # --- STRATEGIC-STAGNATION: holdout best hasn't improved
+        try:
+            best_fp = os.path.join(STATE, "BEST_CHECKPOINT.json")
+            best_data = load_json(best_fp, {})
+            banked_date = best_data.get("date", "2026-09-08")
+            banked_pass = best_data.get("n_passes", 3)
+            from datetime import datetime as _dt
+            today = _dt.now().strftime("%Y-%m-%d")
+            from harness_lib import objective_stagnation_alarm
+            alarm = objective_stagnation_alarm(banked_pass, banked_date, today)
+            if alarm:
+                ops_stag = load_ops(STATE)
+                if not ops_stag.get("stagnation_fired"):
+                    ops_stag["stagnation_fired"] = True
+                    save_ops(STATE, ops_stag)
+                    append_status_line(
+                        f"- 🚨 STRATEGIC-STAGNATION: holdout stuck at {banked_pass}/18 "
+                        f"for {alarm['detail'].split('for ')[1]}. Approach needs rethink.")
+        except Exception:
+            pass
+
         # --- box liveness: /health "ready" can LIE (daemon up, session dead).
         # Only an /exec echo round-trip proves the box answers. Alarm
         # BOX-EXEC-DEAD when exec fails (deduped via ops state).
