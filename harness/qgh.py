@@ -2500,6 +2500,18 @@ LAUNCHD_LABEL = LAUNCHD_LABEL_TICK
 
 # ----------------------------------------------------------------------------- restored functions
 BOX_BOUND_LANES = ("evaluator", "trainer-ops", "deploy-integrity")
+# C-9620: which exec transport serves which box-bound lane. The 18-task
+# holdout EVAL legs run on ASI2 (run_asi2_base_adapter_rubric_eval.py /
+# c9072 marker canary / fast_pass_gate), scorer deploys target ASI2, and
+# the trainer runs on ASI3. The dispatch wedge gate must be LANE-AWARE: an
+# ASI3-only exec wedge must NOT hold the evaluator lane (its box, ASI2, is
+# healthy) -- the legacy single-global gate read only asi3.json and wedged
+# every box-bound lane, so no fail-closed eval leg could dispatch.
+LANE_BOX_PROBE = {
+    "evaluator": "asi2",  # holdout legs run on ASI2 :19004
+    "deploy-integrity": "asi2",  # scorer deploys target ASI2
+    "trainer-ops": "asi3",  # trainer runs on ASI3 :20653
+}
 TRANSPORT_WEDGE_MARK = "exec_wedged"
 PROBE_STALE_S = 3600
 CLAUDE = os.environ.get("QGH_CLAUDE", "/Users/daxu/homebrew/bin/claude")
@@ -4268,6 +4280,40 @@ def _last_success_age_s():
         return None
 
 
+def _ensure_standing_guardian():
+    """The self-resume guardian must be STANDING, not invoked-and-forgotten.
+
+    Measured gap (2026-09-22 12:04Z): the guardian resumed training once,
+    wrote its state, and was gone; when the 507015 NPU fault killed the
+    trainer 11 min later nothing re-resumed it for 40+ min. The heal
+    daemon runs every 30 min via launchd — if the guardian is not alive,
+    restart it detached (nohup, own session via start_new_session). Never
+    raises: guardian restart is best-effort, the next heal retries.
+    """
+    try:
+        probe = subprocess.run(
+            ["pgrep", "-f", "self_resume_guardian.py"],
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+        if probe.returncode == 0 and probe.stdout.strip():
+            return  # already standing
+        log_dir = os.path.join(STATE, "logs")
+        os.makedirs(log_dir, exist_ok=True)
+        log = open(os.path.join(log_dir, "self_resume_guardian.log"), "a")
+        guardian = os.path.join(REPO, "harness", "scripts", "self_resume_guardian.py")
+        subprocess.Popen(
+            [sys.executable, guardian, "--loop"],
+            stdout=log,
+            stderr=subprocess.STDOUT,
+            start_new_session=True,
+        )
+        event(STATE, "guardian_restarted_by_heal", {"ts": now_iso()})
+    except Exception as exc:
+        event(STATE, "guardian_restart_failed", {"why": str(exc)[:200]})
+
+
 def cmd_heal(_args):
     # Self-monitoring heal: detect a true tick HALT (no successful tick in
     # SUCCESS_STALE_SEC — e.g. every tick crashing in reap) and force recovery,
@@ -4287,6 +4333,7 @@ def cmd_heal(_args):
                 kill_pid(pid)
         _rmtree(TICK_LOCK)
     self_spawn(["install-cron"])
+    _ensure_standing_guardian()
     # on a detected halt, clear zombie fleet BEFORE the tick so the fresh tick
     # can dispatch (zombies count against WIP and block new workers). Then tick.
     if halted:
@@ -4592,7 +4639,11 @@ def cmd_dispatch(args):
             and not card_backoff_active(ops, c["id"])
             and c["id"] not in quota_blocked_ids  # C-9132
             and c["id"] not in refused_ids  # C-9506
-            and not (wedged and c["lane"] in BOX_BOUND_LANES and (args.lane is None))
+            and not (
+                args.lane is None
+                and c["lane"] in BOX_BOUND_LANES
+                and transport_wedged_lane(c["lane"])
+            )
         ]
         if not candidates:
             break
@@ -4684,10 +4735,10 @@ def cmd_dispatch(args):
 # ----------------------------------------------------------------------------- reap
 
 
-def _box_probe_age_s(state_dir):
-    """Age (seconds) of the on-disk asi3 probe, or None if missing/illegible."""
+def _box_probe_age_s(state_dir, box="asi3"):
+    """Age (seconds) of the on-disk <box> probe, or None if missing/illegible."""
     try:
-        data = load_json(os.path.join(state_dir, "probes", "asi3.json"))
+        data = load_json(os.path.join(state_dir, "probes", box + ".json"))
         ts = data.get("ts")
         if not ts:
             return None
@@ -4703,10 +4754,18 @@ def _refresh_box_probe_best_effort(state_dir):
     A dead probe AGENT leaves a STALE 'exec_wedged' asi3 probe on disk; without
     a live re-measure the transport gate would hold box-bound lanes forever
     (measured outage 2026-09-17: 5h+ stall while asi3 had rebooted and asi1/2
-    were healthy). This does a read-only, health-only probe of each daemon —
-    no exec echo, never raises — and re-writes the probe files so the gate and
-    the standup both see current reality. On refresh failure the existing file
-    is left untouched (fail-safe: stale wedge evidence still holds)."""
+    were healthy). This re-writes the probe files so the gate and the standup
+    both see current reality.
+
+    C-9625: the refresh MUST run the active exec echo positive control
+    (C-9021 / d59579a7) — /health 'ready=true' can LIE while the /exec
+    channel is still wedged. A health-ONLY refresh would overwrite a stale
+    'exec_wedged' summary with 'READY' and FAIL OPEN the box-bound dispatch
+    gate onto a genuinely wedged box, env_blocking every dispatched
+    trainer-ops worker (C-9616 botting). With the exec control, a still-wedged
+    box keeps the wedge marker -> the gate stays closed (fail-safe). This
+    never raises: a refresh failure falls back to the on-disk file.
+    """
     try:
         import resource_probes as RP
         from harness_lib import now_iso, save_json
@@ -4714,42 +4773,106 @@ def _refresh_box_probe_best_effort(state_dir):
         out_dir = os.path.join(state_dir, "probes")
         os.makedirs(out_dir, exist_ok=True)
         for name, port in RP.DAEMON_PORTS.items():
-            p = RP.probe_daemon(name, port)  # health-only, read-only
+            p = RP.probe_daemon(name, port, exec_probe_fn=RP.probe_exec_echo)
             rec = {"ts": now_iso(), "status": p.get("status"), "summary": p.get("summary")}
             if "liveness" in p:
                 rec["liveness"] = p["liveness"]
+            if "transport" in p:
+                rec["transport"] = p["transport"]
             save_json(os.path.join(out_dir, f"{name}.json"), rec)
     except Exception:
         pass  # probe refresh must never break dispatch
 
 
-def transport_wedged(state_dir=None):
-    """True iff asi3 is CURRENTLY exec-wedged. Fail-open for MISSING probes
-    (never dispatched against an unmeasured box anyway). A STALE probe is
-    re-measured live before deciding, so a dead probe agent cannot hold box
-    lanes forever after the box has actually recovered; if the box is still
-    wedged, the fresh probe says so and the gate still holds (fail-safe)."""
-    sd = state_dir or STATE
-    age = _box_probe_age_s(sd)
-    # Refresh ONLY when a probe file EXISTS and is stale — so a dead probe
-    # agent's stale wedge evidence is re-measured live (the fixed case). A
-    # MISSING probe is left untouched and fails open (original behavior: no
-    # refresh, no side effect, never dispatch against an unmeasured box
-    # either way). Refresh helper never raises, but the gate is safety
-    # critical and must never crash dispatch: on any raise fall back to the
-    # on-disk file (a stale wedged probe then keeps the gate held).
+def _box_probe_summary(sd, box):
+    """Raw summary of the <box> exec probe, or None if missing/illegible."""
+    data = load_json(os.path.join(sd, "probes", box + ".json"))
+    if not data:
+        return None
+    return str(data.get("summary", ""))
+
+
+def _box_exec_wedged(sd, box):
+    """Verdict for <box>'s exec probe: True=wedged, False=healthy,
+    None=MISSING (no verdict). A STALE probe is re-measured live before
+    deciding, so a dead probe agent cannot hold box lanes forever after
+    the box has actually recovered; if the box is still wedged, the fresh
+    probe says so and the gate still holds (fail-safe). (C-9620 box-aware.)
+
+    Refresh happens ONLY when a probe file EXISTS and is either stale OR does
+    not positively certify a healthy box — a MISSING probe is left untouched
+    and yields None (no verdict) for the caller to decide. Refreshing an
+    unhealthy (but young) probe closes the C-9629 latch: a transient
+    conn-refused measured during a daemon restart used to hold box-bound
+    lanes for a full PROBE_STALE_S hour after the box had recovered
+    (measured 2026-09-22: gate latched 12:14Z, exec healthy 12:39Z, ticks
+    held dispatch through 12:41Z+). The fresh probe is still fail-closed:
+    it runs the active exec echo positive control, so a genuinely wedged
+    box keeps the gate held (C-9625 semantics preserved). Refresh helper
+    never raises, but the gate is safety critical and must never crash
+    dispatch: on any raise fall back to the on-disk file (a stale wedged
+    probe then keeps the gate held)."""
+    age = _box_probe_age_s(sd, box)
+    summ = _box_probe_summary(sd, box)
+    unhealthy_young = (
+        summ is not None
+        and not _healthy_exec_summary(summ)
+        and (age is not None and age <= PROBE_STALE_S)
+    )
     if age is not None and age > PROBE_STALE_S:
         try:
             _refresh_box_probe_best_effort(sd)
         except Exception:
             pass
-    p = os.path.join(sd, "probes", "asi3.json")
-    data = load_json(p)
-    if not data:
-        return False
-    if "exec_wedged" in str(data.get("summary", "")):
+    elif unhealthy_young:
+        try:
+            _refresh_box_probe_best_effort(sd)
+        except Exception:
+            pass
+    summ = _box_probe_summary(sd, box)
+    if summ is None:
+        return None
+    if "exec_wedged" in summ:
         return True
-    return False
+    return not _healthy_exec_summary(summ)
+
+
+def _healthy_exec_summary(summ):
+    """True only when the probe positively certifies a dispatchable box:
+    READY with a passing active exec echo. Anything else (unready, HTTP-500,
+    conn-refused, unparseable, lying-health EXEC=wedged) is NOT dispatchable
+    and the lane gate must fail closed. (C-9620 hold.)"""
+    return "READY" in summ and "ready" in summ and "EXEC=ok" in summ
+
+
+def transport_wedged_lane(lane, state_dir=None):
+    """True iff the exec transport of the BOX that serves `lane` is wedged.
+
+    C-9620 durable fix: the dispatcher gates each box-bound lane on the
+    health of the box that actually runs that lane's work, not on a single
+    global asi3 verdict. Evaluator legs run on ASI2; trainer-ops on ASI3;
+    deploy targets ASI2.
+
+    When the lane's OWN box probe is MISSING we fall back to the legacy
+    ASI3 proxy gate (a missing probe behaves exactly as before: fail-open),
+    so a box we have never measured can neither newly-open nor newly-hold a
+    lane beyond the pre-existing asi3 gate. An unknown lane also falls back
+    to the legacy asi3-only gate."""
+    sd = state_dir or STATE
+    box = LANE_BOX_PROBE.get(lane)
+    if box is None:
+        return transport_wedged(sd)
+    verdict = _box_exec_wedged(sd, box)
+    if verdict is None:
+        return transport_wedged(sd)  # own box unmeasured -> legacy asi3 proxy
+    return verdict
+
+
+def transport_wedged(state_dir=None):
+    """Legacy single-global gate kept for callers that are not lane-aware:
+    True iff asi3 is CURRENTLY exec-wedged. Fail-open for MISSING probes.
+    (C-9620: dispatch now uses transport_wedged_lane per box-bound lane.)"""
+    return bool(_box_exec_wedged(state_dir or STATE, "asi3") or False)
 
 
 def dispatch_target_ok(queue, card, lanes=None, claim_in_progress=False):
