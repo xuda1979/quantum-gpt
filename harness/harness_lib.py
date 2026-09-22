@@ -1082,6 +1082,7 @@ SCRIPT-FIRST: write code/script, run it, report deterministic output. Use:
   python3 harness/scripts/log_to_table.py --status-md|<log_file>   # log→table
   python3 harness/scripts/tdd.py red|green --test <path>           # TDD cycle
   python3 harness/scripts/run_and_report.py <cmd>|--box-exec ASI3 "cmd"  # run→report
+  python3 harness/scripts/answer_question.py "why is X slow?"      # question→data
   Never eyeball logs. Never analyze conversationally. Write script, run script, paste output.BUDGET: {budget} min hard deadline — you will be stopped; report what you have by then.
 HEARTBEAT (mandatory): after every meaningful step run
   python3 harness/qgh.py heartbeat {cid} "what you just did"   # heartbeat file: {hb}
