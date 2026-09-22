@@ -22182,3 +22182,35 @@ C-9603 monitor: box-verified ASI3 trainer run=sapo-27b-ai-20260921T033826 STEP33
 - **507015 treadmill continues**: faults at 13:16/13:35/14:02/14:36Z; self_resume_guardian auto-resumed each (6th resume now live, pid 89044, run 225024Z). All resumes bank step-7 checkpoints.
 - **B-044 DONE**: re-armed fresh durable tick job_f2e260b4eee4 (expires 09-29); retired old native 79dab443 + dead duplicate job_8c75ee7352a0 (failing "Not logged in" since 08:30Z, wrong penrose cwd). Exactly ONE tick job now.
 - Commits this tick: edb8c26a (C-9629+C-9630 never-stop gaps), c772a68a (11-red clearance).
+- MEASURED [sapo-27b-ai-20260922T145121]: checkpoint step 1 eval = 0/4 tasks passed (ground truth from eval_results.jsonl; any conflicting 'X/18 milestone' claim without this signature is FALSE)
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed twice (transport flake)
+- 🚨 STRATEGIC-STAGNATION: holdout stuck at 3/18 for 14 days. The current approach is NOT working. Requires strategy change, not more of the same.. Approach needs rethink.
+- MEASURED [sapo-27b-ai-20260922T145121]: checkpoint step 1 eval = 0/4 tasks passed (ground truth from eval_results.jsonl; any conflicting 'X/18 milestone' claim without this signature is FALSE)
+- MEASURED [sapo-27b-ai-20260922T145121]: checkpoint step 2 eval = 4/8 tasks passed (ground truth from eval_results.jsonl; any conflicting 'X/18 milestone' claim without this signature is FALSE)
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed twice (transport flake)
+- 🚨 STRATEGIC-STAGNATION: holdout stuck at 3/18 for 14 days. The current approach is NOT working. Requires strategy change, not more of the same.. Approach needs rethink.
+- MEASURED [sapo-27b-ai-20260922T145121]: checkpoint step 2 eval = 4/8 tasks passed (ground truth from eval_results.jsonl; any conflicting 'X/18 milestone' claim without this signature is FALSE)
+
+
+## 2026-09-22 23:40 CST — tick: all 3 daemons READY (ASI3 down→keeper-healed pid11522); suite 781/0; SFT-vs-GRPO truth drift tracked (C-9634 ready); no launch (no GO, flat-reward)
+- HEALTH §9.1: ASI1(20646) READY / ASI2(19004) READY / ASI3(20653) READY — ASI3 dropped (conn-refused) this tick, session-keeper auto-healed (pid 78023→11522); exec round-trip verified. reconciler_loop RUNNING (cyc868 exit0) / self_resume_guardian RUNNING / checkpoint_publisher(ASI3 pid20175) RUNNING / eval_watcher(ASI2 pid20786) RUNNING + eval leg in flight on sft-27b-q38-v10-resume.../step-7.
+- TESTS: full harness suite 781 passed / 0 failed / 98 skipped (879). No new reds; no bug cleared this tick (bar already green).
+- TRAINING/EVAL: authoritative engine (source_of_truth C-9634) = SFT_peft_resume, but NO SFT process on box; live trainer on ASI3 = GRPO 145121 (2 procs, retired C-9621 per source-of-truth) → truth divergence, already queued as ready card C-9634. GRPO 145121 step-record shows zero_change_alarm:true + trust_region_violated at ~step1 (flat-reward condition). NO next-leg launch: no USER GO + warm-continue dispersion collapse unresolved (§5.4/§2.8).
+- Note: doctor fleet=0 live workers w/ 5 ready cards; reconciler cycling normally (not wedged).
+- MEASURED [sapo-27b-ai-20260922T145121]: checkpoint step 3 eval = 7/12 tasks passed (ground truth from eval_results.jsonl; any conflicting 'X/18 milestone' claim without this signature is FALSE)
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. USER ACTION likely required (console re-login) if authDrift; keeper cannot fix auth.
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. USER ACTION likely required (console re-login) if authDrift; keeper cannot fix auth.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed twice (transport flake)
+- 🚨 STRATEGIC-STAGNATION: holdout stuck at 3/18 for 15 days. The current approach is NOT working. Requires strategy change, not more of the same.. Approach needs rethink.
+- MEASURED [sapo-27b-ai-20260922T145121]: checkpoint step 3 eval = 7/12 tasks passed (ground truth from eval_results.jsonl; any conflicting 'X/18 milestone' claim without this signature is FALSE)
+
+
+## 2026-09-22 23:52 CST — tick: all resources READY; suite 781/0; SFT resumed (guardian pid89044); no launch (no GO, dispersion unresolved)
+- HEALTH §9.1: ASI1(20646) READY pid=9035 / ASI2(19004) READY pid=40452 / ASI3(20653) READY pid=11522 (all live-probed this tick). reconciler_loop RUNNING cycle=915 exit=0 (ASI1/2/3 class=healthy). self_resume_guardian RUNNING TRAINER_RUNNING (16:03Z fresh). session_keeper running (pid3190). checkpoint_publisher + eval_watcher box-side running + reconciler boxes healthy.
+- TESTS: full harness suite 781 passed / 0 failed / 0 errors / 98 skipped (879). No new reds; no bug cleared (bar already green).
+- TRAINING/EVAL: authoritative engine SFT-peft-resume sft-27b-q38-v10-resume-20260922T225024Z RESUMED (launch PASS, boot pid89044 alive, step-7 adapter) = self_resume_guardian 507015-loop #6 hold. GRPO 145121 retired/flat (zero_change+trust_region_violated, non-authoritative). C-9634 truth-divergence ready card. NO next-leg launch: no USER GO + warm-continue flat_candidate_dispersion collapse unresolved.
+- NOTE: no code/import red tests this tick (suite fully green); no new bug to clear. Strategic-stagnation (holdout 3/18) persists — strategy change pending, not a launch defect.- MEASURED [sapo-27b-ai-20260922T145121]: checkpoint step 4 eval = 7/16 tasks passed (ground truth from eval_results.jsonl; any conflicting 'X/18 milestone' claim without this signature is FALSE)
+
+- 2026-09-23 00:20 CST — CONTINUITY BREAK CLEARED (user mandate: harness never stops until 18/18 verified). (1) Durable tick job_f2e260b4eee4 was created 14:40Z WITHOUT `-p huanxin -m dp4` → every firing died "Not logged in" (same failure that killed B-044's predecessor). Fixed the run.sh invocation; verified live: ticks firing+completing every 10m since 15:10Z (full cycles: suite 781/0, ASI3 healed, STATUS appended). (2) dp4 judge was UNHEALTHY 81 strikes since 06:02Z — root cause: aihuanxin.cn gateway now rejects chunked transfer-encoding (curl stdin upload) with 500→404 "subscription route not found"; A/B bisect: stdin 500×4 vs -d 200×3. Patched claude-code-main/claude_huanxin_anthropic_proxy.py `_curl_upstream` to write body to temp file + `--data-binary @file` (fixed Content-Length). Restarted proxy 55648 (pid 28031). Judge probe: HEALTHY scores-complete strikes=0. Patch backup: harness/scripts/dp4_proxy_chunked_fix.py.bak. (3) B-044 hygiene: deleted stale job_3f1f162a20a1 dir; its crontab line removal is WEDGED (crontab install hangs, root pid 63889 needs sudo password — flagged for USER; line is harmless no-op, script gone). Note for B-044 re-arm: crontab install hang also blocks CronDelete/CronCreate persistence — the tick job itself is live and armed, but re-arm before 2026-09-29 needs the crontab wedge cleared first.
