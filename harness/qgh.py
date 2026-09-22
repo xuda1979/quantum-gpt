@@ -1234,7 +1234,11 @@ AUTHORITY: {auth}
 ACCEPTANCE (every item must hold to report DONE):
 {acc}
 GATES (mechanical, evidence required in your reply): {gates}
-BUDGET: {budget} min hard deadline — you will be stopped; report what you have by then.
+SCRIPT-FIRST: write code/script, run it, report deterministic output. Use:
+  python3 harness/scripts/log_to_table.py --status-md|<log_file>   # log→table
+  python3 harness/scripts/tdd.py red|green --test <path>           # TDD cycle
+  python3 harness/scripts/run_and_report.py <cmd>|--box-exec ASI3 "cmd"  # run→report
+  Never eyeball logs. Never analyze conversationally. Write script, run script, paste output.BUDGET: {budget} min hard deadline — you will be stopped; report what you have by then.
 HEARTBEAT (mandatory): after every meaningful step run
   python3 harness/qgh.py heartbeat {cid} "what you just did"   # heartbeat file: {hb}
 A worker whose heartbeat file goes stale >{stall} min is treated as STALLED and killed.
@@ -3366,15 +3370,15 @@ def training_watch_eval_truth():
                 r = _url.urlopen(
                     _url.Request(
                         "http://127.0.0.1:20653/exec",
-                        data=_json.dumps({"command": "python3 /tmp/tw_eval.py 2>&1 | base64"}).encode(),
+                        data=_json.dumps(
+                            {"command": "python3 /tmp/tw_eval.py 2>&1 | base64"}
+                        ).encode(),
                         headers={"Content-Type": "application/json"},
                     ),
                     timeout=20,
                 )
                 out = _json.loads(r.read()).get("output", "")
-                d = _json.loads(
-                    _b64_mod.b64decode("".join(out.split())).decode("utf-8", "replace")
-                )
+                d = _json.loads(_b64_mod.b64decode("".join(out.split())).decode("utf-8", "replace"))
                 break
             except Exception:
                 if _attempt == 0:
@@ -3459,7 +3463,9 @@ def training_watch():
             r = _url.urlopen(
                 _url.Request(
                     "http://127.0.0.1:20653/exec",
-                    data=_json.dumps({"command": "python3 /tmp/tw_summary.py 2>&1 | base64"}).encode(),
+                    data=_json.dumps(
+                        {"command": "python3 /tmp/tw_summary.py 2>&1 | base64"}
+                    ).encode(),
                     headers={"Content-Type": "application/json"},
                 ),
                 timeout=20,
@@ -3487,7 +3493,10 @@ def training_watch():
         run = "unknown"
         if not d:
             alarms = [
-                {"kind": "TRAINING-UNMEASURABLE", "detail": "summary fetch failed twice (transport flake)"}
+                {
+                    "kind": "TRAINING-UNMEASURABLE",
+                    "detail": "summary fetch failed twice (transport flake)",
+                }
             ]
         else:
             run = d.get("run", "unknown")
@@ -3521,11 +3530,13 @@ def training_watch():
             configs["eval_max_new_tokens"] = 4096  # C-9198
             configs["inference_max_new_tokens"] = 4096
             from harness_lib import check_pipeline_config_consistency
+
             mismatches = check_pipeline_config_consistency(configs)
             if mismatches:
                 for m in mismatches:
                     append_status_line(
-                        f"- ⚠️ CONFIG-MISMATCH {m['field']}: {m['issue']} — {m['detail'][:80]}")
+                        f"- ⚠️ CONFIG-MISMATCH {m['field']}: {m['issue']} — {m['detail'][:80]}"
+                    )
                     event(STATE, "config_mismatch", m)
         except Exception:
             pass
@@ -3537,8 +3548,10 @@ def training_watch():
             banked_date = best_data.get("date", "2026-09-08")
             banked_pass = best_data.get("n_passes", 3)
             from datetime import datetime as _dt
+
             today = _dt.now().strftime("%Y-%m-%d")
             from harness_lib import objective_stagnation_alarm
+
             alarm = objective_stagnation_alarm(banked_pass, banked_date, today)
             if alarm:
                 ops_stag = load_ops(STATE)
@@ -3547,7 +3560,8 @@ def training_watch():
                     save_ops(STATE, ops_stag)
                     append_status_line(
                         f"- 🚨 STRATEGIC-STAGNATION: holdout stuck at {banked_pass}/18 "
-                        f"for {alarm['detail'].split('for ')[1]}. Approach needs rethink.")
+                        f"for {alarm['detail'].split('for ')[1]}. Approach needs rethink."
+                    )
         except Exception:
             pass
 
@@ -3556,10 +3570,14 @@ def training_watch():
         # BOX-EXEC-DEAD when exec fails (deduped via ops state).
         for _name, _port in (("ASI1", 20646), ("ASI2", 19004), ("ASI3", 20653)):
             try:
-                _r = _url.urlopen(_url.Request(
-                    f"http://127.0.0.1:{_port}/exec",
-                    data=_json.dumps({"command": "echo BOX_ALIVE_PROBE"}).encode(),
-                    headers={"Content-Type": "application/json"}), timeout=10)
+                _r = _url.urlopen(
+                    _url.Request(
+                        f"http://127.0.0.1:{_port}/exec",
+                        data=_json.dumps({"command": "echo BOX_ALIVE_PROBE"}).encode(),
+                        headers={"Content-Type": "application/json"},
+                    ),
+                    timeout=10,
+                )
                 _ok = "BOX_ALIVE_PROBE" in _json.loads(_r.read()).get("output", "")
             except Exception:
                 _ok = False
@@ -3572,7 +3590,8 @@ def training_watch():
                     append_status_line(
                         f"- ⚠️ BOX-EXEC-DEAD {_name}: exec round-trip FAILED — "
                         f"box cannot work. USER ACTION likely required "
-                        f"(console re-login) if authDrift; keeper cannot fix auth.")
+                        f"(console re-login) if authDrift; keeper cannot fix auth."
+                    )
                     event(STATE, "box_exec_dead", {"box": _name})
             elif _ops3.get(_key):
                 _ops3[_key] = False

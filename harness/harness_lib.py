@@ -1078,7 +1078,11 @@ AUTHORITY: {auth}
 ACCEPTANCE (every item must hold to report DONE):
 {acc}
 GATES (mechanical, evidence required in your reply): {gates}
-BUDGET: {budget} min hard deadline — you will be stopped; report what you have by then.
+SCRIPT-FIRST: write code/script, run it, report deterministic output. Use:
+  python3 harness/scripts/log_to_table.py --status-md|<log_file>   # log→table
+  python3 harness/scripts/tdd.py red|green --test <path>           # TDD cycle
+  python3 harness/scripts/run_and_report.py <cmd>|--box-exec ASI3 "cmd"  # run→report
+  Never eyeball logs. Never analyze conversationally. Write script, run script, paste output.BUDGET: {budget} min hard deadline — you will be stopped; report what you have by then.
 HEARTBEAT (mandatory): after every meaningful step run
   python3 harness/qgh.py heartbeat {cid} "what you just did"   # heartbeat file: {hb}
 A worker whose heartbeat file goes stale >{stall} min is treated as STALLED and killed.
@@ -1181,6 +1185,7 @@ def auto_eval_on_checkpoint(queue, checkpoint_name, run_dir, fast_score=None, cu
             return None
     if fast_score is not None:
         import fast_pass_gate as FPG
+
         gate = FPG.FastPassGate(current_best=current_best)
         allowed, best, reason = gate.gate(checkpoint=checkpoint_name, fast_score=fast_score)
         if not allowed:
@@ -2395,8 +2400,7 @@ def training_watch_alarms(rows, now_s, last_mtime, stale_s=1200):
     """
     alarms = []
     if not rows:
-        alarms.append({"kind": "TRAINING-UNMEASURABLE",
-                       "detail": "no grpo_step_metrics rows"})
+        alarms.append({"kind": "TRAINING-UNMEASURABLE", "detail": "no grpo_step_metrics rows"})
         return alarms
 
     def _f(row, key):
@@ -2421,8 +2425,12 @@ def training_watch_alarms(rows, now_s, last_mtime, stale_s=1200):
                 freeze = cadence * DurableTrainerHealth.STALL_AFTER_MISSED_CADENCES
                 bound = max(stale_s, freeze)
             if last_mtime and now_s - float(last_mtime) >= bound:
-                alarms.append({"kind": "LOG-STALE",
-                               "detail": f"log stale {int(now_s - float(last_mtime))}s >= {bound}s (cadence-aware)"})
+                alarms.append(
+                    {
+                        "kind": "LOG-STALE",
+                        "detail": f"log stale {int(now_s - float(last_mtime))}s >= {bound}s (cadence-aware)",
+                    }
+                )
     except (TypeError, ValueError):
         pass
 
@@ -2431,26 +2439,31 @@ def training_watch_alarms(rows, now_s, last_mtime, stale_s=1200):
     passes = [_f(r, "pass_rate") for r in last3]
 
     # DEAD-SIGNAL: 3 consecutive zero-reward AND zero-pass steps
-    if (len(rewards) == 3 and all(r == 0.0 for r in rewards)
-            and all(p == 0.0 for p in passes)):
-        alarms.append({"kind": "DEAD-SIGNAL",
-                       "detail": f"3 consecutive zero-reward/zero-pass steps "
-                                 f"({rows[-3].get('step')}..{rows[-1].get('step')})"})
+    if len(rewards) == 3 and all(r == 0.0 for r in rewards) and all(p == 0.0 for p in passes):
+        alarms.append(
+            {
+                "kind": "DEAD-SIGNAL",
+                "detail": f"3 consecutive zero-reward/zero-pass steps "
+                f"({rows[-3].get('step')}..{rows[-1].get('step')})",
+            }
+        )
 
     # NO-OP: last two rewards identical (flat) and nonzero (else DEAD-SIGNAL class)
     if len(rows) >= 2:
         r1, r2 = _f(rows[-2], "mean_reward"), _f(rows[-1], "mean_reward")
         if r1 is not None and r1 == r2 and r1 != 0.0:
-            alarms.append({"kind": "NO-OP",
-                           "detail": f"flat mean_reward {r1} over 2 steps"})
+            alarms.append({"kind": "NO-OP", "detail": f"flat mean_reward {r1} over 2 steps"})
 
     # PASS-RATE-ZERO: >=10 rows all pass_rate 0
     recent = rows[-10:]
-    if (len(recent) == 10
-            and all(_f(r, "pass_rate") == 0.0 for r in recent)):
-        alarms.append({"kind": "PASS-RATE-ZERO",
-                       "detail": f"pass_rate 0 for last {len(recent)} steps "
-                                 f"({recent[0].get('step')}..{recent[-1].get('step')})"})
+    if len(recent) == 10 and all(_f(r, "pass_rate") == 0.0 for r in recent):
+        alarms.append(
+            {
+                "kind": "PASS-RATE-ZERO",
+                "detail": f"pass_rate 0 for last {len(recent)} steps "
+                f"({recent[0].get('step')}..{recent[-1].get('step')})",
+            }
+        )
 
     # ENTROPY-LOW: latest entropy < 0.08
     ent = _f(rows[-1], "entropy_mean")
@@ -2469,6 +2482,7 @@ def append_status_line(line):
     """Append one line to .sapo-loop/STATUS.md (best-effort, never raises)."""
     try:
         from pathlib import Path as _P
+
         p = _P(_P(__file__).resolve().parent.parent) / ".sapo-loop" / "STATUS.md"
         with open(p, "a", encoding="utf-8") as f:
             f.write(line.rstrip("\n") + "\n")
@@ -2486,8 +2500,7 @@ def eval_truth_summary(eval_rows):
         return None
     n_passes = sum(1 for r in eval_rows if r.get("passed"))
     last_step = eval_rows[-1].get("step")
-    return {"step": last_step, "n_passes": n_passes,
-            "n_candidates": len(eval_rows)}
+    return {"step": last_step, "n_passes": n_passes, "n_candidates": len(eval_rows)}
 
 
 def best_checkpoint_update(current, verdict):
@@ -2502,10 +2515,12 @@ def best_checkpoint_update(current, verdict):
     if not verdict.get("beats_base"):
         return dict(current) if current else None
     if current is None or verdict["n_passes"] > current.get("n_passes", -1):
-        return {"checkpoint": verdict["checkpoint"],
-                "n_passes": verdict["n_passes"],
-                "n_tasks": verdict["n_tasks"],
-                "source": verdict.get("source", "holdout-verdict")}
+        return {
+            "checkpoint": verdict["checkpoint"],
+            "n_passes": verdict["n_passes"],
+            "n_tasks": verdict["n_tasks"],
+            "source": verdict.get("source", "holdout-verdict"),
+        }
     return dict(current)
 
 
@@ -2524,14 +2539,17 @@ def objective_stagnation_alarm(banked_best_pass, banked_date, current_date, stal
     much infrastructure work or training has happened.
     """
     from datetime import datetime
+
     d1 = datetime.fromisoformat(banked_date)
     d2 = datetime.fromisoformat(current_date)
     days = (d2 - d1).days
     if days >= stale_days:
-        return {"kind": "STRATEGIC-STAGNATION",
-                "detail": f"holdout best ({banked_best_pass}/18) unchanged for {days} days. "
-                          f"The current approach is NOT working. "
-                          f"Requires strategy change, not more of the same."}
+        return {
+            "kind": "STRATEGIC-STAGNATION",
+            "detail": f"holdout best ({banked_best_pass}/18) unchanged for {days} days. "
+            f"The current approach is NOT working. "
+            f"Requires strategy change, not more of the same.",
+        }
     return None
 
 
@@ -2551,30 +2569,36 @@ def check_pipeline_config_consistency(configs):
     if len(token_fields) > 1:
         vals = set(token_fields.values())
         if len(vals) > 1:
-            issues.append({
-                "field": "max_new_tokens",
-                "issue": "MISMATCH across pipeline stages",
-                "detail": str(token_fields),
-            })
+            issues.append(
+                {
+                    "field": "max_new_tokens",
+                    "issue": "MISMATCH across pipeline stages",
+                    "detail": str(token_fields),
+                }
+            )
     # benchmark: training benchmark may differ from eval holdout by design,
     # but if both reference the same holdout file they must match
     bench_fields = {k: v for k, v in configs.items() if "benchmark" in k}
     if len(bench_fields) > 1:
         vals = set(bench_fields.values())
         if len(vals) > 1:
-            issues.append({
-                "field": "benchmark",
-                "issue": "MISMATCH across pipeline stages",
-                "detail": str(bench_fields),
-            })
+            issues.append(
+                {
+                    "field": "benchmark",
+                    "issue": "MISMATCH across pipeline stages",
+                    "detail": str(bench_fields),
+                }
+            )
     # model path: all stages must use the same base model
     model_fields = {k: v for k, v in configs.items() if "model" in k and "tokens" not in k}
     if len(model_fields) > 1:
         vals = set(model_fields.values())
         if len(vals) > 1:
-            issues.append({
-                "field": "model_path",
-                "issue": "MISMATCH across pipeline stages",
-                "detail": str(model_fields),
-            })
+            issues.append(
+                {
+                    "field": "model_path",
+                    "issue": "MISMATCH across pipeline stages",
+                    "detail": str(model_fields),
+                }
+            )
     return issues
