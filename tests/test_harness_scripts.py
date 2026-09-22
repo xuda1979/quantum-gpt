@@ -113,3 +113,42 @@ def test_run_and_report_check_file_missing():
     r = run_script("run_and_report.py", "--check-file", "/nonexistent/path/xyz")
     assert r.returncode == 0
     assert "STATUS: FAIL" in r.stdout
+
+
+# --- answer_question.py ---
+
+
+def test_answer_question_slow():
+    """answer_question.py 'why is progress slow?' collects metrics."""
+    r = run_script("answer_question.py", "why is progress slow?")
+    assert r.returncode == 0
+    data = json.loads(r.stdout)
+    assert data["question"] == "why is progress slow?"
+    assert "data" in data
+    assert "best_eval_pass" in data["data"]
+
+
+def test_answer_question_improve():
+    """answer_question.py 'how to improve' collects training_health."""
+    r = run_script("answer_question.py", "how to improve the algorithm")
+    assert r.returncode == 0
+    data = json.loads(r.stdout)
+    assert data["data_collected"] == "training_health"
+
+
+def test_answer_question_collect_direct():
+    """answer_question.py --collect card_churn produces churn data."""
+    r = run_script("answer_question.py", "--collect", "card_churn")
+    assert r.returncode == 0
+    data = json.loads(r.stdout)
+    assert "total_spawned" in data
+    assert "churn_ratio" in data
+
+
+def test_answer_question_worker_throughput():
+    """answer_question.py --collect worker_throughput produces throughput data."""
+    r = run_script("answer_question.py", "--collect", "worker_throughput")
+    assert r.returncode == 0
+    data = json.loads(r.stdout)
+    assert "active_agents" in data
+    assert data["active_agents"] > 0
