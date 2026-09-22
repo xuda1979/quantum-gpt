@@ -108,7 +108,7 @@ ENTROPY_TOKEN_CAP="${ENTROPY_TOKEN_CAP:-256}"
 # headroom: the trainer's policy-math path truncates prompt+completion at
 # max-seq-length, which would silently drop the tail tokens out of the SAPO
 # token gate at a 2048 cap with 2048 seq length.
-MAX_NEW_TOKENS="${MAX_NEW_TOKENS:-2048}"
+MAX_NEW_TOKENS="${MAX_NEW_TOKENS:-4096}"
 MAX_ADAPTIVE_NEW_TOKENS="${MAX_ADAPTIVE_NEW_TOKENS:-$MAX_NEW_TOKENS}"
 MAX_SEQ_LENGTH="${MAX_SEQ_LENGTH:-3072}"
 LOGIT_CLIP="${LOGIT_CLIP:-50.0}"
@@ -457,8 +457,11 @@ while true; do
 
   logd "syncing adapter from $ADAPTER_DIR -> $SNAPSHOT_DIR"
   if cp -a "$ADAPTER_DIR"/* "$SNAPSHOT_DIR/" 2>/dev/null; then
-    # Copy metrics if available
-    for mf in "$OUT"/grpo_metrics.json "$OUT"/grpo_step_metrics.jsonl; do
+    # Copy metrics if available. eval_results.jsonl (B-222 / C-9561) is the
+    # per-candidate measurable artifact the goal harness watches for advancing
+    # step/loss; it MUST ride every checkpoint snapshot with the step metrics
+    # or the measure never leaves the box.
+    for mf in "$OUT"/grpo_metrics.json "$OUT"/grpo_step_metrics.jsonl "$OUT"/eval_results.jsonl; do
       if [[ -f "$mf" ]]; then
         cp "$mf" "$SNAPSHOT_DIR/" 2>/dev/null || true
       fi

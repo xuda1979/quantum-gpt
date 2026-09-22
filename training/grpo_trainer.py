@@ -299,7 +299,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "echo is truthful — the clamp already capped any higher value, so no "
         "behavior change (launchers pass their own explicit values).",
     )
-    p.add_argument("--max-new-tokens", type=int, default=2048)
+    p.add_argument("--max-new-tokens", type=int, default=4096)
     p.add_argument(
         "--no-fence-stop-marker",
         action="store_false",
@@ -4456,6 +4456,72 @@ def build_eval_result_row(
     }
 
 
+def append_eval_step_summary(
+    path: Path,
+    *,
+    step: int,
+    task_name: str,
+    loss: float | None,
+    per_task: Mapping[str, Any],
+) -> None:
+    """C-9561: append one step-summary row to eval_results.jsonl (rank 0).
+
+    The per-candidate rows (build_eval_result_row) carry `step` + reward
+    components but NO loss and NO per-task pass map, so downstream consumers
+    cannot demonstrate advancing step+loss / 3/18 -> 18/18 from the file the
+    trainer writes alone. This step-level row is appended once per completed
+    (non-skipped) step and adds ``loss`` (finite when the step computed one,
+    else None -- never fabricated) and ``per_task`` (a per-task pass map
+    ``{task: {passed, total, pass_rate}}``) alongside the ``step`` ladder
+    head that harness/resource_probes._read_step_ladder (B-222) keys on.
+
+    The row keeps an int ``step`` so the step-ladder contract holds, and is
+    O(1)-append (never blocks the training loop).
+    """
+    row: dict[str, Any] = {
+        "schema_version": EVAL_RESULTS_SCHEMA_VERSION,
+        "kind": "step_summary",
+        "step": int(step),
+        "task": task_name,
+        "loss": loss,
+        "per_task": dict(per_task),
+    }
+    append_grpo_metric_jsonl(path, row)
+
+
+# C-9561: cumulative per-task pass map across steps. Each completed step
+# processes exactly one task; the summary row's ``per_task`` is this
+# cumulative map so downstream harnesses can trace 3/18 -> 18/18 progression.
+_EVAL_PER_TASK_PASS: dict[str, dict[str, float]] = {}
+
+
+def _accumulate_per_task_pass(record: Mapping[str, Any]) -> dict[str, dict[str, float]]:
+    """Fold one step record's per-candidate pass outcomes into the cumulative
+    per-task pass map."""
+    name = record.get("task") or "unknown"
+    rewards = record.get("rollout_rewards") or []
+    passed = sum(1 for r in rewards if bool(r.get("pass")))
+    total = len(rewards)
+    cur = _EVAL_PER_TASK_PASS.setdefault(name, dict(passed=0, total=0, pass_rate=0.0))
+    cur["passed"] += int(passed)
+    cur["total"] += int(total)
+    cur["pass_rate"] = cur["passed"] / cur["total"] if cur["total"] else 0.0
+    return _EVAL_PER_TASK_PASS
+
+
+def _emit_eval_step_summary(output_dir: Path, record: Mapping[str, Any]) -> None:
+    """C-9561: append one advancing step+loss+per_task row to the run's
+    eval_results.jsonl after each completed (non-skipped) step."""
+    _accumulate_per_task_pass(record)
+    append_eval_step_summary(
+        output_dir / EVAL_RESULTS_FILENAME,
+        step=int(record["step"]),
+        task_name=str(record.get("task") or "unknown"),
+        loss=record.get("loss"),
+        per_task=dict(_EVAL_PER_TASK_PASS),
+    )
+
+
 def recompute_aggregate_sapo_loss(per_candidate_losses: list[dict[str, Any]]) -> float:
     """Recompute the documented SAPO aggregate loss from a step record.
 
@@ -4804,6 +4870,12 @@ def emit_step_record(
     )
     append_grpo_metric(metrics, record=record)
     append_grpo_metric_jsonl(step_metrics_path, record)
+    # C-9561: emit the advancing step+loss+per_task summary row to
+    # eval_results.jsonl (the measurability artifact the goal harness reads).
+    # Only completed (loss-computed) steps write a loss; skipped steps still
+    # advance `step` so the ladder never lies.
+    if not skipped:
+        _emit_eval_step_summary(step_metrics_path.parent, record)
     # One compact grep-able line per step (the full json record still prints
     # at the log_steps cadence below).
     print(format_compact_loss_breakdown(record), flush=True)
