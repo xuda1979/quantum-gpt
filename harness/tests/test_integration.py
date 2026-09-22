@@ -903,14 +903,21 @@ class TestTransportGate(unittest.TestCase):
         seed_card(title="eval leg", lane="evaluator")
         seed_card(title="box verify", lane="deploy-integrity")
         seed_card(title="local refactor", lane="qa-steward")  # not box-bound
-        H.save_json(
-            os.path.join(qgh.STATE, "probes", "asi3.json"),
-            {
-                "ts": H.now_iso(),
-                "status": "unknown",
-                "summary": "UNKNOWN (ready-but-exec_wedged: busyAgeMs=30000)",
-            },
-        )
+        # both box probes carry the literal exec_wedged marker so the lane
+        # gate holds regardless of which box a lane resolves to (C-9620)
+        for box in ("asi2", "asi3"):
+            H.save_json(
+                os.path.join(qgh.STATE, "probes", f"{box}.json"),
+                {
+                    "ts": H.now_iso(),
+                    "status": "unknown",
+                    "summary": "UNKNOWN (ready-but-exec_wedged: busyAgeMs=30000)",
+                },
+            )
+        # C-9629: stub the live re-measure so this unit test proves the pure
+        # read: a re-measure that still reports wedged keeps lanes held.
+        real_refresh = qgh._refresh_box_probe_best_effort
+        qgh._refresh_box_probe_best_effort = lambda sd: None
         order = []
 
         def fake_spawn(goal, queue, card, dep_results):
@@ -934,6 +941,7 @@ class TestTransportGate(unittest.TestCase):
             qgh.cmd_dispatch(type("A", (), {"lane": None})())
         finally:
             qgh.spawn_worker = real
+            qgh._refresh_box_probe_best_effort = real_refresh
         q = qgh.load_queue(qgh.STATE)
         dispatched_lanes = {c["lane"] for c in q["cards"] if c["status"] == "running"}
         self.assertNotIn("evaluator", dispatched_lanes)
@@ -942,10 +950,13 @@ class TestTransportGate(unittest.TestCase):
 
     def test_box_lanes_resume_when_transport_ready(self):
         seed_card(title="eval leg", lane="evaluator")
-        H.save_json(
-            os.path.join(qgh.STATE, "probes", "asi3.json"),
-            {"ts": H.now_iso(), "status": "ready", "summary": "READY /health ready=true pid=999"},
-        )
+        # current certification contract: READY + ready + EXEC=ok (C-9625)
+        for box in ("asi2", "asi3"):
+            H.save_json(
+                os.path.join(qgh.STATE, "probes", f"{box}.json"),
+                {"ts": H.now_iso(), "status": "ready",
+                 "summary": "READY HEALTH=ready EXEC=ok pid=999"},
+            )
         # Mock quota probe to allow dispatch (no API key in test env)
         _real_probe = qgh.QPG.probe_quota
         qgh.QPG.probe_quota = lambda **kw: dict(verdict="ok", detail="test mock", utc=H.now_iso())
@@ -1021,14 +1032,16 @@ class TestTransportGate(unittest.TestCase):
 
         def fake_refresh(sd):
             # live re-measure: the box has rebooted and is NOT wedged now
-            H.save_json(
-                os.path.join(sd, "probes", "asi3.json"),
-                {
-                    "ts": H.now_iso(),
-                    "status": "ready",
-                    "summary": "READY /health ready=true pid=999",
-                },
-            )
+            # (current certification contract: READY + ready + EXEC=ok, C-9625)
+            for box in ("asi2", "asi3"):
+                H.save_json(
+                    os.path.join(sd, "probes", f"{box}.json"),
+                    {
+                        "ts": H.now_iso(),
+                        "status": "ready",
+                        "summary": "READY HEALTH=ready EXEC=ok pid=999",
+                    },
+                )
 
         qgh._refresh_box_probe_best_effort = fake_refresh
         qgh.spawn_worker = fake_spawn
@@ -1048,14 +1061,18 @@ class TestTransportGate(unittest.TestCase):
         verify. Refresh failure => hold; only confirmed recovery clears."""
         seed_card(title="eval leg", lane="evaluator")
         stale_ts = (H.datetime.utcnow() - H.timedelta(hours=3)).strftime("%Y-%m-%dT%H:%M:%SZ")
-        H.save_json(
-            os.path.join(qgh.STATE, "probes", "asi3.json"),
-            {
-                "ts": stale_ts,
-                "status": "unknown",
-                "summary": "UNKNOWN (ready-but-exec_wedged: busyAgeMs=30000)",
-            },
-        )
+        # BOTH box probes stale-wedged: the evaluator lane gates on asi2, so a
+        # leftover fresh-healthy asi2.json from a prior test (shared STATE dir)
+        # must not open the lane while the refresh is failing (test isolation).
+        for box in ("asi2", "asi3"):
+            H.save_json(
+                os.path.join(qgh.STATE, "probes", f"{box}.json"),
+                {
+                    "ts": stale_ts,
+                    "status": "unknown",
+                    "summary": "UNKNOWN (ready-but-exec_wedged: busyAgeMs=30000)",
+                },
+            )
         order = []
 
         def fake_spawn(goal, queue, card, dep_results):

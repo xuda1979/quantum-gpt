@@ -38,6 +38,27 @@ TRAINER_FILE_STALE_S = 1800  # file evidence older than this is not positive liv
 STUB_MODEL_SIGNATURES = ("someorg/", "some-model")  # C-9019: argparse-default scaffold
 
 
+def _daemon_exec(port, command, timeout=10):
+    """POST a command to a box daemon /exec endpoint, return stdout text.
+
+    Same transport contract as scripts/run_and_report.py run_box(); kept
+    local so probes never import harness scripts (one-way dep). Raises on
+    any transport failure — callers fail closed to UNKNOWN."""
+    import json as _json
+    import urllib.request
+
+    payload = _json.dumps({"command": command}).encode("utf-8")
+    req = urllib.request.Request(
+        f"http://127.0.0.1:{port}/exec",
+        data=payload,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        body = _json.loads(resp.read().decode("utf-8", errors="replace"))
+    return str(body.get("output") or "")
+
+
 def classify_transport(health):
     """Classify a parsed /health body (B-263 heal-detect, C-0008).
 
@@ -182,6 +203,52 @@ def probe_trainer(port, exec_fn=None):
         "summary": f"READY trainer pid={pid} ({m.group(3)[:48]})",
         "liveness": {"term": "ps_pid", "pid": pid},
     }
+
+
+def probe_trainer_box_aware(port, outputs_dir, now=None, proc_root=None,
+                            exec_fn=None):
+    """C-9590/C-0074: the trainer probe, box-aware — two evidence tiers.
+
+    Tier 1 (box ps): a live ps on the trainer box via exec transport; a
+    parseable pid row is the strongest liveness (process running NOW).
+    Tier 2 (files): probe_trainer_files evidence — step ladder + freshness
+    + /proc state — which works when exec is wedged or unavailable (the
+    measured 2026-09-21 state: a healthy trainer invisible to a wedged
+    /exec). File evidence only DOWNGRADES the verdict (a live ps never
+    loses to a stale file; a ready file never loses to a missing ps) —
+    the never-lie rule: exec silence must not read as 'no trainer'.
+
+    Returns the tier-1 dict when ps evidence exists, else the tier-2 dict.
+    Never raises — every failure path returns an explicit UNKNOWN with a
+    named reason.
+
+    exec_fn=None (the default) DISABLES tier 1 — callers that want box-ps
+    evidence must pass a transport explicitly. This keeps unit tests
+    (file-evidence fixtures, no live daemon) hermetic: a test env never
+    probes a real box and picks up an unrelated live trainer.
+    """
+    # Tier 1: box ps via exec (only when a transport is supplied).
+    if exec_fn is None:
+        ps = _unknown("no exec transport configured", "box-aware tier-1 skipped")
+    else:
+        try:
+            ps = probe_trainer(port, exec_fn=exec_fn)
+        except Exception as exc:  # a transport crash must never kill the probe
+            ps = _unknown("exec transport died", str(exc)[:120])
+    if ps.get("status") == "ready":
+        return ps
+    # Tier 2: file evidence (works with zero transport).
+    files = probe_trainer_files(outputs_dir, now=now, proc_root=proc_root)
+    if files.get("status") == "ready":
+        # Keep the tier-1 silence as a disclosed footnote, never a veto.
+        files = dict(files)
+        files["box_ps_note"] = str(ps.get("summary") or "")[:120]
+        return files
+    # Neither tier has positive evidence: return the MORE INFORMATIVE
+    # unknown (files names step+age or an explicit UNMEASURABLE reason).
+    files = dict(files)
+    files["box_ps_note"] = str(ps.get("summary") or "")[:120]
+    return files
 
 
 def _is_stub_run_dir(d):

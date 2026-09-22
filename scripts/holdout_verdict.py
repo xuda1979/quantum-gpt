@@ -360,6 +360,10 @@ def load_leg(path, total):
         "candidates_differ": _load_candidates_differ(env, leg_name, path),
         # C-9119: proven (or refused) base-model identity for this leg.
         "model_identity": _resolve_model_identity(env, leg_name),
+        # C-9612: the reproducibility seed this leg ran under (leg runner
+        # stamps it; the composer gates on presence + equality and embeds
+        # both in the verdict for audit).
+        "seed": env.get("seed"),
         # C-9110: the leg-time candidate-vs-base diff recording
         # (gate INPUT -- compose never recomputes the diff).
         "candidates_vs_base": _load_candidates_vs_base(
@@ -571,6 +575,21 @@ def compose(leg1, leg2, target=DEFAULT_TARGET):
                                    leg1["candidates_vs_base"])
     gate2 = candidates_differ_gate("leg2",
                                    leg2["candidates_vs_base"])
+    # C-9612: reproducibility seed gate. A beats_base verdict composed
+    # from legs that ran under different (or missing) sampling seeds is
+    # not reproducible: same candidate+prompt must give the same verdict.
+    # Missing seed = precondition unmet (the C-9568/C-9585 state); cross
+    # seeds = the two legs sampled different trajectories. Both refuse
+    # fail-closed: NO verdict file is written.
+    if leg1.get("seed") is None or leg2.get("seed") is None:
+        missing = "leg1" if leg1.get("seed") is None else "leg2"
+        if leg1.get("seed") is None and leg2.get("seed") is None:
+            missing = "both legs"
+        _reject(f"verdict_composer_refused_missing_seed: {missing} carry no "
+                "reproducibility seed (C-9612 fail-closed)")
+    if leg1["seed"] != leg2["seed"]:
+        _reject("verdict_composer_refused_cross_seed: leg1 seed {!r} != "
+                "leg2 seed {!r} (C-9612 same-seed bar)".format(leg1["seed"], leg2["seed"]))
     disagree = sorted(
         tid for tid in leg1["adapter"]
         if leg1["adapter"][tid] != leg2["adapter"][tid]
@@ -649,8 +668,26 @@ def compose(leg1, leg2, target=DEFAULT_TARGET):
                                 (f"{a_pass}/{total}") == target
                                 and beats_base) else "NO"),
         "goal_target": target,
+        # C-9612: seed reproducibility evidence embedded for audit
+        # (the compose gate above already refused missing/cross seeds).
+        "reproducibility": {
+            "seed": {"leg1": leg1.get("seed"), "leg2": leg2.get("seed")},
+            "seed_match": leg1.get("seed") == leg2.get("seed"),
+            "same_seed": leg1.get("seed") == leg2.get("seed"),
+        },
         "adapter_applied_marker": leg1["env"].get("adapter_applied_marker"),
         "adapter_probe_differs_marker": leg1["env"].get("adapter_probe_differs_marker"),
+        # C-9556: TOP-LEVEL boolean markers — the done_criteria and the
+        # goal's done-check read these directly. Fail-closed: True only
+        # when BOTH legs positively carry the marker.
+        "adapter_applied": (
+            leg1["env"].get("adapter_applied_marker") is True
+            and leg2["env"].get("adapter_applied_marker") is True
+        ),
+        "adapter_probe_differs": (
+            leg1["env"].get("adapter_probe_differs_marker") is True
+            and leg2["env"].get("adapter_probe_differs_marker") is True
+        ),
         "fail_closed_markers": {
             "adapter_applied": {
                 "source": "envelope",

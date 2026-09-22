@@ -127,6 +127,11 @@ def _write_leg(tmp, leg, passes, runner, markers=(True, True)):
         box="ASI2",
         adapter=str(tmp / "adapter"),
         base_model=str(tmp / "base"),
+        # C-9612: reproducibility seed — the compose gate refuses
+        # missing/cross-seed legs fail-closed (real legs get the seed
+        # from the runner --seed flag, C-9585). Both legs of a verdict
+        # share ONE seed (same-seed bar).
+        seed="leg-seed-20260922",
         # C-9055 reconciliation (2026-09-17): C-9046 budget parity --
         # every leg envelope MUST carry a usable max_new_tokens or the
         # composer refuses fail-closed (verdict_composer_refused_budget
