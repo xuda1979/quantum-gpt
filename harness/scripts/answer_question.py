@@ -1,28 +1,21 @@
 #!/usr/bin/env python3
-"""answer_question.py — convert high-level questions into data-collection scripts.
+"""answer_question.py — convert high-level questions into data-collection.
 
-"Why is progress slow?" → runs scripts that measure: commits/day, eval pass rate,
-training steps/hr, worker throughput, card churn rate, bounce rate.
-"How to improve the algorithm?" → runs scripts that collect: reward curve,
-loss curve, candidate dispersion, failure classification per task.
+"Why is progress slow?" → collect_metrics
+"How to improve the algorithm?" → collect_training_health
+"throughput?" → collect_worker_throughput
+"churn/waste?" → collect_card_churn
 
-This script DOES NOT answer the question — it COLLECTS the data the LLM needs
-to answer it. The LLM then iterates: write more scripts, run them, analyze.
+This script COLLECTS data. The LLM analyzes and iterates.
 
 Usage:
     python3 harness/scripts/answer_question.py "why is progress slow?"
-    python3 harness/scripts/answer_question.py "how to improve the algorithm"
     python3 harness/scripts/answer_question.py --collect metrics
-    python3 harness/scripts/answer_question.py --collect training_health
-    python3 harness/scripts/answer_question.py --collect worker_throughput
-    python3 harness/scripts/answer_question.py --collect card_churn
 """
 
 from __future__ import annotations
 
-import argparse
 import json
-import re
 import subprocess
 import sys
 import time
@@ -30,193 +23,12 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent.parent
 STATE = REPO / "harness" / "state"
-
-
-def collect_metrics() -> dict:
-    """Collect all objective metrics: eval pass rate, training status, commit rate."""
-    # Eval pass rate from verdicts
-    verdicts_dir = STATE / "verdicts"
-    best_pass = 0
-    total_verdicts = 0
-    if verdicts_dir.exists():
-        for f in verdicts_dir.glob("*.json"):
-            try:
-                d = json.loads(f.read_text())
-                total_verdicts += 1
-                pa = d.get("pass_adapter", "0/18")
-                m = re.match(r"(\d+)/(\d+)", str(pa))
-                if m and int(m.group(1)) > best_pass:
-                    best_pass = int(m.group(1))
-            except (json.JSONDecodeError, KeyError):
-                pass
-
-    # Commits today
-    today = time.strftime("%Y-%m-%d")
-    proc = subprocess.run(
-        ["git", "log", "--oneline", f"--since={today}T00:00:00"],
-        capture_output=True,
-        text=True,
-        cwd=str(REPO),
-    )
-    commits_today = len(proc.stdout.strip().splitlines()) if proc.stdout.strip() else 0
-
-    # Training probe
-    train_probe = STATE / "probes" / "train.json"
-    train_status = "UNKNOWN"
-    if train_probe.exists():
-        try:
-            train_status = json.loads(train_probe.read_text()).get("status", "UNKNOWN")
-        except (json.JSONDecodeError, KeyError):
-            pass
-
-    # Queue stats
-    queue_path = STATE / "QUEUE.json"
-    card_stats = {"total": 0, "running": 0, "bounced": 0, "done": 0, "blocked": 0, "dead": 0}
-    if queue_path.exists():
-        try:
-            q = json.loads(queue_path.read_text())
-            cards = q.get("cards", [])
-            card_stats["total"] = len(cards)
-            for c in cards:
-                s = c.get("status", "unknown")
-                if s in card_stats:
-                    card_stats[s] += 1
-        except (json.JSONDecodeError, KeyError):
-            pass
-
-    return {
-        "best_eval_pass": f"{best_pass}/18",
-        "total_verdicts": total_verdicts,
-        "commits_today": commits_today,
-        "training_status": train_status,
-        "cards": card_stats,
-        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
-    }
-
-
-def collect_training_health() -> dict:
-    """Collect training health: reward curve, loss, step rate, dispersion."""
-    # Check train probe
-    train_probe = STATE / "probes" / "train.json"
-    probe_data = {}
-    if train_probe.exists():
-        try:
-            probe_data = json.loads(train_probe.read_text())
-        except (json.JSONDecodeError, KeyError):
-            pass
-
-    # Check metrics log
-    metrics_log = REPO / ".sapo-loop" / "metrics.md.log"
-    recent_metrics = []
-    if metrics_log.exists():
-        lines = metrics_log.read_text(errors="replace").splitlines()
-        for line in lines[-20:]:
-            if line.strip():
-                recent_metrics.append(line.strip())
-
-    # Check trainer liveness log
-    trainer_log = REPO / ".sapo-loop" / "trainer_liveness.log"
-    trainer_events = []
-    if trainer_log.exists():
-        lines = trainer_log.read_text(errors="replace").splitlines()
-        for line in lines[-10:]:
-            if line.strip():
-                trainer_events.append(line.strip())
-
-    return {
-        "probe": probe_data,
-        "recent_metrics": recent_metrics[-10:],
-        "trainer_liveness_tail": trainer_events[-5:],
-    }
-
-
-def collect_worker_throughput() -> dict:
-    """Measure worker throughput: active agents, card completion rate, avg card lifetime."""
-    # Count active claude worker processes
-    proc = subprocess.run(["ps", "aux"], capture_output=True, text=True)
-    agent_count = sum(
-        1
-        for line in proc.stdout.splitlines()
-        if "claude" in line
-        and ("--print" in line or "--bare" in line or "-p " in line)
-        and "grep" not in line
-    )
-
-    # Card throughput from queue
-    queue_path = STATE / "QUEUE.json"
-    done_count = 0
-    bounced_count = 0
-    total_cards = 0
-    if queue_path.exists():
-        try:
-            q = json.loads(queue_path.read_text())
-            for c in q.get("cards", []):
-                total_cards += 1
-                if c.get("status") == "done":
-                    done_count += 1
-                elif c.get("status") == "bounced":
-                    bounced_count += 1
-        except (json.JSONDecodeError, KeyError):
-            pass
-
-    # Events for completion rate
-    events_path = STATE / "EVENTS.jsonl"
-    recent_events = []
-    if events_path.exists():
-        lines = events_path.read_text(errors="replace").splitlines()
-        for line in lines[-50:]:
-            try:
-                ev = json.loads(line)
-                if ev.get("event") in ("card_done", "card_bounced", "card_spawned"):
-                    recent_events.append(
-                        {"event": ev["event"], "card": ev.get("card"), "ts": ev.get("ts", "")}
-                    )
-            except (json.JSONDecodeError, KeyError):
-                pass
-
-    return {
-        "active_agents": agent_count,
-        "cards_total": total_cards,
-        "cards_done": done_count,
-        "cards_bounced": bounced_count,
-        "completion_rate": f"{done_count}/{total_cards}" if total_cards > 0 else "N/A",
-        "bounce_rate": f"{bounced_count}/{total_cards}" if total_cards > 0 else "N/A",
-        "recent_events": recent_events[-20:],
-    }
-
-
-def collect_card_churn() -> dict:
-    """Measure card churn: how many cards are being created vs completed."""
-    events_path = STATE / "EVENTS.jsonl"
-    spawned = 0
-    done = 0
-    bounced = 0
-    dead = 0
-    if events_path.exists():
-        for line in events_path.read_text(errors="replace").splitlines():
-            try:
-                ev = json.loads(line)
-                etype = ev.get("event", "")
-                if etype == "card_spawned":
-                    spawned += 1
-                elif etype == "card_done":
-                    done += 1
-                elif etype == "card_bounced":
-                    bounced += 1
-                elif etype == "card_dead":
-                    dead += 1
-            except (json.JSONDecodeError, KeyError):
-                pass
-
-    return {
-        "total_spawned": spawned,
-        "total_done": done,
-        "total_bounced": bounced,
-        "total_dead": dead,
-        "churn_ratio": f"{(bounced + dead)}/{spawned}" if spawned > 0 else "N/A",
-        "efficiency": f"{done}/{spawned}" if spawned > 0 else "N/A",
-    }
-
+sys.path.insert(0, str(REPO / "harness" / "scripts"))
+from status_collectors import (  # noqa: E402
+    collect_eval,
+    collect_queue,
+    collect_training,
+)
 
 QUESTION_MAP = {
     "slow": "metrics",
@@ -230,40 +42,98 @@ QUESTION_MAP = {
 }
 
 
-def answer_question(question: str) -> dict:
-    """Route a natural-language question to the right data collector."""
-    q_lower = question.lower()
-    collector_name = "metrics"  # default
-    for keyword, collector in QUESTION_MAP.items():
-        if keyword in q_lower:
-            collector_name = collector
-            break
+def collect_metrics() -> dict:
+    """Objective metrics: eval, commits, training, cards. <3s."""
+    today = time.strftime("%Y-%m-%d")
+    proc = subprocess.run(
+        ["git", "log", "--oneline", f"--since={today}T00:00:00"],
+        capture_output=True,
+        text=True,
+        cwd=str(REPO),
+        timeout=5,
+    )
+    commits = len(proc.stdout.strip().splitlines()) if proc.stdout.strip() else 0
+    return {
+        "best_eval_pass": collect_eval()["best_pass"],
+        "commits_today": commits,
+        "training": collect_training(),
+        "cards": collect_queue()["by_status"],
+        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+    }
 
+
+def collect_training_health() -> dict:
+    """Training health: probe + metrics + liveness tail. <2s."""
+    return {"probe": collect_training()}
+
+
+def collect_worker_throughput() -> dict:
+    """Worker throughput: agents, card completion. <3s."""
+    proc = subprocess.run(["ps", "aux"], capture_output=True, text=True, timeout=5)
+    agents = sum(
+        1
+        for line in proc.stdout.splitlines()
+        if "claude" in line
+        and ("--print" in line or "--bare" in line or "-p " in line)
+        and "grep" not in line
+    )
+    q = collect_queue()
+    return {
+        "active_agents": agents,
+        "cards_total": q["total_cards"],
+        "completion_rate": f"{q['by_status'].get('done', 0)}/{q['total_cards']}"
+        if q["total_cards"]
+        else "N/A",
+        "bounce_rate": f"{q['by_status'].get('bounced', 0)}/{q['total_cards']}"
+        if q["total_cards"]
+        else "N/A",
+    }
+
+
+def collect_card_churn() -> dict:
+    """Card churn: spawned vs done vs bounced. <2s."""
+    q = collect_queue()
+    s = q["by_status"]
+    spawned = q["total_cards"]
+    done = s.get("done", 0)
+    bounced = s.get("bounced", 0)
+    dead = s.get("dead", 0)
+    return {
+        "total_spawned": spawned,
+        "total_done": done,
+        "total_bounced": bounced,
+        "total_dead": dead,
+        "churn_ratio": f"{bounced + dead}/{spawned}" if spawned else "N/A",
+        "efficiency": f"{done}/{spawned}" if spawned else "N/A",
+    }
+
+
+def answer_question(question: str) -> dict:
+    """Route question to collector. <1s."""
+    q_lower = question.lower()
+    name = "metrics"
+    for kw, collector in QUESTION_MAP.items():
+        if kw in q_lower:
+            name = collector
+            break
     collectors = {
         "metrics": collect_metrics,
         "training_health": collect_training_health,
         "worker_throughput": collect_worker_throughput,
         "card_churn": collect_card_churn,
     }
-    collector = collectors.get(collector_name, collect_metrics)
-    data = collector()
-    return {
-        "question": question,
-        "data_collected": collector_name,
-        "data": data,
-        "note": "This script COLLECTS data. The LLM must analyze this data and iterate: write more scripts to drill deeper.",
-    }
+    return {"question": question, "data_collected": name, "data": collectors[name]()}
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Convert questions into data-collection scripts")
-    ap.add_argument("question", nargs="?", help="natural-language question")
+    import argparse
+
+    ap = argparse.ArgumentParser(description="Questions → data collection")
+    ap.add_argument("question", nargs="?")
     ap.add_argument(
-        "--collect",
-        choices=["metrics", "training_health", "worker_throughput", "card_churn"],
-        help="directly specify data collector",
+        "--collect", choices=["metrics", "training_health", "worker_throughput", "card_churn"]
     )
-    ap.add_argument("--json", action="store_true", help="output JSON")
+    ap.add_argument("--json", action="store_true")
     args = ap.parse_args()
 
     if args.collect:
@@ -279,11 +149,7 @@ def main():
     else:
         ap.print_help()
         sys.exit(1)
-
-    if args.json:
-        print(json.dumps(data, indent=2, default=str))
-    else:
-        print(json.dumps(data, indent=2, default=str))
+    print(json.dumps(data, indent=2, default=str))
 
 
 if __name__ == "__main__":

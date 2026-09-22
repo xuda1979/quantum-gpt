@@ -1,14 +1,11 @@
 #!/usr/bin/env python3
-"""run_and_report.py — run a command, produce deterministic structured output.
-
-Every harness agent uses this instead of running commands conversationally.
-The output is ALWAYS structured: exit code, stdout, stderr, timing, pass/fail.
+"""run_and_report.py — run command → deterministic PASS/FAIL output.
 
 Usage:
     python3 harness/scripts/run_and_report.py <command...>
     python3 harness/scripts/run_and_report.py --json <command...>
-    python3 harness/scripts/run_and_report.py --check-file <path>  # verify file exists + non-empty
-    python3 harness/scripts/run_and_report.py --box-exec ASI3 "command"  # exec on a box
+    python3 harness/scripts/run_and_report.py --check-file <path>
+    python3 harness/scripts/run_and_report.py --box-exec ASI3 "command"
 """
 
 from __future__ import annotations
@@ -18,7 +15,6 @@ import json
 import subprocess
 import sys
 import time
-import urllib.error
 import urllib.request
 from pathlib import Path
 
@@ -27,33 +23,34 @@ BOX_PORTS = {"ASI1": 20646, "ASI2": 19004, "ASI3": 20653}
 
 
 def run_local(cmd: list[str], timeout: int = 60) -> dict:
+    """Run local command. <15 lines."""
     start = time.time()
     try:
         proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, cwd=str(REPO))
-        elapsed = time.time() - start
-        return {
-            "command": " ".join(cmd),
-            "exit_code": proc.returncode,
-            "stdout": proc.stdout[-2000:] if len(proc.stdout) > 2000 else proc.stdout,
-            "stderr": proc.stderr[-2000:] if len(proc.stderr) > 2000 else proc.stderr,
-            "elapsed_s": round(elapsed, 2),
-            "status": "PASS" if proc.returncode == 0 else "FAIL",
-        }
+        return _result(
+            " ".join(cmd), proc.returncode, proc.stdout, proc.stderr, time.time() - start
+        )
     except subprocess.TimeoutExpired:
-        return {
-            "command": " ".join(cmd),
-            "exit_code": -1,
-            "stdout": "",
-            "stderr": f"TIMEOUT after {timeout}s",
-            "elapsed_s": timeout,
-            "status": "TIMEOUT",
-        }
+        return _result(" ".join(cmd), -1, "", f"TIMEOUT after {timeout}s", timeout)
+
+
+def _result(cmd: str, exit_code: int, stdout: str, stderr: str, elapsed: float) -> dict:
+    """Build result dict. <8 lines."""
+    return {
+        "command": cmd,
+        "exit_code": exit_code,
+        "stdout": stdout[-2000:],
+        "stderr": stderr[-2000:],
+        "elapsed_s": round(elapsed, 2),
+        "status": "PASS" if exit_code == 0 else "FAIL",
+    }
 
 
 def run_box(box: str, command: str, timeout: int = 30) -> dict:
+    """Exec on a box via daemon. <20 lines."""
     port = BOX_PORTS.get(box.upper())
     if not port:
-        return {"status": "FAIL", "error": f"unknown box {box}"}
+        return {"box": box, "status": "FAIL", "error": f"unknown box {box}"}
     payload = json.dumps({"command": command}).encode()
     req = urllib.request.Request(
         f"http://127.0.0.1:{port}/exec",
@@ -64,20 +61,18 @@ def run_box(box: str, command: str, timeout: int = 30) -> dict:
     start = time.time()
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
-            d = json.loads(resp.read().decode())
-            elapsed = time.time() - start
+            d = json.loads(resp.read())
+            ok = d.get("commandOk") or d.get("commandStatus", d.get("exitCode", -1)) == 0
             return {
                 "box": box,
                 "command": command,
                 "exit_code": d.get("commandStatus", d.get("exitCode", -1)),
                 "stdout": (d.get("output") or d.get("stdout") or "")[-2000:],
                 "stderr": (d.get("stderr") or "")[-2000:],
-                "elapsed_s": round(elapsed, 2),
-                "status": "PASS"
-                if (d.get("commandOk") or d.get("commandStatus", d.get("exitCode", -1)) == 0)
-                else "FAIL",
+                "elapsed_s": round(time.time() - start, 2),
+                "status": "PASS" if ok else "FAIL",
             }
-    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as e:
+    except Exception as e:
         return {
             "box": box,
             "command": command,
@@ -90,6 +85,7 @@ def run_box(box: str, command: str, timeout: int = 30) -> dict:
 
 
 def check_file(path: str) -> dict:
+    """Verify file exists and non-empty. <6 lines."""
     p = Path(path)
     if not p.exists():
         return {"path": path, "exists": False, "status": "FAIL", "reason": "not found"}
@@ -98,13 +94,25 @@ def check_file(path: str) -> dict:
     return {"path": path, "exists": True, "size": p.stat().st_size, "status": "PASS"}
 
 
+def _print(result: dict):
+    """Print human-readable result. <8 lines."""
+    print(f"STATUS: {result['status']}")
+    if "exit_code" in result:
+        print(f"EXIT: {result['exit_code']}  TIME: {result.get('elapsed_s', '?')}s")
+    if result.get("stdout"):
+        print(f"STDOUT:\n{result['stdout']}")
+    if result.get("stderr"):
+        print(f"STDERR:\n{result['stderr']}")
+
+
 def main():
+    """Dispatch. <15 lines."""
     ap = argparse.ArgumentParser(description="Run command → deterministic output")
-    ap.add_argument("--json", action="store_true", help="output JSON")
+    ap.add_argument("--json", action="store_true")
     ap.add_argument("--timeout", type=int, default=60)
-    ap.add_argument("--check-file", help="verify file exists and non-empty")
-    ap.add_argument("--box-exec", help="box name (ASI1/ASI2/ASI3) to exec on")
-    ap.add_argument("command", nargs="*", help="command to run")
+    ap.add_argument("--check-file")
+    ap.add_argument("--box-exec")
+    ap.add_argument("command", nargs="*")
     args = ap.parse_args()
 
     if args.check_file:
@@ -120,16 +128,7 @@ def main():
         ap.print_help()
         sys.exit(1)
 
-    if args.json:
-        print(json.dumps(result, indent=2))
-    else:
-        print(f"STATUS: {result['status']}")
-        if "exit_code" in result:
-            print(f"EXIT: {result['exit_code']}  TIME: {result.get('elapsed_s', '?')}s")
-        if result.get("stdout"):
-            print(f"STDOUT:\n{result['stdout']}")
-        if result.get("stderr"):
-            print(f"STDERR:\n{result['stderr']}")
+    print(json.dumps(result, indent=2)) if args.json else _print(result)
 
 
 if __name__ == "__main__":
