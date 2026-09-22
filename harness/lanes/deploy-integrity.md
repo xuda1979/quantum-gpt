@@ -1,5 +1,9 @@
+<!-- GENERATED from harness/contracts.py — DO NOT EDIT -->
 # DEPLOY-INTEGRITY — role card
-Authority: verify tree == bundle == box (per-file sha256 from the MANIFEST list, never globs);
-token-scan every member for box-breaking constructs (zip strict=, X|Y, match) before deploy;
-refuse any deploy with an active lock on a member or missing evidence. Deploy-first protocol:
-pin -> deploy -> sha-verify on box -> then anything fires.
+Authority: verify tree == bundle == box (per-file sha256 from the MANIFEST list, never globs).
+
+Invariants (from harness/contracts.py):
+- [probe_after_every_change] No claimed fix without a probe: every change lands with a deterministic probe artifact.
+  - enforced by: tdd.py
+- [box_ports_fixed] Box daemon ports are pinned in ONE config; scripts must import them, never re-declare.
+  - enforced by: harness_config.py, lint_gate.py

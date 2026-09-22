@@ -68,14 +68,38 @@ def _launch_cmd(box: str, benchmark: str, resume_from: str) -> str:
     return cmd
 
 
+def compile_gate(box: str) -> dict:
+    """Refuse to launch unless the on-box training tree compiles. Contract:
+    no_training_without_compile_gate — today's two crashes were mid-push
+    import races. py_compile sweep of /root/work/training/*.py. <12 lines."""
+    sh = (
+        "bad=0; for f in /root/work/training/*.py; do "
+        "python3 -m py_compile \"$f\" 2>/dev/null || { echo \"BAD:$f\"; bad=1; }; done; "
+        "echo GATE_RC=$bad"
+    )
+    r = run_box(box, sh, timeout=120)
+    out = r.get("stdout", "")
+    ok = "GATE_RC=0" in out
+    bad_files = [ln[4:] for ln in out.splitlines() if ln.startswith("BAD:")]
+    return {"ok": ok, "bad_files": bad_files, "status": r.get("status")}
+
+
 def launch(box: str, benchmark: str, resume_from: str) -> dict:
-    """Launch training on box with setsid. <15 lines."""
+    """Gate on compile, then launch training on box with setsid. <15 lines."""
+    gate = compile_gate(box)
+    if not gate["ok"]:
+        probe = _probe_data(_run_name(), benchmark)
+        probe["launch_result"] = "BLOCKED_COMPILE_GATE"
+        probe["gate"] = gate
+        _write_probe(probe)
+        return {"blocked": True, "gate": gate, "probe": probe}
     run_name = _run_name()
     cmd = _launch_cmd(box, benchmark, resume_from)
     result = run_box(box, cmd, timeout=15)
     probe = _probe_data(run_name, benchmark)
     probe["launch_command"] = cmd
     probe["launch_result"] = result.get("status")
+    probe["gate"] = gate
     _write_probe(probe)
     return {"run_name": run_name, "command": cmd, "result": result, "probe": probe}
 

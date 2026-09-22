@@ -15,13 +15,20 @@ from __future__ import annotations
 import argparse
 import json
 import subprocess
+import sys as _sys
 import time
 import urllib.error
 import urllib.request
 from pathlib import Path
+import sys as _sys
+_sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from harness_config import get  # noqa: E402
+
+_sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from harness_config import get  # noqa: E402
 
 REPO = Path(__file__).resolve().parent.parent.parent
-BOX_PORTS = {"ASI1": 20646, "ASI2": 19004, "ASI3": 20653}
+BOX_PORTS = get("box_ports")  # single source: harness_config.py
 STATE_DIR = REPO / "harness" / "state" / "reconciler"
 
 REMEDIES = {

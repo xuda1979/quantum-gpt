@@ -12,11 +12,15 @@ from __future__ import annotations
 import base64
 import json
 import sys
+import sys as _sys
 import time
 import urllib.request
 from pathlib import Path
+import sys as _sys
+_sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from harness_config import get  # noqa: E402
 
-BOX_PORTS = {"ASI1": 20646, "ASI2": 19004, "ASI3": 20653}
+BOX_PORTS = get("box_ports")  # single source: harness_config.py
 CHUNK_SIZE = 32 * 1024  # 32KB raw → ~43KB base64, safe for exec
 
 

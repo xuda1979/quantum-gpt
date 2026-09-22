@@ -19,10 +19,12 @@ sys.path.insert(0, str(REPO / "harness" / "scripts"))
 from status_collectors import (  # noqa: E402
     collect_activity,
     collect_boxes,
+    collect_bus,
     collect_eval,
     collect_keeper,
     collect_queue,
     collect_training,
+    collect_bus,
 )
 from status_render import render_status  # noqa: E402
 
@@ -36,6 +38,7 @@ def collect() -> dict:
         "training": collect_training(),
         "queue": collect_queue(),
         "eval": collect_eval(),
+        "bus": collect_bus(),
         **collect_activity(),
     }
 

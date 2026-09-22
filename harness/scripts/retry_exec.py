@@ -9,10 +9,15 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 import time
 import urllib.request
+from pathlib import Path
 
-BOX_PORTS = {"ASI1": 20646, "ASI2": 19004, "ASI3": 20653}
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from harness_config import get  # noqa: E402
+
+BOX_PORTS = get("box_ports")  # single source: harness_config.py
 
 
 def exec_once(box: str, cmd: str, timeout: int = 20) -> dict:

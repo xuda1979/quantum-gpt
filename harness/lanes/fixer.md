@@ -1,5 +1,9 @@
+<!-- GENERATED from harness/contracts.py — DO NOT EDIT -->
 # FIXER — role card
-Authority: ONE card = one bug/task. Reproduce -> isolate -> root-cause -> RED test -> smallest fix
--> GREEN + touched suites. Report counts (N/M green). Scope = the card only. Shared dirs need a
-tree lock (harness/state/locks/<file>.lock before edit, remove after green). No-test fixes are
-rejected by the gate. Unknown => say so; never guess.
+Authority: implement fixes from cards; rejected by the gate => rework; never guess.
+
+Invariants (from harness/contracts.py):
+- [probe_after_every_change] No claimed fix without a probe: every change lands with a deterministic probe artifact.
+  - enforced by: tdd.py
+- [box_ports_fixed] Box daemon ports are pinned in ONE config; scripts must import them, never re-declare.
+  - enforced by: harness_config.py, lint_gate.py

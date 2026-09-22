@@ -12,13 +12,20 @@ import json
 import re
 import subprocess
 import sys
+import sys as _sys
 import time
 import urllib.request
 from pathlib import Path
+import sys as _sys
+_sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from harness_config import get  # noqa: E402
+
+_sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from harness_config import get  # noqa: E402
 
 REPO = Path(__file__).resolve().parent.parent.parent
 STATE = REPO / "harness" / "state"
-BOX_PORTS = {"ASI1": 20646, "ASI2": 19004, "ASI3": 20653}
+BOX_PORTS = get("box_ports")  # single source: harness_config.py
 
 
 def _box_exec(box: str, cmd: str, timeout: int = 8) -> dict:
@@ -129,6 +136,39 @@ def collect_eval() -> dict:
             except Exception:
                 pass
     return {"best_pass": f"{best_n}/18", "total_verdicts": total}
+
+
+def collect_bus() -> dict:
+    """Checkpoint bus watcher/publisher state (NAS), one fast ASI2 exec. <12 lines."""
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+        f1 = pool.submit(
+            _box_out, "ASI2",
+            "python3 -c \"import json;d=json.load(open('/root/work/ckpt_bus/eval_watcher_state.json'));print(d['ts'],len(d.get('results',[])))\" 2>/dev/null",
+        )
+        f2 = pool.submit(
+            _box_out, "ASI2",
+            "python3 -c \"import json;d=json.load(open('/root/work/ckpt_bus/checkpoint_publisher_state.json'));print(d['ts'],len(d.get('results',[])))\" 2>/dev/null",
+        )
+    return {"eval_watcher": f1.result() or "N/A", "ckpt_publisher": f2.result() or "N/A"}
+
+
+def _box_out(box: str, cmd: str, timeout: int = 6) -> str:
+    """One box exec returning stdout (empty on any failure). <8 lines."""
+    port = BOX_PORTS.get(box)
+    if not port:
+        return ""
+    try:
+        req = urllib.request.Request(
+            f"http://127.0.0.1:{port}/exec",
+            data=json.dumps({"command": cmd}).encode(),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            d = json.loads(r.read())
+            return ((d.get("output") or "")[:120]).strip()
+    except Exception:
+        return ""
 
 
 def _count_agents() -> int:

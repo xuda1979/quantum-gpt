@@ -14,12 +14,19 @@ import argparse
 import json
 import subprocess
 import sys
+import sys as _sys
 import time
 import urllib.request
 from pathlib import Path
+import sys as _sys
+_sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from harness_config import get  # noqa: E402
+
+_sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from harness_config import get  # noqa: E402
 
 REPO = Path(__file__).resolve().parent.parent.parent
-BOX_PORTS = {"ASI1": 20646, "ASI2": 19004, "ASI3": 20653}
+BOX_PORTS = get("box_ports")  # single source: harness_config.py
 
 
 def run_local(cmd: list[str], timeout: int = 60) -> dict:
