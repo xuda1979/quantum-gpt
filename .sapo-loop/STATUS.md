@@ -22125,3 +22125,60 @@ C-9603 monitor: box-verified ASI3 trainer run=sapo-27b-ai-20260921T033826 STEP33
 - **Single config**: `harness/harness_config.py` (ports/paths/bus/model) — all scripts import; `lint_gate.py` enforces (strays/stale-docs/port-drift; CLEAN); `token_meter.py` bins the event ledger into waste classes (top: redundant_install 1208, reap_churn 902) → next card from data, not opinion.
 - **RECURRING BOX FAULT (measured, next card)**: SFT resume runs die with `RuntimeError: ACL stream synchronize failed, error code:507015` after ~10-11 optimizer steps (~5-10 min) on ASI3 8-NPU. Guardian auto-resumes from the 5-min checkpoint each time (progress preserved: loss 0.62→0.34), but each fault wastes ~5 min and leaves leaked semaphores. Suspects: NPU device state pollution from the earlier crashed GRPO runs (device reset may fix), or a `torch_npu`/chunked-delta-rule stream bug (transformers qwen3_5 gated-delta path). Card should try: (1) `npu-smi` device reset before launch, (2) `ASCEND_LAUNCH_BLOCKING=1` repro to localize, (3) older transformers pin if reproducible.
 - Training now: `sft-27b-q38-v10-resume-20260922T194018Z` (guardian-run), steps advancing, checkpoints every 300s → bus → eval watcher (step-7 eval in flight on ASI2).
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed twice (transport flake)
+- 🚨 STRATEGIC-STAGNATION: holdout stuck at 3/18 for 14 days. The current approach is NOT working. Requires strategy change, not more of the same.. Approach needs rethink.
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. USER ACTION likely required (console re-login) if authDrift; keeper cannot fix auth.
+- MEASURED [sapo-27b-ai-20260921T033826]: checkpoint step 37 eval = 4/40 tasks passed (ground truth from eval_results.jsonl; any conflicting 'X/18 milestone' claim without this signature is FALSE)
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed twice (transport flake)
+- 🚨 STRATEGIC-STAGNATION: holdout stuck at 3/18 for 14 days. The current approach is NOT working. Requires strategy change, not more of the same.. Approach needs rethink.
+- MEASURED [sapo-27b-ai-20260921T033826]: checkpoint step 37 eval = 4/40 tasks passed (ground truth from eval_results.jsonl; any conflicting 'X/18 milestone' claim without this signature is FALSE)
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed twice (transport flake)
+- 🚨 STRATEGIC-STAGNATION: holdout stuck at 3/18 for 14 days. The current approach is NOT working. Requires strategy change, not more of the same.. Approach needs rethink.
+- MEASURED [sapo-27b-ai-20260921T033826]: checkpoint step 37 eval = 4/40 tasks passed (ground truth from eval_results.jsonl; any conflicting 'X/18 milestone' claim without this signature is FALSE)
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. USER ACTION likely required (console re-login) if authDrift; keeper cannot fix auth.
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed twice (transport flake)
+- 🚨 STRATEGIC-STAGNATION: holdout stuck at 3/18 for 14 days. The current approach is NOT working. Requires strategy change, not more of the same.. Approach needs rethink.
+- MEASURED [sapo-27b-ai-20260921T033826]: checkpoint step 37 eval = 4/40 tasks passed (ground truth from eval_results.jsonl; any conflicting 'X/18 milestone' claim without this signature is FALSE)
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed twice (transport flake)
+- 🚨 STRATEGIC-STAGNATION: holdout stuck at 3/18 for 14 days. The current approach is NOT working. Requires strategy change, not more of the same.. Approach needs rethink.
+- MEASURED [sapo-27b-ai-20260921T033826]: checkpoint step 37 eval = 4/40 tasks passed (ground truth from eval_results.jsonl; any conflicting 'X/18 milestone' claim without this signature is FALSE)
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed twice (transport flake)
+- 🚨 STRATEGIC-STAGNATION: holdout stuck at 3/18 for 14 days. The current approach is NOT working. Requires strategy change, not more of the same.. Approach needs rethink.
+- MEASURED [sapo-27b-ai-20260921T033826]: checkpoint step 37 eval = 4/40 tasks passed (ground truth from eval_results.jsonl; any conflicting 'X/18 milestone' claim without this signature is FALSE)
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. USER ACTION likely required (console re-login) if authDrift; keeper cannot fix auth.
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. USER ACTION likely required (console re-login) if authDrift; keeper cannot fix auth.
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed twice (transport flake)
+- 🚨 STRATEGIC-STAGNATION: holdout stuck at 3/18 for 14 days. The current approach is NOT working. Requires strategy change, not more of the same.. Approach needs rethink.
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. USER ACTION likely required (console re-login) if authDrift; keeper cannot fix auth.
+- MEASURED [sapo-27b-ai-20260921T033826]: checkpoint step 37 eval = 4/40 tasks passed (ground truth from eval_results.jsonl; any conflicting 'X/18 milestone' claim without this signature is FALSE)
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed twice (transport flake)
+- 🚨 STRATEGIC-STAGNATION: holdout stuck at 3/18 for 14 days. The current approach is NOT working. Requires strategy change, not more of the same.. Approach needs rethink.
+- MEASURED [sapo-27b-ai-20260921T033826]: checkpoint step 37 eval = 4/40 tasks passed (ground truth from eval_results.jsonl; any conflicting 'X/18 milestone' claim without this signature is FALSE)
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed twice (transport flake)
+- 🚨 STRATEGIC-STAGNATION: holdout stuck at 3/18 for 14 days. The current approach is NOT working. Requires strategy change, not more of the same.. Approach needs rethink.
+- MEASURED [sapo-27b-ai-20260921T033826]: checkpoint step 37 eval = 4/40 tasks passed (ground truth from eval_results.jsonl; any conflicting 'X/18 milestone' claim without this signature is FALSE)
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed twice (transport flake)
+- 🚨 STRATEGIC-STAGNATION: holdout stuck at 3/18 for 14 days. The current approach is NOT working. Requires strategy change, not more of the same.. Approach needs rethink.
+- MEASURED [sapo-27b-ai-20260921T033826]: checkpoint step 37 eval = 4/40 tasks passed (ground truth from eval_results.jsonl; any conflicting 'X/18 milestone' claim without this signature is FALSE)
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed twice (transport flake)
+- 🚨 STRATEGIC-STAGNATION: holdout stuck at 3/18 for 14 days. The current approach is NOT working. Requires strategy change, not more of the same.. Approach needs rethink.
+- MEASURED [sapo-27b-ai-20260921T033826]: checkpoint step 37 eval = 4/40 tasks passed (ground truth from eval_results.jsonl; any conflicting 'X/18 milestone' claim without this signature is FALSE)
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed twice (transport flake)
+- 🚨 STRATEGIC-STAGNATION: holdout stuck at 3/18 for 14 days. The current approach is NOT working. Requires strategy change, not more of the same.. Approach needs rethink.
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. USER ACTION likely required (console re-login) if authDrift; keeper cannot fix auth.
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+
+## 2026-09-22 22:52 CST — tick: 11 reds cleared (C-9612/C-9544/C-9590/C-9556); full suite 781/0; B-044 re-armed; 507015 loop #6 auto-resumed
+
+- **C-9612**: compose_verdict now refuses missing-seed/cross-seed legs fail-closed + embeds reproducibility evidence in verdict (was: composer never looked at seeds). 3/3 green.
+- **C-9544**: v10 training benchmark DELIBERATELY covered all 18 frozen holdout tasks (C-9458 = leakage). De-overlapped to 23-task union; audited all 13 GRPO training sets — v10 was the only full leaker. 1/1 green.
+- **C-9590**: commit c4da06a4 called resource_probes.probe_trainer_box_aware() that NEVER EXISTED (lost impl; silent AttributeError). Implemented with injectable exec transport (tier-1 box ps / tier-2 files, hermetic in tests). 13/13 green.
+- **C-9556**: verdict now carries TOP-LEVEL adapter_applied/adapter_probe_differs booleans (both-legs-true semantics). 2/2 green.
+- Test fixes: integration TestTransportGate used pre-C-9625 summary formats + asi2 ordering pollution; pre-freeze sha-less verdict artifacts archived. Full suite **781 passed / 0 failed** (was 770/11).
+- **INCIDENT + RECOVERY**: my in-session debug script clobbered live QUEUE.json (95→2 cards) at 13:48Z — reconstructed 139 cards from EVENTS.jsonl, live file preserved; backup in scratch/. The C-2026-09-17 conftest seam class: NEVER import qgh outside pytest without QGH_STATE_DIR.
+- **507015 treadmill continues**: faults at 13:16/13:35/14:02/14:36Z; self_resume_guardian auto-resumed each (6th resume now live, pid 89044, run 225024Z). All resumes bank step-7 checkpoints.
+- **B-044 DONE**: re-armed fresh durable tick job_f2e260b4eee4 (expires 09-29); retired old native 79dab443 + dead duplicate job_8c75ee7352a0 (failing "Not logged in" since 08:30Z, wrong penrose cwd). Exactly ONE tick job now.
+- Commits this tick: edb8c26a (C-9629+C-9630 never-stop gaps), c772a68a (11-red clearance).
