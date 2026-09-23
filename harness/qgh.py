@@ -3921,9 +3921,26 @@ def cmd_tick(_args):
                 if isinstance(_ev, dict):
                     _errs = len(_ev.get("errors", []))
                     _counts = _ev.get("counts", {})
+                    # whole-system digest (mandate 2026-09-23 #2): goal,
+                    # training engine/probe, fleet size — one line, every report
+                    _g = _rd.get("goal") if isinstance(_rd.get("goal"), dict) else {}
+                    _t = _rd.get("training") if isinstance(_rd.get("training"), dict) else {}
+                    _fq = _rd.get("fleet_queue") if isinstance(_rd.get("fleet_queue"), dict) else {}
+                    _sys = ""
+                    if _g or _t or _fq:
+                        _sys = (
+                            " | goal={gstatus} best={bp}/{bt}" " train={eng}/{rstat} agents={n}"
+                        ).format(
+                            gstatus=_g.get("status"),
+                            bp=_g.get("best_n_passes"),
+                            bt=_g.get("best_n_tasks"),
+                            eng=_t.get("engine"),
+                            rstat=_t.get("resume_status"),
+                            n=_fq.get("n_agents"),
+                        )
                     append_line(
                         os.path.join(STATE, "STATUS.md"),
-                        f"- {now_iso()} report#{tick_no} errors_in_1h={_errs} top_kinds={json.dumps(dict(list(_counts.items())[:5]))}\n",
+                        f"- {now_iso()} report#{tick_no} errors_in_1h={_errs} top_kinds={json.dumps(dict(list(_counts.items())[:5]))}{_sys}\n",
                     )
                     # fail-loud: error-class events present -> dedicated event
                     if _errs:
