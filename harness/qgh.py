@@ -1217,8 +1217,18 @@ BRIEF_MAX_LINES = 80
 
 def compose_brief(goal, card, dep_results=None, heartbeat_path=None, stall_min=None):
     """Compose a worker brief: small, complete, with an output contract."""
-    acc = "\n".join(f"- {a}" for a in card["acceptance"])
-    gates = ", ".join(card["gates"]) if card["gates"] else "none (acceptance still required)"
+    # 2026-09-23: bare card["acceptance"] raised KeyError on cards lacking the
+    # field (spawn_error 'acceptance' every tick, zero workers spawned). Fail-
+    # closed: a card without acceptance criteria is malformed and must say so
+    # in the brief rather than crash dispatch for every other card.
+    acceptance = card.get("acceptance")
+    if not acceptance:
+        acc = ("- MALFORMED CARD: no acceptance criteria recorded; complete the "
+               "card only if its title alone describes verifiable work, and "
+               "report the malformed schema in your output")
+    else:
+        acc = "\n".join(f"- {a}" for a in acceptance)
+    gates = ", ".join(card.get("gates") or []) if card.get("gates") else "none (acceptance still required)"
     dep_note = ""
     if card["deps"]:
         lines = [
@@ -2284,7 +2294,7 @@ def render_standup(goal, queue, fleet, tick_no, verdicts=None, probes=None, stat
                 c["status"],
                 disp,
                 c["title"][:48],
-                (c["why"] or "")[:48],
+                (c.get("why") or "")[:48],
             )
         )
     if not rows:
