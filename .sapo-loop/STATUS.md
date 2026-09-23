@@ -22214,3 +22214,66 @@ C-9603 monitor: box-verified ASI3 trainer run=sapo-27b-ai-20260921T033826 STEP33
 - NOTE: no code/import red tests this tick (suite fully green); no new bug to clear. Strategic-stagnation (holdout 3/18) persists — strategy change pending, not a launch defect.- MEASURED [sapo-27b-ai-20260922T145121]: checkpoint step 4 eval = 7/16 tasks passed (ground truth from eval_results.jsonl; any conflicting 'X/18 milestone' claim without this signature is FALSE)
 
 - 2026-09-23 00:20 CST — CONTINUITY BREAK CLEARED (user mandate: harness never stops until 18/18 verified). (1) Durable tick job_f2e260b4eee4 was created 14:40Z WITHOUT `-p huanxin -m dp4` → every firing died "Not logged in" (same failure that killed B-044's predecessor). Fixed the run.sh invocation; verified live: ticks firing+completing every 10m since 15:10Z (full cycles: suite 781/0, ASI3 healed, STATUS appended). (2) dp4 judge was UNHEALTHY 81 strikes since 06:02Z — root cause: aihuanxin.cn gateway now rejects chunked transfer-encoding (curl stdin upload) with 500→404 "subscription route not found"; A/B bisect: stdin 500×4 vs -d 200×3. Patched claude-code-main/claude_huanxin_anthropic_proxy.py `_curl_upstream` to write body to temp file + `--data-binary @file` (fixed Content-Length). Restarted proxy 55648 (pid 28031). Judge probe: HEALTHY scores-complete strikes=0. Patch backup: harness/scripts/dp4_proxy_chunked_fix.py.bak. (3) B-044 hygiene: deleted stale job_3f1f162a20a1 dir; its crontab line removal is WEDGED (crontab install hangs, root pid 63889 needs sudo password — flagged for USER; line is harmless no-op, script gone). Note for B-044 re-arm: crontab install hang also blocks CronDelete/CronCreate persistence — the tick job itself is live and armed, but re-arm before 2026-09-29 needs the crontab wedge cleared first.
+- MEASURED [sapo-27b-ai-20260922T145121]: checkpoint step 5 eval = 7/20 tasks passed (ground truth from eval_results.jsonl; any conflicting 'X/18 milestone' claim without this signature is FALSE)
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. USER ACTION likely required (console re-login) if authDrift; keeper cannot fix auth.
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. USER ACTION likely required (console re-login) if authDrift; keeper cannot fix auth.
+- MEASURED [sapo-27b-ai-20260922T145121]: checkpoint step 6 eval = 7/24 tasks passed (ground truth from eval_results.jsonl; any conflicting 'X/18 milestone' claim without this signature is FALSE)
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. USER ACTION likely required (console re-login) if authDrift; keeper cannot fix auth.
+- MEASURED [sapo-27b-ai-20260922T145121]: checkpoint step 7 eval = 7/28 tasks passed (ground truth from eval_results.jsonl; any conflicting 'X/18 milestone' claim without this signature is FALSE)
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. USER ACTION likely required (console re-login) if authDrift; keeper cannot fix auth.
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. USER ACTION likely required (console re-login) if authDrift; keeper cannot fix auth.
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. USER ACTION likely required (console re-login) if authDrift; keeper cannot fix auth.
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- MEASURED [sapo-27b-ai-20260922T145121]: checkpoint step 8 eval = 11/32 tasks passed (ground truth from eval_results.jsonl; any conflicting 'X/18 milestone' claim without this signature is FALSE)
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. USER ACTION likely required (console re-login) if authDrift; keeper cannot fix auth.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- MEASURED [sapo-27b-ai-20260922T145121]: checkpoint step 9 eval = 14/36 tasks passed (ground truth from eval_results.jsonl; any conflicting 'X/18 milestone' claim without this signature is FALSE)
+- MEASURED [sapo-27b-ai-20260922T145121]: checkpoint step 10 eval = 17/40 tasks passed (ground truth from eval_results.jsonl; any conflicting 'X/18 milestone' claim without this signature is FALSE)
+- MEASURED [sapo-27b-ai-20260922T145121]: checkpoint step 11 eval = 21/44 tasks passed (ground truth from eval_results.jsonl; any conflicting 'X/18 milestone' claim without this signature is FALSE)
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. USER ACTION likely required (console re-login) if authDrift; keeper cannot fix auth.
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. USER ACTION likely required (console re-login) if authDrift; keeper cannot fix auth.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- MEASURED [sapo-27b-ai-20260922T145121]: checkpoint step 12 eval = 21/48 tasks passed (ground truth from eval_results.jsonl; any conflicting 'X/18 milestone' claim without this signature is FALSE)
+- MEASURED [sapo-27b-ai-20260922T145121]: checkpoint step 13 eval = 25/52 tasks passed (ground truth from eval_results.jsonl; any conflicting 'X/18 milestone' claim without this signature is FALSE)
+- MEASURED [sapo-27b-ai-20260922T145121]: checkpoint step 14 eval = 29/56 tasks passed (ground truth from eval_results.jsonl; any conflicting 'X/18 milestone' claim without this signature is FALSE)
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. USER ACTION likely required (console re-login) if authDrift; keeper cannot fix auth.
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. USER ACTION likely required (console re-login) if authDrift; keeper cannot fix auth.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. USER ACTION likely required (console re-login) if authDrift; keeper cannot fix auth.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. USER ACTION likely required (console re-login) if authDrift; keeper cannot fix auth.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. USER ACTION likely required (console re-login) if authDrift; keeper cannot fix auth.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- MEASURED [sapo-27b-ai-20260922T145121]: checkpoint step 15 eval = 29/60 tasks passed (ground truth from eval_results.jsonl; any conflicting 'X/18 milestone' claim without this signature is FALSE)
+- MEASURED [sapo-27b-ai-20260922T145121]: checkpoint step 16 eval = 29/64 tasks passed (ground truth from eval_results.jsonl; any conflicting 'X/18 milestone' claim without this signature is FALSE)
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. USER ACTION likely required (console re-login) if authDrift; keeper cannot fix auth.
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- MEASURED [sapo-27b-ai-20260922T145121]: checkpoint step 17 eval = 32/68 tasks passed (ground truth from eval_results.jsonl; any conflicting 'X/18 milestone' claim without this signature is FALSE)
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. USER ACTION likely required (console re-login) if authDrift; keeper cannot fix auth.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. USER ACTION likely required (console re-login) if authDrift; keeper cannot fix auth.
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. USER ACTION likely required (console re-login) if authDrift; keeper cannot fix auth.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. USER ACTION likely required (console re-login) if authDrift; keeper cannot fix auth.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. USER ACTION likely required (console re-login) if authDrift; keeper cannot fix auth.
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. USER ACTION likely required (console re-login) if authDrift; keeper cannot fix auth.
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. USER ACTION likely required (console re-login) if authDrift; keeper cannot fix auth.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. USER ACTION likely required (console re-login) if authDrift; keeper cannot fix auth.
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. USER ACTION likely required (console re-login) if authDrift; keeper cannot fix auth.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+
+- 2026-09-23 10:05 CST — THREE NEW USER MANDATES (standing, forever): (M1) dp4 is the ONLY judge — zhipu GLM-5.3-Flash fallback REMOVED from sapo_judge_mac_watcher (fail-closed: dp4 errors stage as errors, never a substitute judge); (M2) ALL code files ≤200 lines — 682 first-party files currently over (harness/qgh.py 5208 is the worst); (M3) every changed file must have unit tests + integration testing of the whole on EVERY code change. ENFORCEMENT LIVE: scripts/sapo_mandate_gate.py runs every heartbeat cycle (police layer), verdict in huanxin_heartbeat_state.json["mandate"] — currently RED on M2 (682 files). Loop work queue: grind M2 debt file-by-file (split into modules, each ≤200 lines, each with unit tests, integration suite green after each split — never leave the suite red). Priority order: harness/qgh.py (5208) first, then harness/harness_lib.py (2605), scripts/rl_distill_pipeline.py (2307), then long tail. Commit 399aea62 (dp4-proxy chunked-stdin fix) landed with tests; judge now HEALTHY strikes=0.
