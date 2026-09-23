@@ -4084,6 +4084,25 @@ def cmd_tick(_args):
                         )
         except Exception:
             pass  # report publish must never break a tick
+        # ---- retrospective (C-9658 DevOps self-improvement mandate) ----
+        # The harness ALWAYS reviews its own work, then improves: every 3rd
+        # tick (alongside the report) the retrospective scans recent events
+        # and files improvement cards itself. Crash-isolated: a retro bug
+        # must never break the tick (and will be caught by its own finder).
+        if tick_no % 3 == 0:
+            try:
+                _rsdir = os.path.join(REPO, "harness", "scripts")
+                if _rsdir not in sys.path:
+                    sys.path.insert(0, _rsdir)
+                import retrospective as _retro
+
+                _res = _retro.review(window_hours=3.0, file_cards=True)
+                append_line(
+                    os.path.join(STATE, "STATUS.md"),
+                    f"- {now_iso()} retro#{tick_no} findings={len(_res['findings'])} cards_filed={len(_res['cards_filed'])}\n",
+                )
+            except Exception as _retro_exc:
+                event(STATE, "retro_error", {"err": repr(_retro_exc)[:160]})
         append_line(
             os.path.join(STATE, "STATUS.md"),
             f"- {now_iso()} tick#{tick_no} reaped={reaped} {dispatch_note}\n",
