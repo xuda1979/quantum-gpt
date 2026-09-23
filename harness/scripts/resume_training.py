@@ -68,8 +68,13 @@ def compile_gate(box: str = BOX):
     return ("GATE_RC=0" in r.get("stdout", "")) if up else False, up
 
 
-def launch_cmd(checkpoint: str, run_name: str, checkpoint_interval_seconds: int = 300) -> str:
-    """The setsid resume command (current CLI, not the stale template). <12 lines.
+def launch_cmd(
+    checkpoint: str,
+    run_name: str,
+    checkpoint_interval_seconds: int = 300,
+    exclude_devices: list | None = None,
+) -> str:
+    """The setsid resume command (current CLI, not the stale template). <14 lines.
 
     2026-09-23 C-9631: clear leaked NPU device state BEFORE launching the
     authoritative SFT resume to break the recurring 507015 (ACL stream sync
@@ -77,14 +82,22 @@ def launch_cmd(checkpoint: str, run_name: str, checkpoint_interval_seconds: int 
     reuses polluted devices and crashes again at the same step. Kill BOTH the
     residual SFT and the retired GRPO families (the 14:52Z SFT OOM was
     retired-GRPO holding all 8 NPUs), wait for NPU release, then launch.
-    Order is covered by test_resume_npu_reset_before_launch."""
+    Order is covered by test_resume_npu_reset_before_launch.
+
+    exclude_devices: a faulty NPU die (measured: chip 5 fires aicore 507015)
+    is excluded by setting ASCEND_RT_VISIBLE_DEVICES to the healthy subset and
+    dropping --nproc_per_node to match. Covered by test_c9631_exclude_faulty_npu."""
+    total = [0, 1, 2, 3, 4, 5, 6, 7]
+    visible = [d for d in total if d not in (exclude_devices or [])]
+    nproc = len(visible)
+    vis_str = ",".join(str(d) for d in visible)
     return (
         f"cd {get('box.repo_nas')} && mkdir -p outputs/{run_name} logs && "
         f"pkill -f 'grpo_trainer' 2>/dev/null; "
         f"npu-smi info >/dev/null 2>&1; "
         f"pkill -f 'qwen_sft_peft' 2>/dev/null; sleep 20; "
-        f"ASCEND_LAUNCH_BLOCKING=1 "
-        f"setsid nohup torchrun --nproc_per_node=8 training/qwen_sft_peft.py "
+        f"ASCEND_RT_VISIBLE_DEVICES={vis_str} ASCEND_LAUNCH_BLOCKING=1 "
+        f"setsid nohup torchrun --nproc_per_node={nproc} training/qwen_sft_peft.py "
         f"--model-name {get('box.base_model')} "
         f"--train-file data/generated/quantum_finetune_verified_chat_sft_dedup_1k/train_chatml.jsonl "
         f"--adapter-init {checkpoint} "
@@ -118,7 +131,11 @@ def boot_verify(box: str, run_name: str) -> dict:
     return {"alive": False, "pid": pid if "pid" in dir() else "", "log_stages": stages}
 
 
-def resume(dry_run: bool = False, checkpoint_interval_seconds: int = 300) -> dict:
+def resume(
+    dry_run: bool = False,
+    checkpoint_interval_seconds: int = 300,
+    exclude_devices: list | None = None,
+) -> dict:
     """Gate chain + launch + boot-verify. <20 lines."""
     run_name = f"sft-27b-q38-v10-resume-{time.strftime('%Y%m%dT%H%M%SZ')}"
     latest = find_latest_checkpoint()
@@ -135,7 +152,12 @@ def resume(dry_run: bool = False, checkpoint_interval_seconds: int = 300) -> dic
         return {**result, "status": "BOX_DOWN"}
     if not cok:
         return {**result, "status": "BLOCKED_COMPILE_GATE"}
-    cmd = launch_cmd(latest, run_name, checkpoint_interval_seconds=checkpoint_interval_seconds)
+    cmd = launch_cmd(
+        latest,
+        run_name,
+        checkpoint_interval_seconds=checkpoint_interval_seconds,
+        exclude_devices=exclude_devices,
+    )
     if dry_run:
         return {**result, "status": "DRY_RUN", "command": cmd}
     r = run_box(BOX, cmd, timeout=30)
@@ -157,8 +179,23 @@ def main() -> None:
         default=300,
         help="C-9629/C-9631 507015 mitigation: 0 = save only at end (breaks step-10 crash)",
     )
+    ap.add_argument(
+        "--exclude-devices",
+        type=str,
+        default=None,
+        help="faulty NPU die ids to exclude (e.g. 5 = chip-5 aicore 507015), comma-separated",
+    )
     args = ap.parse_args()
-    print(json.dumps(resume(args.dry_run, args.checkpoint_interval_seconds), indent=2, default=str))
+    exclude = (
+        [int(x) for x in args.exclude_devices.split(",") if x.strip()]
+        if args.exclude_devices
+        else None
+    )
+    print(
+        json.dumps(
+            resume(args.dry_run, args.checkpoint_interval_seconds, exclude), indent=2, default=str
+        )
+    )
 
 
 if __name__ == "__main__":
