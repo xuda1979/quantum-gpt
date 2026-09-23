@@ -64,6 +64,9 @@ ERROR_KINDS = {
     "reap_lock_refused",
     "dispatch_lock_refused",
     "card_ghost_rearmed",
+    # C-9655: tick crash isolation — a crashed tick phase must lead the
+    # error digest (it freezes every later phase until fixed)
+    "tick_crashed",
 }
 ERROR_RE = re.compile(r"(_error|_dead|_failed)$")
 

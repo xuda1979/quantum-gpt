@@ -180,8 +180,32 @@ def new_card(
     }
 
 
+def _normalize_card(c):
+    """C-9655 schema guarantee (mirrors qgh.py): required fields always present.
+
+    The gates-KeyError incident (138 legacy cards missing 'gates') must never
+    recur — normalize at the read boundary with fail-safe defaults.
+    """
+    if not isinstance(c, dict):
+        return c
+    for k, v in {
+        "deps": [],
+        "gates": [],
+        "acceptance": [],
+        "bounce_count": 0,
+        "budget_min": 60,
+        "priority": 0,
+    }.items():
+        if c.get(k) is None:
+            c[k] = v
+    return c
+
+
 def load_queue(state_dir):
-    return load_json(os.path.join(state_dir, "QUEUE.json"), {"cards": [], "seq": 0})
+    q = load_json(os.path.join(state_dir, "QUEUE.json"), {"cards": [], "seq": 0})
+    if isinstance(q, dict) and isinstance(q.get("cards"), list):
+        q["cards"] = [_normalize_card(c) for c in q["cards"]]
+    return q
 
 
 def save_queue(state_dir, queue):
@@ -935,6 +959,29 @@ def harvest_log(log_path):
     # scope fix).
     tail = [ln for ln in last_seg.strip().splitlines() if ln.strip()][-10:]
     return (m.group(1) if m else None), tail
+
+
+def last_dispatch_segment_text(log_path):
+    """C-9675: return the FULL text of the LAST dispatch segment.
+
+    The reap's gate checks ('tdd', 'sha-verified', 'eval-failclosed', ...)
+    judge evidence against this FULL segment -- never just the final 10-line
+    tail (tail is only for verdict-line / bounce-reason heuristics). A
+    legitimate TDD worker writes its RED->GREEN pytest evidence in the BODY of
+    the segment, then a terminal RESULT/EVIDENCE block; slicing to the last 10
+    lines dropped that body evidence and produced FALSE 'no RED->GREEN
+    evidence' / 'no sha256 evidence' gate bounces.
+
+    Same C-9048-A/C-9507 scoping: only the LAST dispatch segment is returned
+    so a PREVIOUS dispatch's evidence never leaks in. Fail-closed: no file ->
+    empty string.
+    """
+    if not log_path or not os.path.exists(log_path):
+        return ""
+    with open(log_path, encoding="utf-8", errors="replace") as _f:
+        full = _f.read()
+    _segs = DISPATCH_SEG_RE.split(full)
+    return (_segs[-1] if _segs else full).strip()
 
 
 # ----------------------------------------------------------------------------- gates

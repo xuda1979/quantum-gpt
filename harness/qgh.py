@@ -175,8 +175,37 @@ def new_card(
     }
 
 
+def _normalize_card(c):
+    """C-9655 schema guarantee: every card carries every required field.
+
+    The gates-KeyError incident (138 legacy cards missing 'gates' froze the
+    tick loop ~50min) must never recur. Any card — legacy, hand-written, or
+    from an older writer — is normalized on load with fail-safe defaults.
+    Callers may index required fields directly; missing keys are impossible.
+    """
+    if not isinstance(c, dict):
+        return c
+    defaults = {
+        "deps": [],
+        "gates": [],
+        "acceptance": [],
+        "bounce_count": 0,
+        "budget_min": 60,
+        "priority": 0,
+    }
+    for k, v in defaults.items():
+        if c.get(k) is None:
+            c[k] = v
+    return c
+
+
 def load_queue(state_dir):
-    return load_json(os.path.join(state_dir, "QUEUE.json"), {"cards": [], "seq": 0})
+    q = load_json(os.path.join(state_dir, "QUEUE.json"), {"cards": [], "seq": 0})
+    # C-9655: normalize every card on load — schema holes are healed at the
+    # read boundary, so no consumer can ever KeyError on a required field.
+    if isinstance(q, dict) and isinstance(q.get("cards"), list):
+        q["cards"] = [_normalize_card(c) for c in q["cards"]]
+    return q
 
 
 def save_queue(state_dir, queue):
@@ -748,13 +777,39 @@ def _auto_cleanup_stale_running_locked(state_dir):
         return 0
 
 
-def auto_retire_high_bounce(state_dir, threshold=3):
-    """C-9534: Auto-retire bounced cards with bounce_count >= threshold.
+# C-9655: bounce_reason values caused by infra-environmental stall-kills, NOT
+# by the remediation card failing on its own merits. These are emitted by
+# bounce_dead_running_cards and _auto_cleanup_stale_running_locked when the
+# deep-analysis worker is stall-killed by the heartbeat watchdog (STALL_MIN)
+# or reap/transport health, not because the card's remediation failed.
+# Such bounces are infra churn (C-9652: 62 dispatches / 0 done / 61 reaped)
+# and must NEVER count toward the auto-retire high-bounce threshold: a
+# healthy remediation card must not be silently retired by infra kills.
+INFRA_STALL_KILL_BOUNCE_REASONS = frozenset(
+    {
+        "all_workers_dead_deadline_expired",
+        "worker PID dead",
+        "running without claimed_by",
+    }
+)
 
-    Bounced cards with high bounce_count are stuck -- they keep failing the
-    same way. Retire them (mark dead) so the queue stays clean and the
-    dispatcher can focus on new, more targeted cards. The bounce reasons
-    are preserved in the card data for future mining.
+# C-9655 (hardening): the reap loop bounce-marks a worker the heartbeat
+# watchdog stall-killed (STALL_MIN) via bounce_reason(outcome='stalled-killed'),
+# which builds a composite reason like "stalled: heartbeat stale >10 min;
+# had DONE verdict; ...". That is the same infra-environmental stall-kill
+# class (C-9652: 62 dispatches / 0 done / 61 reaped) and must never count
+# toward the auto-retire threshold. The composite string is not a stable
+# exact value, so classify it by its stall-kill signature.
+INFRA_STALL_KILL_SIGNATURE = "stalled: heartbeat stale"
+
+
+def auto_retire_high_bounce(state_dir, threshold=3):
+    """C-9534+C-9655: Auto-retire bounced cards with bounce_count >= threshold.
+
+    C-9655: cards whose bounce_reason is an infra-environmental stall-kill
+    class (INFRA_STALL_KILL_BOUNCE_REASONS) are NOT candidate-retiring faults.
+    They are skipped so repeated infra stall-kills never silently retire a
+    healthy remediation card. Retire only genuinely-faulted cards.
 
     Returns the count of retired cards. Never raises -- best-effort.
     """
@@ -762,22 +817,29 @@ def auto_retire_high_bounce(state_dir, threshold=3):
         queue = load_queue(state_dir)
         retired = 0
         for c in queue["cards"]:
-            if c["status"] == "bounced" and c.get("bounce_count", 0) >= threshold:
-                c["status"] = "dead"
-                c["retired_utc"] = now_iso()
-                retired += 1
-                try:
-                    event(
-                        state_dir,
-                        "card_auto_retired",
-                        {
-                            "card": c["id"],
-                            "bounce_count": c.get("bounce_count", 0),
-                            "title": c.get("title", "")[:80],
-                        },
-                    )
-                except Exception:
-                    pass
+            if c["status"] != "bounced":
+                continue
+            if c.get("bounce_count", 0) < threshold:
+                continue
+            _br = c.get("bounce_reason") or ""
+            if _br in INFRA_STALL_KILL_BOUNCE_REASONS or INFRA_STALL_KILL_SIGNATURE in _br:
+                # infra stall-kill, not a card fault -- never retire.
+                continue
+            c["status"] = "dead"
+            c["retired_utc"] = now_iso()
+            retired += 1
+            try:
+                event(
+                    state_dir,
+                    "card_auto_retired",
+                    {
+                        "card": c["id"],
+                        "bounce_count": c.get("bounce_count", 0),
+                        "title": c.get("title", "")[:80],
+                    },
+                )
+            except Exception:
+                pass
         if retired:
             save_queue(state_dir, queue)
         return retired
@@ -877,7 +939,44 @@ def requeue_card(queue, card_id):
     return True, (f"requeued bounced->ready (bounce_count={c.get('bounce_count', 0)} preserved)")
 
 
-# ----------------------------------------------------------------------------- fleet
+def unretire_card(queue, card_id, reason):
+    """C-9654: the dead-card un-retire path. The C-0032 requeue_card is
+    bounced->ready ONLY and preserves bounce_count; a dead card (bounce>2,
+    auto-retired by the reaper on repeated infra stall-kills) is unreachable
+    by it, so 14 zero-pass C-9640 data-miner cards sat dead at WIP=10 with no
+    operator exit. This flips dead->ready as an explicit action: bounce_count
+    is reset to 0 (the stall was infra-environmental, not a card fault), claim
+    fields are cleared, requeued_utc is stamped (tripwire-exempt), and the
+    human/operator rationale is recorded in card['result']. Fail-closed:
+    refuses anything that is not a single, unambiguous, dead card. Returns
+    (ok, reason)."""
+    matches = [c for c in queue["cards"] if c["id"] == card_id]
+    if not matches:
+        return False, "no such card: " + card_id
+    if len(matches) > 1:
+        return False, ("ambiguous card id " + card_id + ": " + str(len(matches)) + " queue entries")
+    c = matches[0]
+    if c["status"] != "dead":
+        return False, (
+            "card " + card_id + " status is " + repr(c["status"]) + ", not dead: unretire refused"
+        )
+    c["status"] = "ready"
+    c["bounce_count"] = 0
+    c["claimed_by"] = None
+    c["claimed_utc"] = None
+    c["deadline_utc"] = None
+    c["retired_utc"] = None
+    c["requeued_utc"] = now_iso()
+    c["bounce_reason"] = ""
+    note = "unretired via qgh card unretire (C-9654)"
+    if reason:
+        note = note + " | rationale: " + reason
+    c["result"] = (c.get("result") or "").strip()
+    c["result"] = note if not c["result"] else (c["result"] + chr(10) + note)
+    return True, ("unretired dead->ready (bounce_count reset 0, rationale recorded)")
+
+
+# ----------------------------------------------------------------------------- fleet# ----------------------------------------------------------------------------- fleet
 def load_fleet(state_dir):
     return load_json(os.path.join(state_dir, "FLEET.json"), {"agents": []})
 
@@ -1068,6 +1167,26 @@ def harvest_log(log_path):
     # scope fix).
     tail = [ln for ln in last_seg.strip().splitlines() if ln.strip()][-10:]
     return (m.group(1) if m else None), tail
+
+
+def last_dispatch_segment_text(log_path):
+    """C-9675: return the FULL text of the LAST dispatch segment.
+
+    Gate checks judge evidence against this FULL segment -- never just the
+    10-line tail (tail stays for verdict/bounce heuristics). A legitimate TDD
+    worker writes RED->GREEN evidence in the BODY, then a terminal
+    RESULT/EVIDENCE block; the 10-line slice dropped body evidence and caused
+    FALSE 'no RED->GREEN evidence' / 'no sha256 evidence' gate bounces
+    (evidence-loss that was bouncing every card). Same C-9048-A/C-9507
+    per-segment scoping: only the LAST segment, so a previous dispatch's
+    evidence never leaks in. Fail-closed: no file -> empty string.
+    """
+    if not log_path or not os.path.exists(log_path):
+        return ""
+    with open(log_path, encoding="utf-8", errors="replace") as _f:
+        full = _f.read()
+    _segs = DISPATCH_SEG_RE.split(full)
+    return (_segs[-1] if _segs else full).strip()
 
 
 # ----------------------------------------------------------------------------- gates
@@ -2896,12 +3015,17 @@ def _reap_locked():
             # legacy cards (pre-gates schema) carry no 'gates' key — treat as
             # no gates rather than crash the whole reap on KeyError (this
             # exact crash froze the tick loop for ~50min on 2026-09-23)
+            # C-9675: gate evidence is judged against the FULL last dispatch
+            # segment (last_dispatch_segment_text), not the 10-line tail --
+            # a legit TDD worker's RED->GREEN evidence lives in the body, and
+            # the 10-line slice dropped it, bouncing cards with FALSE
+            # 'no RED->GREEN evidence'/'no sha256 evidence'. Still fail-closed:
+            # evidence must be in the actual log segment, not a claim.
+            gate_seg = last_dispatch_segment_text(a.get("log"))
             for gate in (card.get("gates") or []) if card else []:
-                ok, reason = check_gate(
-                    gate, "\n".join(tail) + " " + str(card and card.get("result"))
-                )
-                # gate evidence must be in the log tail, not a claim
-                ok2, reason2 = check_gate(gate, "\n".join(tail))
+                ok, reason = check_gate(gate, gate_seg + " " + str(card and card.get("result")))
+                # gate evidence must be in the log segment, not a claim
+                ok2, reason2 = check_gate(gate, gate_seg)
                 if not ok2:
                     ok, reason = False, reason2
                     break
@@ -3725,6 +3849,16 @@ def cmd_tick(_args):
     if lock is None:
         print("tick skipped: another tick live")
         return
+    # C-9655 crash isolation (user mandate 2026-09-23: productive + 0-bug
+    # harness): the gates-KeyError incident (6c73825ef) showed one crashing
+    # phase silently freezes EVERY later phase for hours — no reap, no
+    # dispatch, no report, and no event to say why. The tick now runs in
+    # two layers: (1) the phase body below may still crash, but (2) the
+    # finally clause always releases the lock AND the except clause emits
+    # a tick_crashed event with the exact traceback so the failure is
+    # LOUD (shows in REPORT.md/GUI instantly) instead of a silent log line
+    # in a launchd file nobody reads.
+    _tick_started = now_iso()
     try:
         goal = load_goal(STATE)
         if goal.get("status") == "DONE":
@@ -4038,6 +4172,33 @@ def cmd_tick(_args):
                 _busy = _h.get("busy", False)
                 _last = (_h.get("lastCommand") or "")[:60]
                 print(f"    {_name} /exec: cmdCount={_cc} busy={_busy} last=[{_last}]")
+    except Exception as _tick_exc:
+        # C-9655: a crashed tick must be LOUD, not silent. Pre-fix, the
+        # gates KeyError froze the loop ~50min because the traceback only
+        # landed in the launchd log. Now: tick_crashed event (shows in
+        # REPORT.md error digest + GUI immediately) + STATUS line so even
+        # a grep of STATUS.md reveals it.
+        import traceback as _tb
+
+        _err = repr(_tick_exc)[:300]
+        try:
+            event(
+                STATE,
+                "tick_crashed",
+                {
+                    "err": _err,
+                    "started_utc": _tick_started,
+                    "trace": _tb.format_exc()[-600:],
+                },
+            )
+        except Exception:
+            pass  # event write must never re-crash the handler
+        append_line(
+            os.path.join(STATE, "STATUS.md"),
+            f"- {now_iso()} TICK-CRASHED {_err}\n",
+        )
+        print(f"TICK CRASHED: {_err}")
+        raise  # nonzero exit still surfaces in launchd log
     finally:
         release_lock(TICK_LOCK, lock)
 
@@ -4511,6 +4672,10 @@ def main():
     cr = cp.add_parser("requeue")
     cr.add_argument("ids", nargs="+", metavar="C-XXXX")
     cr.set_defaults(func=cmd_card_requeue)
+    cu = cp.add_parser("unretire")
+    cu.add_argument("ids", nargs="+", metavar="C-XXXX")
+    cu.add_argument("--reason", default=None, help="rationale recorded on the card")
+    cu.set_defaults(func=cmd_card_unretire)
     crem = cp.add_parser("remove")
     crem.add_argument("ids", nargs="+", metavar="C-XXXX")
     crem.set_defaults(func=cmd_card_remove)
@@ -4714,6 +4879,34 @@ def cmd_card_requeue(args):
     for r in refused:
         print("REFUSED " + r)
     print(f"requeued {len(requeued)} card(s), refused {len(refused)}")
+    if refused:
+        sys.exit(1)  # fail closed: a refusal must never look like success
+
+
+@_queue_locked
+def cmd_card_unretire(args):
+    """C-9654: CLI entry for the dead-card un-retire path. Flipping a
+    dead -> ready card resets bounce_count to 0 and records the operator
+    rationale. Refusals are fail-closed (nonzero exit)."""
+    queue = load_queue(STATE)
+    unretired, refused = [], []
+    for cid in args.ids:
+        ok, reason = unretire_card(queue, cid, getattr(args, "reason", None) or "")
+        if ok:
+            unretired.append(cid)
+            card = find_card(queue, cid)
+            event(
+                STATE,
+                "card_unretired",
+                dict(card=cid, bounce_count=card.get("bounce_count", 0), by="manual"),
+            )
+            print("UNRETIRED " + cid + " " + reason)
+        else:
+            refused.append(cid + ": " + reason)
+    save_queue(STATE, queue)
+    for r in refused:
+        print("REFUSED " + r)
+    print("unretired " + str(len(unretired)) + " card(s), refused " + str(len(refused)))
     if refused:
         sys.exit(1)  # fail closed: a refusal must never look like success
 
