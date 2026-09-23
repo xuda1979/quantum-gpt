@@ -58,17 +58,13 @@ API_ERROR_SIGNATURES = (
     "rate limit",
 )
 # QPG: quota preflight gate module (imported lazily to avoid circular deps)
-
 try:
-    import quota_preflight_gate as QPG
+    import quota_preflight_gate as QPG  # noqa: E402
 except ImportError:
     QPG = None
 
-
-# ----------------------------------------------------------------------------- time (extracted to time_utils, C-9641)
-# ----------------------------------------------------------------------------- io (extracted to json_io, C-9641)
-from json_io import append_line, load_json, save_json  # noqa: F401  (re-exported)
-from time_utils import age_min, now_iso, parse_iso  # noqa: F401  (re-exported)
+from json_io import append_line, load_json, save_json  # noqa: E402  (seam re-export, C-9641)
+from time_utils import age_min, now_iso, parse_iso  # noqa: E402  (seam re-export, C-9641)
 
 
 def append_heartbeat(path, line):
@@ -2573,28 +2569,61 @@ def planner_topup_needed(queue, min_ready=2):
 
 
 def worker_command():
-    """bash: source credential files, then exec claude (pid stays the worker's)."""
+    """bash: source credential files, then exec claude (pid stays the worker's).
+
+    C-9642 stall-killer fix (2026-09-23): deep-analysis workers (trainer-ops
+    investigating run logs for >10 min) don't call `qgh.py heartbeat` while
+    thinking, get stall-killed at STALL_MIN=10, bounce 3x, then auto-retire
+    (card_auto_retired) — the exact failure that stalled the training resume
+    for an hour. The bash now runs a background auto-heartbeat loop that
+    touches the card's .progress file every 5 min while claude works; it is
+    killed via trap when claude exits. The heartbeat line is honest
+    ('auto-heartbeat: worker process alive') — never fabricates progress.
+    Requires WORKER_HEARTBEAT_CARD env (set per-spawn in spawn_worker).
+    """
     srcs = " ".join(f'[ -f "{f}" ] && source "{f}";' for f in WORKER_ENV_FILES)
     model_flag = f"-m '{WORKER_MODEL}'" if WORKER_MODEL else ""
     provider_flag = f"-p {WORKER_PROVIDER}" if WORKER_PROVIDER else ""
+    heartbeat_loop = (
+        'if [ -n "$WORKER_HEARTBEAT_CARD" ]; then '
+        "( while true; do sleep 300; "
+        "printf '%s auto-heartbeat: worker process alive\\n' "
+        '"$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> '
+        f'"{STATE}/agents/$WORKER_HEARTBEAT_CARD.progress"; '
+        "done ) & HB_PID=$!; "
+        "trap 'kill $HB_PID 2>/dev/null' EXIT; fi; "
+    )
     return [
         "/bin/bash",
         "-c",
-        srcs + " exec '" + CLAUDE + "' " + provider_flag + " " + model_flag + ' --print "$(cat)"',
+        srcs
+        + heartbeat_loop
+        + " exec '"
+        + CLAUDE
+        + "' "
+        + provider_flag
+        + " "
+        + model_flag
+        + ' --print "$(cat)"',
     ]
 
 
-def worker_env():
+def worker_env(card_id=None):
     """C-9547: Build the worker environment with the REAL HOME.
 
     The claude wrapper resolves the claude binary via $HOME/.local/bin/claude.
     A /tmp fallback orphans that lookup and causes env-blocked spawn failures.
+    C-9642: WORKER_HEARTBEAT_CARD enables the auto-heartbeat loop (see
+    worker_command) so long-thinking workers aren't stall-killed.
     """
-    return {
+    env = {
         "PATH": os.environ.get("PATH", "/usr/bin:/bin:/usr/local/bin"),
         "HOME": os.environ.get("HOME") or os.path.expanduser("~"),
         "TMPDIR": os.environ.get("TMPDIR", "/tmp"),
     }
+    if card_id:
+        env["WORKER_HEARTBEAT_CARD"] = str(card_id)
+    return env
 
 
 def spawn_worker(goal, queue, card, dep_results):
@@ -2636,7 +2665,7 @@ def spawn_worker(goal, queue, card, dep_results):
     card["claimed_by"] = "pending"
     # Minimal deterministic env: workers get credentials from the sourced files,
     # never from whatever session happened to run the tick.
-    env = worker_env()
+    env = worker_env(card_id=card["id"])
     proc = subprocess.Popen(
         worker_command(),
         stdin=open(brief_path),
