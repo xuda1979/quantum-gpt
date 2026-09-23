@@ -152,8 +152,18 @@ def call_dp4(body_text: str, timeout_s: int = 250) -> str:
 
 
 def call_zhipu_fallback(body_text: str, timeout_s: int = 250) -> str:
-    """Judge fallback (user directive 2026-09-21): when dp4 fails, judge with
-    Zhipu GLM-5.3-Flash (open.bigmodel.cn native Anthropic endpoint). Returns
+    """REMOVED 2026-09-22 (user mandate: dp4 is the ONLY judge). Kept as a
+    fail-closed stub: any caller that still reaches this path gets an explicit
+    error, never a substituted judge model."""
+    return json.dumps(
+        {"error": {"message": "zhipu judge fallback removed: dp4 is the only judge", "type": "judge_policy"}}
+    )
+
+
+def _call_zhipu_fallback_removed(body_text: str, timeout_s: int = 250) -> str:
+    """(dead code, kept for history until next prune) Judge fallback (user
+    directive 2026-09-21, SUPERSEDED 2026-09-22 by dp4-only mandate): when dp4
+    fails, judge with Zhipu GLM-5.3-Flash (open.bigmodel.cn native Anthropic endpoint). Returns
     the same response shape the trainer parses; metadata marks the fallback.
     """
     try:
@@ -246,8 +256,10 @@ def tick(immediate: bool = False) -> int:
         log("judging {}".format(req_path.rsplit("/", 1)[-1]))
         resp = call_dp4(body)
         if is_dp4_failure(resp):
-            log("dp4 judge failed -> zhipu GLM-5.3-Flash fallback")
-            resp = call_zhipu_fallback(body)
+            # USER MANDATE 2026-09-22: dp4 is the ONLY judge. No fallback model
+            # may ever score a candidate. On dp4 failure we stage the error
+            # response (fail-closed, visible) instead of substituting a judge.
+            log("dp4 judge failed -> FAIL-CLOSED (dp4 is the only judge; no fallback)")
         stage(resp_for(req_path), resp)
         log("staged {}".format(resp_for(req_path).rsplit("/", 1)[-1]))
         processed += 1
