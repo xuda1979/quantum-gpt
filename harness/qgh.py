@@ -65,53 +65,10 @@ except ImportError:
     QPG = None
 
 
-# ----------------------------------------------------------------------------- time
-def now_iso():
-    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-
-
-def parse_iso(s):
-    return datetime.strptime(s, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
-
-
-def age_min(iso_ts, now=None):
-    """Minutes since iso timestamp. Missing/invalid -> None (never fabricate)."""
-    if not iso_ts:
-        return None
-    try:
-        then = parse_iso(iso_ts)
-    except ValueError:
-        return None
-    ref = now or datetime.now(timezone.utc)
-    return round((ref - then).total_seconds() / 60.0, 1)
-
-
-# ----------------------------------------------------------------------------- io
-def load_json(path, default=None):
-    try:
-        with open(path, encoding="utf-8") as f:
-            return json.load(f)
-    except (OSError, ValueError):
-        return default
-
-
-def save_json(path, obj):
-    """Atomic write: tmp + rename, so a crash never leaves torn state."""
-    d = os.path.dirname(path)
-    if d:
-        os.makedirs(d, exist_ok=True)
-    tmp = f"{path}.tmp.{os.getpid()}"
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(obj, f, indent=1, ensure_ascii=False)
-    os.replace(tmp, path)
-
-
-def append_line(path, line):
-    d = os.path.dirname(path)
-    if d:
-        os.makedirs(d, exist_ok=True)
-    with open(path, "a", encoding="utf-8") as f:
-        f.write(line.rstrip("\n") + "\n")
+# ----------------------------------------------------------------------------- time (extracted to time_utils, C-9641)
+# ----------------------------------------------------------------------------- io (extracted to json_io, C-9641)
+from json_io import append_line, load_json, save_json  # noqa: F401  (re-exported)
+from time_utils import age_min, now_iso, parse_iso  # noqa: F401  (re-exported)
 
 
 def append_heartbeat(path, line):
@@ -2907,7 +2864,10 @@ def _reap_locked():
             )
         if verdict == "DONE":
             ok, reason = True, "RESULT DONE"
-            for gate in card["gates"] if card else []:
+            # legacy cards (pre-gates schema) carry no 'gates' key — treat as
+            # no gates rather than crash the whole reap on KeyError (this
+            # exact crash froze the tick loop for ~50min on 2026-09-23)
+            for gate in (card.get("gates") or []) if card else []:
                 ok, reason = check_gate(
                     gate, "\n".join(tail) + " " + str(card and card.get("result"))
                 )

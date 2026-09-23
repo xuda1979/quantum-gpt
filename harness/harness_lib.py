@@ -1062,7 +1062,8 @@ BRIEF_MAX_LINES = 80
 def compose_brief(goal, card, dep_results=None, heartbeat_path=None, stall_min=None):
     """Compose a worker brief: small, complete, with an output contract."""
     acc = "\n".join(f"- {a}" for a in card["acceptance"])
-    gates = ", ".join(card["gates"]) if card["gates"] else "none (acceptance still required)"
+    _gates = card.get("gates") or []
+    gates = ", ".join(_gates) if _gates else "none (acceptance still required)"
     dep_note = ""
     if card["deps"]:
         lines = [
