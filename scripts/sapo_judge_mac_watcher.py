@@ -160,41 +160,6 @@ def call_zhipu_fallback(body_text: str, timeout_s: int = 250) -> str:
     )
 
 
-def _call_zhipu_fallback_removed(body_text: str, timeout_s: int = 250) -> str:
-    """(dead code, kept for history until next prune) Judge fallback (user
-    directive 2026-09-21, SUPERSEDED 2026-09-22 by dp4-only mandate): when dp4
-    fails, judge with Zhipu GLM-5.3-Flash (open.bigmodel.cn native Anthropic endpoint). Returns
-    the same response shape the trainer parses; metadata marks the fallback.
-    """
-    try:
-        req_body = json.loads(body_text)
-    except Exception:
-        req_body = {}
-    req_body["model"] = os.environ.get("SAPO_ZHIPU_MODEL", "glm-5.3-flash")
-    req = urllib.request.Request(
-        os.environ.get("SAPO_ZHIPU_URL", "https://open.bigmodel.cn/api/anthropic/v1/messages"),
-        data=json.dumps(req_body).encode("utf-8"),
-        headers={
-            "Content-Type": "application/json",
-            "x-api-key": os.environ.get("ZHIPU_API_KEY", ""),
-            "anthropic-version": "2023-06-01",
-        },
-    )
-    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
-    try:
-        with opener.open(req, timeout=timeout_s) as resp:
-            text = resp.read().decode("utf-8")
-        # annotate: judge model that actually scored this
-        try:
-            parsed = json.loads(text)
-            parsed.setdefault("metadata", {})["judge_model"] = "zhipu-glm-5.3-flash-fallback"
-            return json.dumps(parsed)
-        except Exception:
-            return text
-    except Exception as exc:
-        return json.dumps(
-            {"error": {"message": repr(exc)[:200], "type": "zhipu_fallback_error"}}
-        )
 
 
 def is_dp4_failure(resp_text: str) -> bool:

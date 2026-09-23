@@ -257,7 +257,16 @@ while true; do
     *"CLEAN"*) : ;;
     *) log "POLICE: $HYGIENE" ;;
   esac
-  echo "{\"ts\":\"$(ts)\",\"daemons\":$report,\"hygiene\":\"$HYGIENE\"}" > "$STATE"
+  # MANDATE GATE (user mandates 2026-09-22/23): dp4-only judge; <=200-line
+  # files; changed files must have tests. RED is logged loudly each cycle so
+  # the autonomous loop keeps grinding the debt (not a hard crash: the
+  # heartbeat must stay alive to keep policing).
+  MG=$(/usr/bin/python3 "$QG/scripts/sapo_mandate_gate.py" 2>&1 | head -1)
+  case "$MG" in
+    *"GREEN"*) : ;;
+    *) log "MANDATE-GATE: $MG ($(date -u +%H:%M:%SZ))" ;;
+  esac
+  echo "{\"ts\":\"$(ts)\",\"daemons\":$report,\"hygiene\":\"$HYGIENE\",\"mandate\":\"$MG\"}" > "$STATE"
   log "tick daemons=$report hygiene=$HYGIENE"
   sleep 120
 done
