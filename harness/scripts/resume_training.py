@@ -38,7 +38,7 @@ FIND_LATEST_SH = (
     "| sort -t- -k2 -n | tail -1); "
     "echo LATEST=$latest"
 )
-PGUARD_SH = "pgrep -f 'torchrun|qwen_sft_peft|grpo_trainer' >/dev/null && echo TRAINER_RUNNING || echo TRAINER_DOWN"
+PGUARD_SH = "pgrep -f 'qwen_sft_peft|torchrun.*qwen_sft' >/dev/null && echo TRAINER_RUNNING || echo TRAINER_DOWN"
 COMPILE_SH = (
     "bad=0; for f in /root/work/training/*.py; do "
     "python3 -m py_compile \"$f\" 2>/dev/null || bad=1; done; echo GATE_RC=$bad"
@@ -69,9 +69,15 @@ def compile_gate(box: str = BOX):
 
 
 def launch_cmd(checkpoint: str, run_name: str) -> str:
-    """The setsid resume command (current CLI, not the stale template). <12 lines."""
+    """The setsid resume command (current CLI, not the stale template). <12 lines.
+
+    2026-09-23: first terminate the RETIRED GRPO family (source_of_truth
+    C-9634 — non-authoritative, eval_consumption=REJECTED). The 14:52Z SFT
+    OOM happened because the retired GRPO still held all 8 NPUs. Wait for
+    NPU release before launching the authoritative SFT resume."""
     return (
         f"cd {get('box.repo_nas')} && mkdir -p outputs/{run_name} logs && "
+        f"pkill -f 'grpo_trainer' 2>/dev/null; sleep 20; "
         f"setsid nohup torchrun --nproc_per_node=8 training/qwen_sft_peft.py "
         f"--model-name {get('box.base_model')} "
         f"--train-file data/generated/quantum_finetune_verified_chat_sft_dedup_1k/train_chatml.jsonl "
