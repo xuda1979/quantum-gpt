@@ -1223,12 +1223,24 @@ def compose_brief(goal, card, dep_results=None, heartbeat_path=None, stall_min=N
     # in the brief rather than crash dispatch for every other card.
     acceptance = card.get("acceptance")
     if not acceptance:
-        acc = ("- MALFORMED CARD: no acceptance criteria recorded; complete the "
-               "card only if its title alone describes verifiable work, and "
-               "report the malformed schema in your output")
+        acc = (
+            "- MALFORMED CARD: no acceptance criteria recorded; complete the "
+            "card only if its title alone describes verifiable work, and "
+            "report the malformed schema in your output"
+        )
     else:
         acc = "\n".join(f"- {a}" for a in acceptance)
-    gates = ", ".join(card.get("gates") or []) if card.get("gates") else "none (acceptance still required)"
+    # 2026-09-23 (fix 2): bare card["why"]/card["budget_min"] raised KeyError
+    # on legacy cards (spawn_error 'why' every tick, zero workers spawned —
+    # the same starvation pattern as the 'acceptance' KeyError earlier today).
+    # Fail-closed: degrade to an explicit MALFORMED note in the brief.
+    why = card.get("why") or "(no 'why' recorded — MALFORMED CARD: report this missing field)"
+    budget = card.get("budget_min") or DEFAULT_BUDGET_MIN
+    gates = (
+        ", ".join(card.get("gates") or [])
+        if card.get("gates")
+        else "none (acceptance still required)"
+    )
     dep_note = ""
     if card["deps"]:
         lines = [
@@ -1273,11 +1285,11 @@ Full role rules (read only if needed): harness/lanes/{lane}.md
         lane=card["lane"],
         cid=card["id"],
         title=card["title"],
-        why=card["why"],
+        why=why,
         auth=LANE_AUTHORITY[card["lane"]],
         acc=acc,
         gates=gates,
-        budget=card["budget_min"],
+        budget=budget,
         goal=goal,
         deps=dep_note,
         hb=heartbeat_path or os.path.join("harness/state/agents", "{}.progress".format(card["id"])),
@@ -3845,6 +3857,43 @@ def cmd_tick(_args):
                 f.write(dash)
         except Exception:
             pass  # dashboard publish must never break a tick
+        # ---- detailed report (user mandate 2026-09-23) ----
+        # The harness must deliver detailed information REGULARLY via its own
+        # scripts: event-kind aggregation, exact error payloads, queue schema
+        # audit, ledger freshness, scheduler firings, process audit. Runs
+        # every 3rd tick (~30 min) + on demand via `qgh.py report`.
+        try:
+            _sdir = os.path.join(REPO, "harness", "scripts")
+            if _sdir not in sys.path:
+                sys.path.insert(0, _sdir)
+            import detailed_report as _dr
+
+            if tick_no % 3 == 0:
+                _rd = _dr.collect(window_hours=1)
+                with open(os.path.join(STATE, "REPORT.md"), "w", encoding="utf-8") as f:
+                    f.write(_dr.render(_rd))
+                # one-line digest appended to STATUS.md so the fix-log shows
+                # error counts without opening the report
+                _ev = _rd.get("events")
+                if isinstance(_ev, dict):
+                    _errs = len(_ev.get("errors", []))
+                    _counts = _ev.get("counts", {})
+                    append_line(
+                        os.path.join(STATE, "STATUS.md"),
+                        f"- {now_iso()} report#{tick_no} errors_in_1h={_errs} top_kinds={json.dumps(dict(list(_counts.items())[:5]))}\n",
+                    )
+                    # fail-loud: error-class events present -> dedicated event
+                    if _errs:
+                        event(
+                            STATE,
+                            "report_errors_present",
+                            {
+                                "count": _errs,
+                                "top": _counts.get("spawn_error", 0),
+                            },
+                        )
+        except Exception:
+            pass  # report publish must never break a tick
         append_line(
             os.path.join(STATE, "STATUS.md"),
             f"- {now_iso()} tick#{tick_no} reaped={reaped} {dispatch_note}\n",
@@ -4384,6 +4433,7 @@ def main():
         "heal",
         "review",
         "progress",
+        "report",
     ):
         s = sub.add_parser(name.replace("-", "_") if False else name)
         s.set_defaults(func=globals()["cmd_" + name.replace("-", "_")])
@@ -4986,6 +5036,27 @@ def cmd_progress(_args):
     else:
         print("GOAL NOT YET ACHIEVED")
     print("=" * 60)
+
+
+def cmd_report(_args):
+    """User mandate 2026-09-23: detailed, on-demand harness report.
+
+    Same engine the tick runs every 3rd tick: event-kind aggregation with
+    exact ERROR payloads, queue schema audit, ledger freshness, scheduler
+    firings, process audit."""
+    _sdir = os.path.join(REPO, "harness", "scripts")
+    if _sdir not in sys.path:
+        sys.path.insert(0, _sdir)
+    import detailed_report as _dr
+
+    window = 1
+    if "--window-hours" in sys.argv:
+        try:
+            window = float(sys.argv[sys.argv.index("--window-hours") + 1])
+        except (IndexError, ValueError):
+            pass
+    d = _dr.collect(window_hours=window)
+    print(_dr.render(d))
 
 
 @_queue_locked
