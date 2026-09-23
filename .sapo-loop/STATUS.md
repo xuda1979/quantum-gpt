@@ -22287,3 +22287,15 @@ C-9603 monitor: box-verified ASI3 trainer run=sapo-27b-ai-20260921T033826 STEP33
 - ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
 
 - 2026-09-23 11:55 CST — TRAINING-RESUME MANDATE EXECUTED (user: "if training is not resumed, harness must work hard to resume ASAP"). Found 12h stall: self_resume_guardian PGUARD matched retired GRPO procs → reported TRAINER_RUNNING while authoritative SFT sat dead (NPU OOM 14:52Z, because SFT launched into GRPO-held NPUs). FIXED: PGUARD now authoritative-SFT-only; launch_cmd pkills retired GRPO first + 20s wait; killed lingering GRPO zombie 93153 (held all 8 NPUs); NPU table verified empty; guardian re-dispatched → SFT RESUMED and auto-cycling the 507015 treadmill (runs 111711/112117/113425/114722, step-7 checkpoints banked each cycle). Also fixed NEW tick job job_3e87342df30b (B-044 re-arm recreated the SAME missing '-p huanxin -m dp4' bug — 02:00Z+02:10Z firings died 'Not logged in'; now fixed, verified 20-min real work cycle 02:26-02:46Z). V7 jobs (5, other projects) same bug, same fix. TICK JOB GENERATOR SYSTEMIC BUG: every CronCreate from the MCP tool omits provider flags — file as card; manager must always hand-patch '-p huanxin -m dp4' after CronCreate. Commits: guardian fix (10 tests), tick job fixes (live, uncommitted — cron jobs dir is outside repo).
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. USER ACTION likely required (console re-login) if authDrift; keeper cannot fix auth.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. USER ACTION likely required (console re-login) if authDrift; keeper cannot fix auth.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. USER ACTION likely required (console re-login) if authDrift; keeper cannot fix auth.
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. USER ACTION likely required (console re-login) if authDrift; keeper cannot fix auth.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. USER ACTION likely required (console re-login) if authDrift; keeper cannot fix auth.
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. USER ACTION likely required (console re-login) if authDrift; keeper cannot fix auth.
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK

@@ -46,6 +46,7 @@ WORKER_ENV_FILES = [
 ]
 CRON_MARK = "qgh.py tick"
 TICK_LOCK = os.path.join(STATE, "locks", "tick.lock")
+FLEET_LOCK = os.path.join(STATE, "locks", "FLEET.json.lock")
 TICK_STALE_SEC = 1800
 QUEUE_LOCK = os.path.join(STATE, "locks", "QUEUE.json.lock")
 SUCCESS_STALE_SEC = 2400
@@ -583,6 +584,13 @@ def rearm_ghost_running_cards(queue, fleet, live_fn=None, terminal_ids=None):
             continue
         if c["id"] in live_cards:
             continue  # has a live worker — genuinely running, leave it
+        # C-9631 defense-in-depth: even with no live FLEET row, a card whose
+        # claimed_by pid is ALIVE has a live worker. A missing fleet row is a
+        # lost-update artifact (see FLEET_LOCK), NEVER evidence the worker
+        # died — re-arming here spawns a duplicate worker on live work.
+        claimed = c.get("claimed_by")
+        if claimed and str(claimed).strip() and str(claimed) != "pending" and pid_alive(claimed):
+            continue
         # ghost: re-arm. Environmental — a dead/missing worker is not the
         # card's fault, so do NOT strike (bounce_count unchanged): a ghost
         # rearm must never push a healthy card toward the dead-card threshold.
@@ -719,6 +727,22 @@ def auto_cleanup_stale_running(state_dir):
     worker failed) so a fresh dispatch can happen.
     Returns count of cleaned-up cards.
     """
+    # C-9631: queue+fleet read-modify-write, same lost-update race as
+    # reap/dispatch. Serialize under FLEET_LOCK; on refusal, return 0 (the
+    # next tick retries — cleanup is idempotent, refusal is never data loss).
+    try:
+        _lock = acquire_lock(FLEET_LOCK, stale_s=QUEUE_STALE_SEC)
+    except Exception:
+        _lock = None
+    if _lock is None:
+        return 0
+    try:
+        return _auto_cleanup_stale_running_locked(state_dir)
+    finally:
+        release_lock(FLEET_LOCK, _lock)
+
+
+def _auto_cleanup_stale_running_locked(state_dir):
     try:
         queue = load_queue(state_dir)
         cleaned = 0
@@ -2731,6 +2755,25 @@ def cmd_heartbeat(args):
 
 
 def _reap():
+    # C-9631 (2026-09-23): reap mutates BOTH QUEUE.json and FLEET.json in an
+    # interleaved load->mutate->save cycle, unlocked. Overlapping ticks
+    # (launchd every 120s + heal + manual runs) lost each other's fleet rows:
+    # dispatch saved entry_A, a concurrent reap's stale fleet copy saved over
+    # it, rearm_ghost_running_cards then saw the card "running" with no live
+    # fleet row and re-armed it every tick -> C-9631 re-dispatched ~15 times
+    # (8+ live claude workers at once, each re-spawned every ~2 min). All
+    # queue+fleet mutations in reap now serialize under FLEET_LOCK.
+    fleet_lock = acquire_lock(FLEET_LOCK, stale_s=QUEUE_STALE_SEC)
+    if fleet_lock is None:
+        event(STATE, "reap_lock_refused", {"why": "concurrent reap/dispatch holds FLEET_LOCK"})
+        return 0
+    try:
+        return _reap_locked()
+    finally:
+        release_lock(FLEET_LOCK, fleet_lock)
+
+
+def _reap_locked():
     queue = load_queue(STATE)
     fleet = load_fleet(STATE)
     goal = load_goal(STATE)
@@ -4663,6 +4706,24 @@ def cmd_card_requeue(args):
 
 
 def cmd_dispatch(args):
+    # C-9631: dispatch appends fleet rows + claims queue cards in an
+    # interleaved load->mutate->save cycle. Same lost-update race as reap
+    # (see _reap) — a concurrent reap's stale fleet copy vaporized fresh
+    # dispatch entries, producing the card_ghost_rearmed respawn loop.
+    # Serialize the whole dispatch under FLEET_LOCK (same lease protocol
+    # as reap: a dead/stale holder is taken over, a live one is refused).
+    fleet_lock = acquire_lock(FLEET_LOCK, stale_s=QUEUE_STALE_SEC)
+    if fleet_lock is None:
+        event(STATE, "dispatch_lock_refused", {"why": "concurrent reap/dispatch holds FLEET_LOCK"})
+        print("dispatch skipped: FLEET_LOCK held by concurrent reap/dispatch")
+        return
+    try:
+        _dispatch_locked(args)
+    finally:
+        release_lock(FLEET_LOCK, fleet_lock)
+
+
+def _dispatch_locked(args):
     goal = load_goal(STATE)
     queue = load_queue(STATE)
     fleet = load_fleet(STATE)

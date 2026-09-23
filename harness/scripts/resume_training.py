@@ -41,7 +41,7 @@ FIND_LATEST_SH = (
 PGUARD_SH = "pgrep -f 'qwen_sft_peft|torchrun.*qwen_sft' >/dev/null && echo TRAINER_RUNNING || echo TRAINER_DOWN"
 COMPILE_SH = (
     "bad=0; for f in /root/work/training/*.py; do "
-    "python3 -m py_compile \"$f\" 2>/dev/null || bad=1; done; echo GATE_RC=$bad"
+    'python3 -m py_compile "$f" 2>/dev/null || bad=1; done; echo GATE_RC=$bad'
 )
 
 
@@ -68,16 +68,22 @@ def compile_gate(box: str = BOX):
     return ("GATE_RC=0" in r.get("stdout", "")) if up else False, up
 
 
-def launch_cmd(checkpoint: str, run_name: str) -> str:
+def launch_cmd(checkpoint: str, run_name: str, checkpoint_interval_seconds: int = 300) -> str:
     """The setsid resume command (current CLI, not the stale template). <12 lines.
 
-    2026-09-23: first terminate the RETIRED GRPO family (source_of_truth
-    C-9634 — non-authoritative, eval_consumption=REJECTED). The 14:52Z SFT
-    OOM happened because the retired GRPO still held all 8 NPUs. Wait for
-    NPU release before launching the authoritative SFT resume."""
+    2026-09-23 C-9631: clear leaked NPU device state BEFORE launching the
+    authoritative SFT resume to break the recurring 507015 (ACL stream sync
+    fail) treadmill. Each 507015 crash leaks device semaphores/HBM; relaunch
+    reuses polluted devices and crashes again at the same step. Kill BOTH the
+    residual SFT and the retired GRPO families (the 14:52Z SFT OOM was
+    retired-GRPO holding all 8 NPUs), wait for NPU release, then launch.
+    Order is covered by test_resume_npu_reset_before_launch."""
     return (
         f"cd {get('box.repo_nas')} && mkdir -p outputs/{run_name} logs && "
-        f"pkill -f 'grpo_trainer' 2>/dev/null; sleep 20; "
+        f"pkill -f 'grpo_trainer' 2>/dev/null; "
+        f"npu-smi info >/dev/null 2>&1; "
+        f"pkill -f 'qwen_sft_peft' 2>/dev/null; sleep 20; "
+        f"ASCEND_LAUNCH_BLOCKING=1 "
         f"setsid nohup torchrun --nproc_per_node=8 training/qwen_sft_peft.py "
         f"--model-name {get('box.base_model')} "
         f"--train-file data/generated/quantum_finetune_verified_chat_sft_dedup_1k/train_chatml.jsonl "
@@ -88,7 +94,7 @@ def launch_cmd(checkpoint: str, run_name: str) -> str:
         "--learning-rate 2e-5 --lora-rank 16 --lora-alpha 32 --lora-dropout 0.0 "
         "--target-modules q_proj v_proj o_proj gate_proj up_proj down_proj "
         "--train-on-completions-only --gradient-checkpointing "
-        "--max-trainable-parameters 500000000 --checkpoint-interval-seconds 300 "
+        f"--max-trainable-parameters 500000000 --checkpoint-interval-seconds {checkpoint_interval_seconds} "
         "--overwrite-output-dir "
         f"> logs/{run_name}.log 2>&1 & echo LAUNCHED pid=$!"
     )
@@ -112,7 +118,7 @@ def boot_verify(box: str, run_name: str) -> dict:
     return {"alive": False, "pid": pid if "pid" in dir() else "", "log_stages": stages}
 
 
-def resume(dry_run: bool = False) -> dict:
+def resume(dry_run: bool = False, checkpoint_interval_seconds: int = 300) -> dict:
     """Gate chain + launch + boot-verify. <20 lines."""
     run_name = f"sft-27b-q38-v10-resume-{time.strftime('%Y%m%dT%H%M%SZ')}"
     latest = find_latest_checkpoint()
@@ -129,7 +135,7 @@ def resume(dry_run: bool = False) -> dict:
         return {**result, "status": "BOX_DOWN"}
     if not cok:
         return {**result, "status": "BLOCKED_COMPILE_GATE"}
-    cmd = launch_cmd(latest, run_name)
+    cmd = launch_cmd(latest, run_name, checkpoint_interval_seconds=checkpoint_interval_seconds)
     if dry_run:
         return {**result, "status": "DRY_RUN", "command": cmd}
     r = run_box(BOX, cmd, timeout=30)
@@ -145,8 +151,14 @@ def main() -> None:
     """Dispatch. <6 lines."""
     ap = argparse.ArgumentParser(description="Resume canonical training thread")
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument(
+        "--checkpoint-interval-seconds",
+        type=int,
+        default=300,
+        help="C-9629/C-9631 507015 mitigation: 0 = save only at end (breaks step-10 crash)",
+    )
     args = ap.parse_args()
-    print(json.dumps(resume(args.dry_run), indent=2, default=str))
+    print(json.dumps(resume(args.dry_run, args.checkpoint_interval_seconds), indent=2, default=str))
 
 
 if __name__ == "__main__":

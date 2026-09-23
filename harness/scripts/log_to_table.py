@@ -27,23 +27,40 @@ REPO = Path(__file__).resolve().parent.parent.parent
 STATE = REPO / "harness" / "state"
 
 
-def parse_status_md(path: Path, tail_lines: int = 50) -> list[dict]:
-    """Parse STATUS.md tick lines into structured rows."""
+def parse_status_md(path: Path, tail_lines: int = 2000) -> list[dict]:
+    """Parse STATUS.md timestamped entries into structured rows.
+
+    2026-09-23 fix: default tail was 50 lines — the log's tail is usually
+    daemon-flap noise (BOX-EXEC lines), so the parser returned NO DATA while
+    hundreds of timestamped entries sat just above the window. Window is now
+    2000 lines and every '- <date> <time> <TZ>' line parses (not just the
+    'tick #' format)."""
     rows = []
     lines = path.read_text(errors="replace").splitlines()
     for line in lines[-tail_lines:]:
         if not line.startswith("- 20"):
             continue
-        m = re.match(r"- (\d{4}-\d{2}-\d{2} \d{2}:\d{2}) CST — tick #(\d+): (.*)", line)
-        if not m:
+        m = re.match(r"- (\d{4}-\d{2}-\d{2} \d{2}:\d{2}) (\S+) — tick #(\d+): (.*)", line)
+        if m:
+            rows.append(
+                {
+                    "timestamp": m.group(1),
+                    "tz": m.group(2),
+                    "tick": int(m.group(3)),
+                    "summary": m.group(4)[:120],
+                }
+            )
             continue
-        rows.append(
-            {
-                "timestamp": m.group(1),
-                "tick": int(m.group(2)),
-                "summary": m.group(3)[:120],
-            }
-        )
+        # General timestamped entry (not tick-formatted): keep the first 120 chars
+        m = re.match(r"- (\d{4}-\d{2}-\d{2} \d{2}:\d{2}) (\S+) — (.*)", line)
+        if m:
+            rows.append(
+                {
+                    "timestamp": m.group(1),
+                    "tz": m.group(2),
+                    "summary": m.group(3)[:120],
+                }
+            )
     return rows
 
 

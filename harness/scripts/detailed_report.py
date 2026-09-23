@@ -58,6 +58,12 @@ ERROR_KINDS = {
     "pid_reuse_detected",
     "ghost_heartbeat",
     "dep_blocker_requeued",
+    # C-9631: concurrent reap/dispatch lock contention + ghost-rearm respawn
+    # loop signatures. A live claimed_by with a rearm = duplicate worker; a
+    # burst of card_ghost_rearmed + dispatched on one card = respawn loop.
+    "reap_lock_refused",
+    "dispatch_lock_refused",
+    "card_ghost_rearmed",
 }
 ERROR_RE = re.compile(r"(_error|_dead|_failed)$")
 
@@ -112,6 +118,8 @@ def collect_events(window_hours):
     counts = Counter()
     errors = []  # [(ts, kind, payload_str)] for error-class kinds
     samples = {}  # kind -> most recent non-error payload
+    dispatched_by_card = {}  # C-9631 respawn-loop detector
+    rearmed_by_card = {}
     in_window = 0
     total = len(lines)
     for ln in lines:
@@ -132,6 +140,18 @@ def collect_events(window_hours):
             errors.append((ev.get("ts", "?"), kind, detail_s[:200]))
         else:
             samples[kind] = (ev.get("ts", "?"), detail_s[:120])
+        # C-9631 respawn-loop detector inputs: per-card dispatched/rearmed tallies
+        _card = detail.get("card") or detail.get("id")
+        if isinstance(_card, str):
+            if kind == "dispatched":
+                dispatched_by_card[_card] = dispatched_by_card.get(_card, 0) + 1
+            elif kind == "card_ghost_rearmed":
+                rearmed_by_card[_card] = rearmed_by_card.get(_card, 0) + 1
+    respawn_loops = [
+        {"card": c, "dispatched": dispatched_by_card[c], "ghost_rearmed": rearmed_by_card[c]}
+        for c in rearmed_by_card
+        if rearmed_by_card[c] >= 2 and dispatched_by_card.get(c, 0) >= 3
+    ]
     return {
         "total_lines": total,
         "in_window": in_window,
@@ -139,6 +159,7 @@ def collect_events(window_hours):
         "counts": dict(counts.most_common()),
         "errors": errors[-40:],  # cap; newest last
         "samples": samples,
+        "respawn_loops": sorted(respawn_loops, key=lambda r: -r["dispatched"]),
     }
 
 
@@ -303,6 +324,19 @@ def render(d):
         else:
             L.append("- none")
         L.append("")
+        # C-9631 respawn-loop detector: a card dispatched 3+ times AND ghost-
+        # rearmed 2+ times in the window is in a duplicate-worker respawn
+        # loop (lost fleet rows / ghost rearm). This loop burned 15+ claude
+        # spawns on C-9631 before anyone noticed.
+        loops = ev.get("respawn_loops", [])
+        if loops:
+            L.append("**RESPAWN LOOPS (duplicate workers being spawned on the same card):**")
+            L.append("")
+            L.append("| card | dispatched | ghost_rearmed |")
+            L.append("|---|---|---|")
+            for r in loops[:10]:
+                L.append(f"| {r['card']} | {r['dispatched']} | {r['ghost_rearmed']} |")
+            L.append("")
         L.append(
             "**Event kind counts (window):** "
             + (", ".join(f"{k}={v}" for k, v in ev.get("counts", {}).items()) or "none")
