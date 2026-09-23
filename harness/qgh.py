@@ -3913,8 +3913,15 @@ def cmd_tick(_args):
 
             if tick_no % 3 == 0:
                 _rd = _dr.collect(window_hours=1)
+                _report_md = _dr.render(_rd)
+                # publish to BOTH the internal state dir AND the repo root —
+                # generation is not delivery: the standup had to move to root
+                # for the same reason (see render_progress docstring). A report
+                # buried in state/ is a report the user never sees.
                 with open(os.path.join(STATE, "REPORT.md"), "w", encoding="utf-8") as f:
-                    f.write(_dr.render(_rd))
+                    f.write(_report_md)
+                with open(os.path.join(REPO, "REPORT.md"), "w", encoding="utf-8") as f:
+                    f.write(_report_md)
                 # one-line digest appended to STATUS.md so the fix-log shows
                 # error counts without opening the report
                 _ev = _rd.get("events")

@@ -401,5 +401,8 @@ def render_dashboard(
 
     # ---- FOOTER ----
     L.append("---")
-    L.append(f"_Published by `qgh.py tick` #{tick_no}. Full events: `harness/state/EVENTS.jsonl`._")
+    L.append(
+        f"_Published by `qgh.py tick` #{tick_no}. Full events: `harness/state/EVENTS.jsonl`. "
+        "Detailed whole-system report (every 3rd tick): `REPORT.md`._"
+    )
     return "\n".join(L) + "\n"
