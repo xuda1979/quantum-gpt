@@ -116,6 +116,48 @@ STALL_MIN = 10  # heartbeat staleness that counts as a stall (2min ticks)
 MAX_BUDGET_MIN = 90
 
 
+def _is_placeholder_acceptance(item):
+    """True if an acceptance item is junk/placeholder text (C-9712).
+
+    MIRROR of harness_lib._is_placeholder_acceptance.  C-0001 was minted with
+    acceptance=['test acceptance'] -- 15 chars, so it slipped past the C-9001
+    length-only guard -- and kept re-dispatching into the evaluator lane
+    because it was a content-free placeholder no worker could complete.
+    Targeted rule: reject exact/standalone placeholder phrases and single junk
+    tokens, without over-matching real acceptance criteria.
+    """
+    if not item:
+        return True
+    s = re.sub(r"[^a-z]+", " ", item.strip().lower()).strip()
+    if not s:
+        return True
+    words = s.split()
+    place_phrases = {
+        "test acceptance",           # exact C-0001 regression
+        "this is a test",
+        "test title",
+        "test acceptance criteria",
+        "this is a placeholder",
+        "sample acceptance",
+        "placeholder acceptance",
+        "lorem ipsum",
+        "fix me",
+        "example acceptance",
+        "dummy acceptance criteria",
+        "todo fix this later",
+        "this is a placeholder",
+    }
+    if s in place_phrases:
+        return True
+    if any(ph in s for ph in place_phrases if ph and " " in ph):
+        return True
+    single_tokens = {"test", "placeholder", "dummy", "todo", "lorem",
+                     "ipsum", "sample", "mock", "fixme", "example"}
+    if len(words) == 1 and words[0] in single_tokens:
+        return True
+    return False
+
+
 def new_card(
     title,
     lane,
@@ -153,6 +195,16 @@ def new_card(
             raise ValueError(
                 f"card acceptance item too short ({len(item) if item else 0} chars); "
                 "minimum 8 characters required"
+            )
+    # C-9712: reject placeholder acceptance text (mirror of harness_lib.new_card).
+    # C-0001 was minted with acceptance=['test acceptance'] (15 chars -- passes
+    # the 8-char C-9001 guard) and kept re-dispatching into the evaluator lane
+    # because it was a content-free placeholder no worker could complete.
+    for item in acceptance:
+        if _is_placeholder_acceptance(item):
+            raise ValueError(
+                f"card acceptance item appears to be placeholder/junk text: "
+                f"{item!r}; use real, schedulable done-criteria"
             )
     return {
         "id": card_id,  # assigned by add_card
@@ -976,6 +1028,49 @@ def unretire_card(queue, card_id, reason):
     return True, ("unretired dead->ready (bounce_count reset 0, rationale recorded)")
 
 
+
+def retire_voided_card(queue, card_id, reason):
+    """C-9720: file retirement for a trainer-ops card whose engine premise is
+    VOID (e.g. GRPO sapo-27b-ai retired C-9621; SFT_peft_resume is the single
+    authoritative engine per C-9706 adjudication) so it can never be
+    re-dispatched to fire a retired engine.
+
+    Fail-closed: only a card in status 'running' is touched; any other status
+    (ready/bounced/blocked/done/dead) is refused so we never silently flip a
+    card the scheduler is legitimately handling. Sets status='dead',
+    retired_utc, and records the void rationale in result. Returns (ok, reason).
+    """
+    matches = [c for c in queue["cards"] if c["id"] == card_id]
+    if not matches:
+        return False, "no such card: {}".format(card_id)
+    if len(matches) > 1:
+        return False, "ambiguous card id {}: {} queue entries".format(card_id, len(matches))
+    c = matches[0]
+    if c["status"] != "running":
+        return False, (
+            "card {} status is {!r}, not running: retirement refused (fail closed)".format(
+                card_id, c["status"]
+            )
+        )
+    # Fail closed: ONLY retire a card whose engine premise is actually void
+    # (GRPO-flagged launch). A card on the authoritative SFT path must never
+    # be silently retired by this reconciliation facility.
+    if "grpo" not in (c.get("title") or "").lower():
+        return False, (
+            "card {} is not a GRPO-premise card: retirement refused (fail closed)".format(
+                card_id
+            )
+        )
+    c["status"] = "dead"
+    c["retired_utc"] = now_iso()
+    note = "RETIRED: trainer-ops premise void; single engine of record is SFT_peft_resume"
+    if reason:
+        note = note + " | " + reason
+    c["result"] = (c.get("result") or "").strip()
+    c["result"] = note if not c["result"] else (c["result"] + chr(10) + note)
+    return True, "card {} retired (status=dead): {}".format(card_id, note)
+
+
 # ----------------------------------------------------------------------------- fleet# ----------------------------------------------------------------------------- fleet
 def load_fleet(state_dir):
     return load_json(os.path.join(state_dir, "FLEET.json"), {"agents": []})
@@ -1666,6 +1761,10 @@ def scan_verdicts(repo_root, limit=12):
             if d.get("superseded") is True:
                 # C-9532: deprecated verdict can never retire the goal.
                 continue
+            if d.get("_DISCLAIMER"):
+                # C-9744: synthetic/demo fixture composition (explicit
+                # _DISCLAIMER field); never a goal candidate.
+                continue
             d["_file"] = os.path.basename(p)
             verdicts.append(d)
     return verdicts
@@ -1965,6 +2064,12 @@ def goal_done(goal, verdicts):
         manifest = {}  # C-0031 fail closed: unreadable manifest rejects all
     for v in verdicts:
         if not isinstance(v, dict):
+            continue
+        if v.get("_DISCLAIMER"):
+            # C-9744: a verdict carrying a truthy _DISCLAIMER is a
+            # SYNTHETIC/DEMO fixture composition (e.g. C-9742's
+            # canonical-path demo), NOT a real adapter measurement. It
+            # can NEVER retire the goal. Fail-closed.
             continue
         if str(v.get("pass_adapter", "")) != target:
             continue
@@ -2911,6 +3016,10 @@ def _reap_locked():
         if key in seen_reaps:
             a["status"] = "stopped"
             continue
+        # C-9703: True when this reap re-arms the card for an env-blocked
+        # BLOCKED verdict; guards the per-card success-reset below so an
+        # env-blocked card's counter/backoff is not cleared in the same reap.
+        _env_blocked_requeue = False
         card = find_card(queue, a.get("card"))
         alive = pid_alive(a.get("pid"))
         # PID-REUSE GUARD: a recorded lstart that no longer matches means the
@@ -3036,9 +3145,24 @@ def _reap_locked():
                     tail[-1] if tail else "",
                     None if ok else reason,
                 )
-                if not ok:
+                if ok:
+                    # C-9680: a DONE-verdict worker that passed gates LANDED.
+                    # The worker usually exits right after writing RESULT, so
+                    # by the time the reaper checks liveness 2994 labelled it
+                    # outcome="dead" — a fleet-thrash measurement artifact. A
+                    # landed worker is NOT dead; re-classify as "done" and emit
+                    # the canonical terminal `card_done` event the
+                    # retrospective throughput signal (_throughput_findings)
+                    # counts. Without it the fleet-health metric read done=0
+                    # forever and the harness auto-filed false "fleet thrash"
+                    # cards (C-9680, C-9652) even while workers were landing.
+                    outcome = "done"
+                    event(STATE, "card_done", {"card": card["id"], "pid": a.get("pid")})
+                else:
                     event(STATE, "gate_bounced", {"card": card["id"], "reason": reason})
+                    outcome = "bounced"
         elif verdict == "BLOCKED":
+            outcome = "blocked"
             if card:
                 if is_gate_skip_blocked(text):
                     # C-9085: gate-SKIP BLOCKED = WAITING on the window
@@ -3065,10 +3189,23 @@ def _reap_locked():
                         card["claimed_utc"] = None
                         card["deadline_utc"] = None
                         card["requeued_utc"] = now_iso()
+                        _env_blocked_requeue = True
                         event(STATE, "env_blocked_requeued", {"card": card["id"]})
+                        # C-9703: a card that keeps returning BLOCKED-with-env-
+                        # signature was being re-armed indefinitely (fired
+                        # env_blocked_requeued 5x in a window, no auto-isolation).
+                        # Count each consecutive env-blocked requeue through the
+                        # SAME per-card C-9126 breaker used for spawn-death
+                        # (environmental=True so the global backoff/other cards
+                        # are untouched); at threshold the card enters per-card
+                        # backoff and stops looping in the window.
+                        _ops = load_ops(STATE)
+                        note_spawn_result(STATE, _ops, ok=False, card=card["id"], environmental=True)
+                        save_ops(STATE, _ops)
                     else:
                         release_card(card, "bounced", tail[-1] if tail else "", "worker blocked")
         elif verdict == "PARTIAL" and over:
+            outcome = "partial"
             if card:
                 release_card(
                     card,
@@ -3091,7 +3228,7 @@ def _reap_locked():
                 # "no RESULT verdict".
                 reason = bounce_reason(verdict, outcome, over)
                 release_card(card, "bounced", (tail[-1] if tail else ""), reason)
-        if not environmental:
+        if not environmental and not _env_blocked_requeue:
             ops = load_ops(STATE)
             _cid = a.get("card")
             if card_consecutive_spawn_fails(ops, _cid) or card_backoff_active(ops, _cid):
@@ -3588,6 +3725,148 @@ def training_watch_eval_truth():
         return None
 
 
+# C-9679: box liveness ports, centralized (single source of truth). The
+# exec-required boxes the tick probes for /exec round-trip liveness.
+_BOX_EXEC_PORTS = (("ASI1", 20646), ("ASI2", 19004), ("ASI3", 20653))
+
+
+def box_exec_probe(port, attempts=2, sleep_s=5, urlopen_fn=None, json_mod=None):
+    """C-9679: prove a box answers /exec with a RETRYING echo round-trip.
+
+    The old single-shot 10s probe false-alarmed box_exec_dead when a box's
+    exec queue was transiently saturated (running eval/training) - the box is
+    busy, misses one timeout, and is wrongly declared dead. That class of
+    false positive repeated constantly (82 box_exec_dead events in the
+    ledger; >6 in a single filing window). This retries with a short sleep so
+    a box is declared dead ONLY when every attempt fails - box_exec_dead now
+    means "confirmed persistently unresponsive", not "one probe was slow".
+
+    Returns True iff any attempt round-trips the BOX_ALIVE_PROBE echo.
+    urlopen_fn/json_mod are injectable for deterministic unit tests.
+    """
+    import json as _json
+    import time as _time
+    import urllib.request as _url
+
+    json_mod = json_mod or _json
+    urlopen_fn = urlopen_fn or _url.urlopen
+    for _attempt in range(max(1, attempts)):
+        try:
+            _r = urlopen_fn(
+                _url.Request(
+                    "http://127.0.0.1:%d/exec" % port,
+                    data=json_mod.dumps({"command": "echo BOX_ALIVE_PROBE"}).encode(),
+                    headers={"Content-Type": "application/json"},
+                ),
+                timeout=10,
+            )
+            if "BOX_ALIVE_PROBE" in json_mod.loads(_r.read()).get("output", ""):
+                return True
+        except Exception:
+            pass
+        if _attempt < attempts - 1 and sleep_s:
+            _time.sleep(sleep_s)
+    return False
+
+
+# C-9702: DETECTION -> FIX wiring. The old handler only WARNED when a box was
+# confirmed persistently exec-dead and relied on the separately-scheduled
+# reconciler loop to eventually restore the daemon. That latency gap let a dead
+# box stay dead for many ticks and the retrospective re-filed a new watcher card
+# each window (box_exec_dead fired 11x). Now the SAME code path that detects the
+# dead box also auto-kicks the canonical reconciler remedy.
+def _box_exec_kick_cmd(box_name):
+    """The canonical auto-fix command: kick daemon_reconciler for one box."""
+    return [
+        sys.executable,
+        os.path.join(REPO, "harness", "scripts", "daemon_reconciler.py"),
+        "--box",
+        box_name,
+    ]
+
+
+def box_exec_autofix(box_name, port=None, dead=True, kick_fn=None):
+    """C-9702: automatic detection->fix for a persistently exec-dead box.
+
+    When a box is confirmed dead (dead=True), auto-kick the reconciler as the
+    remedy so the exec transport recovers without waiting for the next
+    reconciler cycle. dead=False (healthy) fires no kick. Returns the kick
+    action dict ({}) when nothing is kicked. kick_fn is injectable for tests.
+    """
+    if not dead:
+        return {}
+    if kick_fn is None:
+
+        def kick_fn(b):
+            try:
+                _proc = subprocess.run(
+                    _box_exec_kick_cmd(b),
+                    capture_output=True,
+                    text=True,
+                    timeout=90,
+                )
+                return {"action": "reconciler_kick", "exit": _proc.returncode}
+            except subprocess.TimeoutExpired:
+                return {"action": "reconciler_kick", "exit": -1, "error": "timeout"}
+            except Exception as _e:  # strongest fix lives: never break the tick
+                return {"action": "reconciler_kick", "exit": -1, "error": str(_e)}
+
+    # C-9727 crash-isolation (C-9655): the autofix runs inside the tick loop and
+    # must NEVER break the tick, no matter how kick_fn behaves. A raising kick_fn
+    # (or one that returns a non-dict) degrades to a fail-closed error dict.
+    try:
+        _res = kick_fn(box_name)
+        if isinstance(_res, dict):
+            return _res
+        return {"action": "reconciler_kick", "exit": -1, "error": "non-dict kick result"}
+    except Exception as _e:
+        return {"action": "reconciler_kick", "exit": -1, "error": str(_e)}
+
+
+
+
+def box_health_alive(port, urlopen_fn=None, json_mod=None):
+    """C-9727: True iff the box answers /health (process is up).
+    /health is a fast non-queueing endpoint - unlike /exec, it does not
+    wait behind a saturated exec queue. A box that answers /health is
+    ALIVE (possibly busy); only a box that does NOT answer /health and
+    does NOT answer /exec is genuinely exec-dead. Never raises."""
+    import json as _json, urllib.request as _url
+    json_mod = json_mod or _json
+    uf = urlopen_fn or _url.urlopen
+    try:
+        uf(_url.Request("http://127.0.0.1:%d/health" % port), timeout=5)
+        return True
+    except Exception:
+        return False
+
+
+def box_exec_dead_gate(port, exec_ok_fn=None, health_alive_fn=None):
+    """C-9727: True ONLY when a box is genuinely exec-dead.
+    Systemic fix for the 7x/window false alarms: the old check declared
+    box_exec_dead whenever the QUEUE-BASED /exec echo timed out, so a
+    box whose exec queue was saturated with a heavy command (eval leg,
+    find over large dirs) was falsely declared dead, then C-9702's
+    autofix kicked the reconciler (a no-op on a live-but-busy box), and
+    the box self-recovered when the queue drained - re-firing dead at
+    the next burst. A box is dead ONLY when BOTH the /exec echo fails
+    AND /health is unreachable. If /health answers, the box is alive.
+    Never raises (crash-isolated, C-9655). exec_ok_fn/health_alive_fn
+    injectable for deterministic unit tests."""
+    exec_ok = exec_ok_fn
+    if exec_ok is None:
+        exec_ok = lambda p: box_exec_probe(p, attempts=2)
+    health_alive = health_alive_fn
+    if health_alive is None:
+        health_alive = lambda p: box_health_alive(p)
+    try:
+        if exec_ok(port):
+            return False          # exec echo works -> alive, done
+        if health_alive(port):
+            return False          # /health answers -> ALIVE (busy), NOT dead
+        return True               # exec AND health both dead -> genuinely dead
+    except Exception:
+        return True               # fail-closed: probe error -> assume dead
 def training_watch():
     """Full-training-process monitor (C-9556): fetch metrics tail from the
     live ASI3 run, compute alarms (DEAD-SIGNAL/NO-OP/PASS-RATE-ZERO/LOG-STALE/
@@ -3638,17 +3917,27 @@ def training_watch():
             b"ev_small=[{'step':r.get('step'),'passed':bool(r.get('passed'))} for r in ev_rows]\n"
             b"print(json.dumps({'run':os.path.basename(d),'eval_rows':ev_small}))\n"
         ).decode()
-        _push = _url.urlopen(
-            _url.Request(
-                "http://127.0.0.1:20653/exec",
-                data=_json.dumps(
-                    {"command": f"echo {_script_b64} | base64 -d > /tmp/tw_summary.py"}
-                ).encode(),
-                headers={"Content-Type": "application/json"},
-            ),
-            timeout=15,
-        )
-        _push.read()
+        # C-9688 (fail-closed): a down/timing-out exec box is a NORMAL measured
+        # condition, not a crash. Guard the script-push write so a transport
+        # failure degrades to the TRAINING-UNMEASURABLE path below instead of
+        # propagating to the outer except (which fired training_watch_error 261x
+        # in the ledger with NO auto-fix). d already defaults to None below, so
+        # the fail-closed alarm fires and training_watch never raises.
+        try:
+            _push = _url.urlopen(
+                _url.Request(
+                    "http://127.0.0.1:20653/exec",
+                    data=_json.dumps(
+                        {"command": f"echo {_script_b64} | base64 -d > /tmp/tw_summary.py"}
+                    ).encode(),
+                    headers={"Content-Type": "application/json"},
+                ),
+                timeout=15,
+            )
+            _push.read()
+        except Exception:
+            # keep d = None -> falls through to TRAINING-UNMEASURABLE alarm
+            pass
 
         def _fetch_summary():
             r = _url.urlopen(
@@ -3759,31 +4048,32 @@ def training_watch():
         # --- box liveness: /health "ready" can LIE (daemon up, session dead).
         # Only an /exec echo round-trip proves the box answers. Alarm
         # BOX-EXEC-DEAD when exec fails (deduped via ops state).
-        for _name, _port in (("ASI1", 20646), ("ASI2", 19004), ("ASI3", 20653)):
-            try:
-                _r = _url.urlopen(
-                    _url.Request(
-                        f"http://127.0.0.1:{_port}/exec",
-                        data=_json.dumps({"command": "echo BOX_ALIVE_PROBE"}).encode(),
-                        headers={"Content-Type": "application/json"},
-                    ),
-                    timeout=10,
-                )
-                _ok = "BOX_ALIVE_PROBE" in _json.loads(_r.read()).get("output", "")
-            except Exception:
-                _ok = False
+        for _name, _port in _BOX_EXEC_PORTS:
+            # C-9679: retry-with-backoff before declaring dead - a transiently
+            # busy box (exec queue saturated) must NOT be falsely box_exec_dead.
+            _ok = not box_exec_dead_gate(_port)
             _ops3 = load_ops(STATE)
             _key = f"box_exec_dead_{_name}"
             if not _ok:
                 if not _ops3.get(_key):
                     _ops3[_key] = True
                     save_ops(STATE, _ops3)
+                    # C-9702: DETECTION -> FIX in the same path. Auto-kick the
+                    # canonical reconciler remedy; box_exec_dead now triggers
+                    # automatic remediation, not just a warning. Crash-isolated
+                    # (C-9655): a kick failure degrades to the warning and never breaks the tick.
+                    _kick = box_exec_autofix(_name, port=_port)
+                    _kick_txt = (
+                        f"auto-fix reconciler_kick exit={_kick.get('exit')}"
+                        if _kick
+                        else f"user action required"
+                    )
                     append_status_line(
                         f"- ⚠️ BOX-EXEC-DEAD {_name}: exec round-trip FAILED — "
-                        f"box cannot work. USER ACTION likely required "
-                        f"(console re-login) if authDrift; keeper cannot fix auth."
+                        f"box cannot work. {_kick_txt}."
                     )
-                    event(STATE, "box_exec_dead", {"box": _name})
+                    event(STATE, "box_exec_dead", {"box": _name, "autofix": bool(_kick)})
+
             elif _ops3.get(_key):
                 _ops3[_key] = False
                 save_ops(STATE, _ops3)
@@ -3827,6 +4117,35 @@ def training_watch():
             _tb.print_exc()
         else:
             event(STATE, "training_watch_error", {"err": repr(_tw_exc)[:200]})
+
+
+def _collect_env_health(ports=_BOX_EXEC_PORTS):
+    """C-9655 phase isolation: probe the /exec box health endpoints.
+
+    Self-contained, fail-closed, NEVER raises and ALWAYS returns a dict.
+    Each box maps to either its parsed health JSON or None when unreachable.
+
+    Pre-fix (C-9695), env_health was initialized INSIDE the dashboard-publish
+    try block, after `from dashboard import render_dashboard`. If that import
+    (or any pre-assignment line) raised, the `except Exception: pass` swallowed
+    it but left the function-local env_health UNBOUND; later references in the
+    tick's status printout then raised
+    UnboundLocalError('local variable env_health referenced before assignment'),
+    which crashed the whole tick. Isolating this network-probe phase into a
+    never-raising helper guarantees env_health is always a dict before the
+    (independently fragile) dashboard-render phase runs.
+    """
+    env_health = {}
+    import json as _json
+    import urllib.request as _url
+
+    for _name, _port in ports:
+        try:
+            _r = _url.urlopen(f"http://127.0.0.1:{_port}/health", timeout=5)
+            env_health[_name] = _json.loads(_r.read())
+        except Exception:
+            env_health[_name] = None
+    return env_health
 
 
 def cmd_tick(_args):
@@ -4003,19 +4322,13 @@ def cmd_tick(_args):
             pass  # progress publish must never break a tick
         # publish the comprehensive system dashboard (detailed tables for every
         # component — DevOps observability: environments, agents, cards, verdicts)
+        # C-9655 phase isolation (C-9695): sample env health BEFORE the
+        # dashboard-render phase so env_health is always bound at this scope —
+        # a dashboard-import failure can never again leave it unbound.
+        env_health = _collect_env_health()
         try:
-            import json as _json
-            import urllib.request as _url
-
             from dashboard import render_dashboard
 
-            env_health = {}
-            for _name, _port in (("ASI1", 20646), ("ASI2", 19004), ("ASI3", 20653)):
-                try:
-                    _r = _url.urlopen(f"http://127.0.0.1:{_port}/health", timeout=5)
-                    env_health[_name] = _json.loads(_r.read())
-                except Exception:
-                    env_health[_name] = None
             dash = render_dashboard(
                 goal, queue, fleet, tick_no, verdicts, probes, env_health, STATE
             )

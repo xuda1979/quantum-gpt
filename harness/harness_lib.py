@@ -121,6 +121,51 @@ STALL_MIN = 10  # heartbeat staleness that counts as a stall (2min ticks)
 MAX_BUDGET_MIN = 90
 
 
+def _is_placeholder_acceptance(item):
+    """True if an acceptance item is junk/placeholder text (C-9712).
+
+    C-0001 was minted with acceptance=['test acceptance'] -- 15 chars, so it
+    slipped past the C-9001 length-only guard -- and kept re-dispatching into
+    the evaluator lane because it was a content-free placeholder no worker
+    could legitimately complete.  Targeted rule: reject exact/standalone
+    placeholder phrases and single junk tokens, so junk cards are blocked at
+    add-time WITHOUT over-matching real acceptance criteria (e.g. a criterion
+    that merely contains the words 'test' or 'acceptance' in a real sentence).
+    """
+    if not item:
+        return True
+    s = re.sub(r"[^a-z]+", " ", item.strip().lower()).strip()
+    if not s:
+        return True
+    words = s.split()
+    # Known literal placeholder phrases (normalized, no punctuation).
+    place_phrases = {
+        "test acceptance",           # exact C-0001 regression
+        "this is a test",
+        "test title",
+        "test acceptance criteria",
+        "this is a placeholder",
+        "sample acceptance",
+        "placeholder acceptance",
+        "lorem ipsum",
+        "fix me",
+        "example acceptance",
+        "dummy acceptance criteria",
+        "todo fix this later",
+        "this is a placeholder",
+    }
+    if s in place_phrases:
+        return True
+    if any(ph in s for ph in place_phrases if ph and " " in ph):
+        return True
+    # Standalone single junk token.
+    single_tokens = {"test", "placeholder", "dummy", "todo", "lorem",
+                     "ipsum", "sample", "mock", "fixme", "example"}
+    if len(words) == 1 and words[0] in single_tokens:
+        return True
+    return False
+
+
 def new_card(
     title,
     lane,
@@ -158,6 +203,17 @@ def new_card(
             raise ValueError(
                 f"card acceptance item too short ({len(item) if item else 0} chars); "
                 "minimum 8 characters required"
+            )
+    # C-9712: reject placeholder acceptance text.  C-0001 was minted with
+    # acceptance=['test acceptance'] (15 chars -- passes the 8-char C-9001
+    # guard) and kept re-dispatching into the evaluator lane because it was a
+    # content-free placeholder no worker could legitimately complete.  Block
+    # junk cards at add-time, not after they have burned dispatcher cycles.
+    for item in acceptance:
+        if _is_placeholder_acceptance(item):
+            raise ValueError(
+                f"card acceptance item appears to be placeholder/junk text: "
+                f"{item!r}; use real, schedulable done-criteria"
             )
     return {
         "id": card_id,  # assigned by add_card
@@ -1448,6 +1504,18 @@ def recompute_goal_done_preflight(goal, verdicts):
         violations.append(
             {"violation_type": "beats_base_false", "detail": "beats_base is not true"}
         )
+    if not v.get("independent_second_leg"):
+        # C-9725: done_criteria #3 -- the verdict must be reconfirmed by an
+        # INDEPENDENT second leg, not just any second leg (same process,
+        # shared candidate cache, or identical runner mechanism is NOT an
+        # independent reconfirmation). Fail-closed.
+        violations.append(
+            {
+                "violation_type": "no_independent_second_leg",
+                "detail": "verdict not reconfirmed by an independent second "
+                "leg (independent_second_leg absent or false); done_criteria #3",
+            }
+        )
     if v.get("superseded"):
         violations.append(
             {
@@ -1541,9 +1609,17 @@ def scan_verdicts(repo_root, limit=12):
         cands.sort(reverse=True)
         for _, p in cands[:limit]:
             d = load_json(p, {})
-            if d:
-                d["_file"] = os.path.basename(p)
-                verdicts.append(d)
+            if not d:
+                continue
+            if d.get("superseded") is True:
+                # C-9532: deprecated verdict can never retire the goal.
+                continue
+            if d.get("_DISCLAIMER"):
+                # C-9744: synthetic/demo fixture composition; never a
+                # goal candidate (fail-closed, see goal_done).
+                continue
+            d["_file"] = os.path.basename(p)
+            verdicts.append(d)
     return verdicts
 
 
@@ -1841,6 +1917,12 @@ def goal_done(goal, verdicts):
         manifest = {}  # C-0031 fail closed: unreadable manifest rejects all
     for v in verdicts:
         if not isinstance(v, dict):
+            continue
+        if v.get("_DISCLAIMER"):
+            # C-9744: a verdict carrying a truthy _DISCLAIMER is a
+            # SYNTHETIC/DEMO fixture composition (e.g. C-9742's
+            # canonical-path demo), NOT a real adapter measurement. It
+            # can NEVER retire the goal. Fail-closed.
             continue
         if str(v.get("pass_adapter", "")) != target:
             continue
