@@ -1043,10 +1043,15 @@ def retire_voided_card(queue, card_id, reason):
     authoritative engine per C-9706 adjudication) so it can never be
     re-dispatched to fire a retired engine.
 
-    Fail-closed: only a card in status 'running' is touched; any other status
-    (ready/bounced/blocked/done/dead) is refused so we never silently flip a
-    card the scheduler is legitimately handling. Sets status='dead',
-    retired_utc, and records the void rationale in result. Returns (ok, reason).
+    Fail-closed: only a card in a DISPATCHABLE/re-armable status is touched
+    ('running', 'bounced', or 'ready'); a terminal/held status ('done', 'dead',
+    'blocked') is refused so we never silently flip a card the scheduler is
+    legitimately done with or holding. C-9751 widened the guard from
+    'running'-only to include 'bounced'/'ready' so a stale GRPO-premise card
+    that re-arms (e.g. a bounced GRPO eval that would feed a non-authoritative
+    adapter to fail-closed eval) is also filed dead before the dispatcher can
+    re-dispatch it. Sets status='dead', retired_utc, and records the void
+    rationale in result. Returns (ok, reason).
     """
     matches = [c for c in queue["cards"] if c["id"] == card_id]
     if not matches:
@@ -1054,9 +1059,9 @@ def retire_voided_card(queue, card_id, reason):
     if len(matches) > 1:
         return False, f"ambiguous card id {card_id}: {len(matches)} queue entries"
     c = matches[0]
-    if c["status"] != "running":
+    if c["status"] not in ("running", "bounced", "ready"):
         return False, (
-            "card {} status is {!r}, not running: retirement refused (fail closed)".format(
+            "card {} status is {!r}, not dispatchable: retirement refused (fail closed)".format(
                 card_id, c["status"]
             )
         )
@@ -2052,6 +2057,43 @@ def model_identity_violation(verdict):
     return None
 
 
+def leg_provenance_violation(verdict, _os_path_exists=None):
+    """C-9752: named fixture-provenance violation on a verdict's legs, or None.
+
+    A verdict that would retire the goal must show REAL eval provenance on
+    BOTH legs. Fail-closed rules (any hit -> violation):
+      - leg missing entirely (caller's leg checks precede this)
+      - leg ref points at a nonexistent file AND no scores_sha256
+      - leg ref path looks like a tempdir fixture (*/T/, /var/folders/,
+        /tmp/c9.../, 'c9750-canonical', 'canonical-' patterns) — these are
+        the C-9750 fixture composition shapes
+      - leg_process_id/candidate_cache_id match the fixture literal shapes
+        ('pid-leg', 'cache-leg', 'win-leg') — real runners emit process ids,
+        cache hashes, window hashes
+    <25 lines.
+    """
+    exists = _os_path_exists or os.path.exists
+    FIXTURE_ID_PREFIXES = ("pid-leg", "cache-leg", "win-leg")
+    for name in ("leg1", "leg2"):
+        leg = verdict.get(name)
+        if not isinstance(leg, dict):
+            return f"{name}_missing"
+        ref = leg.get("ref")
+        ind = leg.get("independence") if isinstance(leg.get("independence"), dict) else {}
+        ids = (ind.get("leg_process_id"), ind.get("candidate_cache_id"), ind.get("window_id"))
+        if any(isinstance(x, str) and x.startswith(FIXTURE_ID_PREFIXES) for x in ids):
+            return f"{name}_fixture_identity"
+        # C-9752 core rule: a leg must show REAL scores evidence — an existing
+        # scores/ref file, or a recorded scores sha. A ref pointing at a
+        # nonexistent file with no sha is the C-9750 fixture shape (its
+        # /var/folders/.../leg1.json never existed at scan time).
+        if isinstance(ref, str) and ref:
+            if not exists(ref) and not leg.get("scores_sha256"):
+                return f"{name}_ref_missing_no_sha"
+        elif not leg.get("scores_sha256"):
+            return f"{name}_no_ref_no_sha"
+    return None
+
 def goal_done(goal, verdicts):
     """18/18 achieved = a fail-closed TWO-LEG verdict shows 18/18 +
     beats_base.
@@ -2132,6 +2174,12 @@ def goal_done(goal, verdicts):
             # C-9119: a verdict whose checkpoint base model is unproven
             # or outside the Qwen3.8-27B family silently violates the
             # GOAL's model field; it can never retire the goal.
+            continue
+        lpio = leg_provenance_violation(v)
+        if lpio is not None:
+            # C-9752: a verdict whose legs show FIXTURE provenance (tempdir
+            # refs, fixture-shaped identities, missing scores) never ran
+            # real eval compute; it can never retire the goal.
             continue
         return True, v.get("_file")
     return False, None

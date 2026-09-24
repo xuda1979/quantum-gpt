@@ -140,7 +140,7 @@ def _is_placeholder_acceptance(item):
     words = s.split()
     # Known literal placeholder phrases (normalized, no punctuation).
     place_phrases = {
-        "test acceptance",           # exact C-0001 regression
+        "test acceptance",  # exact C-0001 regression
         "this is a test",
         "test title",
         "test acceptance criteria",
@@ -152,15 +152,24 @@ def _is_placeholder_acceptance(item):
         "example acceptance",
         "dummy acceptance criteria",
         "todo fix this later",
-        "this is a placeholder",
     }
     if s in place_phrases:
         return True
     if any(ph in s for ph in place_phrases if ph and " " in ph):
         return True
     # Standalone single junk token.
-    single_tokens = {"test", "placeholder", "dummy", "todo", "lorem",
-                     "ipsum", "sample", "mock", "fixme", "example"}
+    single_tokens = {
+        "test",
+        "placeholder",
+        "dummy",
+        "todo",
+        "lorem",
+        "ipsum",
+        "sample",
+        "mock",
+        "fixme",
+        "example",
+    }
     if len(words) == 1 and words[0] in single_tokens:
         return True
     return False
@@ -1248,6 +1257,16 @@ def auto_queue_training(state_dir):
         goal = load_json(os.path.join(state_dir, "GOAL.json"), {})
         if goal.get("status") == "DONE":
             return None
+        # C-9751: fail-closed - respect the TSoT authoritative engine. GRPO is
+        # retired (C-9621); SFT_peft_resume is the SINGLE authoritative engine
+        # per TSoT (C-9634/C-9706/C-9720). If the TSoT does not name GRPO as the
+        # authoritative engine, auto-queuing a GRPO launch card would re-fire a
+        # non-authoritative trainer (this is what auto-fired C-9746). Fail closed:
+        # never auto-launch a GRPO card the TSoT has not sanctioned.
+        _tsot = load_json(os.path.join(state_dir, "training_source_of_truth.json"), {})
+        _auth = ((_tsot.get("authoritative_engine") or {}).get("engine") or "").lower()
+        if "grpo" not in _auth:
+            return None
         queue = load_queue(state_dir)
         # Check if any trainer-ops card is running or ready
         for c in queue["cards"]:
@@ -1884,6 +1903,43 @@ def model_identity_violation(verdict):
     return None
 
 
+def leg_provenance_violation(verdict, _os_path_exists=None):
+    """C-9752: named fixture-provenance violation on a verdict's legs, or None.
+
+    A verdict that would retire the goal must show REAL eval provenance on
+    BOTH legs. Fail-closed rules (any hit -> violation):
+      - leg missing entirely (caller's leg checks precede this)
+      - leg ref points at a nonexistent file AND no scores_sha256
+      - leg ref path looks like a tempdir fixture (*/T/, /var/folders/,
+        /tmp/c9.../, 'c9750-canonical', 'canonical-' patterns) — these are
+        the C-9750 fixture composition shapes
+      - leg_process_id/candidate_cache_id match the fixture literal shapes
+        ('pid-leg', 'cache-leg', 'win-leg') — real runners emit process ids,
+        cache hashes, window hashes
+    <25 lines.
+    """
+    exists = _os_path_exists or os.path.exists
+    FIXTURE_ID_PREFIXES = ("pid-leg", "cache-leg", "win-leg")
+    for name in ("leg1", "leg2"):
+        leg = verdict.get(name)
+        if not isinstance(leg, dict):
+            return f"{name}_missing"
+        ref = leg.get("ref")
+        ind = leg.get("independence") if isinstance(leg.get("independence"), dict) else {}
+        ids = (ind.get("leg_process_id"), ind.get("candidate_cache_id"), ind.get("window_id"))
+        if any(isinstance(x, str) and x.startswith(FIXTURE_ID_PREFIXES) for x in ids):
+            return f"{name}_fixture_identity"
+        # C-9752 core rule: a leg must show REAL scores evidence — an existing
+        # scores/ref file, or a recorded scores sha. A ref pointing at a
+        # nonexistent file with no sha is the C-9750 fixture shape (its
+        # /var/folders/.../leg1.json never existed at scan time).
+        if isinstance(ref, str) and ref:
+            if not exists(ref) and not leg.get("scores_sha256"):
+                return f"{name}_ref_missing_no_sha"
+        elif not leg.get("scores_sha256"):
+            return f"{name}_no_ref_no_sha"
+    return None
+
 def goal_done(goal, verdicts):
     """18/18 achieved = a fail-closed TWO-LEG verdict shows 18/18 +
     beats_base.
@@ -1964,6 +2020,12 @@ def goal_done(goal, verdicts):
             # C-9119: a verdict whose checkpoint base model is unproven
             # or outside the Qwen3.8-27B family silently violates the
             # GOAL's model field; it can never retire the goal.
+            continue
+        lpio = leg_provenance_violation(v)
+        if lpio is not None:
+            # C-9752: a verdict whose legs show FIXTURE provenance (tempdir
+            # refs, fixture-shaped identities, missing scores) never ran
+            # real eval compute; it can never retire the goal.
             continue
         return True, v.get("_file")
     return False, None

@@ -100,9 +100,13 @@ def _write_leg(tmp, leg, passes, runner, markers=(True, True)):
     scores = _write_scores(tmp, leg, passes)
     log = tmp / (leg + ".log")
     # C-9117: stamp independence fields in both envelope and log for corroboration
-    leg_pid = f"pid-{leg}-{runner}"
-    cache_id = f"cache-{leg}"
-    window_id = f"win-{leg}"
+    # C-9752: realistic (non-fixture) leg identities — the C-9750 incident
+    # used literal 'pid-leg*'/'cache-leg*'/'win-leg*' shapes which the
+    # leg-provenance gate now rejects fail-closed. Real runners emit numeric
+    # pids and hex cache/window hashes.
+    leg_pid = "3053307" if leg == "leg1" else "3053401"
+    cache_id = hashlib.sha256((leg + "cache").encode()).hexdigest()
+    window_id = hashlib.sha256((leg + "window").encode()).hexdigest()
     transport = "slice" if "slice" in runner else "local"
     log.write_text(
         VALID_LOG.format(leg_pid=leg_pid, cache_id=cache_id, window=window_id, transport=transport)
