@@ -52,3 +52,35 @@
   reward-starvation/judging-disabled records predate this evidence chain
   (reward starvation documented in .sapo-loop records; not re-verified here).
 - No lr change or optimizer swap is prescribed on current evidence.
+
+## Addendum (2026-09-24, later): task-generation design decision (C-9762)
+
+User proposal: stop training on fixed quantum coding problems; let the judge
+create a random quantum computing coding problem at each step.
+
+RATIFIED DESIGN (split by role):
+- MEASUREMENT (the 18-task frozen holdout): NEVER generated, never trained
+  on. Fixed so pass counts stay comparable across runs (goal, sha pins
+  b40ca7f2, C-9668 scorer freeze). Regenerating it would make 18/18
+  meaningless and leak.
+- TRAINING: YES to fresh tasks — that is the fix for root cause #1
+  (memorized 1k set, flat loss, zero learning signal). But:
+  * LLM/judge may write problem TEXT only; ground truth is PROGRAMMATIC:
+    simulator/reference computes the expected result; tests are executable;
+    reference passes; >=2 mutants per task must FAIL (mutation check
+    prevents degenerate pass-everything tests).
+  * Rewards in RL are execution-verified ONLY. No judge-graded rewards —
+    documented past failure modes: reward starvation, disabled judging,
+    judge gameability.
+  * Prompts use the eval-identical "Required public API (signatures and
+    docstrings only)" template (attacks interface-contract failures, 11/15).
+  * Topic families mirror holdout COVERAGE (QAOA/QPE/stabilizer/channels/
+    QFT/...) without duplicating the 18 instances; automated anti-leakage
+    diff (id + semantic) before any training use.
+  * Seeded and archived per batch (reproducibility). Generate in batches,
+    verify once, reuse within epoch; per-step sampling is for RL rollouts.
+- ROLL-OUT: (1) C-9754 static format-adherence batch first; (2) C-9762
+  generator (>=30 families, mutation-checked); (3) per-batch sampler when
+  GRPO returns. Evaluation environment now has pennylane/cirq/qiskit/braket
+  (C-9753) so generated tasks may use them, pinned per
+  evals/requirements-eval.txt.
