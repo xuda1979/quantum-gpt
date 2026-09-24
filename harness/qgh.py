@@ -133,7 +133,7 @@ def _is_placeholder_acceptance(item):
         return True
     words = s.split()
     place_phrases = {
-        "test acceptance",           # exact C-0001 regression
+        "test acceptance",  # exact C-0001 regression
         "this is a test",
         "test title",
         "test acceptance criteria",
@@ -145,14 +145,23 @@ def _is_placeholder_acceptance(item):
         "example acceptance",
         "dummy acceptance criteria",
         "todo fix this later",
-        "this is a placeholder",
     }
     if s in place_phrases:
         return True
     if any(ph in s for ph in place_phrases if ph and " " in ph):
         return True
-    single_tokens = {"test", "placeholder", "dummy", "todo", "lorem",
-                     "ipsum", "sample", "mock", "fixme", "example"}
+    single_tokens = {
+        "test",
+        "placeholder",
+        "dummy",
+        "todo",
+        "lorem",
+        "ipsum",
+        "sample",
+        "mock",
+        "fixme",
+        "example",
+    }
     if len(words) == 1 and words[0] in single_tokens:
         return True
     return False
@@ -1028,7 +1037,6 @@ def unretire_card(queue, card_id, reason):
     return True, ("unretired dead->ready (bounce_count reset 0, rationale recorded)")
 
 
-
 def retire_voided_card(queue, card_id, reason):
     """C-9720: file retirement for a trainer-ops card whose engine premise is
     VOID (e.g. GRPO sapo-27b-ai retired C-9621; SFT_peft_resume is the single
@@ -1042,9 +1050,9 @@ def retire_voided_card(queue, card_id, reason):
     """
     matches = [c for c in queue["cards"] if c["id"] == card_id]
     if not matches:
-        return False, "no such card: {}".format(card_id)
+        return False, f"no such card: {card_id}"
     if len(matches) > 1:
-        return False, "ambiguous card id {}: {} queue entries".format(card_id, len(matches))
+        return False, f"ambiguous card id {card_id}: {len(matches)} queue entries"
     c = matches[0]
     if c["status"] != "running":
         return False, (
@@ -1057,9 +1065,7 @@ def retire_voided_card(queue, card_id, reason):
     # be silently retired by this reconciliation facility.
     if "grpo" not in (c.get("title") or "").lower():
         return False, (
-            "card {} is not a GRPO-premise card: retirement refused (fail closed)".format(
-                card_id
-            )
+            f"card {card_id} is not a GRPO-premise card: retirement refused (fail closed)"
         )
     c["status"] = "dead"
     c["retired_utc"] = now_iso()
@@ -1068,7 +1074,7 @@ def retire_voided_card(queue, card_id, reason):
         note = note + " | " + reason
     c["result"] = (c.get("result") or "").strip()
     c["result"] = note if not c["result"] else (c["result"] + chr(10) + note)
-    return True, "card {} retired (status=dead): {}".format(card_id, note)
+    return True, f"card {card_id} retired (status=dead): {note}"
 
 
 # ----------------------------------------------------------------------------- fleet# ----------------------------------------------------------------------------- fleet
@@ -1465,6 +1471,11 @@ RULES:
   harness/state/locks/asi2-eval.lock via harness_lib.acquire_lock BEFORE
   launching a leg; release it (release_lock) when the leg dispatch completes.
 - Never mark DONE on another agent's unverified claim. Never fabricate a measurement.
+- WORKFLOW STAGES (C-9751): train -> eval_leg -> compose_verdict. Before launching a
+  stage's compute, run: python3 harness/scripts/workflow_gate.py check --stage <id>.
+  Exit non-zero = BLOCKED; do NOT run the stage; report BLOCKED instead. Attest your
+  stage outcome (workflow_gate.py attest) only from primary evidence. Spec:
+  harness/workflow_spec.json. Independent audit: harness/scripts/workflow_audit.py.
 - Unknown/unmeasured = say so. Fail closed, always.
 {deps}
 OUTPUT CONTRACT — end your reply EXACTLY with:
@@ -1513,6 +1524,16 @@ def auto_queue_training(state_dir):
     try:
         goal = load_json(os.path.join(state_dir, "GOAL.json"), {})
         if goal.get("status") == "DONE":
+            return None
+        # C-9751: fail-closed - respect the TSoT authoritative engine. GRPO is
+        # retired (C-9621); SFT_peft_resume is the SINGLE authoritative engine
+        # per TSoT (C-9634/C-9706/C-9720). If the TSoT does not name GRPO as the
+        # authoritative engine, auto-queuing a GRPO launch card would re-fire a
+        # non-authoritative trainer (this is what auto-fired C-9746). Fail closed:
+        # never auto-launch a GRPO card the TSoT has not sanctioned.
+        _tsot = load_json(os.path.join(state_dir, "training_source_of_truth.json"), {})
+        _auth = ((_tsot.get("authoritative_engine") or {}).get("engine") or "").lower()
+        if "grpo" not in _auth:
             return None
         queue = load_queue(state_dir)
         # Check if any trainer-ops card is running or ready
@@ -3200,7 +3221,9 @@ def _reap_locked():
                         # are untouched); at threshold the card enters per-card
                         # backoff and stops looping in the window.
                         _ops = load_ops(STATE)
-                        note_spawn_result(STATE, _ops, ok=False, card=card["id"], environmental=True)
+                        note_spawn_result(
+                            STATE, _ops, ok=False, card=card["id"], environmental=True
+                        )
                         save_ops(STATE, _ops)
                     else:
                         release_card(card, "bounced", tail[-1] if tail else "", "worker blocked")
@@ -3823,15 +3846,15 @@ def box_exec_autofix(box_name, port=None, dead=True, kick_fn=None):
         return {"action": "reconciler_kick", "exit": -1, "error": str(_e)}
 
 
-
-
 def box_health_alive(port, urlopen_fn=None, json_mod=None):
     """C-9727: True iff the box answers /health (process is up).
     /health is a fast non-queueing endpoint - unlike /exec, it does not
     wait behind a saturated exec queue. A box that answers /health is
     ALIVE (possibly busy); only a box that does NOT answer /health and
     does NOT answer /exec is genuinely exec-dead. Never raises."""
-    import json as _json, urllib.request as _url
+    import json as _json
+    import urllib.request as _url
+
     json_mod = json_mod or _json
     uf = urlopen_fn or _url.urlopen
     try:
@@ -3861,12 +3884,14 @@ def box_exec_dead_gate(port, exec_ok_fn=None, health_alive_fn=None):
         health_alive = lambda p: box_health_alive(p)
     try:
         if exec_ok(port):
-            return False          # exec echo works -> alive, done
+            return False  # exec echo works -> alive, done
         if health_alive(port):
-            return False          # /health answers -> ALIVE (busy), NOT dead
-        return True               # exec AND health both dead -> genuinely dead
+            return False  # /health answers -> ALIVE (busy), NOT dead
+        return True  # exec AND health both dead -> genuinely dead
     except Exception:
-        return True               # fail-closed: probe error -> assume dead
+        return True  # fail-closed: probe error -> assume dead
+
+
 def training_watch():
     """Full-training-process monitor (C-9556): fetch metrics tail from the
     live ASI3 run, compute alarms (DEAD-SIGNAL/NO-OP/PASS-RATE-ZERO/LOG-STALE/
@@ -4066,7 +4091,7 @@ def training_watch():
                     _kick_txt = (
                         f"auto-fix reconciler_kick exit={_kick.get('exit')}"
                         if _kick
-                        else f"user action required"
+                        else "user action required"
                     )
                     append_status_line(
                         f"- ⚠️ BOX-EXEC-DEAD {_name}: exec round-trip FAILED — "
