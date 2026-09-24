@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 import time
 from pathlib import Path
@@ -35,9 +36,72 @@ STATE = REPO / "harness" / "state" / "resume_training.json"
 # not the step-N dir itself.
 FIND_LATEST_SH = (
     "latest=$(ls -d {repo}/outputs/sft-27b-q38-v10*/checkpoints/step-*/adapter 2>/dev/null "
-    "| sort -t- -k2 -n | tail -1); "
+    "| sed -E 's#.*/step-([0-9]+)/adapter#\\1 &#' "
+    "| sort -n -k1 | tail -1 | cut -d' ' -f2-); "
     "echo LATEST=$latest"
 )
+
+
+def parse_latest_checkpoint(paths) -> str | None:
+    """Return the path with the numerically-max step-N, or None if empty.
+    <8 lines. Correct numeric ordering (step-25 > step-9 > step-7), immune
+    to the leading run-name digits (sft-27b-*)."""
+    best = None
+    best_n = -1
+    for p in paths or []:
+        m = re.search(r"step-(\d+)/adapter$", p)
+        if not m:
+            continue
+        n = int(m.group(1))
+        if n > best_n:
+            best_n, best = n, p
+    return best
+def latest_run_advancing(lines, now_iso=None, freshness_window_s=600):
+    import json as _json
+    from datetime import datetime, timezone
+    def _ts(rec):
+        raw = rec.get('timestamp_utc') if rec else None
+        if not raw:
+            return None
+        try:
+            return datetime.fromisoformat(str(raw).replace('Z', '+00:00'))
+        except ValueError:
+            return None
+    text = chr(10).join((lines or []))
+    dec = _json.JSONDecoder()
+    recs = []
+    i = 0
+    n = len(text)
+    while i < n:
+        j = text.find(chr(123), i)
+        if j == -1:
+            break
+        try:
+            obj, k = dec.raw_decode(text, j)
+        except _json.JSONDecodeError:
+            i = j + 1
+            continue
+        if isinstance(obj, dict):
+            recs.append(obj)
+        i = k
+    if not recs:
+        return dict(advancing=False, latest_step=None)
+    last = recs[-1]
+    latest_step = last.get('step')
+    advancing = False
+    if len(recs) >= 2:
+        prev_step = recs[-2].get('step')
+        if isinstance(latest_step, int) and isinstance(prev_step, int):
+            advancing = latest_step > prev_step
+    if now_iso:
+        now = datetime.fromisoformat(str(now_iso).replace('Z', '+00:00'))
+        last_ts = _ts(last)
+        if last_ts and (now - last_ts).total_seconds() > freshness_window_s:
+            advancing = False
+    elif len(recs) < 2:
+        advancing = False
+    return dict(advancing=advancing, latest_step=latest_step)
+
 PGUARD_SH = "pgrep -f 'qwen_sft_peft|torchrun.*qwen_sft' >/dev/null && echo TRAINER_RUNNING || echo TRAINER_DOWN"
 COMPILE_SH = (
     "bad=0; for f in /root/work/training/*.py; do "
@@ -45,13 +109,45 @@ COMPILE_SH = (
 )
 
 
+# C-9692: compact output immune to run_box stdout truncation. Sort by version
+# on the box so only the numerically-max step-N adapter path is echoed (a
+# whole-tree ls -d could drop step-166 when run_box truncates to last 2000
+# chars, returning a stale step-97). sort -V orders step-9 < step-25 < step-166.
+LS_ALL_SH = (
+    # C-9746: rank candidates by adapter mtime (newest first), then max step
+    # within the newest run. A warm-consumed shard checkpoint (older mtime)
+    # must never win over the fresher run that consumed it.
+    "for p in {repo}/outputs/sft-27b-q38-v10*/checkpoints/step-*/adapter; do "
+    "[ -e \"$p/adapter_config.json\" ] || continue; "
+    "stat -c '%Y %n' \"$p\" 2>/dev/null; done "
+    "| sort -n | tail -40"
+)
+
+
 def find_latest_checkpoint(box: str = BOX):
-    """Latest step-N adapter of the canonical run. <8 lines."""
-    r = run_box(box, FIND_LATEST_SH.format(repo=get("box.repo_nas")), timeout=30)
+    """C-9746: the LATEST-RUN's newest checkpoint, by mtime rank.
+
+    The box emits '<mtime> <path>' lines sorted newest-first (LS_ALL_SH).
+    Rank = (mtime desc, step desc). Rationale: resume must continue the run
+    that most recently banked a checkpoint. A warm-consumed shard checkpoint
+    (e.g. step-166 used to init a resume run) has an OLDER mtime than the
+    resume run's own checkpoints; picking the global max step instead
+    discarded the newer run's progress (C-9746 incident, 2026-09-24)."""
+    r = run_box(box, LS_ALL_SH.format(repo=get("box.repo_nas")), timeout=30)
+    best = None
+    best_key = None
     for ln in r.get("stdout", "").splitlines():
-        if ln.startswith("LATEST=/") and ln.strip() != "LATEST=":
-            return ln.split("=", 1)[1].strip()
-    return None
+        parts = ln.strip().split(None, 1)
+        if len(parts) != 2 or not parts[0].isdigit():
+            continue
+        mtime, path = int(parts[0]), parts[1].strip()
+        m = re.search(r"step-(\d+)/adapter$", path)
+        if not m:
+            continue
+        key = (mtime, int(m.group(1)))
+        if best_key is None or key > best_key:
+            best_key, best = key, path
+    return best
 
 
 def trainer_running(box: str = BOX):
@@ -131,12 +227,43 @@ def boot_verify(box: str, run_name: str) -> dict:
     return {"alive": False, "pid": pid if "pid" in dir() else "", "log_stages": stages}
 
 
+def load_die_exclusions(box='ASI3'):
+    """Read the persistent die-exclusion ledger for a box. C-9689.
+
+    Exclusion knowledge (dies proven faulty by past 507015 aicore crashes) is
+    persisted in harness/state/np_die_exclusions.json so no relaunch loses it.
+    Returns the box's dies_excluded list, or [] when absent/unknown. <12 lines."""
+    p = REPO / 'harness' / 'state' / 'np_die_exclusions.json'
+    if not p.exists():
+        return []
+    try:
+        data = json.loads(p.read_text())
+    except (json.JSONDecodeError, OSError):
+        return []
+    if not isinstance(data, dict):
+        return []
+    if data.get('box') != box:
+        return []
+    dies = data.get('dies_excluded')
+    if not isinstance(dies, list):
+        return []
+    out = []
+    for d in dies:
+        try:
+            out.append(int(d))
+        except (TypeError, ValueError):
+            continue
+    return out
+
+
 def resume(
     dry_run: bool = False,
     checkpoint_interval_seconds: int = 300,
     exclude_devices: list | None = None,
 ) -> dict:
     """Gate chain + launch + boot-verify. <20 lines."""
+    if exclude_devices is None:
+        exclude_devices = load_die_exclusions(BOX)  # C-9689 auto-load
     run_name = f"sft-27b-q38-v10-resume-{time.strftime('%Y%m%dT%H%M%SZ')}"
     latest = find_latest_checkpoint()
     result = {"run_name": run_name, "latest_checkpoint": latest}
