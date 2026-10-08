@@ -45,6 +45,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from training.compat import strict_zip as _strict_zip  # noqa: E402
+from training.task_admission import read_manifest, verify_task_integrity  # noqa: E402
 
 # Per-step repair-sidecar auto-relaunch (root cause of run 20260913T233607Z:
 # the sidecar died at launch, the per-step guard DETECTED it and printed the
@@ -218,6 +219,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Optional PEFT adapter directory to continue from before GRPO updates.",
     )
     p.add_argument("--tasks-dir", default="evals/tasks")
+    p.add_argument("--verified-task-manifest", default=None,
+                   help="Fail-closed generated-task admission manifest; only hash-pinned approved tasks may train.")
     p.add_argument(
         "--resume-from",
         default=None,
@@ -5731,6 +5734,19 @@ def main() -> int:
     )
     if not tasks:
         raise ValueError("No GRPO tasks matched the requested filters")
+    verified_task_entries = None
+    if args.verified_task_manifest:
+        verified_task_entries = read_manifest(args.verified_task_manifest)
+        discovered_ids = {str(t["meta"].get("id", t["task_dir"].name)) for t in tasks}
+        unknown_ids = discovered_ids - set(verified_task_entries)
+        if unknown_ids:
+            raise ValueError("Unverified tasks present in SAPO workload: " + ", ".join(sorted(unknown_ids)))
+        for task in tasks:
+            task_id = str(task["meta"].get("id", task["task_dir"].name))
+            verify_task_integrity(task, verified_task_entries[task_id], Path(args.tasks_dir))
+        if rank == 0:
+            print(json.dumps({"stage": "verified_task_admission", "accepted": len(tasks),
+                              "manifest": str(args.verified_task_manifest)}), flush=True)
     for task in tasks:
         task_id = str(task["meta"].get("id", task["task_dir"].name))
         task["reference_code_chars"] = reference_code_char_counts.get(task_id)
@@ -6302,6 +6318,8 @@ def main() -> int:
             break
         task_index = random.choices(range(len(tasks)), weights=weights, k=1)[0]
         task = tasks[task_index]
+        if verified_task_entries is not None:
+            verify_task_integrity(task, verified_task_entries[task["task_id"]], Path(args.tasks_dir))
         task_prob = weights[task_index] / weight_sum if weight_sum > 0 else 1.0 / len(tasks)
         prompt = build_prompt(task, research_methods=research_methods)
         test_harness = load_test_harness(task["tests_py"])
@@ -8179,6 +8197,7 @@ def main() -> int:
                     "resume_state": getattr(args, "resume_state", None),
                     "resume_step": resume_step,
                     "tasks_dir": args.tasks_dir,
+                    "verified_task_manifest": args.verified_task_manifest,
                     "benchmark_file": args.benchmark_file,
                     "domain_filter": args.domain_filter,
                     "group_size": args.group_size,
