@@ -1,0 +1,10 @@
+Write a complete, runnable Python program using Qiskit + qiskit_optimization that:
+1. Builds a triangle graph with 3 vertices and edges (0,1), (1,2), (2,0).
+2. Uses qiskit_optimization.applications.Maxcut to build the QUBO, then solves it with QAOA using StatevectorSampler, COBYLA(maxiter=300), reps=2, and MinimumEigenOptimizer.
+3. In `def main()`, prints the binary solution, the two vertex sets, and the max-cut value.
+Output exactly:
+  Binary solution: <3-char 0/1 string>
+  Set A: <list of ints>
+  Set B: <list of ints>
+  Max-cut value: <int>
+Call main() under `if __name__ == "__main__":`.

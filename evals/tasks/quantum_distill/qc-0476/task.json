@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0476",
+  "name": "You are given the following quantum programming task. Simulate time evolution of",
+  "task_prompt": "You are given the following quantum programming task. Simulate time evolution of the 4-site Heisenberg XXZ chain (Jx=Jy=1, Jz=1.07, open boundary) for time t=1.25 in Qiskit using first-order Trotterization with 60 steps. Start from the Neel state and compare <Z_0>(t) against exact evolution with scipy.linalg.expm. Your answer must be the complete working code only, runnable from top to bottom."
+}

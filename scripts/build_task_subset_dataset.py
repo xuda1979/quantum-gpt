@@ -10,6 +10,8 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
+ROOT = Path(__file__).resolve().parents[1]
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -46,7 +48,9 @@ def parse_args() -> argparse.Namespace:
 
 
 def load_jsonl(path: Path) -> list[dict[str, Any]]:
-    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    return [
+        json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()
+    ]
 
 
 def load_task_ids(path: Path) -> list[str]:
@@ -62,21 +66,24 @@ def load_task_ids(path: Path) -> list[str]:
 
 
 def stable_bucket(example_id: str, seed_tag: str) -> float:
-    digest = hashlib.sha256(f"{seed_tag}:{example_id}".encode("utf-8")).hexdigest()
+    digest = hashlib.sha256(f"{seed_tag}:{example_id}".encode()).hexdigest()
     return int(digest[:16], 16) / float(16**16 - 1)
 
 
 def summarize(rows: list[dict[str, Any]]) -> dict[str, Any]:
     by_domain = Counter()
     by_task = Counter()
+    by_family = Counter()
     for row in rows:
         metadata = row.get("metadata", {})
         by_domain[metadata.get("domain", "unknown")] += 1
         by_task[metadata.get("task_id", "unknown")] += 1
+        by_family[metadata.get("prompt_family", "unknown")] += 1
     return {
         "count": len(rows),
         "domains": dict(sorted(by_domain.items())),
         "tasks": dict(sorted(by_task.items())),
+        "prompt_families": dict(sorted(by_family.items())),
     }
 
 
@@ -93,7 +100,9 @@ def main() -> int:
         raise SystemExit("--train-ratio must be between 0 and 1")
 
     task_ids = set(load_task_ids(args.task_id_file))
-    rows = [row for row in load_jsonl(args.input) if row.get("metadata", {}).get("task_id") in task_ids]
+    rows = [
+        row for row in load_jsonl(args.input) if row.get("metadata", {}).get("task_id") in task_ids
+    ]
     if not rows:
         raise SystemExit("No rows matched the requested task subset")
 
@@ -105,7 +114,9 @@ def main() -> int:
         target.append(row)
 
     if not train_rows or not eval_rows:
-        raise SystemExit("Deterministic split produced an empty train or eval split; adjust seed or train ratio")
+        raise SystemExit(
+            "Deterministic split produced an empty train or eval split; adjust seed or train ratio"
+        )
 
     write_jsonl(args.out_dir / "train.jsonl", train_rows)
     write_jsonl(args.out_dir / "eval.jsonl", eval_rows)
@@ -117,6 +128,39 @@ def main() -> int:
         "out_dir": str(args.out_dir),
         "train_ratio": args.train_ratio,
         "seed_tag": args.seed_tag,
+        "dataset_contract": {
+            "generation_script": str(Path(__file__).resolve().relative_to(ROOT)),
+            "source_task_ids": sorted(task_ids),
+            "train_task_ids": sorted(
+                {row.get("metadata", {}).get("task_id", "unknown") for row in train_rows}
+            ),
+            "eval_task_ids": sorted(
+                {row.get("metadata", {}).get("task_id", "unknown") for row in eval_rows}
+            ),
+            "prompt_families": {
+                "train": sorted(
+                    {
+                        str(row.get("metadata", {}).get("prompt_family", "unknown"))
+                        for row in train_rows
+                    }
+                ),
+                "eval": sorted(
+                    {
+                        str(row.get("metadata", {}).get("prompt_family", "unknown"))
+                        for row in eval_rows
+                    }
+                ),
+            },
+            "benchmark_contracts": [
+                {
+                    "name": "selected_task_subset",
+                    "kind": "task_id_list",
+                    "task_ids": sorted(task_ids),
+                    "must_resolve_to_tasks": False,
+                    "must_be_absent_from_train": False,
+                }
+            ],
+        },
         "selected_summary": summarize(rows),
         "train_summary": summarize(train_rows),
         "eval_summary": summarize(eval_rows),

@@ -1,0 +1,75 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+S3_ROOT="nm-aihuanxin:jtdlp-3ed7854b946a47b1a49ad754baa76cd3/quantum-qwen25-coder-main"
+REMOTE_ROOT="${AI1_REMOTE_ROOT:-/root/work/quantum-gpt}"
+
+usage() {
+  cat >&2 <<'EOF'
+Usage:
+  scripts/ai1_sync_model_from_s3.sh <model-subdir> [--dry-run]
+
+Examples:
+  scripts/ai1_sync_model_from_s3.sh Qwen2.5-1.5B-Instruct
+  scripts/ai1_sync_model_from_s3.sh Qwen2.5-1.5B-Instruct --dry-run
+EOF
+  exit 1
+}
+
+if [[ $# -lt 1 ]]; then
+  usage
+fi
+
+MODEL_SUBDIR="$1"
+shift
+
+if [[ "$MODEL_SUBDIR" == /* ]]; then
+  echo "model-subdir must be relative, for example: Qwen2.5-1.5B-Instruct" >&2
+  exit 1
+fi
+
+DRY_RUN=0
+if [[ "${1:-}" == "--dry-run" ]]; then
+  DRY_RUN=1
+  shift
+fi
+
+if [[ $# -gt 0 ]]; then
+  usage
+fi
+
+cd "$ROOT_DIR"
+
+S3_MODEL_DIR="$S3_ROOT/models/$MODEL_SUBDIR"
+REMOTE_MODEL_DIR="$REMOTE_ROOT/models/$MODEL_SUBDIR"
+REMOTE_INCOMING_DIR="${REMOTE_MODEL_DIR}.__incoming"
+REMOTE_PREVIOUS_SUFFIX="$(date +%s)"
+REMOTE_PREVIOUS_DIR="${REMOTE_MODEL_DIR}.__previous.${REMOTE_PREVIOUS_SUFFIX}"
+RCLONE_CMD="mkdir -p '$REMOTE_ROOT/models' '$REMOTE_INCOMING_DIR' && rclone sync '$S3_MODEL_DIR' '$REMOTE_INCOMING_DIR' --exclude '.cache/**' --exclude '__pycache__/**' --exclude '*.pyc' --fast-list --progress"
+RCLONE_CMD+=" && python3 '$REMOTE_ROOT/training/verify_qwen_snapshot.py' '$REMOTE_INCOMING_DIR' --expected-substring '$MODEL_SUBDIR' --expected-family-substring ''"
+RCLONE_CMD+=" && if [ -e '$REMOTE_MODEL_DIR' ]; then mv '$REMOTE_MODEL_DIR' '$REMOTE_PREVIOUS_DIR'; fi"
+RCLONE_CMD+=" && mv '$REMOTE_INCOMING_DIR' '$REMOTE_MODEL_DIR'"
+
+if [[ $DRY_RUN -eq 1 ]]; then
+  RCLONE_CMD="mkdir -p '$REMOTE_ROOT/models' '$REMOTE_INCOMING_DIR' && rclone sync '$S3_MODEL_DIR' '$REMOTE_INCOMING_DIR' --exclude '.cache/**' --exclude '__pycache__/**' --exclude '*.pyc' --fast-list --progress --dry-run"
+fi
+
+REMOTE_LOG="/tmp/ai1_sync_model_from_s3.log"
+JSON_OUT="$(bash scripts/huanxin_shell.sh ai1 "log='$REMOTE_LOG'; { $RCLONE_CMD; } >\"\$log\" 2>&1; rc=\$?; echo __AI1_SYNC_MODEL_FROM_S3_RC__:\$rc; tail -n 40 \"\$log\"")"
+
+python3 - <<'PY' "$JSON_OUT" "$MODEL_SUBDIR"
+import json
+import re
+import sys
+
+payload = json.loads(sys.argv[1])
+model_subdir = sys.argv[2]
+text = "\n".join(str(payload.get(k, "")) for k in ("output", "after", "before"))
+matches = re.findall(r"__AI1_SYNC_MODEL_FROM_S3_RC__:(\d+)", text)
+bad_markers = ("ERROR :", "NOTICE: Failed", "AccessDenied", "Failed to")
+if not matches:
+    raise SystemExit(f"Did not observe model sync completion marker for {model_subdir}.\n{text}")
+if any(marker in text for marker in bad_markers) or any(code != "0" for code in matches):
+    raise SystemExit(text)
+PY

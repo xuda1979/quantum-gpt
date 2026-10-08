@@ -23,8 +23,21 @@ import sys
 from pathlib import Path
 
 DEFAULT_BOOTSTRAP_BUNDLE = Path("artifacts/huanxin-bootstrap/20260316T143522Z")
+DEFAULT_HF_ENDPOINT = "https://huggingface.co"
+HF_MIRROR_ENDPOINT = "https://hf-mirror.com"
 
 PUBLIC_MODELS = {
+    "qwen36-27b": {
+        "model_id": "/root/work/filestorage/Qwen3.8-27B",
+        "expected_substring": "Qwen3.6-27B",
+        "expected_family_substring": "qwen",
+        "supports_generic_remote_commands": True,
+        "audit_out": "artifacts/model-source-audit-qwen36-27b.json",
+        "handoff_note": "research/qwen36-27b-handoff.md",
+        "remote_model_dir": "/root/software/quantum-gpt//root/work/filestorage/Qwen3.8-27B",
+        "handoff_manifest": "artifacts/qwen36-27b-local-snapshot-handoff.json",
+        "preflight_manifest": "artifacts/qwen36-27b-local-snapshot-preflight.json",
+    },
     "qwen25": {
         "model_id": "Qwen/Qwen2.5-1.5B-Instruct",
         "expected_substring": "Qwen2.5-1.5B-Instruct",
@@ -32,7 +45,7 @@ PUBLIC_MODELS = {
         "supports_generic_remote_commands": True,
         "audit_out": "artifacts/model-source-audit-qwen25.json",
         "handoff_note": "research/qwen25-public-fallback-handoff.md",
-        "remote_model_dir": "/root/root/work/quantum-gpt/models/Qwen2.5-1.5B-Instruct",
+        "remote_model_dir": "/root/work/quantum-gpt/models/Qwen2.5-1.5B-Instruct",
         "handoff_manifest": "artifacts/qwen25-local-snapshot-handoff.json",
         "preflight_manifest": "artifacts/qwen25-local-snapshot-preflight.json",
     },
@@ -43,7 +56,7 @@ PUBLIC_MODELS = {
         "supports_generic_remote_commands": True,
         "audit_out": "artifacts/model-source-audit-qwen3-1p7b.json",
         "handoff_note": "research/qwen3-public-alternative-handoff.md",
-        "remote_model_dir": "/root/root/work/quantum-gpt/models/Qwen3-1.7B",
+        "remote_model_dir": "/root/work/quantum-gpt/models/Qwen3-1.7B",
         "handoff_manifest": "artifacts/qwen3-1p7b-local-snapshot-handoff.json",
         "preflight_manifest": "artifacts/qwen3-1p7b-local-snapshot-preflight.json",
     },
@@ -54,7 +67,7 @@ PUBLIC_MODELS = {
         "supports_generic_remote_commands": False,
         "audit_out": "artifacts/model-source-audit-omnicoder9b.json",
         "handoff_note": "research/omnicoder9b-public-handoff.md",
-        "remote_model_dir": "/root/root/work/quantum-gpt/models/OmniCoder-9B",
+        "remote_model_dir": "/root/work/quantum-gpt/models/OmniCoder-9B",
         "handoff_manifest": "artifacts/omnicoder9b-local-snapshot-handoff.json",
         "preflight_manifest": "artifacts/omnicoder9b-local-snapshot-preflight.json",
     },
@@ -65,7 +78,7 @@ PUBLIC_MODELS = {
         "supports_generic_remote_commands": False,
         "audit_out": "artifacts/model-source-audit-gemma4-e2b-it.json",
         "handoff_note": "research/papers/gemma4_text_path_enablement/paper.md",
-        "remote_model_dir": "/root/root/work/quantum-gpt/models/gemma-4-E2B-it",
+        "remote_model_dir": "/root/work/quantum-gpt/models/gemma-4-E2B-it",
         "handoff_manifest": "artifacts/gemma4-e2b-it-local-snapshot-handoff.json",
         "preflight_manifest": "artifacts/gemma4-e2b-it-local-snapshot-preflight.json",
     },
@@ -76,9 +89,31 @@ PUBLIC_MODELS = {
         "supports_generic_remote_commands": False,
         "audit_out": "artifacts/model-source-audit-gemma4-e4b-it.json",
         "handoff_note": "research/papers/gemma4_text_path_enablement/paper.md",
-        "remote_model_dir": "/root/root/work/quantum-gpt/models/gemma-4-E4B-it",
+        "remote_model_dir": "/root/work/quantum-gpt/models/gemma-4-E4B-it",
         "handoff_manifest": "artifacts/gemma4-e4b-it-local-snapshot-handoff.json",
         "preflight_manifest": "artifacts/gemma4-e4b-it-local-snapshot-preflight.json",
+    },
+    "gemma4-26b-a4b-it": {
+        "model_id": "google/gemma-4-26B-A4B-it",
+        "expected_substring": "gemma-4-26B-A4B-it",
+        "expected_family_substring": "gemma",
+        "supports_generic_remote_commands": False,
+        "audit_out": "artifacts/model-source-audit-gemma4-26b-a4b-it.json",
+        "handoff_note": "research/papers/gemma4_text_path_enablement/paper.md",
+        "remote_model_dir": "/root/work/quantum-gpt/models/gemma-4-26B-A4B-it",
+        "handoff_manifest": "artifacts/gemma4-26b-a4b-it-local-snapshot-handoff.json",
+        "preflight_manifest": "artifacts/gemma4-26b-a4b-it-local-snapshot-preflight.json",
+    },
+    "gemma4-31b-it": {
+        "model_id": "google/gemma-4-31B-it",
+        "expected_substring": "gemma-4-31B-it",
+        "expected_family_substring": "gemma",
+        "supports_generic_remote_commands": False,
+        "audit_out": "artifacts/model-source-audit-gemma4-31b-it.json",
+        "handoff_note": "research/papers/gemma4_text_path_enablement/paper.md",
+        "remote_model_dir": "/root/work/quantum-gpt/models/gemma-4-31B-it",
+        "handoff_manifest": "artifacts/gemma4-31b-it-local-snapshot-handoff.json",
+        "preflight_manifest": "artifacts/gemma4-31b-it-local-snapshot-preflight.json",
     },
 }
 
@@ -123,6 +158,10 @@ def parse_args() -> argparse.Namespace:
         default=30.0,
         help="Timeout passed through to Hugging Face Hub HTTP requests during source audit/download preflight",
     )
+    parser.add_argument(
+        "--hf-endpoint",
+        help="Optional Hugging Face-compatible endpoint. If omitted, this helper tries the official endpoint first and then hf-mirror.",
+    )
     return parser.parse_args()
 
 
@@ -135,6 +174,32 @@ def run_checked(
     if env_overrides:
         env.update(env_overrides)
     return subprocess.run(command, check=True, text=True, capture_output=True, env=env)
+
+
+def build_hf_env(timeout_seconds: float, endpoint: str | None = None) -> dict[str, str]:
+    env = {
+        "HF_HUB_DOWNLOAD_TIMEOUT": str(int(timeout_seconds)),
+        "HF_HUB_ETAG_TIMEOUT": str(int(timeout_seconds)),
+    }
+    if endpoint:
+        env["HF_ENDPOINT"] = endpoint
+    return env
+
+
+def candidate_hf_endpoints(explicit_endpoint: str | None = None) -> list[str]:
+    raw_candidates = [
+        explicit_endpoint,
+        os.environ.get("HF_ENDPOINT"),
+        DEFAULT_HF_ENDPOINT,
+        HF_MIRROR_ENDPOINT,
+    ]
+    normalized: list[str] = []
+    for endpoint in raw_candidates:
+        value = (endpoint or "").strip().rstrip("/")
+        if not value or value in normalized:
+            continue
+        normalized.append(value)
+    return normalized
 
 
 def render_remote_commands(bundle: Path, remote_model_dir: str) -> tuple[Path, dict]:
@@ -171,45 +236,58 @@ def main() -> int:
     handoff_manifest.parent.mkdir(parents=True, exist_ok=True)
     preflight_manifest.parent.mkdir(parents=True, exist_ok=True)
 
-    hf_env = {
-        "HF_HUB_DOWNLOAD_TIMEOUT": str(int(args.hf_timeout_seconds)),
-        "HF_HUB_ETAG_TIMEOUT": str(int(args.hf_timeout_seconds)),
-    }
-
-    try:
-        audit_proc = run_checked(
-            [
-                sys.executable,
-                "training/audit_model_source.py",
-                "--model-id",
-                model_id,
-                "--expected-family-substring",
-                expected_family_substring,
-                "--out",
-                str(audit_out),
-                "--timeout-seconds",
-                str(args.hf_timeout_seconds),
-            ],
-            env_overrides=hf_env,
-        )
-    except subprocess.CalledProcessError as exc:
-        sys.stderr.write(exc.stdout)
-        sys.stderr.write(exc.stderr)
-        if "timed out" in (exc.stdout + exc.stderr).lower():
-            sys.stderr.write(
-                f"\nHugging Face source audit timed out for {model_id}. "
-                f"This usually means transient metadata/API reachability from this machine, not local code drift. "
-                f"Retry later, or use --hf-timeout-seconds > {args.hf_timeout_seconds} if you have reason to believe latency is the only issue.\n"
+    audit_summary: dict | None = None
+    selected_hf_endpoint: str | None = None
+    last_audit_error: subprocess.CalledProcessError | None = None
+    for candidate_endpoint in candidate_hf_endpoints(args.hf_endpoint):
+        hf_env = build_hf_env(args.hf_timeout_seconds, candidate_endpoint)
+        try:
+            audit_proc = run_checked(
+                [
+                    sys.executable,
+                    "training/audit_model_source.py",
+                    "--model-id",
+                    model_id,
+                    "--expected-family-substring",
+                    expected_family_substring,
+                    "--out",
+                    str(audit_out),
+                    "--timeout-seconds",
+                    str(args.hf_timeout_seconds),
+                    "--hf-endpoint",
+                    candidate_endpoint,
+                ],
+                env_overrides=hf_env,
             )
-        return exc.returncode or 1
+            audit_summary = json.loads(audit_proc.stdout)
+            selected_hf_endpoint = candidate_endpoint
+            break
+        except subprocess.CalledProcessError as exc:
+            last_audit_error = exc
+            combined = (exc.stdout + exc.stderr).lower()
+            if "timed out" in combined or "urlerror" in combined:
+                continue
+            sys.stderr.write(exc.stdout)
+            sys.stderr.write(exc.stderr)
+            return exc.returncode or 1
 
-    audit_summary = json.loads(audit_proc.stdout)
+    if audit_summary is None or selected_hf_endpoint is None:
+        if last_audit_error is not None:
+            sys.stderr.write(last_audit_error.stdout)
+            sys.stderr.write(last_audit_error.stderr)
+        sys.stderr.write(
+            f"\nHugging Face source audit failed for {model_id} across endpoints: "
+            + ", ".join(candidate_hf_endpoints(args.hf_endpoint))
+            + "\n"
+        )
+        return last_audit_error.returncode if last_audit_error is not None else 1
 
     if args.dry_run:
         result = {
             "status": "dry_run",
             "target": args.target,
             "model_id": model_id,
+            "hf_endpoint": selected_hf_endpoint,
             "audit_out": str(audit_out),
             "handoff_note": handoff_note,
             "remote_model_dir": remote_model_dir,
@@ -220,7 +298,9 @@ def main() -> int:
         }
         if args.render_remote_commands and supports_generic_remote_commands:
             try:
-                remote_commands_path, render_payload = render_remote_commands(args.bootstrap_bundle, remote_model_dir)
+                remote_commands_path, render_payload = render_remote_commands(
+                    args.bootstrap_bundle, remote_model_dir
+                )
             except subprocess.CalledProcessError as exc:
                 sys.stderr.write(exc.stdout)
                 sys.stderr.write(exc.stderr)
@@ -234,7 +314,9 @@ def main() -> int:
                 "bootstrap path assumes a text-only AutoTokenizer + AutoModelForCausalLM stack. "
                 "This target requires a newer runtime and/or a processor-aware conditional-generation path first."
             )
-        preflight_manifest.write_text(json.dumps(result, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        preflight_manifest.write_text(
+            json.dumps(result, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+        )
         print(json.dumps(result, indent=2, ensure_ascii=False))
         return 0
 
@@ -256,7 +338,10 @@ def main() -> int:
     )
 
     try:
-        download_proc = run_checked([sys.executable, "-c", "\n".join(py)], env_overrides=hf_env)
+        download_proc = run_checked(
+            [sys.executable, "-c", "\n".join(py)],
+            env_overrides=build_hf_env(args.hf_timeout_seconds, selected_hf_endpoint),
+        )
     except subprocess.CalledProcessError as exc:
         sys.stderr.write(exc.stdout)
         sys.stderr.write(exc.stderr)
@@ -287,6 +372,7 @@ def main() -> int:
         "status": "ok",
         "target": args.target,
         "model_id": model_id,
+        "hf_endpoint": selected_hf_endpoint,
         "audit_out": str(audit_out),
         "snapshot_dir": snapshot_dir,
         "remote_model_dir": remote_model_dir,
@@ -297,7 +383,9 @@ def main() -> int:
     }
     if args.render_remote_commands and supports_generic_remote_commands:
         try:
-            remote_commands_path, render_payload = render_remote_commands(args.bootstrap_bundle, remote_model_dir)
+            remote_commands_path, render_payload = render_remote_commands(
+                args.bootstrap_bundle, remote_model_dir
+            )
         except subprocess.CalledProcessError as exc:
             sys.stderr.write(exc.stdout)
             sys.stderr.write(exc.stderr)
@@ -309,9 +397,11 @@ def main() -> int:
         result["render_remote_commands_warning"] = (
             "Generic remote bootstrap command rendering is disabled for this target because the current "
             "bootstrap path assumes a text-only AutoTokenizer + AutoModelForCausalLM stack. "
-            "OmniCoder-9B requires a newer Transformers runtime and a processor-aware path first."
+            f"{Path(remote_model_dir).name} requires a newer Transformers runtime and a processor-aware path first."
         )
-    handoff_manifest.write_text(json.dumps(result, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    handoff_manifest.write_text(
+        json.dumps(result, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+    )
     print(json.dumps(result, indent=2, ensure_ascii=False))
     return 0
 

@@ -1,0 +1,18 @@
+Write a complete, runnable Python program using Qiskit 2.x that:
+1. Builds a 6-qubit circuit A that applies a single 4-controlled Toffoli
+   (multi-controlled X with controls q0,q1,q2,q3 and target q5) using
+   `qc.mcx([0,1,2,3], 5)`. Apply X to q0,q1,q2,q3 first so all controls
+   are |1>.
+2. Builds a 6-qubit circuit B that implements the 4-controlled Toffoli
+   using only T, Tdg, H, and CNOT gates (the Barenco et al. decomposition
+   without ancilla, or any equivalent decomposition). Apply X to
+   q0,q1,q2,q3 first.
+   For simplicity, you may use the relative-phase Toffoli cascade or the
+   Qiskit `MCXGate(mode='noancilla')` decomposition.
+3. Uses qiskit.quantum_info.Statevector to compute the final statevector of
+   both circuits. Computes the fidelity |<psi_A | psi_B>|^2.
+4. In `def main()`, prints:
+     fidelity = <value rounded to 3 decimals>
+     match: True   (if fidelity >= 0.999 else False)
+   Expected: fidelity = 1.000 and match: True.
+Call main() under `if __name__ == "__main__":`.

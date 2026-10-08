@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0585",
+  "name": "Implement a Python function `measure_qubit_random(state, q, n, rng=None)` that p",
+  "task_prompt": "Implement a Python function `measure_qubit_random(state, q, n, rng=None)` that probabilistically measures a single qubit `q` in an `n`-qubit state vector (shape `(2^n,)`). Use the Born rule to compute the probability of outcome 1: `p1 = sum of |amplitude|^2` where the qubit `q` is 1. Sample an outcome `b` (0 or 1) from Bernoulli(p1) using the provided `rng` (default `np.random.default_rng()`). Then collapse the state to the post-measurement state for that outcome: zero out amplitudes inconsistent with `b` and renormalize. Return `(new_state, b)`. Raise `ValueError` if the outcome has zero probability (i.e., `p1` is exactly 0 or 1). Finally, test with a 2-qubit Bell state `|00> + |11> / sqrt(2)` by measuring qubit 0 many times and verifying that outcomes 0 and 1 occur roughly equally (within statistical fluctuation). Use only numpy functions; do not import any quantum library."
+}

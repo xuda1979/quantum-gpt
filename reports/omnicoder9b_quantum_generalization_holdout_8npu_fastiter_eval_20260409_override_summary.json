@@ -1,0 +1,39 @@
+{
+  "scorecard": "/Users/daxu/software/quantum-gpt/evals/runs/omnicoder-quantum-generalization-holdout-8npu-fastiter-eval-20260409T122347Z/scorecard.json",
+  "override_total": 4,
+  "override_passes": 2,
+  "override_failures": 2,
+  "override_pass_rate": 0.5,
+  "domains": {
+    "quantum": 4
+  },
+  "categories": {
+    "algorithm_implementation": 2,
+    "api_normalization": 1,
+    "reasoning": 1
+  },
+  "failed_task_ids": [
+    "quantum_gate_alias_normalization",
+    "quantum_qaoa_maxcut"
+  ],
+  "failed_tasks": [
+    {
+      "id": "quantum_gate_alias_normalization",
+      "name": "Gate alias normalization repair",
+      "domain": "quantum",
+      "category": "api_normalization",
+      "error_type": null,
+      "first_detail": "normalize_gate_sequence(['swap']) did not raise ValueError",
+      "candidate_path": "/root/root/work/quantum-gpt/evals/runs/omnicoder-quantum-generalization-holdout-8npu-fastiter-eval-20260409T122347Z/candidates/quantum_gate_alias_normalization.py"
+    },
+    {
+      "id": "quantum_qaoa_maxcut",
+      "name": "QAOA MaxCut cost function and classical simulation",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "error_type": "ValueError",
+      "first_detail": "runner_exception: ValueError: bitstring length must match number of nodes",
+      "candidate_path": "/root/root/work/quantum-gpt/evals/runs/omnicoder-quantum-generalization-holdout-8npu-fastiter-eval-20260409T122347Z/candidates/quantum_qaoa_maxcut.py"
+    }
+  ]
+}

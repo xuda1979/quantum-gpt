@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0699",
+  "name": "Solve this quantum programming problem. Implement a minimal HHL-style solver in ",
+  "task_prompt": "Solve this quantum programming problem. Implement a minimal HHL-style solver in Qiskit for the 2x2 system A x = b with A = [[2.0, 1.0], [1.0, 2.0]], b = [1, 0]: run QPE with 3 clock qubits, invert eigenvalues via controlled-RY rotations, post-select on the ancilla, and compare the normalized solution with numpy.linalg.solve. Write the full runnable code (all imports included); executing it should print the results."
+}

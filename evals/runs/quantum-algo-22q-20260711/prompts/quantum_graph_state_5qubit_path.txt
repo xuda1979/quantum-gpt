@@ -1,0 +1,20 @@
+Write a complete, runnable Python program using Qiskit 2.x that:
+1. Prepares a 5-qubit graph state on the path graph P5 (vertices 0-1-2-3-4
+   with edges (0,1), (1,2), (2,3), (3,4)). Standard construction:
+     - Apply H to all 5 qubits.
+     - Apply CZ along each edge.
+2. Verifies the graph state by measuring the 5 stabilizer generators
+   K_i = X_i * prod_{j in N(i)} Z_j, where N(i) is the set of neighbors
+   of vertex i. Each K_i should have eigenvalue +1.
+   For each stabilizer, measure it by computing the parity: apply
+   H on qubit i (to convert X to Z), then CNOT from each neighbor j to
+   qubit i, then H on qubit i, then measure qubit i. (Or use the equivalent
+   direct stabilizer measurement via an ancilla.)
+3. Use StatevectorSampler (>= 2000 shots) and count how many of the 5
+   stabilizers give eigenvalue +1 (i.e. measurement outcome 0, since +1
+   eigenvalue maps to |0>).
+4. In `def main()`, prints:
+     stab_eigenvalue = <integer count of +1 outcomes, 0-5>
+     graph_state: True   (if all 5 stabilizers give +1)
+   Expected: stab_eigenvalue = 5 and graph_state: True.
+Call main() under `if __name__ == "__main__":`.

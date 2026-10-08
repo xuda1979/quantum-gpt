@@ -1,0 +1,9 @@
+{
+  "id": "quantum_rl_v2_phase_encode_decode",
+  "name": "Phase encode and decode via explicit inverse QFT",
+  "domain": "quantum",
+  "category": "algorithm_implementation",
+  "task_prompt": "Implement encode_phase(phi,n) as the normalized state (1/sqrt(N))*sum_k exp(2*pi*i*k*phi)|k> for phi=0.9 and n=10, apply an explicitly constructed inverse QFT, and implement decode_phase from the resulting probabilities. Return the maximum-likelihood grid phase with circular absolute error, verify probabilities normalize, compare to the nearest k/2**n grid point, and explain the exactly representable phi=0.25 case through executable assertions rather than relying on undefined helper functions. Provide only complete executable Python code. Do not use remote services. Seed random generators, print the requested quantities, and include robust self-tests rather than relying on visual inspection.",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

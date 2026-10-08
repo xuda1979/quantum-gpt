@@ -1,0 +1,92 @@
+{
+  "recommendations": [
+    {
+      "task_id": "quantum_braket_bell_state",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "failure_category": "assertion",
+      "inferred_frameworks": [
+        "braket"
+      ],
+      "priority_score": 8,
+      "recommendation": "Add 3-5 worked examples demonstrating correct algorithm_implementation for quantum_braket_bell_state"
+    },
+    {
+      "task_id": "quantum_cirq_qaoa_line",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "failure_category": "assertion",
+      "inferred_frameworks": [
+        "cirq"
+      ],
+      "priority_score": 8,
+      "recommendation": "Add 3-6 matrix-math worked examples for algorithm_implementation (use numpy linalg, scipy.linalg.sqrtm, exact operator form)"
+    },
+    {
+      "task_id": "quantum_pennylane_vqe_h2",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "failure_category": "assertion",
+      "inferred_frameworks": [
+        "pennylane"
+      ],
+      "priority_score": 8,
+      "recommendation": "Add 3-5 worked examples demonstrating correct algorithm_implementation for quantum_pennylane_vqe_h2"
+    },
+    {
+      "task_id": "quantum_qaoa_maxcut_5cycle",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "failure_category": "assertion",
+      "inferred_frameworks": [
+        "general"
+      ],
+      "priority_score": 8,
+      "recommendation": "Add 3-5 worked examples demonstrating correct algorithm_implementation for quantum_qaoa_maxcut_5cycle"
+    },
+    {
+      "task_id": "quantum_qiskit_qft_entangled",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "failure_category": "assertion",
+      "inferred_frameworks": [
+        "qiskit"
+      ],
+      "priority_score": 8,
+      "recommendation": "Add 3-5 worked examples demonstrating correct algorithm_implementation for quantum_qiskit_qft_entangled"
+    },
+    {
+      "task_id": "quantum_pennylane_qml_iris_classification",
+      "domain": "quantum",
+      "category": "quantum_ml",
+      "failure_category": "assertion",
+      "inferred_frameworks": [
+        "pennylane"
+      ],
+      "priority_score": 6,
+      "recommendation": "Add 3-5 worked examples demonstrating correct quantum_ml for quantum_pennylane_qml_iris_classification"
+    },
+    {
+      "task_id": "software_log_parser_aggregator",
+      "domain": "software",
+      "category": "data_processing",
+      "failure_category": "assertion",
+      "inferred_frameworks": [
+        "general"
+      ],
+      "priority_score": 3,
+      "recommendation": "Add 3-5 worked examples demonstrating correct data_processing for software_log_parser_aggregator"
+    },
+    {
+      "task_id": "software_sql_join_resolver",
+      "domain": "software",
+      "category": "data_processing",
+      "failure_category": "assertion",
+      "inferred_frameworks": [
+        "general"
+      ],
+      "priority_score": 3,
+      "recommendation": "Add 3-5 worked examples demonstrating correct data_processing for software_sql_join_resolver"
+    }
+  ]
+}

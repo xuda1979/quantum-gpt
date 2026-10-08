@@ -18,11 +18,15 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_OUT_ROOT = ROOT / "artifacts" / "deliveries"
 DEFAULT_BASE_MODEL = Path("models/OmniCoder-9B")
-DEFAULT_ADAPTER = Path("outputs/interface-prefix-omnicoder9b-semantic-v4-2npu-true20-20260329T2219CST/adapter")
+DEFAULT_ADAPTER = Path(
+    "outputs/interface-prefix-omnicoder9b-semantic-v4-2npu-true20-20260329T2219CST/adapter"
+)
 DEFAULT_SLICE = Path("reports/base_vs_adapter_eval_slice_interface_prefix.json")
 DEFAULT_REPORT = Path("reports/base_vs_adapter_outputs_omnicoder9b_semantic_v4_true20.json")
 DEFAULT_LOG = Path("/tmp/base-vs-adapter-omnicoder9b-semantic-v4-true20.log")
-DEFAULT_DELIVERY_MANIFEST = Path("artifacts/deliveries/omnicoder9b_first_working_adapter_20260330.json")
+DEFAULT_DELIVERY_MANIFEST = Path(
+    "artifacts/deliveries/omnicoder9b_first_working_adapter_20260330.json"
+)
 SCRIPT_INPUTS = [
     Path("scripts/run_base_vs_adapter_eval.py"),
     Path("scripts/summarize_base_vs_adapter_report.py"),
@@ -76,7 +80,7 @@ def build_commands(
 ) -> dict[str, str]:
     joined_push_paths = " ".join(push_paths)
     eval_cmd = (
-        "cd /root/root/work/quantum-gpt && "
+        "cd /root/work/quantum-gpt && "
         "nohup env PYTHONPYCACHEPREFIX=/tmp/pycache TOKENIZERS_PARALLELISM=false "
         "python3 scripts/run_base_vs_adapter_eval.py "
         f"--slice-json {slice_path} "
@@ -89,7 +93,7 @@ def build_commands(
     return {
         "push_to_s3": f"./scripts/push_to_s3.sh {joined_push_paths}",
         "sync_ai2_from_s3": "./scripts/ai2_sync_from_s3.sh",
-        "launch_eval_on_ai2": f"./scripts/ai2_shell.sh \"{eval_cmd}\"",
+        "launch_eval_on_ai2": f'./scripts/ai2_shell.sh "{eval_cmd}"',
         "watch_report": (
             "./scripts/watch_base_vs_adapter_report.sh "
             f"ai2 {report_path} {report_path} {log_path}"
@@ -158,7 +162,7 @@ def main() -> int:
         "blocker": {
             "type": "outer-approval-layer",
             "summary": "Direct networked file transfer remains blocked outside the workspace.",
-            "blocked_command": "/Users/daxu/homebrew/bin/rclone copy scripts/run_base_vs_adapter_eval.py \"nm-aihuanxin:jtdlp-3ed7854b946a47b1a49ad754baa76cd3/quantum-qwen25-coder-main/scripts\" --s3-no-check-bucket --progress",
+            "blocked_command": '/Users/daxu/homebrew/bin/rclone copy scripts/run_base_vs_adapter_eval.py "nm-aihuanxin:jtdlp-3ed7854b946a47b1a49ad754baa76cd3/quantum-qwen25-coder-main/scripts" --s3-no-check-bucket --progress',
         },
         "base_model": str(args.base_model),
         "adapter": {
@@ -173,7 +177,9 @@ def main() -> int:
 
     manifest_path = artifact_dir / "handoff_manifest.json"
     commands_path = artifact_dir / "NEXT_ACTIONS.sh"
-    manifest_path.write_text(json.dumps(handoff_manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    manifest_path.write_text(
+        json.dumps(handoff_manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+    )
     commands_path.write_text(
         "#!/usr/bin/env bash\n"
         "set -euo pipefail\n\n"

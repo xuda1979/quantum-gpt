@@ -1,0 +1,9 @@
+{
+  "id": "quantum_rl_v2_qml_classifier_x0x1",
+  "name": "Two-qubit PennyLane variational classifier for x0*x1>0",
+  "domain": "quantum",
+  "category": "algorithm_implementation",
+  "task_prompt": "Build a reproducible two-qubit PennyLane variational classifier for labels defined by x0*x1>0 on a small deterministic 2D training set. Use angle encoding, two trainable rotation-entangling layers, an expectation-value output with a trainable bias, mini-batch-free Adam optimization, and a fixed train/test split. Print loss and accuracies, assert loss decreases from initialization and all predictions are finite; do not hard-code a guaranteed accuracy threshold above 70 percent. Output code only as a self-contained Python program. Use documented public APIs, require no cloud credentials, make stochastic behavior reproducible, and include executable checks with justified tolerances.",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

@@ -1,0 +1,24 @@
+Write a complete, runnable Python program using numpy and qiskit that:
+1. Prepares a 4-qubit W state |W_4> = (|1000> + |0100> + |0010> + |0001>)/2.
+   Use the cascaded-rotation construction:
+   - Apply ry(2*arccos(sqrt(1/4))) to qubit 0.
+   - For each k from 1 to 3, apply cry(2*arccos(sqrt(1/(4-k))), k-1, k) followed
+     by CX(k, k-1). This cascades the |1> amplitude from qubit k-1 to qubit k
+     while leaving the appropriate excitation behind.
+2. Simulate with qiskit.quantum_info.Statevector.
+3. Computes the fidelity with the ideal W state |expected> = (|1000> + |0100>
+   + |0010> + |0001>)/2 as |<expected|actual>|^2.
+4. Computes the total probability of measuring exactly one excitation (one
+   qubit in |1>, all others in |0>).
+5. Computes the per-basis-state probabilities for |1000>, |0100>, |0010>,
+   |0001> and verifies they are all 0.25.
+6. In `def main()`, prints exactly:
+     W-state: 4 qubits
+     Fidelity = <value rounded to 6 decimals>
+     One-excitation prob = 1.000000
+     Per-qubit probs = [0.25, 0.25, 0.25, 0.25]
+     Equal weights: True
+     Correct: <True|False>
+   where Correct is True iff fidelity > 0.9999 AND all four probabilities are
+   0.25 to within 1e-9.
+Call main() under `if __name__ == "__main__":`.

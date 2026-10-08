@@ -1,0 +1,19 @@
+def claimable_ready_count(queue):
+    """C-9114: count CLAIMABLE ready cards straight from QUEUE.json's cards
+    field (dict-format cards): status "ready" AND no dep whose status is
+    dead/bounced. A running or done dep is work in flight/complete -- the
+    card still counts (the board is not idle); only a TERMINAL dep means
+    the card can never become work, so it is excluded."""
+    n = 0
+    for c in queue["cards"]:
+        if c["status"] != "ready":
+            continue
+        stuck = False
+        for dep_id in c["deps"]:
+            dep = find_card(queue, dep_id)
+            if dep is not None and dep["status"] in ("dead", "bounced"):
+                stuck = True
+                break
+        if not stuck:
+            n += 1
+    return n

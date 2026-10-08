@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0704",
+  "name": "Write a Qiskit program that prepares the 5-qubit W state exactly (using controll",
+  "task_prompt": "Write a Qiskit program that prepares the 5-qubit W state exactly (using controlled rotations) and verifies it by printing the statevector amplitudes of the basis states with a single 1. Give one complete script that runs end-to-end on its own and prints the outcome."
+}

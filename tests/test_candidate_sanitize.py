@@ -24,3 +24,8 @@ def test_sanitize_extracts_parseable_prefix_from_broken_tail() -> None:
 Explanation:
 """
     assert sanitize_candidate_text(raw) == "def solve(x):\n    return x + 1\n"
+
+
+def test_sanitize_drops_known_terminal_markers() -> None:
+    raw = "OK<|im_end|>\n<|endoftext|>"
+    assert sanitize_candidate_text(raw) == "OK\n"

@@ -1,0 +1,43 @@
+{
+  "date": "2026-04-12",
+  "environment": "huanxin-ai2",
+  "workspace_root": "/root/work/david/software/quantum-gpt",
+  "codex_version": "0.120.0",
+  "proxy_base_url": "http://127.0.0.1:8011/v1",
+  "transport_mode": "s3-relay-via-local-bridge",
+  "direct_ai2_yunwu_status": "blocked_by_ai2_outbound_https_timeout",
+  "verified_proxy_models": [
+    {
+      "model": "gpt-5.4",
+      "route": "ai2 local_openai_response_probe -> ai2 local proxy -> S3 relay -> local bridge -> Yunwu chat/completions",
+      "result": "OK"
+    },
+    {
+      "model": "claude-opus-4-6",
+      "route": "ai2 local_openai_response_probe -> ai2 local proxy -> S3 relay -> local bridge -> Yunwu chat/completions",
+      "result": "OK"
+    }
+  ],
+  "verified_codex_commands": [
+    {
+      "command": "codex exec --skip-git-repo-check --color never -C /root/work/david/software/quantum-gpt -p yunwu -m gpt-5.4 -o /tmp/codex_yunwu_gpt54_ai2.txt \"Reply with exactly OK and nothing else.\"",
+      "provider": "yunwu",
+      "model": "gpt-5.4",
+      "output_file": "/tmp/codex_yunwu_gpt54_ai2.txt",
+      "output_text": "OK"
+    },
+    {
+      "command": "codex exec --skip-git-repo-check --color never -C /root/work/david/software/quantum-gpt -p yunwu -m claude-opus-4-6 -o /tmp/codex_yunwu_claude_ai2.txt \"Reply with exactly OK and nothing else.\"",
+      "provider": "yunwu",
+      "model": "claude-opus-4-6",
+      "output_file": "/tmp/codex_yunwu_claude_ai2.txt",
+      "output_text": "OK"
+    }
+  ],
+  "required_local_helper": "python3 scripts/yunwu_s3_bridge.py",
+  "notes": [
+    "ai2 now reaches the local Yunwu-compatible proxy at 127.0.0.1:8011.",
+    "The proxy was extended to relay upstream chat/completions requests through S3 because direct ai2 -> api.yunwu.ai HTTPS remained blocked.",
+    "The end-to-end Codex success claims above were verified live on ai2."
+  ]
+}

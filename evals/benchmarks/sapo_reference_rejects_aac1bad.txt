@@ -1,0 +1,15 @@
+# Sticky reference failures for questions_and_code source sha256
+# aac1bad21dc9f8dc2784176d04e477642fedebc00826207753aaef706e4cf365.
+# A task stays excluded after any observed reference/harness failure, even if a
+# later stochastic run happens to pass.
+qc-0014
+qc-0175
+qc-0220
+qc-0240
+qc-0253
+qc-0451
+qc-0456
+qc-0459
+qc-0787
+qc-0782
+qc-0867

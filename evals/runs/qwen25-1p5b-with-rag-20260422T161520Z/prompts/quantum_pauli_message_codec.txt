@@ -1,0 +1,184 @@
+Task ID: quantum_pauli_message_codec
+Task name: Pauli label codec for two-bit messages
+Domain: quantum
+Category: api_normalization
+
+Reference documentation (use these only as background; do not echo them):
+--- BEGIN REFERENCE DOCS ---
+[DOC 1] source=AGENTS.md
+[source: daxu/software/quantum-gpt/AGENTS.md] [daxu/software/quantum-gpt/AGENTS.md]
+
+receive a heartbeat poll (message matches the configured heartbeat prompt), don't just reply `HEARTBEAT_OK` every time. Use heartbeats productively!
+
+Default heartbeat prompt:
+`Read HEARTBEAT.md if it exists (workspace context). Follow it strictly. Do not infer or repeat old tasks from prior chats. If nothing needs attention, reply HEARTBEAT_OK.`
+
+You are free to edit `HEARTBEAT.md` with a short checklist or reminders. Keep it small to limit token burn.
+
+### Heartbeat vs Cron: When to Use Each
+
+**Use heartbeat when:**
+
+- Multiple checks can batch together (inbox + calendar + notifications in one turn)
+- You need conversational context from recent messages
+- Timing can drift slightly (every ~30 min is fine, not exact)
+- You want to reduce API calls by combining periodic checks
+
+**Use cron when:**
+
+- Exact timing matters ("9:00 AM sharp every Monday")
+- Task needs isolation from main session history
+- You want a different model or thinking level for the task
+- One-shot reminders ("remind me in 20 minut  ...[truncated]
+
+[DOC 2] source=AGENTS.md
+[source: daxu/software/quantum-gpt/AGENTS.md] [daxu/software/quantum-gpt/AGENTS.md]
+
+uman's stuff. That doesn't mean you _share_ their stuff. In groups, you're a participant — not their voice, not their proxy. Think before you speak.
+
+### 💬 Know When to Speak!
+
+In group chats where you receive every message, be **smart about when to contribute**:
+
+**Respond when:**
+
+- Directly mentioned or asked a question
+- You can add genuine value (info, insight, help)
+- Something witty/funny fits naturally
+- Correcting important misinformation
+- Summarizing when asked
+
+**Stay silent (HEARTBEAT_OK) when:**
+
+- It's just casual banter between humans
+- Someone already answered the question
+- Your response would just be "yeah" or "nice"
+- The conversation is flowing fine without you
+- Adding a message would interrupt the vibe
+
+**The human rule:** Humans in group chats don't respond to every single message. Neither should you. Quality > quantity. If you wouldn't send it in a real group chat with friends, don't send it.
+
+**Avoid the triple-tap:** Don't respond multiple times to the same message with dif  ...[truncated]
+
+[DOC 3] source=stabilizer_formalism.md
+[source: quantum-gpt/docs/quantum_libraries/stabilizer_formalism.md] [quantum-gpt/docs/quantum libraries/stabilizer formalism.md]
+
+# Stabilizer formalism and tableau update
+
+## Concept
+A stabilizer state is the unique +1 eigenstate of a maximal abelian
+subgroup of the n-qubit Pauli group. Any stabilizer state can be
+described compactly by its stabilizer generators (a list of n Pauli
+strings), or equivalently by a binary "tableau" of size 2n x (2n+1).
+
+Stabilizer circuits are exactly the Clifford circuits: H, S, CNOT.
+They can be simulated efficiently in O(n^2) per gate via the Aaronson-
+Gottesman tableau algorithm.
+
+## Tableau layout
+Rows: 2n stabilizer generators (n destabilizers + n stabilizers).
+Columns: 2n binary symplectic + 1 sign column.
+
+For each row r:
+- x bits: r[0:n]
+- z bits: r[n:2n]
+- sign:  r[2n] (1 means -)
+
+A Pauli operator is X^x Z^z up to a global phase set by the sign bit.
+
+## Update rules
+- **H on qubit q**: swap x_q and z_q in every row; flip sign if x_q AND z_q in that row.
+- **S on qubit q**: z_q ^= x_q; flip sign if x_q AND z_q in that row.
+- **CNOT(c, t)**: x  ...[truncated]
+--- END REFERENCE DOCS ---
+
+Write the simplest Python file that satisfies the supplied tests and return only that file.
+
+Reference candidate style example (for format guidance, not for blind copying):
+--- BEGIN REFERENCE CANDIDATE ---
+_BITS_TO_LABEL = {
+    "00": "I",
+    "01": "X",
+    "10": "Z",
+    "11": "XZ",
+}
+
+_LABEL_TO_BITS = {value: key for key, value in _BITS_TO_LABEL.items()}
+
+
+def canonicalize_pauli_label(label: str) -> str:
+    normalized = "".join(str(label).strip().upper().split())
+    if normalized == "ZX":
+        normalized = "XZ"
+    if normalized not in _LABEL_TO_BITS:
+        raise ValueError("unknown Pauli label")
+    return normalized
+
+
+def bits_to_pauli_label(bits: str) -> str:
+    if bits not in _BITS_TO_LABEL:
+        raise ValueError("bits must be one of 00, 01, 10, 11")
+    return _BITS_TO_LABEL[bits]
+
+
+def pauli_label_to_bits(label: str) -> str:
+    return _LABEL_TO_BITS[canonicalize_pauli_label(label)]
+
+--- END REFERENCE CANDIDATE ---
+
+Tests the candidate must satisfy:
+--- BEGIN TESTS ---
+import importlib.util
+
+
+def _load(candidate_path: str):
+    spec = importlib.util.spec_from_file_location("candidate", candidate_path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
+def run_tests(candidate_path: str) -> dict:
+    module = _load(candidate_path)
+    failures = []
+
+    expected = {"00": "I", "01": "X", "10": "Z", "11": "XZ"}
+    for bits, label in expected.items():
+        actual_label = module.bits_to_pauli_label(bits)
+        if actual_label != label:
+            failures.append(f"bits_to_pauli_label({bits!r}) -> {actual_label!r}, expected {label!r}")
+        recovered_bits = module.pauli_label_to_bits(label)
+        if recovered_bits != bits:
+            failures.append(f"pauli_label_to_bits({label!r}) -> {recovered_bits!r}, expected {bits!r}")
+
+    if module.canonicalize_pauli_label(" z x ") != "XZ":
+        failures.append("canonicalize_pauli_label should normalize whitespace/casing and canonicalize ZX -> XZ")
+    if module.pauli_label_to_bits("xz") != "11":
+        failures.append("pauli_label_to_bits should accept lowercase non-canonical input and recover the right bits")
+
+    for bad_bits in ("2", "101", ""):
+        try:
+            module.bits_to_pauli_label(bad_bits)
+        except ValueError:
+            pass
+        except Exception as exc:
+            failures.append(f"bits_to_pauli_label({bad_bits!r}) raised {type(exc).__name__}, expected ValueError")
+        else:
+            failures.append(f"bits_to_pauli_label({bad_bits!r}) accepted invalid bits")
+
+    try:
+        module.pauli_label_to_bits("YY")
+    except ValueError:
+        pass
+    except Exception as exc:
+        failures.append(f"pauli_label_to_bits('YY') raised {type(exc).__name__}, expected ValueError")
+    else:
+        failures.append("pauli_label_to_bits('YY') accepted an unknown label")
+
+    return {
+        "passed": not failures,
+        "details": failures or ["Pauli message codec round-trips two-bit messages and normalizes labels correctly"],
+    }
+
+--- END TESTS ---

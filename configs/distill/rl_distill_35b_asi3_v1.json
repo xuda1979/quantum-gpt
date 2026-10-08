@@ -1,0 +1,175 @@
+{
+  "name": "rl_distill_35b_asi3_v1",
+  "student_model": {
+    "base_model": "Qwen/Qwen3.6-35B-A3B",
+    "adapter_init_path": "outputs/qg-35b-asi3-glm52-distill-sft-iter2/adapter",
+    "serving": {
+      "api_base": "http://127.0.0.1:8009/v1",
+      "api_key_env": "STUDENT_35B_API_KEY",
+      "model": "rl_distill_latest",
+      "temperature": 0.7,
+      "max_tokens": 3072,
+      "timeout_seconds": 600
+    }
+  },
+  "teacher_model": {
+    "model": "glm5.2",
+    "api_base_env": "GLM52_API_BASE",
+    "api_key_env": "GLM52_API_KEY",
+    "temperature": 0.0,
+    "max_tokens": 4096,
+    "top_logprobs": 20,
+    "timeout_seconds": 900
+  },
+  "question_generation": {
+    "frameworks": [
+      "qiskit",
+      "pennylane",
+      "cirq",
+      "braket",
+      "pyquil",
+      "qsharp",
+      "isq",
+      "cuda-quantum",
+      "mitiq",
+      "pyzx"
+    ],
+    "topics": [
+      "circuits",
+      "algorithms",
+      "noise_and_mitigation",
+      "hardware_compilation",
+      "ml_kernels",
+      "visualization",
+      "transpilation",
+      "protocols",
+      "simulation",
+      "error_correction"
+    ],
+    "difficulties": [
+      "easy",
+      "medium",
+      "hard"
+    ],
+    "framework_distribution": {
+      "qiskit": 0.3,
+      "pennylane": 0.16,
+      "cirq": 0.12,
+      "braket": 0.08,
+      "pyquil": 0.05,
+      "qsharp": 0.04,
+      "isq": 0.08,
+      "cuda-quantum": 0.07,
+      "mitiq": 0.05,
+      "pyzx": 0.05
+    },
+    "difficulty_distribution": {
+      "easy": 0.2,
+      "medium": 0.5,
+      "hard": 0.3
+    },
+    "topic_distribution": {
+      "circuits": 0.18,
+      "algorithms": 0.18,
+      "noise_and_mitigation": 0.12,
+      "hardware_compilation": 0.1,
+      "ml_kernels": 0.08,
+      "visualization": 0.06,
+      "transpilation": 0.08,
+      "protocols": 0.08,
+      "simulation": 0.08,
+      "error_correction": 0.04
+    },
+    "max_resamples_per_question": 3,
+    "rejection_buffer_size": 64
+  },
+  "pipeline": {
+    "student_samples_per_question": 1,
+    "max_teacher_corrections_per_question": 1,
+    "execution_timeout_seconds": 30,
+    "pass_threshold": 1.0,
+    "run_harness_when_available": false,
+    "teacher_judge_when_no_harness": true,
+    "target_buffer_size_per_round": 256,
+    "trainer_max_length": 2048
+  },
+  "splits": {
+    "train_ratio": 0.95,
+    "eval_ratio": 0.05,
+    "split_method": "stable_sha256_sorted_95_5"
+  },
+  "output_dir": "data/generated/rl_distill_35b_asi3_v1",
+  "seed": 20260706,
+  "concurrency": 4,
+  "guardrail": {
+    "max_consecutive_teacher_rejections": 12,
+    "max_teacher_qgate_rejection_rate": 0.85,
+    "min_teacher_confidence": 0.3,
+    "min_corrected_answer_chars": 40,
+    "rolling_window": 32
+  },
+  "eval_gate": {
+    "enabled": false,
+    "verdict_path": "",
+    "poll_every_seconds": 300,
+    "tolerance_pass_at_1": 0.03,
+    "tolerance_r_runnable": 0.2,
+    "required_consecutive": 2,
+    "_comment": "Set enabled=true and verdict_path=<NAS path to verdict.json> to arm the eval-regression gate. See skills/quantum-eval-verifier and docs/STATE.md."
+  },
+  "reward_weighting": {
+    "w_teacher_already_correct": 0.15,
+    "w_teacher_confidence": 0.1,
+    "w_first_pass_qgate": 0.05,
+    "w_answer_substance": 0.05,
+    "w_student_exec_pass": 0.45,
+    "w_teacher_exec_pass": 0.2
+  },
+  "per_artifact_scoring": {
+    "enabled": true,
+    "issue_classifier": "rule_v1",
+    "description": "Decomposes the teacher's free-form issues into the rubric's 7 categories and writes metadata.artifact_scores. The trainer uses this only when --reward-weighted-nll / --per-artifact-kl-gate / --partial-credit-upweight are set; otherwise the legacy single-reward path is used.",
+    "trainer": {
+      "reward_weighted_nll": false,
+      "per_artifact_kl_gate": false,
+      "partial_credit_upweight": 0.0
+    }
+  },
+  "dedup": {
+    "enabled": true,
+    "max_entries": 20000
+  },
+  "eval": {
+    "enabled": true,
+    "every_rounds": 2,
+    "tasks": "quantum",
+    "k": 1,
+    "max_new_tokens": 1024,
+    "npu_max_memory_gib": 58,
+    "reward_floor_for_train": 0.2
+  },
+  "git_sync": {
+    "enabled": true,
+    "interval": 50,
+    "push": true,
+    "remote": "origin",
+    "branch": "",
+    "add_paths": [],
+    "author_name": "rl-distill-bot",
+    "author_email": "rl-distill-bot@local"
+  },
+  "sandbox": {
+    "enabled": true,
+    "timeout_seconds": 30,
+    "memory_gib": 1.0,
+    "reject_on_teacher_exec_fail": true,
+    "exec_is_ground_truth": true
+  },
+  "weakness_aware": {
+    "enabled": true,
+    "report_path": "data/generated/rl_distill_35b_asi3_v1/weakness_report.json",
+    "alpha": 0.4,
+    "min_weight": 0.05,
+    "reload_every_samples": 100
+  }
+}

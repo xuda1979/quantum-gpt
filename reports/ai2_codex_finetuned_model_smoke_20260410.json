@@ -1,0 +1,28 @@
+{
+  "test_date": "2026-04-10",
+  "environment": "huanxin-ai2",
+  "workspace_root": "/root/root/work/quantum-gpt",
+  "model_alias": "omnicoder9b-quantum-generalization-sft-8npu-fastiter-20260409T1451CST",
+  "provider_id": "quantum_local",
+  "provider_api_base": "http://127.0.0.1:8000/v1",
+  "device": "npu",
+  "command": "printf '' | /root/.local/bin/codex exec --skip-git-repo-check --color never -C /root/root/work/quantum-gpt -p local -m omnicoder9b-quantum-generalization-sft-8npu-fastiter-20260409T1451CST -o /tmp/codex_last.txt 'Reply with exactly OK and nothing else.'",
+  "health_check": {
+    "endpoint": "http://127.0.0.1:8000/health",
+    "response": {
+      "ok": true,
+      "model": "omnicoder9b-quantum-generalization-sft-8npu-fastiter-20260409T1451CST"
+    }
+  },
+  "direct_probe": {
+    "script": "scripts/local_openai_response_probe.py",
+    "status": "completed",
+    "output_text": "OK\n"
+  },
+  "codex_result": {
+    "output_file": "/tmp/codex_last.txt",
+    "output_text": "OK",
+    "status": "success"
+  },
+  "evidence_source": "memory/2026-04-10.md"
+}

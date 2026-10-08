@@ -1,5 +1,6 @@
 const { ensureProfileDir } = require('./huanxin_profile');
 const { launchPersistentContext } = require('./huanxin_browser_launch');
+const { TRAIN_DEV_URL, bridgePageViaSafariSso, classifyUrl } = require('./huanxin_repair_profile_via_safari_sso');
 
 function usage() {
   console.error('Usage: node huanxin_open_env.js <envName> [--click-text <text>]');
@@ -21,6 +22,153 @@ function parseArgs(argv) {
   }
 
   return { envName, clickText };
+}
+
+function cleanText(value) {
+  return String(value || '').replace(/\s+/g, ' ').trim();
+}
+
+function getAppBaseUrl(url) {
+  return String(url || '').split('#')[0] || String(TRAIN_DEV_URL).split('#')[0];
+}
+
+function findEnvironmentPage(context, envName) {
+  const encodedEnvName = encodeURIComponent(envName || '');
+  return context.pages().find(
+    (candidate) =>
+      !candidate.isClosed() &&
+      candidate.url().includes('/train-dev/environment/') &&
+      (!envName || candidate.url().includes(`name=${encodedEnvName}`) || candidate.url().includes(`name=${envName}`))
+  );
+}
+
+async function pageLooksLikeEnvironment(page, envName) {
+  const url = page.url();
+  const encodedEnvName = encodeURIComponent(envName || '');
+  if (url.includes('/train-dev/environment/') && (url.includes(`name=${encodedEnvName}`) || url.includes(`name=${envName}`))) {
+    return true;
+  }
+
+  const bodyText = cleanText(await page.locator('body').innerText().catch(() => ''));
+  return bodyText.includes(`打开环境 ${envName}`);
+}
+
+async function ensureAppSurface(page, envName) {
+  const listUrl = `${getAppBaseUrl(TRAIN_DEV_URL)}#/train-dev`;
+  await page.goto(listUrl, { waitUntil: 'domcontentloaded', timeout: 180000 });
+  await page.waitForTimeout(3000);
+
+  if (classifyUrl(page.url()) === 'login_required') {
+    const bridge = await bridgePageViaSafariSso(page, {
+      authUrl: page.url(),
+      targetUrl: listUrl,
+      waitMs: 8000,
+      resultPath: `/tmp/huanxin-open-env-${envName}-${Date.now()}.json`,
+    });
+    if (!bridge.ok) {
+      throw new Error(`Safari SSO bridge failed: ${JSON.stringify(bridge)}`);
+    }
+    await page.waitForTimeout(3000);
+  }
+
+  if (classifyUrl(page.url()) !== 'app_surface') {
+    await page.goto(listUrl, { waitUntil: 'domcontentloaded', timeout: 180000 });
+    await page.waitForTimeout(3000);
+  }
+}
+
+async function dismissBlockingAnnouncements(page) {
+  await page
+    .evaluate(() => {
+      const clean = (value) => String(value || '').replace(/\s+/g, ' ').trim();
+      const candidates = Array.from(
+        document.querySelectorAll('button, [role="button"], .ant-modal-close, .ant-drawer-close, .close')
+      );
+      for (const element of candidates) {
+        const text = clean(element.innerText || element.textContent || element.getAttribute('aria-label'));
+        if (/^(知道了|我知道了|确定|确认|关闭|取消|OK|Close|×|x)$/i.test(text)) {
+          element.click();
+        }
+      }
+
+      for (const selector of ['.system-announcement-wrap', '.mask']) {
+        for (const element of document.querySelectorAll(selector)) {
+          element.style.pointerEvents = 'none';
+        }
+      }
+    })
+    .catch(() => {});
+  await page.waitForTimeout(500).catch(() => {});
+}
+
+async function openEnvironment(page, envName) {
+  const context = page.context();
+  const existingEnvPage = findEnvironmentPage(context, envName);
+  if (existingEnvPage) {
+    await existingEnvPage.bringToFront().catch(() => {});
+    await existingEnvPage.waitForTimeout(1500);
+    return existingEnvPage;
+  }
+
+  if (await pageLooksLikeEnvironment(page, envName)) {
+    await page.bringToFront().catch(() => {});
+    await page.waitForTimeout(1500);
+    return page;
+  }
+
+  const row = page.locator('tr', { hasText: envName }).first();
+  await row.waitFor({ state: 'visible', timeout: 60000 });
+  const openButton = row.getByRole('button', { name: '打开' }).first();
+  const startButton = row.getByRole('button', { name: '运行' }).first();
+
+  for (let poll = 0; poll < 30; poll += 1) {
+    await dismissBlockingAnnouncements(page);
+    const existingPage = findEnvironmentPage(context, envName);
+    if (existingPage) {
+      await existingPage.bringToFront().catch(() => {});
+      await existingPage.waitForTimeout(1500);
+      return existingPage;
+    }
+
+    const rowText = cleanText(await row.textContent().catch(() => ''));
+    const startVisible = await startButton.isVisible().catch(() => false);
+    const startEnabled = await startButton.isEnabled().catch(() => false);
+    const openEnabled = await openButton.isEnabled().catch(() => false);
+    const spinning = await page.locator('.ant-spin-spinning, .ant-spin-blur').count().catch(() => 0);
+    const shouldStart = (rowText.includes('已停止') || rowText.includes('已锁定')) && startVisible && startEnabled;
+
+    if (shouldStart && spinning === 0) {
+      await startButton.click({ timeout: 15000 });
+      await page.waitForTimeout(8000);
+      continue;
+    }
+
+    if (openEnabled && spinning === 0) {
+      const pagesBeforeOpen = context.pages().length;
+      await openButton.click({ timeout: 15000 });
+      await page.waitForTimeout(5000);
+
+      const newEnvPage =
+        findEnvironmentPage(context, envName) ||
+        (context.pages().length > pagesBeforeOpen ? context.pages()[context.pages().length - 1] : null);
+      if (newEnvPage) {
+        await newEnvPage.bringToFront().catch(() => {});
+        await newEnvPage.waitForTimeout(1500);
+        return newEnvPage;
+      }
+
+      if (await pageLooksLikeEnvironment(page, envName)) {
+        await page.bringToFront().catch(() => {});
+        await page.waitForTimeout(1500);
+        return page;
+      }
+    }
+
+    await page.waitForTimeout(2000);
+  }
+
+  const rowText = cleanText(await row.textContent().catch(() => ''));
+  throw new Error(`Failed to open environment ${envName}. Row preview: ${rowText}`);
 }
 
 async function clickByVisibleText(page, text) {
@@ -58,19 +206,8 @@ async function main() {
 
   const page = context.pages()[0] || (await context.newPage());
   page.setDefaultTimeout(30000);
-  await page.goto(
-    'https://aihuanxin.cn/kunlun/kl-web?poolId=1&projectId=3ed7854b946a47b1a49ad754baa76cd3#/train-dev',
-    { waitUntil: 'networkidle', timeout: 180000 }
-  );
-  await page.waitForTimeout(2000);
-
-  const row = page.locator('tr', { hasText: envName }).first();
-  await row.waitFor({ state: 'visible' });
-  await row.getByRole('button', { name: '打开' }).click();
-  await page.waitForTimeout(5000);
-
-  const pages = context.pages();
-  const activePage = pages[pages.length - 1];
+  await ensureAppSurface(page, envName);
+  const activePage = await openEnvironment(page, envName);
   await activePage.waitForTimeout(3000);
 
   if (clickText) {

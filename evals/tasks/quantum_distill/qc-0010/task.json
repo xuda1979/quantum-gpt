@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0010",
+  "name": "You are given a Hamiltonian describing a quantum spin chain with 4 qubits: H = Z",
+  "task_prompt": "You are given a Hamiltonian describing a quantum spin chain with 4 qubits: H = Z_0 Z_1 + X_0 X_2 + Y_1 Y_3. Using PennyLane 0.44.1, write a Python function that: (1) Defines a variational quantum circuit ansatz using 6 trainable parameters (rotations on each qubit followed by two CNOT entangling layers); (2) Computes the expectation value of H using qml.Hamiltonian and qml.expval; (3) Uses gradient descent to minimize the expectation value (cost function). Provide the complete code that would be syntactically correct, import-ready, and can be run on default.qubit."
+}

@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0294",
+  "name": "Using Qiskit, implement a VQE algorithm to find the ground state energy of the H",
+  "task_prompt": "Using Qiskit, implement a VQE algorithm to find the ground state energy of the Hamiltonian H = -1.0 * (ZII + IZI + IIZ) + 0.5 * (XXI + IXX + XII). Use the RealAmplitudes ansatz with 2 repetitions and COBYLA optimizer with maxiter=100. Ensure reproducibility by seeding the initial parameters with a fixed random seed (e.g., 42). Compute the expectation value exactly using the statevector simulator (no shots). Return the final energy and the optimized parameters. Your code must be executable and include all necessary imports."
+}

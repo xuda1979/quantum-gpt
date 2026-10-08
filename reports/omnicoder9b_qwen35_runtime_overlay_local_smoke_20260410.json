@@ -1,0 +1,63 @@
+{
+  "python": "3.11.15",
+  "platform": "macOS-26.3-arm64-arm-64bit",
+  "machine": "arm64",
+  "target_model": "models/OmniCoder-9B",
+  "load_model_requested": false,
+  "modules": {
+    "torch": "2.11.0",
+    "transformers": "5.6.0.dev0",
+    "accelerate": "1.4.0",
+    "datasets": "3.3.2",
+    "peft": "0.14.0"
+  },
+  "dataset": {
+    "path": "data/seed/splits-auto-seed/train.jsonl",
+    "rows": 18,
+    "sample_ids": [
+      "quantum_circuit_depth_opt_001"
+    ],
+    "sample_domains": [
+      "quantum"
+    ],
+    "sample_message_counts": [
+      3
+    ],
+    "role_histogram": {
+      "system": 18,
+      "user": 18,
+      "assistant": 18
+    }
+  },
+  "torch_cuda_available": false,
+  "config_model_type": "qwen3_5",
+  "config_architectures": [
+    "Qwen3_5ForConditionalGeneration"
+  ],
+  "runtime_autoconfig_ok": true,
+  "checkpoint_transformers_version": "5.3.0.dev0",
+  "runtime_config_class": "Qwen3_5Config",
+  "text_preprocessor_backend_kind": "tokenizer",
+  "render_backend_class": "TokenizersBackend",
+  "text_backend_class": "TokenizersBackend",
+  "save_backend_class": "TokenizersBackend",
+  "tokenizer_vocab_size": 248044,
+  "pad_token_filled_from_eos": false,
+  "text_batch_preflight": {
+    "example_id": "quantum_circuit_depth_opt_001",
+    "input_token_count": 1892,
+    "attention_token_count": 1892,
+    "prompt_token_count": 1533,
+    "batch_input_shape": [
+      1,
+      1892
+    ],
+    "batch_label_shape": [
+      1,
+      1892
+    ],
+    "masked_label_tokens": 1533
+  },
+  "model_load_skipped": true,
+  "status": "ok"
+}

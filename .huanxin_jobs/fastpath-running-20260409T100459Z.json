@@ -1,0 +1,12 @@
+{
+  "job_id": "fastpath-running-20260409T100459Z",
+  "name": "fastpath-running",
+  "pid": 297533,
+  "log_path": "/tmp/ai2_fastpath_running.log",
+  "remote_root": "/root/root/work/quantum-gpt",
+  "command": "cd /root/root/work/quantum-gpt && echo __FASTPATH_RUNNING_BEGIN__ && sleep 20 && echo __FASTPATH_RUNNING_END__",
+  "created_at": "2026-04-09T10:05:02.708565+00:00",
+  "transport": "daemon",
+  "duration_ms": 2872,
+  "meta_file": "/Users/daxu/software/quantum-gpt/.huanxin_jobs/fastpath-running-20260409T100459Z.json"
+}

@@ -1,0 +1,21 @@
+Write a complete, runnable Python program using Qiskit 2.x that:
+1. Builds a 3-qubit "quantum volume"-style random circuit with depth 3:
+   - For each layer d in 0..2:
+     - For each qubit q, apply a random SU(2) gate (use a fixed seed so the
+       output is deterministic). You can use qiskit.quantum_info.random_unitary(2)
+       with seed = d * 4 + q.
+     - Apply a random permutation of the qubits (use a fixed permutation
+       derived from the seed).
+2. Uses Statevector to compute the ideal output probabilities for all 8
+   bitstrings. Defines the "heavy outputs" as the bitstrings whose
+   probability is greater than the median probability of all 8 bitstrings.
+3. Measures the circuit with StatevectorSampler (>= 4000 shots) and computes
+   the fraction of shots that landed on heavy outputs.
+4. In `def main()`, prints:
+     heavy_output_prob = <value rounded to 3 decimals>
+     passes: True   (if heavy_output_prob > 2/3 + epsilon, use epsilon = 0.02,
+                      i.e. > 0.687, else False)
+   For a 3-qubit ideal circuit the heavy-output probability should be
+   at least ~5/8 = 0.625 (and typically higher for random circuits).
+   Expected: heavy_output_prob > 0.687 and passes: True.
+Call main() under `if __name__ == "__main__":`.

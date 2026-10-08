@@ -1,0 +1,27 @@
+Write a complete, runnable Python program using numpy and qiskit that:
+1. Builds a 5-qubit GHZ state: H on qubit 0, then CX(0,1), CX(1,2), CX(2,3),
+   CX(3,4).
+2. Simulate with qiskit.quantum_info.Statevector.
+3. Computes the expectation value of each GHZ stabilizer:
+   - X0X1X2X3X4 (should be +1)
+   - Z0Z1 (should be +1)
+   - Z1Z2 (should be +1)
+   - Z2Z3 (should be +1)
+   - Z3Z4 (should be +1)
+   Use qiskit.quantum_info.SparsePauliOp for the Pauli strings.
+4. Computes the reduced density matrix of qubit 0 (trace out qubits 1..4) and
+   its purity Tr(rho0^2). For a genuine GHZ state, this purity equals 0.5
+   (maximally mixed single qubit).
+5. In `def main()`, prints exactly:
+     GHZ state: 5 qubits
+     <XXXXX> = +1.0000
+     <ZZIII> = +1.0000
+     <IZZII> = +1.0000
+     <IIZZI> = +1.0000
+     <IIIZZ> = +1.0000
+     All stabilizers +1: True
+     Single-qubit purity = 0.5000
+     Entangled: True
+     Valid GHZ: True
+   (Stabilizer lines must each show +1.0000; Entangled and Valid GHZ must be True.)
+Call main() under `if __name__ == "__main__":`.

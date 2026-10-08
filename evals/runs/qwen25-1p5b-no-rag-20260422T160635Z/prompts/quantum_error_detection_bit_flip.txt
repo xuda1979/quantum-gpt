@@ -1,0 +1,100 @@
+Task ID: quantum_error_detection_bit_flip
+Task name: Quantum Bit-Flip Error Detection
+Domain: quantum
+Category: debug_repair
+
+Write the simplest Python file that satisfies the supplied tests and return only that file.
+
+Reference candidate style example (for format guidance, not for blind copying):
+--- BEGIN REFERENCE CANDIDATE ---
+def bit_flip_code(initial_state: int, error_qubit: int) -> dict:
+    """3-qubit bit-flip repetition code.
+
+    Encodes logical qubit |initial_state> into 3 physical qubits,
+    applies a bit-flip error on error_qubit, measures the syndrome,
+    and corrects to recover the original logical state.
+
+    Args:
+        initial_state: 0 or 1 — the logical qubit value to encode.
+        error_qubit: 0, 1, or 2 — which physical qubit receives the error.
+
+    Returns:
+        dict with:
+            'syndrome': list[int] of length 2 — parity check results.
+            'corrected_state': int — recovered logical value (0 or 1).
+    """
+    # Encode: all 3 physical qubits = initial_state
+    qubits = [initial_state, initial_state, initial_state]
+
+    # Apply error
+    qubits[error_qubit] ^= 1
+
+    # Syndrome measurement (parity checks)
+    # s0 = q0 XOR q1 (do q0 and q1 agree?)
+    # s1 = q1 XOR q2 (do q1 and q2 agree?)
+    s0 = qubits[0] ^ qubits[1]
+    s1 = qubits[1] ^ qubits[2]
+    syndrome = [s0, s1]
+
+    # Correct: majority vote
+    corrected_state = 1 if (qubits[0] + qubits[1] + qubits[2]) >= 2 else 0
+
+    return {"syndrome": syndrome, "corrected_state": corrected_state}
+
+--- END REFERENCE CANDIDATE ---
+
+Tests the candidate must satisfy:
+--- BEGIN TESTS ---
+import importlib.util
+
+
+def _load(candidate_path: str):
+    spec = importlib.util.spec_from_file_location("candidate", candidate_path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
+def run_tests(candidate_path: str) -> dict:
+    module = _load(candidate_path)
+    failures = []
+
+    # No error — syndrome should be [0, 0], state recovered correctly
+    for init in (0, 1):
+        for err_q in (0, 1, 2):
+            result = module.bit_flip_code(init, err_q)
+
+            if not isinstance(result, dict):
+                failures.append(f"bit_flip_code({init},{err_q}) must return dict, got {type(result)}")
+                continue
+
+            syndrome = result.get("syndrome")
+            corrected = result.get("corrected_state")
+
+            if not isinstance(syndrome, list) or len(syndrome) != 2:
+                failures.append(f"bit_flip_code({init},{err_q}): syndrome must be list of length 2, got {syndrome}")
+                continue
+
+            # Syndrome correctness: only one qubit flipped
+            # Error on qubit 0: s0=1, s1=0
+            # Error on qubit 1: s0=1, s1=1
+            # Error on qubit 2: s0=0, s1=1
+            expected_syndromes = {0: [1, 0], 1: [1, 1], 2: [0, 1]}
+            expected_syndrome = expected_syndromes[err_q]
+            if syndrome != expected_syndrome:
+                failures.append(
+                    f"bit_flip_code({init},{err_q}): syndrome={syndrome}, expected {expected_syndrome}"
+                )
+
+            if corrected != init:
+                failures.append(
+                    f"bit_flip_code({init},{err_q}): corrected_state={corrected}, expected {init}"
+                )
+
+    return {
+        "passed": not failures,
+        "details": failures or ["Bit-flip code correct for all initial states and error positions"],
+    }
+
+--- END TESTS ---

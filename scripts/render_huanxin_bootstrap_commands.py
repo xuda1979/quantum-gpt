@@ -11,7 +11,7 @@ It does not transfer files by itself. The goal is to remove ambiguity at the
 moment browser auth becomes usable again.
 
 Important: the default model target is the explicit remote local-path handoff
-location under `/root/root/work/quantum-gpt/models/...`, not an unresolved
+location under `/root/work/quantum-gpt/models/...`, not an unresolved
 public Hugging Face identifier. This avoids generating misleading remote smoke
 commands that look runnable before a verified local snapshot has actually been
 placed on Huanxin.
@@ -25,11 +25,12 @@ import shlex
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_MODEL = "/root/root/work/quantum-gpt/models/Qwen3.5-1.5B-Instruct"
+DEFAULT_MODEL = "/root/work/quantum-gpt/models/Qwen3.5-1.5B-Instruct"
 DEFAULT_DATASET = "data/seed/splits-auto-seed/train.jsonl"
 DEFAULT_TRAIN = "data/seed/splits-auto-seed/train.jsonl"
 DEFAULT_VAL = "data/seed/splits-auto-seed/val.jsonl"
 DEFAULT_REQS = "training/requirements-huanxin-cpu.txt"
+GEMMA_REQS = "training/requirements-gemma4-runtime.txt"
 DEFAULT_SMOKE = "training/huanxin_cpu_smoke.py"
 DEFAULT_TRAINING = "training/qwen_sft_peft.py"
 DEFAULT_PREFLIGHT_TARGETS = [
@@ -41,7 +42,11 @@ DEFAULT_OUTPUT_DIR = "outputs/qwen35-1p5b-peft-smoke"
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("bundle", type=Path, help="Path to a timestamped bundle dir under artifacts/huanxin-bootstrap/")
+    parser.add_argument(
+        "bundle",
+        type=Path,
+        help="Path to a timestamped bundle dir under artifacts/huanxin-bootstrap/",
+    )
     parser.add_argument(
         "--model-name",
         default=DEFAULT_MODEL,
@@ -50,8 +55,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--dataset", default=DEFAULT_DATASET)
     parser.add_argument("--train-file", default=DEFAULT_TRAIN)
     parser.add_argument("--eval-file", default=DEFAULT_VAL)
-    parser.add_argument("--output-dir", default=DEFAULT_OUTPUT_DIR, help="Remote output dir used by the optional PEFT smoke command")
-    parser.add_argument("--output", type=Path, help="Optional explicit output path for the rendered command file")
+    parser.add_argument(
+        "--output-dir",
+        default=DEFAULT_OUTPUT_DIR,
+        help="Remote output dir used by the optional PEFT smoke command",
+    )
+    parser.add_argument(
+        "--output", type=Path, help="Optional explicit output path for the rendered command file"
+    )
     return parser.parse_args()
 
 
@@ -61,6 +72,13 @@ def find_file(files: list[dict], rel_path: str) -> bool:
 
 def existing_preflight(files: list[dict]) -> list[str]:
     return [rel_path for rel_path in DEFAULT_PREFLIGHT_TARGETS if find_file(files, rel_path)]
+
+
+def resolve_requirements_file(model_name: str) -> str:
+    lowered = model_name.lower()
+    if "gemma-4" in lowered or "gemma4" in lowered:
+        return GEMMA_REQS
+    return DEFAULT_REQS
 
 
 def build_text(
@@ -79,6 +97,7 @@ def build_text(
     eval_file_q = shlex.quote(eval_file)
     output_dir_q = shlex.quote(output_dir)
     files = manifest["files"]
+    requirements_file = resolve_requirements_file(model_name)
     lines: list[str] = []
     lines.append("# Huanxin bootstrap command sheet")
     lines.append(f"# bundle_label: {manifest.get('label', 'unknown')}")
@@ -95,7 +114,11 @@ def build_text(
     for item in files:
         rel_path = item["path"]
         lines.append(f"# sha256 {item['sha256']}  {rel_path}")
-        lines.append(f"mkdir -p {shlex.quote(str(Path(rel_path).parent))}" if str(Path(rel_path).parent) != "." else "# top-level file")
+        lines.append(
+            f"mkdir -p {shlex.quote(str(Path(rel_path).parent))}"
+            if str(Path(rel_path).parent) != "."
+            else "# top-level file"
+        )
         lines.append(f"cat > {shlex.quote(rel_path)} <<'EOF'")
         lines.append(f"# paste local contents of {rel_path} here")
         lines.append("EOF")
@@ -109,13 +132,19 @@ def build_text(
     preflight_targets = existing_preflight(files)
     if preflight_targets:
         lines.append("# Local-file syntax preflight on the remote host before package install.")
-        lines.append("python3 -m py_compile " + " ".join(shlex.quote(path) for path in preflight_targets))
+        lines.append(
+            "python3 -m py_compile " + " ".join(shlex.quote(path) for path in preflight_targets)
+        )
         lines.append("")
 
-    if find_file(files, DEFAULT_REQS):
+    if find_file(files, requirements_file):
         lines.append("# Install the minimal CPU bootstrap stack.")
         lines.append("python3 -m pip install --upgrade pip")
-        lines.append(f"python3 -m pip install -r {shlex.quote(DEFAULT_REQS)}")
+        lines.append(f"python3 -m pip install -r {shlex.quote(requirements_file)}")
+        lines.append("")
+    elif requirements_file == GEMMA_REQS:
+        lines.append("# Gemma 4 runtime upgrade file is not present in this bundle.")
+        lines.append(f"# Expected requirements file: {GEMMA_REQS}")
         lines.append("")
 
     if find_file(files, DEFAULT_SMOKE):
@@ -158,7 +187,14 @@ def main() -> int:
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     output_path = args.output.resolve() if args.output else bundle / "REMOTE_BOOTSTRAP_COMMANDS.sh"
     output_path.write_text(
-        build_text(manifest, args.model_name, args.dataset, args.train_file, args.eval_file, args.output_dir),
+        build_text(
+            manifest,
+            args.model_name,
+            args.dataset,
+            args.train_file,
+            args.eval_file,
+            args.output_dir,
+        ),
         encoding="utf-8",
     )
     print(json.dumps({"bundle": str(bundle), "output": str(output_path)}, indent=2))

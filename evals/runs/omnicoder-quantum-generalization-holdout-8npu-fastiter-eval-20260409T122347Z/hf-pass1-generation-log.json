@@ -1,0 +1,35 @@
+{
+  "generated_at_utc": "2026-04-09T12:27:00Z",
+  "base_model": "models/OmniCoder-9B",
+  "adapter": "outputs/omnicoder9b-quantum-generalization-sft-8npu-fastiter-20260409T1451CST/adapter",
+  "device": "npu",
+  "max_new_tokens": 512,
+  "temperature": 0.0,
+  "turboquant": null,
+  "tasks": [
+    {
+      "task_id": "quantum_gate_alias_normalization",
+      "candidate_path": "candidates/quantum_gate_alias_normalization.py",
+      "output_chars": 625,
+      "started_at_sec": 22.303
+    },
+    {
+      "task_id": "quantum_phase_estimation_circuit",
+      "candidate_path": "candidates/quantum_phase_estimation_circuit.py",
+      "output_chars": 554,
+      "started_at_sec": 39.007
+    },
+    {
+      "task_id": "quantum_qaoa_maxcut",
+      "candidate_path": "candidates/quantum_qaoa_maxcut.py",
+      "output_chars": 1051,
+      "started_at_sec": 71.826
+    },
+    {
+      "task_id": "quantum_superdense_coding",
+      "candidate_path": "candidates/quantum_superdense_coding.py",
+      "output_chars": 682,
+      "started_at_sec": 95.589
+    }
+  ]
+}

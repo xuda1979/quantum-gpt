@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0850",
+  "name": "You are given the following quantum programming task. Solve MaxCut on the graph ",
+  "task_prompt": "You are given the following quantum programming task. Solve MaxCut on the graph [(0, 1), (0, 3), (0, 4), (1, 3), (2, 3)] with QAOA (p=1) in PennyLane: build cost/mixer layers manually, optimize with AdamOptimizer, and print the most probable bitstring and its cut value. Provide a complete, self-contained program that runs as-is and prints its results."
+}

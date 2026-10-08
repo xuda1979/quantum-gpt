@@ -1,0 +1,13 @@
+Write a complete, runnable Python program using Qiskit 2.x that:
+1. Prepares the 4-qubit computational basis state |5> = |0101> (qubit 0 = LSB = 1).
+2. Applies the 4-qubit Quantum Fourier Transform (QFT) using Qiskit's QFT(n, inverse=False).
+3. Measures all 4 qubits with StatevectorSampler (>= 8000 shots).
+4. In `def main()`, computes and prints:
+     input_state = <4-bit string>
+     n_outcomes = <integer>
+     max_prob = <value rounded to 3 decimals>
+     min_prob = <value rounded to 3 decimals>
+     uniform: <True|False>
+   Expected: n_outcomes = 16, max_prob ≈ 0.0625, min_prob ≈ 0.0625, uniform: True
+   (QFT of a computational basis state yields a uniform superposition up to phases).
+Call main() under `if __name__ == "__main__":`.

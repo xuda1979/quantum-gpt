@@ -1,0 +1,8 @@
+Write a complete, runnable Python program using Qiskit that:
+1. Builds a SWAP-test circuit: ancilla q0, state A = |0> on q1, state B = |+> = H|0> on q2.
+2. Applies H on ancilla, CSWAPs (controlled by ancilla) between q1 and q2, H on ancilla, measure ancilla.
+3. In `def main()`, uses StatevectorSampler (4000 shots), computes P(ancilla=0), and prints |<A|B>|^2 = 2*P(0) - 1.
+Output exactly:
+  P(0) = <value rounded to 3 decimals>
+  |<A|B>|^2 = <value rounded to 3 decimals>
+Call main() under `if __name__ == "__main__":`.

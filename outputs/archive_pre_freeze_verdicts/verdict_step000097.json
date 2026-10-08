@@ -1,0 +1,70 @@
+{
+  "composite_adapter": 1.3898,
+  "composite_base": 0.8294,
+  "beats_base": true,
+  "pass_adapter": "2/18",
+  "pass_base": "1/18",
+  "rubric_adapter": 1.938,
+  "rubric_base": 1.161,
+  "gains": [
+    "quantum_superdense_coding"
+  ],
+  "losses": [],
+  "by_category": [
+    {
+      "category": "algorithm_implementation",
+      "adapter_pass": 1,
+      "base_pass": 1,
+      "adapter_rubric": 1.572,
+      "base_rubric": 1.06,
+      "adapter_wins": true
+    },
+    {
+      "category": "api_normalization",
+      "adapter_pass": 0,
+      "base_pass": 0,
+      "adapter_rubric": 4.12,
+      "base_rubric": 4.12,
+      "adapter_wins": false
+    },
+    {
+      "category": "interface_contract",
+      "adapter_pass": 0,
+      "base_pass": 0,
+      "adapter_rubric": 4.12,
+      "base_rubric": 0.75,
+      "adapter_wins": true
+    },
+    {
+      "category": "quantum_error_correction",
+      "adapter_pass": 0,
+      "base_pass": 0,
+      "adapter_rubric": 0.75,
+      "base_rubric": 0.75,
+      "adapter_wins": false
+    },
+    {
+      "category": "quantum_ml",
+      "adapter_pass": 0,
+      "base_pass": 0,
+      "adapter_rubric": 0.57,
+      "base_rubric": 0.75,
+      "adapter_wins": false
+    },
+    {
+      "category": "reasoning",
+      "adapter_pass": 1,
+      "base_pass": 0,
+      "adapter_rubric": 4.88,
+      "base_rubric": 0.75,
+      "adapter_wins": true
+    }
+  ],
+  "by_task_wins": [
+    "quantum_binary_measurement_decoder",
+    "quantum_superdense_coding"
+  ],
+  "superseded": true,
+  "stale_reason": "pre-sha-pin verdict superseded by C-0040 2026-09-16: banked before the scorer embeds holdout_sha256/scorer_shas pins; scorer changed after bank; non-canonical, fail-closed",
+  "superseded_utc": "2026-09-16T15:57:49Z"
+}

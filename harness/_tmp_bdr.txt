@@ -1,0 +1,63 @@
+def bounce_dead_running_cards(state_dir, pid_alive_fn=None):
+    """C-9123: bounce 'running' cards whose deadline expired AND all workers
+    are dead. Unlike rearm_ghost_running_cards (which re-arms environmental
+    deaths without a strike), this BOUNCES the card so the dep-blocker
+    self-heal can detect it and break dependency cycles.
+
+    A card stuck in 'running' with an expired deadline and no live workers
+    is a deadlock source: downstream cards wait on it forever. Bouncing
+    lets _reconcile_dep_blockers escalate or re-decompose.
+
+    Returns a list of bounced card ids."""
+    if pid_alive_fn is None:
+        pid_alive_fn = pid_alive
+    queue = load_json(os.path.join(state_dir, "QUEUE.json"), {"cards": [], "seq": 0})
+    fleet = load_json(os.path.join(state_dir, "FLEET.json"), {"agents": []})
+    # Gather card ids with at least one live running worker
+    live_cards = set()
+    for a in fleet.get("agents", []):
+        if a.get("status") != "running":
+            continue
+        if pid_alive_fn(a.get("pid")):
+            live_cards.add(a.get("card"))
+
+    now = datetime.now(timezone.utc)
+    bounced = []
+    for c in queue.get("cards", []):
+        if c.get("status") != "running":
+            continue
+        if c["id"] in live_cards:
+            continue  # has a live worker
+        deadline = c.get("deadline_utc")
+        if not deadline:
+            continue  # no deadline — let rearm_ghost handle it
+        try:
+            dl = datetime.strptime(deadline, "%Y-%m-%dT%H:%M:%SZ")
+        except (ValueError, TypeError):
+            continue
+        if dl.tzinfo is None:
+            dl = dl.replace(tzinfo=timezone.utc)
+        if dl > now:
+            continue  # deadline not yet passed
+        # All workers dead + deadline expired → bounce
+        c["status"] = "bounced"
+        c["bounce_count"] = c.get("bounce_count", 0) + 1
+        c["bounce_reason"] = "all_workers_dead_deadline_expired"
+        c["claimed_by"] = None
+        c["claimed_utc"] = None
+        c["deadline_utc"] = None
+        c["requeued_utc"] = now_iso()
+        bounced.append(c["id"])
+        # Record event
+        event_path = os.path.join(state_dir, "events.jsonl")
+        evt = {
+            "ts": now_iso(),
+            "kind": "dead_worker_requeued",
+            "card": c["id"],
+            "reason": "all_workers_dead_deadline_expired",
+        }
+        with open(event_path, "a") as f:
+            f.write(json.dumps(evt) + "\n")
+    if bounced:
+        save_queue(state_dir, queue)
+    return bounced

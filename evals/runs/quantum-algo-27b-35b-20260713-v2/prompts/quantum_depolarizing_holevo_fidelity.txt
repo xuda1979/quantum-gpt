@@ -1,0 +1,21 @@
+Write a complete, runnable Python program using numpy and qiskit that:
+1. Implements a single-qubit depolarizing channel with parameter p:
+   E(rho) = (1 - p) * rho + p * I / 2.
+   Use the Kraus operator representation:
+     K_0 = sqrt(1 - p) * I
+     K_1 = sqrt(p/3) * X
+     K_2 = sqrt(p/3) * Y
+     K_3 = sqrt(p/3) * Z
+2. For input |0><0|, computes the output density matrix after E.
+3. Computes the Holevo information chi for an ensemble
+   E_ensemble = {1/2 |0><0|, 1/2 |1><1|} under the channel with p=0.3.
+   chi = S(average output) - 0.5 * S(output from |0>) - 0.5 * S(output from |1>)
+   where S is the von Neumann entropy in bits (log2).
+4. Computes the entanglement fidelity F_e of the channel with p=0.3
+   against the identity channel.
+5. In `def main()`, prints exactly these lines (values rounded to 4 decimals):
+     Output state trace = 1.0000
+     Holevo info = <chi>
+     Entanglement fidelity = <F_e>
+     Depolarizing p = 0.3000
+Call main() under `if __name__ == "__main__":`.

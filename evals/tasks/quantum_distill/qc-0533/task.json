@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0533",
+  "name": "Using PennyLane's default.mixed device, study how amplitude damping with gamma=0",
+  "task_prompt": "Using PennyLane's default.mixed device, study how amplitude damping with gamma=0.172 degrades a Bell state: print <Z0 Z1> and the state purity. Provide a complete, self-contained program that runs as-is and prints its results."
+}

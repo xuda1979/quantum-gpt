@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0858",
+  "name": "Implement the Deutsch-Jozsa algorithm in Qiskit for the constant function f(x) =",
+  "task_prompt": "Implement the Deutsch-Jozsa algorithm in Qiskit for the constant function f(x) = 1 for all x on 3 input qubits. Print the measurement outcome and the conclusion. Your answer must be the complete working code only, runnable from top to bottom."
+}

@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3_sampling",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0720",
+  "name": "Quantum computing task: Implement quantum teleportation in Q# (modern syntax wit",
+  "task_prompt": "Quantum computing task: Implement quantum teleportation in Q# (modern syntax with MResetZ and conditional corrections) teleporting Ry(1.126)|0>, with a Python driver comparing receiver statistics over 2000 shots to theory. Write the full runnable code (all imports included); executing it should print the results."
+}

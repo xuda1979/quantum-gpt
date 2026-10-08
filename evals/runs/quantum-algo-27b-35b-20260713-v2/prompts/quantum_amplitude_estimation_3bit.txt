@@ -1,0 +1,21 @@
+Write a complete, runnable Python program using numpy and qiskit that:
+1. Defines a single-qubit Grover operator Q with theta=pi/8 (so the marked
+   amplitude sin(theta)=sin(pi/8) is the quantity to estimate).
+   Use qiskit.quantum_info.Operator to build Q from R_y(2*theta) and a
+   reflection about |0>.
+2. Builds the standard amplitude-estimation circuit: 1 evaluation qubit
+   used as the phase register (with Hadamard + controlled-Q^{2^k}) and
+   the target qubit prepared in sin(theta)|1> + cos(theta)|0>.
+   Use 3 evaluation qubits total (t=3) so the estimate has 3 bits of
+   resolution.
+3. Implements the inverse QFT on the evaluation register.
+4. Measures the evaluation register and decodes the measured bitstring m
+   to the amplitude estimate a_hat = sin^2(pi * m / 2^t).
+5. In `def main()`, prints exactly these lines (values rounded to 4 decimals):
+     Target amplitude = 0.1464
+     Estimated amplitude = <value>
+     Abs error = <value>
+     Converged: <True|False>
+   where Target amplitude is sin^2(pi/8) = 0.1464 (rounded to 4 decimals),
+   and Converged is True iff the absolute error is below 0.05.
+Call main() under `if __name__ == "__main__":`.

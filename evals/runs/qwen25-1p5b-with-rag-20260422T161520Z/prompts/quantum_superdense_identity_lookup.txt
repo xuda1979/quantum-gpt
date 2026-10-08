@@ -1,0 +1,192 @@
+Task ID: quantum_superdense_identity_lookup
+Task name: Superdense identity lookup
+Domain: quantum
+Category: reasoning
+
+Reference documentation (use these only as background; do not echo them):
+--- BEGIN REFERENCE DOCS ---
+[DOC 1] source=superdense_coding.md
+[source: quantum-gpt/docs/quantum_libraries/superdense_coding.md] [quantum-gpt/docs/quantum libraries/superdense coding.md]
+
+# Superdense coding
+
+## Concept
+Superdense coding lets Alice send 2 classical bits to Bob using a single
+qubit, provided they pre-share an entangled Bell pair.
+
+## Protocol
+1. Pre-shared resource: |Phi+> = (|00> + |11>)/sqrt(2). Alice holds
+   qubit 0, Bob holds qubit 1.
+2. Alice encodes (b1, b0) by applying:
+   - 00 -> I  (do nothing) -> |Phi+>
+   - 01 -> X            -> |Psi+> = (|01> + |10>)/sqrt(2)
+   - 10 -> Z            -> |Phi-> = (|00> - |11>)/sqrt(2)
+   - 11 -> ZX (or iY)   -> |Psi-> = (|01> - |10>)/sqrt(2)
+3. Alice sends her qubit to Bob.
+4. Bob applies CNOT(0, 1) then H(0) (Bell-basis measurement) to recover
+   the two classical bits.
+
+## Encode/decode reference
+
+```python
+ENCODE_TABLE = {
+    (0, 0): "I",
+    (0, 1): "X",
+    (1, 0): "Z",
+    (1, 1): "ZX",
+}
+
+def encode(bits: tuple[int, int]) -> str:
+    return ENCODE_TABLE[bits]
+
+DECODE_TABLE = {
+    (0, 0): (0, 0),
+    (0, 1): (0, 1),
+    (1, 0): (1, 0),
+    (1, 1): (1, 1),
+}
+```
+
+After Bob's meas  ...[truncated]
+
+[DOC 2] source=binary_measurement_decoders.md
+[source: quantum-gpt/docs/quantum_libraries/binary_measurement_decoders.md] [quantum-gpt/docs/quantum libraries/binary measurement decoders.md]
+
+# Binary measurement decoders and Pauli routers
+
+## Bit-flip syndrome decoder
+For the 3-qubit bit-flip code, syndrome bits (s1, s2) come from
+measuring Z0Z1 (s1) and Z1Z2 (s2). Decoder:
+
+```python
+SYNDROMES = {
+    (0, 0): None,  # no error
+    (1, 0): 0,     # X on qubit 0
+    (1, 1): 1,     # X on qubit 1
+    (0, 1): 2,     # X on qubit 2
+}
+```
+
+## Bell measurement decoder
+Bell-basis measurement of two qubits returns a pair of classical bits
+(m1, m2) identifying which Bell state was observed:
+
+```python
+BELL_LABELS = {
+    (0, 0): "Phi+",
+    (0, 1): "Psi+",
+    (1, 0): "Phi-",
+    (1, 1): "Psi-",
+}
+```
+
+## Pauli router (superdense / teleport variants)
+Maps a 2-bit input to a single-qubit Pauli operation on a target qubit:
+
+```python
+PAULI_ROUTER = {
+    (0, 0): "I",
+    (0, 1): "X",
+    (1, 0): "Z",
+    (1, 1): "Y",  # or "ZX" depending on convention
+}
+```
+
+When the convention is "ZX = apply X first then Z", the (1, 1) entry is
+equivalent  ...[truncated]
+
+[DOC 3] source=PROJECT.md
+[source: daxu/software/quantum-gpt/PROJECT.md] [daxu/software/quantum-gpt/PROJECT.md]
+
+lity
+5. CPU-feasible fine-tuning or adaptation experiments
+6. Research notes documenting findings, tradeoffs, and next steps
+
+## Domain Requirements
+
+- Focus on quantum algorithm code in frameworks like Qiskit, Cirq, PennyLane, and small educational simulators when appropriate
+- Cover algorithm families such as QFT, Grover, VQE, QAOA, teleportation, superdense coding, phase estimation, error mitigation, and circuit optimization
+- Preserve software-engineering quality: testing, refactoring, documentation, interfaces, and maintainable Python tooling
+- Prefer verifiable tasks with executable tests or simulators
+
+## Operating Rules
+
+- Start each cycle by reading AGENTS.md, PROJECT.md, HEARTBEAT.md, USER.md, and any recent notes under memory/
+- Keep a running log in memory/YYYY-MM-DD.md
+- When a substantial decision is made, update MEMORY.md if it exists or create it if needed
+- If code is changed, leave the repo in a runnable state and record how to verify it
+- Before any remote training attempt, run t  ...[truncated]
+--- END REFERENCE DOCS ---
+
+Write the simplest Python file that satisfies the supplied tests and return only that file.
+
+Reference candidate style example (for format guidance, not for blind copying):
+--- BEGIN REFERENCE CANDIDATE ---
+_BITS_TO_OPCODE = {
+    "00": "I",
+    "01": "X",
+    "10": "Z",
+    "11": "XZ",
+}
+
+_OPCODE_TO_BITS = {opcode: bits for bits, opcode in _BITS_TO_OPCODE.items()}
+
+
+def encode_bits(bits: str) -> str:
+    if bits not in _BITS_TO_OPCODE:
+        raise ValueError("bits must be one of 00, 01, 10, 11")
+    return _BITS_TO_OPCODE[bits]
+
+
+def decode_opcode(opcode: str) -> str:
+    normalized = "".join(str(opcode).strip().upper().split())
+    if normalized == "ZX":
+        normalized = "XZ"
+    bits = _OPCODE_TO_BITS.get(normalized)
+    if bits is None:
+        raise ValueError("opcode must be one of I, X, Z, XZ")
+    return bits
+
+--- END REFERENCE CANDIDATE ---
+
+Tests the candidate must satisfy:
+--- BEGIN TESTS ---
+import importlib.util
+
+
+def _load(candidate_path: str):
+    spec = importlib.util.spec_from_file_location("candidate", candidate_path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
+def run_tests(candidate_path: str) -> dict:
+    module = _load(candidate_path)
+    failures = []
+
+    expected = {"00": "I", "01": "X", "10": "Z", "11": "XZ"}
+    for bits, opcode in expected.items():
+        if module.encode_bits(bits) != opcode:
+            failures.append(f"encode_bits({bits!r}) failed")
+        if module.decode_opcode(opcode) != bits:
+            failures.append(f"decode_opcode({opcode!r}) failed")
+
+    if module.decode_opcode("i") != "00":
+        failures.append("decode_opcode should preserve the identity opcode I")
+    if module.decode_opcode("zx") != "11":
+        failures.append("decode_opcode should canonicalize zx -> XZ")
+
+    try:
+        module.decode_opcode("YY")
+        failures.append("decode_opcode accepted invalid opcode")
+    except ValueError:
+        pass
+
+    return {
+        "passed": not failures,
+        "details": failures or ["superdense identity lookup preserves the I opcode and canonical XZ routing"],
+    }
+
+--- END TESTS ---

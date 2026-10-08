@@ -1,0 +1,12 @@
+{
+  "job_id": "omnicoder-base-holdout-v2-20260410T084417Z",
+  "name": "omnicoder-base-holdout-v2",
+  "pid": 14302,
+  "log_path": "/tmp/omnicoder_base_eval_v2_20260410.log",
+  "remote_root": "/root/root/work/quantum-gpt",
+  "command": "cd /root/root/work/quantum-gpt && export QUANTUM_TRANSFORMERS_RUNTIME_SRC=/root/root/work/quantum-gpt/artifacts/runtime-bundles/omnicoder-qwen35-runtime-c585eea/transformers-src/src && export QUANTUM_RUNTIME_HTTPX_STUB=0 && export QUANTUM_HF_HUB_COMPAT_VERSION=1.8.0 && export PYTHONPATH=/root/root/work/quantum-gpt/artifacts/runtime-bundles/omnicoder-qwen35-runtime-c585eea/overlay-site-packages:$PYTHONPATH && python3 scripts/run_hf_pass1_eval.py --run-dir evals/runs/omnicoder-quantum-generalization-holdout-base-ai2-bundle-20260410T0540Z --base-model models/OmniCoder-9B --device cpu --score",
+  "created_at": "2026-04-10T08:44:22.594344+00:00",
+  "transport": "daemon",
+  "duration_ms": 3174,
+  "meta_file": "/Users/daxu/software/quantum-gpt/.huanxin_jobs/omnicoder-base-holdout-v2-20260410T084417Z.json"
+}

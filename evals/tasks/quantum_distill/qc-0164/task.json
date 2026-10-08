@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0164",
+  "name": "Implement a QuTiP-based simulator for the Deutsch-Jozsa algorithm on three qubit",
+  "task_prompt": "Implement a QuTiP-based simulator for the Deutsch-Jozsa algorithm on three qubits. Write a function `simulate_deutsch_jozsa(oracle_type)` that: (1) constructs the oracle for either a constant function (all outputs 0) or a balanced function (e.g., f(x)=x0 XOR x1 XOR x2) as a phase oracle (unitary that applies -1 to basis states where f(x)=1), (2) executes the algorithm by applying Hadamard gates, the oracle, and another layer of Hadamards, and (3) returns whether the function is 'constant' or 'balanced' based on the final state amplitude of the |000⟩ component. Use only QuTiP functions listed in the API documentation (basis, hadamard_transform, tensor, qeye, Qobj). Include a brief test that validates both cases."
+}

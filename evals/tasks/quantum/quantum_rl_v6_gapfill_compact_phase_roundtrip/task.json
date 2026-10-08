@@ -1,0 +1,9 @@
+{
+  "id": "quantum_rl_v6_gapfill_compact_phase_roundtrip",
+  "name": "Compact phase quantization roundtrip (no-fence exemplar)",
+  "domain": "quantum",
+  "category": "wave6_no_fence_gapfill",
+  "task_prompt": "Respond with a single runnable Python file using only numpy and the standard library. Define every required function with the EXACT names given; a missing or misnamed entry point fails immediately. Include assert-based self-tests that fail loudly, print nothing on success, and use no randomness or remote services. CRITICAL OUTPUT CONTRACT: output the complete Python file directly with NO markdown code fences and NO prose. Your response is saved verbatim as a .py file and executed; a leading markdown code fence is a guaranteed SyntaxError. Budget your output to be one complete file within the response: never truncate mid-statement. Implement a compact phase-quantization roundtrip pair: phase_bits_roundtrip(phase, n_qubits) quantizes a phase in [0, 1) to n_qubits bits (int(phase * 2**n_qubits), most-significant bit first; ValueError outside [0, 1) or for non-positive n_qubits) and returns the recovered phase integer / 2**n_qubits, so the function is its own inverse on the 2**n grid; and roundtrip_error_table(phases, n_qubits) maps each input phase to its roundtrip error within 1e-12. Assert 0.375 at 3 qubits roundtrips exactly, [0.25, 0.5, 0.75] all roundtrip exactly at 2 qubits, phase 1.0 raises ValueError, and n_qubits 0 raises ValueError.",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

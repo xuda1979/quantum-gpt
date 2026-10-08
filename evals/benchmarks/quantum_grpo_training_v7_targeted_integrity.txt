@@ -1,0 +1,22 @@
+# SAPO integrity fallback: execution-verified, training-disjoint targeted tasks only.
+# source=evals/benchmarks/quantum_grpo_training_v4_targeted_disjoint.txt sha256=59952b0d787838d1eb37d32ee63c868c9b30398ae9c4977dba29563d534f137b
+# task_contract_sha256=af8429bd32a997d63c24b75ef50bf9d8e706809dd226578905de58272ac4faef
+# 2026-08-24 harness enrichment: tests.py numeric-detail summaries for the four
+# prose-only tasks (stabilizer_tableau_update_repair, measurement_bug_repair,
+# superdense_pauli_router, bitstring_maxcut_landscape) — see
+# reports/sapo-harness-enrichment-2026-08-24.md. Pass/fail semantics and prompt
+# behavior-hint templates unchanged; old contract sha256=d0d2e950f7b77716b4059410be02006eea05319f589b84530cc2daac39acb72a
+# targeted=10 deterministic=0 semantic=0
+# required_import_roots=
+# reference_execution_verified=true runs=3
+# Semantic-stdout qc tasks stay circuit-broken until scored evidence has runtime provenance.
+quantum_bitstring_maxcut_landscape
+quantum_circuit_depth_optimization
+quantum_circuit_phase_repair
+quantum_error_detection_bit_flip
+quantum_gate_alias_casefold_barrier
+quantum_measurement_bug_repair
+quantum_phase_measurement_register
+quantum_stabilizer_tableau_update_repair
+quantum_superdense_pauli_router
+quantum_teleportation_corrections

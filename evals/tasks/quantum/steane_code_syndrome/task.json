@@ -1,0 +1,8 @@
+{
+  "id": "quantum_steane_code_syndrome",
+  "name": "Steane [[7,1,3]] code parity-check syndrome",
+  "domain": "quantum",
+  "category": "error_correction",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

@@ -1,0 +1,7 @@
+{
+  "id": "quantum_trotterized_xxz",
+  "title": "Trotterized XXZ Heisenberg on 2 qubits: <Z on q0> at t=1.0",
+  "expected_substrings": [
+    "<Z on q0> = "
+  ]
+}

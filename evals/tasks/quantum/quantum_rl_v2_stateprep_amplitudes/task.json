@@ -1,0 +1,9 @@
+{
+  "id": "quantum_rl_v2_stateprep_amplitudes",
+  "name": "StatePreparation of 8 amplitudes",
+  "domain": "quantum",
+  "category": "algorithm_implementation",
+  "task_prompt": "Use Qiskit StatePreparation to prepare amplitudes proportional to [0.5, 0.5j, -0.25, 0.25j, 0.1, (-0-0.2j), 0.3, -0.4]. Normalize the target explicitly, obtain the exact Statevector, align global phase before displaying the maximum amplitude error, and assert fidelity greater than 1-1e-12. Also print the nonzero basis probabilities using a clearly stated Qiskit bit-order convention. Return only one complete Python script with no Markdown fences. It must run locally without network access, use fixed seeds whenever randomness is involved, print concise results, and assert every required invariant.",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

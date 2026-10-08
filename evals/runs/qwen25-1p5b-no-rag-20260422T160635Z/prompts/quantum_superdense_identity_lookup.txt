@@ -1,0 +1,77 @@
+Task ID: quantum_superdense_identity_lookup
+Task name: Superdense identity lookup
+Domain: quantum
+Category: reasoning
+
+Write the simplest Python file that satisfies the supplied tests and return only that file.
+
+Reference candidate style example (for format guidance, not for blind copying):
+--- BEGIN REFERENCE CANDIDATE ---
+_BITS_TO_OPCODE = {
+    "00": "I",
+    "01": "X",
+    "10": "Z",
+    "11": "XZ",
+}
+
+_OPCODE_TO_BITS = {opcode: bits for bits, opcode in _BITS_TO_OPCODE.items()}
+
+
+def encode_bits(bits: str) -> str:
+    if bits not in _BITS_TO_OPCODE:
+        raise ValueError("bits must be one of 00, 01, 10, 11")
+    return _BITS_TO_OPCODE[bits]
+
+
+def decode_opcode(opcode: str) -> str:
+    normalized = "".join(str(opcode).strip().upper().split())
+    if normalized == "ZX":
+        normalized = "XZ"
+    bits = _OPCODE_TO_BITS.get(normalized)
+    if bits is None:
+        raise ValueError("opcode must be one of I, X, Z, XZ")
+    return bits
+
+--- END REFERENCE CANDIDATE ---
+
+Tests the candidate must satisfy:
+--- BEGIN TESTS ---
+import importlib.util
+
+
+def _load(candidate_path: str):
+    spec = importlib.util.spec_from_file_location("candidate", candidate_path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
+def run_tests(candidate_path: str) -> dict:
+    module = _load(candidate_path)
+    failures = []
+
+    expected = {"00": "I", "01": "X", "10": "Z", "11": "XZ"}
+    for bits, opcode in expected.items():
+        if module.encode_bits(bits) != opcode:
+            failures.append(f"encode_bits({bits!r}) failed")
+        if module.decode_opcode(opcode) != bits:
+            failures.append(f"decode_opcode({opcode!r}) failed")
+
+    if module.decode_opcode("i") != "00":
+        failures.append("decode_opcode should preserve the identity opcode I")
+    if module.decode_opcode("zx") != "11":
+        failures.append("decode_opcode should canonicalize zx -> XZ")
+
+    try:
+        module.decode_opcode("YY")
+        failures.append("decode_opcode accepted invalid opcode")
+    except ValueError:
+        pass
+
+    return {
+        "passed": not failures,
+        "details": failures or ["superdense identity lookup preserves the I opcode and canonical XZ routing"],
+    }
+
+--- END TESTS ---

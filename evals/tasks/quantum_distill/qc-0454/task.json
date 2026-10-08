@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0454",
+  "name": "Here is a quantum coding exercise. Implement 5 steps of a discrete-time quantum ",
+  "task_prompt": "Here is a quantum coding exercise. Implement 5 steps of a discrete-time quantum walk on a cycle of 0 nodes in Qiskit (position register + coin qubit, increment/decrement circuits), and print the final position distribution showing ballistic spread. Write the full runnable code (all imports included); executing it should print the results."
+}

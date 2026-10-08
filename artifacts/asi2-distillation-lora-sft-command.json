@@ -1,0 +1,17 @@
+{
+  "adapter_strategy": "LoRA",
+  "command": "set -euo pipefail\ncd /root/software/quantum-gpt\npython3 scripts/preflight_qwen36_ascend_hf_training.py --model-name /root/work/filestorage/Qwen3.6-35B-A3B --device npu --json\nmkdir -p logs\nexport PYTORCH_NPU_ALLOC_CONF=max_split_size_mb:256\ntorchrun --nproc_per_node=8 training/qwen_sft_peft.py --model-name /root/work/filestorage/Qwen3.6-35B-A3B --train-file data/generated/quantum_distillation_teacher_responses_asi2_v1_high_quality_sft/train_chatml.jsonl --eval-file data/generated/quantum_distillation_teacher_responses_asi2_v1_high_quality_sft/eval_chatml.jsonl --output-dir outputs/qwen36-35b-a3b-distill-uniform-lora-asi2-allnpu-r64-broad-ln-l512-s40 --device npu --max-length 512 --max-steps 40 --num-epochs 3 --per-device-batch-size 1 --gradient-accumulation-steps 1 --learning-rate 5e-5 --eval-steps 10 --log-steps 5 --lora-rank 64 --lora-alpha 128 --lora-dropout 0.0 --target-modules q_proj k_proj v_proj o_proj gate_proj up_proj down_proj --train-on-completions-only --gradient-checkpointing --train-layernorm --max-trainable-parameters 1000000000 --min-trainable-parameters 200000000 2>&1 | tee logs/asi2_distillation_lora_sft.log",
+  "eval_file": "data/generated/quantum_distillation_teacher_responses_asi2_v1_high_quality_sft/eval_chatml.jsonl",
+  "max_trainable_parameters": 1000000000,
+  "min_trainable_parameters": 200000000,
+  "mode": "lora",
+  "model_name": "/root/work/filestorage/Qwen3.6-35B-A3B",
+  "ok": true,
+  "output_dir": "outputs/qwen36-35b-a3b-distill-uniform-lora-asi2-allnpu-r64-broad-ln-l512-s40",
+  "remote_root": "/root/software/quantum-gpt",
+  "train_file": "data/generated/quantum_distillation_teacher_responses_asi2_v1_high_quality_sft/train_chatml.jsonl",
+  "train_layernorm": true,
+  "uniform_lora_policy": "all matching transformer layers, shared rank, attention plus mlp projection targets",
+  "uses_lora": true,
+  "uses_qlora": false
+}

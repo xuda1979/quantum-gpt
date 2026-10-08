@@ -1,0 +1,9 @@
+{
+  "id": "quantum_rl_v2_grover_qiskit_101",
+  "name": "Grover search from elementary Qiskit gates for 101",
+  "domain": "quantum",
+  "category": "algorithm_implementation",
+  "task_prompt": "Implement Grover search from elementary Qiskit gates for the 3-qubit marked computational-basis state '101'. Construct the phase oracle and diffusion operator explicitly, use floor(pi/4*sqrt(2**3)) iterations, compute exact success probability before measurement, sample 4096 shots with a seed, and assert the marked state is the most frequent and the exact probability matches the analytic sin^2((2r+1)asin(1/sqrt(N))) formula. Return only one complete Python script with no Markdown fences. It must run locally without network access, use fixed seeds whenever randomness is involved, print concise results, and assert every required invariant.",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

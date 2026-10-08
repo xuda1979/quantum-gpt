@@ -1,0 +1,28 @@
+{
+  "accepted_jsonl": "/Users/daxu/software/quantum-gpt/data/generated/quantum_distillation_teacher_responses_asi2_v1_high_quality.jsonl",
+  "accepted_rows": 203,
+  "input_jsonl": "/Users/daxu/software/quantum-gpt/data/generated/quantum_distillation_teacher_responses_asi2_v1.jsonl",
+  "min_accepted": 200,
+  "ok": true,
+  "policy": {
+    "reject_low_value_source_markers": [
+      "accessibility",
+      "billing",
+      "bibliography",
+      "references",
+      "changes.rst",
+      "changelog",
+      "common_issues",
+      "common-issues"
+    ],
+    "target": "quantum coding plus agentic software engineering"
+  },
+  "reason_counts": {
+    "agentic_without_agent_failure_signal": 10,
+    "low_value_source_doc": 21,
+    "missing_quantum_task_shape": 5
+  },
+  "rejected_jsonl": "/Users/daxu/software/quantum-gpt/data/generated/quantum_distillation_teacher_responses_asi2_v1_question_rejected.jsonl",
+  "rejected_rows": 35,
+  "total_rows": 238
+}

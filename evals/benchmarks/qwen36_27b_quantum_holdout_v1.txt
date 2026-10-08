@@ -1,0 +1,10 @@
+# Strict unseen quantum holdout for Qwen3.6-27B.
+# This benchmark is task-disjoint from the Qwen3.6 domain-expert curriculum train split.
+# It focuses on docs-grounded quantum coding tasks that exercise state simulation,
+# channels, entanglement witnesses, search, and register decoding.
+quantum_density_matrix_partial_trace
+quantum_channel_depolarizing
+quantum_ghz_state_witness
+quantum_grover_oracle_diffusion
+quantum_phase_register_roundtrip
+quantum_binary_measurement_decoder

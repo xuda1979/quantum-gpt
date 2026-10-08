@@ -1,0 +1,1683 @@
+{
+  "ok": true,
+  "task_root": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum",
+  "doc_roots": [
+    "/Users/daxu/software/quantum-gpt/docs/quantum_libraries"
+  ],
+  "top_k": 3,
+  "alpha": 0.55,
+  "min_score": 0.35,
+  "min_matched_terms": 1,
+  "index": {
+    "chunk_count": 51,
+    "source_count": 27,
+    "vectorizer_features": 6849,
+    "dense_dimensions": 6849
+  },
+  "metrics": {
+    "total_tasks": 31,
+    "grounded_tasks": 31,
+    "missing_tasks": 0,
+    "grounded_rate": 1.0
+  },
+  "missing_task_ids": [],
+  "tasks": [
+    {
+      "task_id": "quantum_bell_pair_construction",
+      "name": "Bell pair construction",
+      "category": "circuit_construction",
+      "task_path": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/bell_pair_construction/task.json",
+      "query": "quantum bell pair construction Bell pair construction circuit construction",
+      "grounded": true,
+      "best_score": 1.48,
+      "matched_terms": [
+        "bell",
+        "circuit",
+        "pair"
+      ],
+      "hits": [
+        {
+          "rank": 1,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/bell_state_construction.md",
+          "final_score": 1.48,
+          "lexical_score": 25.16045379638672,
+          "semantic_score": 0.1728559136390686,
+          "matched_terms": [
+            "bell",
+            "pair",
+            "circuit"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/bell_state_construction.md] [quantum-gpt/docs/quantum libraries/bell state construction.md]\n\n# Bell pair construction\n\n## Concept\nA Bell pair is a maximally entangled two-qubit state. The four Bel"
+        },
+        {
+          "rank": 2,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_teleportation.md",
+          "final_score": 1.4000000000000001,
+          "lexical_score": 14.824913024902344,
+          "semantic_score": 0.09518733620643616,
+          "matched_terms": [
+            "bell",
+            "pair",
+            "circuit"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/quantum_teleportation.md] [quantum-gpt/docs/quantum libraries/quantum teleportation.md]\n\n# Quantum teleportation\n\n## Concept\nTeleportation transfers the *state* of a qubit from Alice to Bob using\n"
+        },
+        {
+          "rank": 3,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_circuit_construction_patterns.md",
+          "final_score": 1.3900000000000001,
+          "lexical_score": 14.333691596984863,
+          "semantic_score": 0.07335533201694489,
+          "matched_terms": [
+            "pair",
+            "circuit"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/quantum_circuit_construction_patterns.md] [quantum-gpt/docs/quantum libraries/quantum circuit construction patterns.md]\n\n# Quantum circuit construction patterns\n\n## Layered circuits\nMost quantum a"
+        }
+      ]
+    },
+    {
+      "task_id": "quantum_binary_measurement_decoder",
+      "name": "Binary measurement decoder",
+      "category": "algorithm_implementation",
+      "task_path": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/binary_measurement_decoder/task.json",
+      "query": "quantum binary measurement decoder Binary measurement decoder algorithm implementation",
+      "grounded": true,
+      "best_score": 1.3583333333333334,
+      "matched_terms": [
+        "binary",
+        "measurement"
+      ],
+      "hits": [
+        {
+          "rank": 1,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/binary_measurement_decoders.md",
+          "final_score": 1.3583333333333334,
+          "lexical_score": 16.49254035949707,
+          "semantic_score": 0.1417653113603592,
+          "matched_terms": [
+            "binary",
+            "measurement"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/binary_measurement_decoders.md] [quantum-gpt/docs/quantum libraries/binary measurement decoders.md]\n\n# Binary measurement decoders and Pauli routers\n\n## Bit-flip syndrome decoder\nFor the 3-qubit b"
+        },
+        {
+          "rank": 2,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/state_vector_simulation.md",
+          "final_score": 1.1223705371220907,
+          "lexical_score": 6.8350443840026855,
+          "semantic_score": 0.027265014126896858,
+          "matched_terms": [
+            "binary",
+            "measurement"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/state_vector_simulation.md] [quantum-gpt/docs/quantum libraries/state vector simulation.md]\n\n# State vector simulation in pure NumPy\n\n## Representation\nAn n-qubit pure state is a complex vector of"
+        },
+        {
+          "rank": 3,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/error_correction_basics.md",
+          "final_score": 1.1083333333333334,
+          "lexical_score": 7.403470516204834,
+          "semantic_score": 0.035809971392154694,
+          "matched_terms": [],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/error_correction_basics.md] [quantum-gpt/docs/quantum libraries/error correction basics.md]\n\nython\nSHOR_BIT_SYNDROMES = {\n    (0, 0): None,\n    (1, 0): 0,\n    (1, 1): 1,\n    (0, 1): 2,\n}\n\ndef shor"
+        }
+      ]
+    },
+    {
+      "task_id": "quantum_bitstring_maxcut_landscape",
+      "name": "Bitstring MaxCut landscape",
+      "category": "algorithm_implementation",
+      "task_path": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/bitstring_maxcut_landscape/task.json",
+      "query": "quantum bitstring maxcut landscape Bitstring MaxCut landscape algorithm implementation",
+      "grounded": true,
+      "best_score": 1.9666666666666668,
+      "matched_terms": [
+        "algorithm",
+        "bitstring",
+        "maxcut"
+      ],
+      "hits": [
+        {
+          "rank": 1,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md",
+          "final_score": 1.9666666666666668,
+          "lexical_score": 21.0549373626709,
+          "semantic_score": 0.15346848964691162,
+          "matched_terms": [
+            "bitstring",
+            "maxcut",
+            "algorithm"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md] [quantum-gpt/docs/quantum libraries/qaoa maxcut.md]\n\n# QAOA for MaxCut\n\n## Concept\nThe Quantum Approximate Optimization Algorithm (QAOA) attacks\ncombinatorial optimization problems"
+        },
+        {
+          "rank": 2,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/maxcut_classical_helpers.md",
+          "final_score": 1.1416666666666666,
+          "lexical_score": 9.701519966125488,
+          "semantic_score": 0.1007106602191925,
+          "matched_terms": [
+            "bitstring",
+            "maxcut"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/maxcut_classical_helpers.md] [quantum-gpt/docs/quantum libraries/maxcut classical helpers.md]\n\n# MaxCut: classical bitstring evaluation, enumeration, ranking\n\n## Definitions\nA cut on graph G = (V,"
+        },
+        {
+          "rank": 3,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_fourier_transform.md",
+          "final_score": 0.655523415406545,
+          "lexical_score": 3.7944869995117188,
+          "semantic_score": 0.02999621257185936,
+          "matched_terms": [
+            "algorithm"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/quantum_fourier_transform.md] [quantum-gpt/docs/quantum libraries/quantum fourier transform.md]\n\n# Quantum Fourier Transform (QFT)\n\n## Concept\nThe QFT is the quantum analogue of the discrete Fouri"
+        }
+      ]
+    },
+    {
+      "task_id": "quantum_circuit_depth_optimization",
+      "name": "Greedy circuit depth optimization via ASAP scheduling",
+      "category": "circuit_optimization",
+      "task_path": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/circuit_depth_optimization/task.json",
+      "query": "quantum circuit depth optimization Greedy circuit depth optimization via ASAP scheduling circuit optimization",
+      "grounded": true,
+      "best_score": 1.2750000000000001,
+      "matched_terms": [
+        "circuit",
+        "depth",
+        "optimization"
+      ],
+      "hits": [
+        {
+          "rank": 1,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/circuit_repair_recipes.md",
+          "final_score": 1.2750000000000001,
+          "lexical_score": 16.171924591064453,
+          "semantic_score": 0.0784783884882927,
+          "matched_terms": [
+            "circuit",
+            "depth",
+            "optimization"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/circuit_repair_recipes.md] [quantum-gpt/docs/quantum libraries/circuit repair recipes.md]\n\n# Circuit repair and depth-optimization recipes\n\n## Common micro-bugs in quantum candidate code\n\n1. **Swa"
+        },
+        {
+          "rank": 2,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md",
+          "final_score": 1.1937499999999999,
+          "lexical_score": 19.133567810058594,
+          "semantic_score": 0.06972065567970276,
+          "matched_terms": [
+            "depth",
+            "optimization"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md] [quantum-gpt/docs/quantum libraries/qaoa maxcut.md]\n\n# QAOA for MaxCut\n\n## Concept\nThe Quantum Approximate Optimization Algorithm (QAOA) attacks\ncombinatorial optimization problems"
+        },
+        {
+          "rank": 3,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/trotter_decomposition.md",
+          "final_score": 1.1375,
+          "lexical_score": 11.899322509765625,
+          "semantic_score": 0.1025676354765892,
+          "matched_terms": [
+            "circuit",
+            "depth"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/trotter_decomposition.md] [quantum-gpt/docs/quantum libraries/trotter decomposition.md]\n\n## Library snippets\n- Qiskit: `qiskit.synthesis.SuzukiTrotter` (and friends in\n  `qiskit.synthesis.product_"
+        }
+      ]
+    },
+    {
+      "task_id": "quantum_circuit_phase_repair",
+      "name": "Circuit phase repair from noisy gate stream",
+      "category": "debug_repair",
+      "task_path": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/circuit_phase_repair/task.json",
+      "query": "quantum circuit phase repair Circuit phase repair from noisy gate stream debug repair",
+      "grounded": true,
+      "best_score": 1.2944444444444445,
+      "matched_terms": [
+        "circuit",
+        "debug",
+        "from",
+        "gate",
+        "phase"
+      ],
+      "hits": [
+        {
+          "rank": 1,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_circuit_construction_patterns.md",
+          "final_score": 1.2944444444444445,
+          "lexical_score": 17.721843719482422,
+          "semantic_score": 0.08978424966335297,
+          "matched_terms": [
+            "circuit",
+            "phase",
+            "gate"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/quantum_circuit_construction_patterns.md] [quantum-gpt/docs/quantum libraries/quantum circuit construction patterns.md]\n\n# Quantum circuit construction patterns\n\n## Layered circuits\nMost quantum a"
+        },
+        {
+          "rank": 2,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/circuit_repair_recipes.md",
+          "final_score": 1.2666666666666666,
+          "lexical_score": 18.127256393432617,
+          "semantic_score": 0.13308219611644745,
+          "matched_terms": [
+            "circuit",
+            "phase",
+            "from",
+            "gate",
+            "debug"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/circuit_repair_recipes.md] [quantum-gpt/docs/quantum libraries/circuit repair recipes.md]\n\ns to slide commuting gates past each other and\n  expose more cancellations: e.g. `Rz` commutes with `CZ` "
+        },
+        {
+          "rank": 3,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/README.md",
+          "final_score": 1.1315893186463248,
+          "lexical_score": 13.513263702392578,
+          "semantic_score": 0.05432180315256119,
+          "matched_terms": [
+            "circuit",
+            "from",
+            "gate"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/README.md] [quantum-gpt/docs/quantum libraries/README.md]\n\n# Quantum Computing Documentation Corpus\n\nThis directory contains compact, RAG-friendly documentation for quantum\ncomputing algorithms an"
+        }
+      ]
+    },
+    {
+      "task_id": "quantum_density_matrix_partial_trace",
+      "name": "Density matrix construction and partial trace",
+      "category": "algorithm_implementation",
+      "task_path": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/density_matrix_partial_trace/task.json",
+      "query": "quantum density matrix partial trace Density matrix construction and partial trace algorithm implementation",
+      "grounded": true,
+      "best_score": 1.8111111111111113,
+      "matched_terms": [
+        "algorithm",
+        "density",
+        "matrix",
+        "partial",
+        "trace"
+      ],
+      "hits": [
+        {
+          "rank": 1,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_partial_trace.md",
+          "final_score": 1.8111111111111113,
+          "lexical_score": 11.489751815795898,
+          "semantic_score": 0.054028939455747604,
+          "matched_terms": [
+            "density",
+            "matrix",
+            "partial",
+            "trace"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/density_matrix_partial_trace.md] [quantum-gpt/docs/quantum libraries/density matrix partial trace.md]\n\nf partial_trace_a(rho: np.ndarray, dim_a: int, dim_b: int) -> np.ndarray:\n    rho4 = rho.resh"
+        },
+        {
+          "rank": 2,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_fourier_transform.md",
+          "final_score": 1.121695770157708,
+          "lexical_score": 9.166311264038086,
+          "semantic_score": 0.03562713786959648,
+          "matched_terms": [
+            "matrix",
+            "algorithm"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/quantum_fourier_transform.md] [quantum-gpt/docs/quantum libraries/quantum fourier transform.md]\n\n# Quantum Fourier Transform (QFT)\n\n## Concept\nThe QFT is the quantum analogue of the discrete Fouri"
+        },
+        {
+          "rank": 3,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/depolarizing_channel.md",
+          "final_score": 1.1032340301407708,
+          "lexical_score": 9.2643461227417,
+          "semantic_score": 0.04357480630278587,
+          "matched_terms": [
+            "trace"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/depolarizing_channel.md] [quantum-gpt/docs/quantum libraries/depolarizing channel.md]\n\nr\n  probability p/4. Be explicit about which definition the problem uses.\n- For p=1 the output is fully mixed"
+        }
+      ]
+    },
+    {
+      "task_id": "quantum_error_detection_bit_flip",
+      "name": "Quantum Bit-Flip Error Detection",
+      "category": "debug_repair",
+      "task_path": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/error_detection_bit_flip/task.json",
+      "query": "quantum error detection bit flip Quantum Bit-Flip Error Detection debug repair",
+      "grounded": true,
+      "best_score": 1.1625,
+      "matched_terms": [
+        "bit",
+        "bit-flip",
+        "debug",
+        "error",
+        "flip"
+      ],
+      "hits": [
+        {
+          "rank": 1,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/error_correction_basics.md",
+          "final_score": 1.1625,
+          "lexical_score": 10.36148452758789,
+          "semantic_score": 0.08734634518623352,
+          "matched_terms": [
+            "error",
+            "bit",
+            "flip",
+            "bit-flip"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/error_correction_basics.md] [quantum-gpt/docs/quantum libraries/error correction basics.md]\n\nython\nSHOR_BIT_SYNDROMES = {\n    (0, 0): None,\n    (1, 0): 0,\n    (1, 1): 1,\n    (0, 1): 2,\n}\n\ndef shor"
+        },
+        {
+          "rank": 2,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/circuit_repair_recipes.md",
+          "final_score": 1.1391557216644288,
+          "lexical_score": 7.042278289794922,
+          "semantic_score": 0.05148790404200554,
+          "matched_terms": [
+            "debug"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/circuit_repair_recipes.md] [quantum-gpt/docs/quantum libraries/circuit repair recipes.md]\n\ns to slide commuting gates past each other and\n  expose more cancellations: e.g. `Rz` commutes with `CZ` "
+        },
+        {
+          "rank": 3,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/README.md",
+          "final_score": 1.1054090976715087,
+          "lexical_score": 7.574211120605469,
+          "semantic_score": 0.04463319852948189,
+          "matched_terms": [],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/README.md] [quantum-gpt/docs/quantum libraries/README.md]\n\n# Quantum Computing Documentation Corpus\n\nThis directory contains compact, RAG-friendly documentation for quantum\ncomputing algorithms an"
+        }
+      ]
+    },
+    {
+      "task_id": "quantum_gate_alias_casefold_barrier",
+      "name": "Gate alias casefold barrier",
+      "category": "api_normalization",
+      "task_path": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/gate_alias_casefold_barrier/task.json",
+      "query": "quantum gate alias casefold barrier Gate alias casefold barrier api normalization",
+      "grounded": true,
+      "best_score": 1.3142857142857143,
+      "matched_terms": [
+        "alias",
+        "barrier",
+        "casefold",
+        "gate"
+      ],
+      "hits": [
+        {
+          "rank": 1,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_gates_reference.md",
+          "final_score": 1.3142857142857143,
+          "lexical_score": 14.647664070129395,
+          "semantic_score": 0.06661517918109894,
+          "matched_terms": [
+            "gate",
+            "alias",
+            "casefold"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/quantum_gates_reference.md] [quantum-gpt/docs/quantum libraries/quantum gates reference.md]\n\n# Single-qubit and multi-qubit gate reference\n\n## Standard single-qubit gates\n\n| Symbol | Name | Matrix"
+        },
+        {
+          "rank": 2,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/circuit_repair_recipes.md",
+          "final_score": 1.1833277923720222,
+          "lexical_score": 10.579395294189453,
+          "semantic_score": 0.04904767498373985,
+          "matched_terms": [
+            "gate",
+            "alias"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/circuit_repair_recipes.md] [quantum-gpt/docs/quantum libraries/circuit repair recipes.md]\n\n# Circuit repair and depth-optimization recipes\n\n## Common micro-bugs in quantum candidate code\n\n1. **Swa"
+        },
+        {
+          "rank": 3,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qiskit_basics.md",
+          "final_score": 1.0002810750688824,
+          "lexical_score": 5.883986473083496,
+          "semantic_score": 0.05812152475118637,
+          "matched_terms": [
+            "gate",
+            "barrier"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/qiskit_basics.md] [quantum-gpt/docs/quantum libraries/qiskit basics.md]\n\n# Qiskit basics (v1.x API)\n\n## Import surface\n\n```python\nfrom qiskit import QuantumCircuit, transpile\nfrom qiskit.quantum_i"
+        }
+      ]
+    },
+    {
+      "task_id": "quantum_gate_alias_normalization",
+      "name": "Gate alias normalization repair",
+      "category": "api_normalization",
+      "task_path": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/gate_alias_normalization/task.json",
+      "query": "quantum gate alias normalization Gate alias normalization repair api normalization",
+      "grounded": true,
+      "best_score": 1.3666666666666667,
+      "matched_terms": [
+        "alias",
+        "gate"
+      ],
+      "hits": [
+        {
+          "rank": 1,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_gates_reference.md",
+          "final_score": 1.3666666666666667,
+          "lexical_score": 23.44867706298828,
+          "semantic_score": 0.1520988792181015,
+          "matched_terms": [
+            "gate",
+            "alias"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/quantum_gates_reference.md] [quantum-gpt/docs/quantum libraries/quantum gates reference.md]\n\ntargets if control is |1>.\n\n## Casefold and alias normalization (very common in repair tasks)\n\nAliases "
+        },
+        {
+          "rank": 2,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/circuit_repair_recipes.md",
+          "final_score": 1.3666666666666667,
+          "lexical_score": 13.200154304504395,
+          "semantic_score": 0.06228123605251312,
+          "matched_terms": [
+            "gate",
+            "alias"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/circuit_repair_recipes.md] [quantum-gpt/docs/quantum libraries/circuit repair recipes.md]\n\n# Circuit repair and depth-optimization recipes\n\n## Common micro-bugs in quantum candidate code\n\n1. **Swa"
+        },
+        {
+          "rank": 3,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_circuit_construction_patterns.md",
+          "final_score": 0.9087706883748372,
+          "lexical_score": 6.651668548583984,
+          "semantic_score": 0.028399767354130745,
+          "matched_terms": [
+            "gate",
+            "alias"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/quantum_circuit_construction_patterns.md] [quantum-gpt/docs/quantum libraries/quantum circuit construction patterns.md]\n\n# Quantum circuit construction patterns\n\n## Layered circuits\nMost quantum a"
+        }
+      ]
+    },
+    {
+      "task_id": "quantum_gate_alias_registry_cleanup",
+      "name": "Gate alias registry cleanup",
+      "category": "api_normalization",
+      "task_path": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/gate_alias_registry_cleanup/task.json",
+      "query": "quantum gate alias registry cleanup Gate alias registry cleanup api normalization",
+      "grounded": true,
+      "best_score": 1.25,
+      "matched_terms": [
+        "alias",
+        "gate"
+      ],
+      "hits": [
+        {
+          "rank": 1,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_gates_reference.md",
+          "final_score": 1.25,
+          "lexical_score": 9.624945640563965,
+          "semantic_score": 0.061557888984680176,
+          "matched_terms": [
+            "gate",
+            "alias"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/quantum_gates_reference.md] [quantum-gpt/docs/quantum libraries/quantum gates reference.md]\n\n# Single-qubit and multi-qubit gate reference\n\n## Standard single-qubit gates\n\n| Symbol | Name | Matrix"
+        },
+        {
+          "rank": 2,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/circuit_repair_recipes.md",
+          "final_score": 1.2214285714285713,
+          "lexical_score": 10.579395294189453,
+          "semantic_score": 0.06973560899496078,
+          "matched_terms": [
+            "gate",
+            "alias"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/circuit_repair_recipes.md] [quantum-gpt/docs/quantum libraries/circuit repair recipes.md]\n\n# Circuit repair and depth-optimization recipes\n\n## Common micro-bugs in quantum candidate code\n\n1. **Swa"
+        },
+        {
+          "rank": 3,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qiskit_basics.md",
+          "final_score": 0.9275158439363752,
+          "lexical_score": 5.883986473083496,
+          "semantic_score": 0.03973311558365822,
+          "matched_terms": [
+            "gate"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/qiskit_basics.md] [quantum-gpt/docs/quantum libraries/qiskit basics.md]\n\n# Qiskit basics (v1.x API)\n\n## Import surface\n\n```python\nfrom qiskit import QuantumCircuit, transpile\nfrom qiskit.quantum_i"
+        }
+      ]
+    },
+    {
+      "task_id": "quantum_gate_token_canonicalizer",
+      "name": "Gate token canonicalizer",
+      "category": "api_normalization",
+      "task_path": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/gate_token_canonicalizer/task.json",
+      "query": "quantum gate token canonicalizer Gate token canonicalizer api normalization",
+      "grounded": true,
+      "best_score": 1.2916666666666667,
+      "matched_terms": [
+        "gate",
+        "token"
+      ],
+      "hits": [
+        {
+          "rank": 1,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_gates_reference.md",
+          "final_score": 1.2916666666666667,
+          "lexical_score": 14.238683700561523,
+          "semantic_score": 0.10291382670402527,
+          "matched_terms": [
+            "gate",
+            "token"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/quantum_gates_reference.md] [quantum-gpt/docs/quantum libraries/quantum gates reference.md]\n\ntargets if control is |1>.\n\n## Casefold and alias normalization (very common in repair tasks)\n\nAliases "
+        },
+        {
+          "rank": 2,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qiskit_basics.md",
+          "final_score": 1.1833333333333333,
+          "lexical_score": 5.883986473083496,
+          "semantic_score": 0.03848154842853546,
+          "matched_terms": [
+            "gate"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/qiskit_basics.md] [quantum-gpt/docs/quantum libraries/qiskit basics.md]\n\n# Qiskit basics (v1.x API)\n\n## Import surface\n\n```python\nfrom qiskit import QuantumCircuit, transpile\nfrom qiskit.quantum_i"
+        },
+        {
+          "rank": 3,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/circuit_repair_recipes.md",
+          "final_score": 1.1833333333333333,
+          "lexical_score": 6.032289028167725,
+          "semantic_score": 0.07225077599287033,
+          "matched_terms": [
+            "gate",
+            "token"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/circuit_repair_recipes.md] [quantum-gpt/docs/quantum libraries/circuit repair recipes.md]\n\n# Circuit repair and depth-optimization recipes\n\n## Common micro-bugs in quantum candidate code\n\n1. **Swa"
+        }
+      ]
+    },
+    {
+      "task_id": "quantum_ghz_state_witness",
+      "name": "GHZ state preparation and entanglement witness",
+      "category": "algorithm_implementation",
+      "task_path": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/ghz_state_witness/task.json",
+      "query": "quantum ghz state witness GHZ state preparation and entanglement witness algorithm implementation",
+      "grounded": true,
+      "best_score": 1.9166666666666665,
+      "matched_terms": [
+        "algorithm",
+        "entanglement",
+        "ghz",
+        "preparation",
+        "state",
+        "witness"
+      ],
+      "hits": [
+        {
+          "rank": 1,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/ghz_state.md",
+          "final_score": 1.9166666666666665,
+          "lexical_score": 40.50347900390625,
+          "semantic_score": 0.2812739610671997,
+          "matched_terms": [
+            "ghz",
+            "state",
+            "witness",
+            "entanglement"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/ghz_state.md] [quantum-gpt/docs/quantum libraries/ghz state.md]\n\n# GHZ state and entanglement witness\n\n## Concept\nThe Greenberger-Horne-Zeilinger (GHZ) state is a tripartite (or\nn-partite) maximal"
+        },
+        {
+          "rank": 2,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_circuit_construction_patterns.md",
+          "final_score": 1.222222222222222,
+          "lexical_score": 6.444085121154785,
+          "semantic_score": 0.04180282726883888,
+          "matched_terms": [
+            "state",
+            "preparation",
+            "algorithm"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/quantum_circuit_construction_patterns.md] [quantum-gpt/docs/quantum libraries/quantum circuit construction patterns.md]\n\n# Quantum circuit construction patterns\n\n## Layered circuits\nMost quantum a"
+        },
+        {
+          "rank": 3,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_fourier_transform.md",
+          "final_score": 1.0159567726982963,
+          "lexical_score": 5.163806915283203,
+          "semantic_score": 0.021364230662584305,
+          "matched_terms": [
+            "state",
+            "algorithm"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/quantum_fourier_transform.md] [quantum-gpt/docs/quantum libraries/quantum fourier transform.md]\n\n# Quantum Fourier Transform (QFT)\n\n## Concept\nThe QFT is the quantum analogue of the discrete Fouri"
+        }
+      ]
+    },
+    {
+      "task_id": "quantum_grover_oracle_diffusion",
+      "name": "Grover oracle and diffusion operator simulation",
+      "category": "algorithm_implementation",
+      "task_path": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/grover_oracle_diffusion/task.json",
+      "query": "quantum grover oracle diffusion Grover oracle and diffusion operator simulation algorithm implementation",
+      "grounded": true,
+      "best_score": 1.9444444444444446,
+      "matched_terms": [
+        "algorithm",
+        "diffusion",
+        "grover",
+        "operator",
+        "oracle"
+      ],
+      "hits": [
+        {
+          "rank": 1,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/grover_search.md",
+          "final_score": 1.9444444444444446,
+          "lexical_score": 45.673828125,
+          "semantic_score": 0.20410239696502686,
+          "matched_terms": [
+            "grover",
+            "oracle",
+            "diffusion",
+            "operator",
+            "algorithm"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/grover_search.md] [quantum-gpt/docs/quantum libraries/grover search.md]\n\n# Grover search (oracle + diffusion)\n\n## Concept\nGrover's algorithm finds a marked element in an unstructured database of\nN"
+        },
+        {
+          "rank": 2,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_circuit_construction_patterns.md",
+          "final_score": 1.3222222222222222,
+          "lexical_score": 31.55009651184082,
+          "semantic_score": 0.10376550257205963,
+          "matched_terms": [
+            "grover",
+            "oracle",
+            "diffusion",
+            "operator",
+            "algorithm"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/quantum_circuit_construction_patterns.md] [quantum-gpt/docs/quantum libraries/quantum circuit construction patterns.md]\n\n# Quantum circuit construction patterns\n\n## Layered circuits\nMost quantum a"
+        },
+        {
+          "rank": 3,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/vqe_basics.md",
+          "final_score": 0.4771323455704583,
+          "lexical_score": 6.1171793937683105,
+          "semantic_score": 0.017690196633338928,
+          "matched_terms": [
+            "operator",
+            "algorithm"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/vqe_basics.md] [quantum-gpt/docs/quantum libraries/vqe basics.md]\n\n# Variational Quantum Eigensolver (VQE)\n\n## Concept\nVQE estimates the lowest eigenvalue of a Hermitian operator H using a\nparamet"
+        }
+      ]
+    },
+    {
+      "task_id": "quantum_maxcut_assignment_enumerator",
+      "name": "MaxCut assignment enumerator",
+      "category": "algorithm_implementation",
+      "task_path": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/maxcut_assignment_enumerator/task.json",
+      "query": "quantum maxcut assignment enumerator MaxCut assignment enumerator algorithm implementation",
+      "grounded": true,
+      "best_score": 1.8916666666666666,
+      "matched_terms": [
+        "algorithm",
+        "maxcut"
+      ],
+      "hits": [
+        {
+          "rank": 1,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md",
+          "final_score": 1.8916666666666666,
+          "lexical_score": 12.759648323059082,
+          "semantic_score": 0.11706694960594177,
+          "matched_terms": [
+            "maxcut",
+            "algorithm"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md] [quantum-gpt/docs/quantum libraries/qaoa maxcut.md]\n\n# QAOA for MaxCut\n\n## Concept\nThe Quantum Approximate Optimization Algorithm (QAOA) attacks\ncombinatorial optimization problems"
+        },
+        {
+          "rank": 2,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/maxcut_classical_helpers.md",
+          "final_score": 1.1416666666666666,
+          "lexical_score": 6.497135162353516,
+          "semantic_score": 0.053403254598379135,
+          "matched_terms": [
+            "maxcut"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/maxcut_classical_helpers.md] [quantum-gpt/docs/quantum libraries/maxcut classical helpers.md]\n\n)\n```\n\nThe list returned by `rank_partitions` is in non-increasing cost order.\nFor deterministic tieb"
+        },
+        {
+          "rank": 3,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_fourier_transform.md",
+          "final_score": 0.961739714940389,
+          "lexical_score": 3.7944869995117188,
+          "semantic_score": 0.03777007758617401,
+          "matched_terms": [
+            "algorithm"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/quantum_fourier_transform.md] [quantum-gpt/docs/quantum libraries/quantum fourier transform.md]\n\n# Quantum Fourier Transform (QFT)\n\n## Concept\nThe QFT is the quantum analogue of the discrete Fouri"
+        }
+      ]
+    },
+    {
+      "task_id": "quantum_maxcut_partition_ranker",
+      "name": "MaxCut partition ranking from Ising-style assignments",
+      "category": "algorithm_reasoning",
+      "task_path": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/maxcut_partition_ranker/task.json",
+      "query": "quantum maxcut partition ranker MaxCut partition ranking from Ising-style assignments algorithm reasoning",
+      "grounded": true,
+      "best_score": 1.8199999999999998,
+      "matched_terms": [
+        "algorithm",
+        "from",
+        "maxcut",
+        "partition",
+        "ranking"
+      ],
+      "hits": [
+        {
+          "rank": 1,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md",
+          "final_score": 1.8199999999999998,
+          "lexical_score": 14.023752212524414,
+          "semantic_score": 0.08156761527061462,
+          "matched_terms": [
+            "maxcut",
+            "from",
+            "algorithm"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md] [quantum-gpt/docs/quantum libraries/qaoa maxcut.md]\n\n# QAOA for MaxCut\n\n## Concept\nThe Quantum Approximate Optimization Algorithm (QAOA) attacks\ncombinatorial optimization problems"
+        },
+        {
+          "rank": 2,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/maxcut_classical_helpers.md",
+          "final_score": 1.1300000000000001,
+          "lexical_score": 10.486211776733398,
+          "semantic_score": 0.11829692125320435,
+          "matched_terms": [
+            "maxcut",
+            "partition",
+            "ranking"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/maxcut_classical_helpers.md] [quantum-gpt/docs/quantum libraries/maxcut classical helpers.md]\n\n# MaxCut: classical bitstring evaluation, enumeration, ranking\n\n## Definitions\nA cut on graph G = (V,"
+        },
+        {
+          "rank": 3,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_fourier_transform.md",
+          "final_score": 0.7309326219558716,
+          "lexical_score": 4.558340072631836,
+          "semantic_score": 0.028206447139382362,
+          "matched_terms": [
+            "from",
+            "algorithm"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/quantum_fourier_transform.md] [quantum-gpt/docs/quantum libraries/quantum fourier transform.md]\n\n# Quantum Fourier Transform (QFT)\n\n## Concept\nThe QFT is the quantum analogue of the discrete Fouri"
+        }
+      ]
+    },
+    {
+      "task_id": "quantum_measurement_bug_repair",
+      "name": "Measurement mapping bug repair",
+      "category": "debug_repair",
+      "task_path": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/measurement_bug_repair/task.json",
+      "query": "quantum measurement bug repair Measurement mapping bug repair debug repair",
+      "grounded": true,
+      "best_score": 1.2916666666666667,
+      "matched_terms": [
+        "bug",
+        "measurement"
+      ],
+      "hits": [
+        {
+          "rank": 1,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/circuit_repair_recipes.md",
+          "final_score": 1.2916666666666667,
+          "lexical_score": 13.135652542114258,
+          "semantic_score": 0.061576277017593384,
+          "matched_terms": [
+            "measurement",
+            "bug"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/circuit_repair_recipes.md] [quantum-gpt/docs/quantum libraries/circuit repair recipes.md]\n\n# Circuit repair and depth-optimization recipes\n\n## Common micro-bugs in quantum candidate code\n\n1. **Swa"
+        },
+        {
+          "rank": 2,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/README.md",
+          "final_score": 1.1282406409581502,
+          "lexical_score": 9.357717514038086,
+          "semantic_score": 0.04600764065980911,
+          "matched_terms": [],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/README.md] [quantum-gpt/docs/quantum libraries/README.md]\n\n# Quantum Computing Documentation Corpus\n\nThis directory contains compact, RAG-friendly documentation for quantum\ncomputing algorithms an"
+        },
+        {
+          "rank": 3,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_teleportation.md",
+          "final_score": 1.0867045362790426,
+          "lexical_score": 8.649580001831055,
+          "semantic_score": 0.05340106412768364,
+          "matched_terms": [
+            "measurement",
+            "bug"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/quantum_teleportation.md] [quantum-gpt/docs/quantum libraries/quantum teleportation.md]\n\n1, m2)\n    psi = np.array([alpha, beta], dtype=complex)\n    if m2 == 1:\n        psi = np.array([psi[1], psi"
+        }
+      ]
+    },
+    {
+      "task_id": "quantum_pauli_message_codec",
+      "name": "Pauli label codec for two-bit messages",
+      "category": "api_normalization",
+      "task_path": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/pauli_message_codec/task.json",
+      "query": "quantum pauli message codec Pauli label codec for two-bit messages api normalization",
+      "grounded": true,
+      "best_score": 1.155,
+      "matched_terms": [
+        "for",
+        "label",
+        "pauli"
+      ],
+      "hits": [
+        {
+          "rank": 1,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/vqe_basics.md",
+          "final_score": 1.155,
+          "lexical_score": 6.340500354766846,
+          "semantic_score": 0.050851721316576004,
+          "matched_terms": [
+            "pauli",
+            "for"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/vqe_basics.md] [quantum-gpt/docs/quantum libraries/vqe basics.md]\n\n# Variational Quantum Eigensolver (VQE)\n\n## Concept\nVQE estimates the lowest eigenvalue of a Hermitian operator H using a\nparamet"
+        },
+        {
+          "rank": 2,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/binary_measurement_decoders.md",
+          "final_score": 1.11,
+          "lexical_score": 5.389076232910156,
+          "semantic_score": 0.04764046519994736,
+          "matched_terms": [
+            "pauli",
+            "label",
+            "for"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/binary_measurement_decoders.md] [quantum-gpt/docs/quantum libraries/binary measurement decoders.md]\n\n# Binary measurement decoders and Pauli routers\n\n## Bit-flip syndrome decoder\nFor the 3-qubit b"
+        },
+        {
+          "rank": 3,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/depolarizing_channel.md",
+          "final_score": 1.11,
+          "lexical_score": 5.3307342529296875,
+          "semantic_score": 0.04562545567750931,
+          "matched_terms": [
+            "pauli",
+            "for"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/depolarizing_channel.md] [quantum-gpt/docs/quantum libraries/depolarizing channel.md]\n\n# Depolarizing channel and Kraus operators\n\n## Concept\nThe single-qubit depolarizing channel with parameter p"
+        }
+      ]
+    },
+    {
+      "task_id": "quantum_phase_estimation_circuit",
+      "name": "Quantum phase estimation unitary eigenvalue extraction",
+      "category": "algorithm_implementation",
+      "task_path": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/phase_estimation_circuit/task.json",
+      "query": "quantum phase estimation circuit Quantum phase estimation unitary eigenvalue extraction algorithm implementation",
+      "grounded": true,
+      "best_score": 1.8166666666666664,
+      "matched_terms": [
+        "algorithm",
+        "circuit",
+        "estimation",
+        "phase",
+        "unitary"
+      ],
+      "hits": [
+        {
+          "rank": 1,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_phase_estimation.md",
+          "final_score": 1.8166666666666664,
+          "lexical_score": 14.880962371826172,
+          "semantic_score": 0.10295050591230392,
+          "matched_terms": [
+            "phase",
+            "estimation",
+            "circuit",
+            "unitary",
+            "algorithm"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/quantum_phase_estimation.md] [quantum-gpt/docs/quantum libraries/quantum phase estimation.md]\n\npi*i*phi}\n    eigval = np.vdot(eigenvector, Uv)\n    phi = (np.angle(eigval) / (2 * np.pi)) % 1.0\n    "
+        },
+        {
+          "rank": 2,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_fourier_transform.md",
+          "final_score": 1.2626204503907097,
+          "lexical_score": 14.344076156616211,
+          "semantic_score": 0.08329804241657257,
+          "matched_terms": [
+            "phase",
+            "estimation",
+            "circuit",
+            "algorithm"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/quantum_fourier_transform.md] [quantum-gpt/docs/quantum libraries/quantum fourier transform.md]\n\n# Quantum Fourier Transform (QFT)\n\n## Concept\nThe QFT is the quantum analogue of the discrete Fouri"
+        },
+        {
+          "rank": 3,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_circuit_construction_patterns.md",
+          "final_score": 1.2057821300294664,
+          "lexical_score": 14.853805541992188,
+          "semantic_score": 0.07011717557907104,
+          "matched_terms": [
+            "phase",
+            "circuit",
+            "unitary",
+            "algorithm"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/quantum_circuit_construction_patterns.md] [quantum-gpt/docs/quantum libraries/quantum circuit construction patterns.md]\n\n# Quantum circuit construction patterns\n\n## Layered circuits\nMost quantum a"
+        }
+      ]
+    },
+    {
+      "task_id": "quantum_phase_measurement_register",
+      "name": "Phase measurement register",
+      "category": "algorithm_implementation",
+      "task_path": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/phase_measurement_register/task.json",
+      "query": "quantum phase measurement register Phase measurement register algorithm implementation",
+      "grounded": true,
+      "best_score": 1.2916666666666667,
+      "matched_terms": [
+        "algorithm",
+        "measurement",
+        "phase",
+        "register"
+      ],
+      "hits": [
+        {
+          "rank": 1,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_phase_estimation.md",
+          "final_score": 1.2916666666666667,
+          "lexical_score": 13.509822845458984,
+          "semantic_score": 0.1170894056558609,
+          "matched_terms": [
+            "phase",
+            "register"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/quantum_phase_estimation.md] [quantum-gpt/docs/quantum libraries/quantum phase estimation.md]\n\n# Quantum Phase Estimation (QPE)\n\n## Concept\nGiven a unitary U with eigenvector |psi> and unknown eig"
+        },
+        {
+          "rank": 2,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/phase_register_roundtrip.md",
+          "final_score": 1.25,
+          "lexical_score": 13.69127082824707,
+          "semantic_score": 0.09479549527168274,
+          "matched_terms": [
+            "phase",
+            "register"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/phase_register_roundtrip.md] [quantum-gpt/docs/quantum libraries/phase register roundtrip.md]\n\n# Phase register round-trip patterns\n\n## Concept\nA \"phase register\" is an n-qubit register whose comp"
+        },
+        {
+          "rank": 3,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_circuit_construction_patterns.md",
+          "final_score": 1.2443965752919517,
+          "lexical_score": 10.109565734863281,
+          "semantic_score": 0.07227679342031479,
+          "matched_terms": [
+            "phase",
+            "measurement",
+            "register",
+            "algorithm"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/quantum_circuit_construction_patterns.md] [quantum-gpt/docs/quantum libraries/quantum circuit construction patterns.md]\n\n# Quantum circuit construction patterns\n\n## Layered circuits\nMost quantum a"
+        }
+      ]
+    },
+    {
+      "task_id": "quantum_phase_register_roundtrip",
+      "name": "Phase register round-trip utility",
+      "category": "interface_contract",
+      "task_path": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/phase_register_roundtrip/task.json",
+      "query": "quantum phase register roundtrip Phase register round-trip utility interface contract",
+      "grounded": true,
+      "best_score": 1.86875,
+      "matched_terms": [
+        "phase",
+        "register",
+        "round-trip",
+        "roundtrip"
+      ],
+      "hits": [
+        {
+          "rank": 1,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/phase_register_roundtrip.md",
+          "final_score": 1.86875,
+          "lexical_score": 18.21392059326172,
+          "semantic_score": 0.17476120591163635,
+          "matched_terms": [
+            "phase",
+            "register",
+            "roundtrip",
+            "round-trip"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/phase_register_roundtrip.md] [quantum-gpt/docs/quantum libraries/phase register roundtrip.md]\n\n# Phase register round-trip patterns\n\n## Concept\nA \"phase register\" is an n-qubit register whose comp"
+        },
+        {
+          "rank": 2,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_phase_estimation.md",
+          "final_score": 1.21875,
+          "lexical_score": 13.509822845458984,
+          "semantic_score": 0.08400782197713852,
+          "matched_terms": [
+            "phase",
+            "register"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/quantum_phase_estimation.md] [quantum-gpt/docs/quantum libraries/quantum phase estimation.md]\n\n# Quantum Phase Estimation (QPE)\n\n## Concept\nGiven a unitary U with eigenvector |psi> and unknown eig"
+        },
+        {
+          "rank": 3,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_circuit_construction_patterns.md",
+          "final_score": 1.1877001285552977,
+          "lexical_score": 10.109565734863281,
+          "semantic_score": 0.04388226568698883,
+          "matched_terms": [
+            "phase",
+            "register"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/quantum_circuit_construction_patterns.md] [quantum-gpt/docs/quantum libraries/quantum circuit construction patterns.md]\n\n# Quantum circuit construction patterns\n\n## Layered circuits\nMost quantum a"
+        }
+      ]
+    },
+    {
+      "task_id": "quantum_qaoa_maxcut",
+      "name": "QAOA MaxCut cost function and classical simulation",
+      "category": "algorithm_implementation",
+      "task_path": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/qaoa_maxcut/task.json",
+      "query": "quantum qaoa maxcut QAOA MaxCut cost function and classical simulation algorithm implementation",
+      "grounded": true,
+      "best_score": 2.065,
+      "matched_terms": [
+        "algorithm",
+        "cost",
+        "maxcut",
+        "qaoa"
+      ],
+      "hits": [
+        {
+          "rank": 1,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md",
+          "final_score": 2.065,
+          "lexical_score": 49.23082733154297,
+          "semantic_score": 0.2818848192691803,
+          "matched_terms": [
+            "qaoa",
+            "maxcut",
+            "cost",
+            "algorithm"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md] [quantum-gpt/docs/quantum libraries/qaoa maxcut.md]\n\n# QAOA for MaxCut\n\n## Concept\nThe Quantum Approximate Optimization Algorithm (QAOA) attacks\ncombinatorial optimization problems"
+        },
+        {
+          "rank": 2,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_circuit_construction_patterns.md",
+          "final_score": 1.245,
+          "lexical_score": 20.20656967163086,
+          "semantic_score": 0.06496879458427429,
+          "matched_terms": [
+            "qaoa",
+            "cost",
+            "algorithm"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/quantum_circuit_construction_patterns.md] [quantum-gpt/docs/quantum libraries/quantum circuit construction patterns.md]\n\n# Quantum circuit construction patterns\n\n## Layered circuits\nMost quantum a"
+        },
+        {
+          "rank": 3,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/maxcut_classical_helpers.md",
+          "final_score": 1.0791644954681396,
+          "lexical_score": 13.891343116760254,
+          "semantic_score": 0.05179087445139885,
+          "matched_terms": [
+            "maxcut",
+            "cost"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/maxcut_classical_helpers.md] [quantum-gpt/docs/quantum libraries/maxcut classical helpers.md]\n\n)\n```\n\nThe list returned by `rank_partitions` is in non-increasing cost order.\nFor deterministic tieb"
+        }
+      ]
+    },
+    {
+      "task_id": "quantum_qft_phase_pattern",
+      "name": "QFT phase pattern",
+      "category": "algorithm_reasoning",
+      "task_path": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/qft_phase_pattern/task.json",
+      "query": "quantum qft phase pattern QFT phase pattern algorithm reasoning",
+      "grounded": true,
+      "best_score": 1.4083333333333334,
+      "matched_terms": [
+        "algorithm",
+        "pattern",
+        "phase",
+        "qft"
+      ],
+      "hits": [
+        {
+          "rank": 1,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_fourier_transform.md",
+          "final_score": 1.4083333333333334,
+          "lexical_score": 36.042659759521484,
+          "semantic_score": 0.23465277254581451,
+          "matched_terms": [
+            "qft",
+            "phase",
+            "pattern",
+            "algorithm"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/quantum_fourier_transform.md] [quantum-gpt/docs/quantum libraries/quantum fourier transform.md]\n\n# Quantum Fourier Transform (QFT)\n\n## Concept\nThe QFT is the quantum analogue of the discrete Fouri"
+        },
+        {
+          "rank": 2,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_circuit_construction_patterns.md",
+          "final_score": 1.3666666666666667,
+          "lexical_score": 19.175992965698242,
+          "semantic_score": 0.07772462069988251,
+          "matched_terms": [
+            "qft",
+            "phase",
+            "pattern",
+            "algorithm"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/quantum_circuit_construction_patterns.md] [quantum-gpt/docs/quantum libraries/quantum circuit construction patterns.md]\n\n# Quantum circuit construction patterns\n\n## Layered circuits\nMost quantum a"
+        },
+        {
+          "rank": 3,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/circuit_repair_recipes.md",
+          "final_score": 1.2583333333333335,
+          "lexical_score": 17.273435592651367,
+          "semantic_score": 0.07927778363227844,
+          "matched_terms": [
+            "qft",
+            "phase",
+            "pattern"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/circuit_repair_recipes.md] [quantum-gpt/docs/quantum libraries/circuit repair recipes.md]\n\ns to slide commuting gates past each other and\n  expose more cancellations: e.g. `Rz` commutes with `CZ` "
+        }
+      ]
+    },
+    {
+      "task_id": "quantum_channel_depolarizing",
+      "name": "Depolarizing quantum channel simulation",
+      "category": "algorithm_implementation",
+      "task_path": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/quantum_channel_depolarizing/task.json",
+      "query": "quantum channel depolarizing Depolarizing quantum channel simulation algorithm implementation",
+      "grounded": true,
+      "best_score": 1.25,
+      "matched_terms": [
+        "algorithm",
+        "channel",
+        "depolarizing"
+      ],
+      "hits": [
+        {
+          "rank": 1,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/depolarizing_channel.md",
+          "final_score": 1.25,
+          "lexical_score": 19.06941795349121,
+          "semantic_score": 0.1272575855255127,
+          "matched_terms": [
+            "channel",
+            "depolarizing"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/depolarizing_channel.md] [quantum-gpt/docs/quantum libraries/depolarizing channel.md]\n\n# Depolarizing channel and Kraus operators\n\n## Concept\nThe single-qubit depolarizing channel with parameter p"
+        },
+        {
+          "rank": 2,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/README.md",
+          "final_score": 1.1833333333333333,
+          "lexical_score": 7.420870304107666,
+          "semantic_score": 0.04375513643026352,
+          "matched_terms": [
+            "channel",
+            "algorithm"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/README.md] [quantum-gpt/docs/quantum libraries/README.md]\n\n# Quantum Computing Documentation Corpus\n\nThis directory contains compact, RAG-friendly documentation for quantum\ncomputing algorithms an"
+        },
+        {
+          "rank": 3,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md",
+          "final_score": 1.163581975301107,
+          "lexical_score": 6.49916934967041,
+          "semantic_score": 0.03361508250236511,
+          "matched_terms": [
+            "algorithm"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md] [quantum-gpt/docs/quantum libraries/qaoa maxcut.md]\n\n# QAOA for MaxCut\n\n## Concept\nThe Quantum Approximate Optimization Algorithm (QAOA) attacks\ncombinatorial optimization problems"
+        }
+      ]
+    },
+    {
+      "task_id": "quantum_error_correction_shor_9qubit",
+      "name": "Shor 9-qubit error correction code simulation",
+      "category": "algorithm_implementation",
+      "task_path": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/quantum_error_correction_shor_9qubit/task.json",
+      "query": "quantum error correction shor 9qubit Shor 9-qubit error correction code simulation algorithm implementation",
+      "grounded": true,
+      "best_score": 1.33,
+      "matched_terms": [
+        "algorithm",
+        "correction",
+        "error",
+        "qubit",
+        "shor"
+      ],
+      "hits": [
+        {
+          "rank": 1,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/error_correction_basics.md",
+          "final_score": 1.33,
+          "lexical_score": 42.51365280151367,
+          "semantic_score": 0.2207612544298172,
+          "matched_terms": [
+            "error",
+            "correction",
+            "shor",
+            "qubit"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/error_correction_basics.md] [quantum-gpt/docs/quantum libraries/error correction basics.md]\n\n# Quantum error correction basics (bit-flip and Shor 9-qubit)\n\n## Bit-flip code (3-qubit repetition)\nPr"
+        },
+        {
+          "rank": 2,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_teleportation.md",
+          "final_score": 1.11,
+          "lexical_score": 13.233762741088867,
+          "semantic_score": 0.04335763305425644,
+          "matched_terms": [
+            "correction",
+            "qubit"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/quantum_teleportation.md] [quantum-gpt/docs/quantum libraries/quantum teleportation.md]\n\n# Quantum teleportation\n\n## Concept\nTeleportation transfers the *state* of a qubit from Alice to Bob using\n"
+        },
+        {
+          "rank": 3,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_fourier_transform.md",
+          "final_score": 1.0113941717147827,
+          "lexical_score": 10.099080085754395,
+          "semantic_score": 0.03172553703188896,
+          "matched_terms": [
+            "shor",
+            "qubit",
+            "algorithm"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/quantum_fourier_transform.md] [quantum-gpt/docs/quantum libraries/quantum fourier transform.md]\n\n# Quantum Fourier Transform (QFT)\n\n## Concept\nThe QFT is the quantum analogue of the discrete Fouri"
+        }
+      ]
+    },
+    {
+      "task_id": "quantum_stabilizer_tableau_update_repair",
+      "name": "Stabilizer tableau single-qubit update repair",
+      "category": "debug_repair",
+      "task_path": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/stabilizer_tableau_update_repair/task.json",
+      "query": "quantum stabilizer tableau update repair Stabilizer tableau single-qubit update repair debug repair",
+      "grounded": true,
+      "best_score": 1.25,
+      "matched_terms": [
+        "debug",
+        "stabilizer",
+        "tableau",
+        "update"
+      ],
+      "hits": [
+        {
+          "rank": 1,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/stabilizer_formalism.md",
+          "final_score": 1.25,
+          "lexical_score": 24.494394302368164,
+          "semantic_score": 0.1440952569246292,
+          "matched_terms": [
+            "stabilizer",
+            "tableau",
+            "update"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/stabilizer_formalism.md] [quantum-gpt/docs/quantum libraries/stabilizer formalism.md]\n\nbits\n        r[2 * n] ^= x & z\n        r[q], r[n + q] = z, x\n\ndef apply_s(tableau, n, q):\n    for r in tablea"
+        },
+        {
+          "rank": 2,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/circuit_repair_recipes.md",
+          "final_score": 1.1857142857142857,
+          "lexical_score": 13.370807647705078,
+          "semantic_score": 0.06111276149749756,
+          "matched_terms": [
+            "debug"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/circuit_repair_recipes.md] [quantum-gpt/docs/quantum libraries/circuit repair recipes.md]\n\ns to slide commuting gates past each other and\n  expose more cancellations: e.g. `Rz` commutes with `CZ` "
+        },
+        {
+          "rank": 3,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/README.md",
+          "final_score": 0.9021244440759931,
+          "lexical_score": 9.357717514038086,
+          "semantic_score": 0.03580990806221962,
+          "matched_terms": [],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/README.md] [quantum-gpt/docs/quantum libraries/README.md]\n\n# Quantum Computing Documentation Corpus\n\nThis directory contains compact, RAG-friendly documentation for quantum\ncomputing algorithms an"
+        }
+      ]
+    },
+    {
+      "task_id": "quantum_superdense_coding",
+      "name": "Superdense coding encode/decode",
+      "category": "reasoning",
+      "task_path": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/superdense_coding/task.json",
+      "query": "quantum superdense coding Superdense coding encode/decode reasoning",
+      "grounded": true,
+      "best_score": 1.9900000000000002,
+      "matched_terms": [
+        "decode",
+        "encode",
+        "superdense"
+      ],
+      "hits": [
+        {
+          "rank": 1,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/superdense_coding.md",
+          "final_score": 1.9900000000000002,
+          "lexical_score": 32.2513542175293,
+          "semantic_score": 0.2090277373790741,
+          "matched_terms": [
+            "superdense",
+            "encode",
+            "decode"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/superdense_coding.md] [quantum-gpt/docs/quantum libraries/superdense coding.md]\n\n# Superdense coding\n\n## Concept\nSuperdense coding lets Alice send 2 classical bits to Bob using a single\nqubit, pro"
+        },
+        {
+          "rank": 2,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/binary_measurement_decoders.md",
+          "final_score": 1.1300000000000001,
+          "lexical_score": 16.707015991210938,
+          "semantic_score": 0.06854148209095001,
+          "matched_terms": [
+            "superdense",
+            "decode"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/binary_measurement_decoders.md] [quantum-gpt/docs/quantum libraries/binary measurement decoders.md]\n\n# Binary measurement decoders and Pauli routers\n\n## Bit-flip syndrome decoder\nFor the 3-qubit b"
+        },
+        {
+          "rank": 3,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_teleportation.md",
+          "final_score": 1.1300000000000001,
+          "lexical_score": 13.293020248413086,
+          "semantic_score": 0.10106439888477325,
+          "matched_terms": [],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/quantum_teleportation.md] [quantum-gpt/docs/quantum libraries/quantum teleportation.md]\n\n# Quantum teleportation\n\n## Concept\nTeleportation transfers the *state* of a qubit from Alice to Bob using\n"
+        }
+      ]
+    },
+    {
+      "task_id": "quantum_superdense_identity_lookup",
+      "name": "Superdense identity lookup",
+      "category": "reasoning",
+      "task_path": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/superdense_identity_lookup/task.json",
+      "query": "quantum superdense identity lookup Superdense identity lookup reasoning",
+      "grounded": true,
+      "best_score": 1.77,
+      "matched_terms": [
+        "identity",
+        "superdense"
+      ],
+      "hits": [
+        {
+          "rank": 1,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/superdense_coding.md",
+          "final_score": 1.77,
+          "lexical_score": 21.087223052978516,
+          "semantic_score": 0.16536271572113037,
+          "matched_terms": [
+            "superdense"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/superdense_coding.md] [quantum-gpt/docs/quantum libraries/superdense coding.md]\n\n# Superdense coding\n\n## Concept\nSuperdense coding lets Alice send 2 classical bits to Bob using a single\nqubit, pro"
+        },
+        {
+          "rank": 2,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/binary_measurement_decoders.md",
+          "final_score": 1.22,
+          "lexical_score": 20.14840316772461,
+          "semantic_score": 0.08894935250282288,
+          "matched_terms": [
+            "superdense",
+            "identity"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/binary_measurement_decoders.md] [quantum-gpt/docs/quantum libraries/binary measurement decoders.md]\n\n# Binary measurement decoders and Pauli routers\n\n## Bit-flip syndrome decoder\nFor the 3-qubit b"
+        },
+        {
+          "rank": 3,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_teleportation.md",
+          "final_score": 1.1300000000000001,
+          "lexical_score": 13.293020248413086,
+          "semantic_score": 0.11363555490970612,
+          "matched_terms": [],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/quantum_teleportation.md] [quantum-gpt/docs/quantum libraries/quantum teleportation.md]\n\n# Quantum teleportation\n\n## Concept\nTeleportation transfers the *state* of a qubit from Alice to Bob using\n"
+        }
+      ]
+    },
+    {
+      "task_id": "quantum_superdense_pauli_router",
+      "name": "Superdense Pauli router",
+      "category": "reasoning",
+      "task_path": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/superdense_pauli_router/task.json",
+      "query": "quantum superdense pauli router Superdense Pauli router reasoning",
+      "grounded": true,
+      "best_score": 1.77,
+      "matched_terms": [
+        "pauli",
+        "router",
+        "superdense"
+      ],
+      "hits": [
+        {
+          "rank": 1,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/superdense_coding.md",
+          "final_score": 1.77,
+          "lexical_score": 21.087223052978516,
+          "semantic_score": 0.14692422747612,
+          "matched_terms": [
+            "superdense"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/superdense_coding.md] [quantum-gpt/docs/quantum libraries/superdense coding.md]\n\n# Superdense coding\n\n## Concept\nSuperdense coding lets Alice send 2 classical bits to Bob using a single\nqubit, pro"
+        },
+        {
+          "rank": 2,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/binary_measurement_decoders.md",
+          "final_score": 1.31,
+          "lexical_score": 27.65342903137207,
+          "semantic_score": 0.14744813740253448,
+          "matched_terms": [
+            "superdense",
+            "pauli",
+            "router"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/binary_measurement_decoders.md] [quantum-gpt/docs/quantum libraries/binary measurement decoders.md]\n\n# Binary measurement decoders and Pauli routers\n\n## Bit-flip syndrome decoder\nFor the 3-qubit b"
+        },
+        {
+          "rank": 3,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_teleportation.md",
+          "final_score": 1.1300000000000001,
+          "lexical_score": 13.293020248413086,
+          "semantic_score": 0.10096480697393417,
+          "matched_terms": [],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/quantum_teleportation.md] [quantum-gpt/docs/quantum libraries/quantum teleportation.md]\n\n# Quantum teleportation\n\n## Concept\nTeleportation transfers the *state* of a qubit from Alice to Bob using\n"
+        }
+      ]
+    },
+    {
+      "task_id": "quantum_teleportation_corrections",
+      "name": "Teleportation correction mapping",
+      "category": "protocol_logic",
+      "task_path": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/teleportation_corrections/task.json",
+      "query": "quantum teleportation corrections Teleportation correction mapping protocol logic",
+      "grounded": true,
+      "best_score": 1.7857142857142856,
+      "matched_terms": [
+        "correction",
+        "corrections",
+        "logic",
+        "mapping",
+        "protocol",
+        "teleportation"
+      ],
+      "hits": [
+        {
+          "rank": 1,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_teleportation.md",
+          "final_score": 1.7857142857142856,
+          "lexical_score": 17.277488708496094,
+          "semantic_score": 0.07272439450025558,
+          "matched_terms": [
+            "teleportation",
+            "corrections",
+            "correction"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/quantum_teleportation.md] [quantum-gpt/docs/quantum libraries/quantum teleportation.md]\n\n1, m2)\n    psi = np.array([alpha, beta], dtype=complex)\n    if m2 == 1:\n        psi = np.array([psi[1], psi"
+        },
+        {
+          "rank": 2,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/circuit_repair_recipes.md",
+          "final_score": 1.1198096854346138,
+          "lexical_score": 13.320718765258789,
+          "semantic_score": 0.04592990502715111,
+          "matched_terms": [
+            "teleportation",
+            "protocol"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/circuit_repair_recipes.md] [quantum-gpt/docs/quantum libraries/circuit repair recipes.md]\n\n# Circuit repair and depth-optimization recipes\n\n## Common micro-bugs in quantum candidate code\n\n1. **Swa"
+        },
+        {
+          "rank": 3,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/binary_measurement_decoders.md",
+          "final_score": 0.9488908852849688,
+          "lexical_score": 7.7938385009765625,
+          "semantic_score": 0.07624852657318115,
+          "matched_terms": [
+            "correction",
+            "mapping",
+            "logic"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/binary_measurement_decoders.md] [quantum-gpt/docs/quantum libraries/binary measurement decoders.md]\n\n# Binary measurement decoders and Pauli routers\n\n## Bit-flip syndrome decoder\nFor the 3-qubit b"
+        }
+      ]
+    },
+    {
+      "task_id": "quantum_trotterized_hamiltonian_evolution",
+      "name": "Trotterized Hamiltonian time evolution",
+      "category": "algorithm_implementation",
+      "task_path": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/trotterized_hamiltonian_evolution/task.json",
+      "query": "quantum trotterized hamiltonian evolution Trotterized Hamiltonian time evolution algorithm implementation",
+      "grounded": true,
+      "best_score": 1.1488400493349347,
+      "matched_terms": [
+        "algorithm",
+        "evolution",
+        "hamiltonian",
+        "time"
+      ],
+      "hits": [
+        {
+          "rank": 1,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/vqe_basics.md",
+          "final_score": 1.1488400493349347,
+          "lexical_score": 7.2177534103393555,
+          "semantic_score": 0.05700375512242317,
+          "matched_terms": [
+            "hamiltonian",
+            "algorithm"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/vqe_basics.md] [quantum-gpt/docs/quantum libraries/vqe basics.md]\n\n# Variational Quantum Eigensolver (VQE)\n\n## Concept\nVQE estimates the lowest eigenvalue of a Hermitian operator H using a\nparamet"
+        },
+        {
+          "rank": 2,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/trotter_decomposition.md",
+          "final_score": 1.0928571428571427,
+          "lexical_score": 8.336451530456543,
+          "semantic_score": 0.059146810322999954,
+          "matched_terms": [
+            "evolution",
+            "time"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/trotter_decomposition.md] [quantum-gpt/docs/quantum libraries/trotter decomposition.md]\n\n## Library snippets\n- Qiskit: `qiskit.synthesis.SuzukiTrotter` (and friends in\n  `qiskit.synthesis.product_"
+        },
+        {
+          "rank": 3,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md",
+          "final_score": 0.9647875819887434,
+          "lexical_score": 3.5804269313812256,
+          "semantic_score": 0.06591597944498062,
+          "matched_terms": [
+            "hamiltonian",
+            "algorithm"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md] [quantum-gpt/docs/quantum libraries/qaoa maxcut.md]\n\n# QAOA for MaxCut\n\n## Concept\nThe Quantum Approximate Optimization Algorithm (QAOA) attacks\ncombinatorial optimization problems"
+        }
+      ]
+    },
+    {
+      "task_id": "quantum_vqe_energy_minimization",
+      "name": "VQE energy expectation from parameterized ansatz",
+      "category": "algorithm_implementation",
+      "task_path": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/vqe_energy_minimization/task.json",
+      "query": "quantum vqe energy minimization VQE energy expectation from parameterized ansatz algorithm implementation",
+      "grounded": true,
+      "best_score": 1.73,
+      "matched_terms": [
+        "algorithm",
+        "ansatz",
+        "expectation",
+        "from",
+        "vqe"
+      ],
+      "hits": [
+        {
+          "rank": 1,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/vqe_basics.md",
+          "final_score": 1.73,
+          "lexical_score": 17.894908905029297,
+          "semantic_score": 0.11774925887584686,
+          "matched_terms": [
+            "vqe",
+            "from",
+            "ansatz"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/vqe_basics.md] [quantum-gpt/docs/quantum libraries/vqe basics.md]\n\nfrom qiskit.circuit.library import RealAmplitudes\n```\n\nPennyLane:\n```python\nimport pennylane as qml\nansatz = qml.SimplifiedTwoDes"
+        },
+        {
+          "rank": 2,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md",
+          "final_score": 1.155,
+          "lexical_score": 8.274046897888184,
+          "semantic_score": 0.03285006433725357,
+          "matched_terms": [
+            "expectation",
+            "from",
+            "algorithm"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md] [quantum-gpt/docs/quantum libraries/qaoa maxcut.md]\n\nt_optimization.applications import Maxcut\nfrom qiskit_optimization.algorithms import MinimumEigenOptimizer\n```\n\nPennyLane offer"
+        },
+        {
+          "rank": 3,
+          "source_path": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_fourier_transform.md",
+          "final_score": 1.032455472946167,
+          "lexical_score": 6.719609260559082,
+          "semantic_score": 0.02476937510073185,
+          "matched_terms": [
+            "from",
+            "algorithm"
+          ],
+          "preview": "[source: quantum-gpt/docs/quantum_libraries/quantum_fourier_transform.md] [quantum-gpt/docs/quantum libraries/quantum fourier transform.md]\n\n# Quantum Fourier Transform (QFT)\n\n## Concept\nThe QFT is the quantum analogue of the discrete Fouri"
+        }
+      ]
+    }
+  ]
+}

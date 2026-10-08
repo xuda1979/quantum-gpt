@@ -1,0 +1,15 @@
+# Autonomous R&D Cycle Command Sheet
+# target: google/gemma-4-31B-it
+
+local_eval_gate: python3 evals/runner/run_eval.py
+holdout_integrity: python3 scripts/verify_holdout_dataset.py --train-file data/generated/omnicoder-quantum-generalization-holdout-v1/train.jsonl --eval-file data/generated/omnicoder-quantum-generalization-holdout-v1/eval.jsonl --manifest data/generated/omnicoder-quantum-generalization-holdout-v1/manifest.json --min-eval-count 500 --require-task-disjoint --require-prompt-family-disjoint
+gemma_audit: python3 training/audit_model_source.py --model-id google/gemma-4-31B-it --expected-family-substring gemma
+gemma_snapshot_acquire: python3 training/acquire_public_qwen_snapshot.py --target gemma4-31b-it --local-dir models/gemma-4-31B-it
+gemma_snapshot_verify: python3 training/verify_qwen_snapshot.py models/gemma-4-31B-it --expected-substring gemma-4-31B-it --expected-family-substring gemma
+gemma_snapshot_relay: scripts/relay_model_snapshot_to_s3.sh gemma-4-31B-it
+gemma_smoke: python3 training/huanxin_cpu_smoke.py --model-name models/gemma-4-31B-it --dataset data/seed/splits-auto-seed/train.jsonl --max-samples 1
+code_sync: scripts/push_to_s3.sh scripts training evals research data
+remote_code_sync: scripts/ai2_sync_from_s3.sh
+remote_model_sync: scripts/ai2_sync_model_from_s3.sh gemma-4-31B-it
+remote_job_queue: scripts/queue_ai2_timeboxed_pipeline.sh --stage-only
+fallback_remote_job_queue: scripts/queue_ai2_timeboxed_pipeline.sh --target omnicoder9b --stage-only

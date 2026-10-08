@@ -1,0 +1,9 @@
+Write a complete, runnable Python program using Qiskit that:
+1. Implements Grover's algorithm on 3 qubits to find the marked state |101>.
+2. Uses 2 Grover iterations. Oracle: X on q1 (the bit that is 0 in |101>), then CCZ on all 3 qubits (implemented as H on q2, MCX with controls [q0, q1] targeting q2, H on q2), then X on q1 to uncompute.
+   Diffusion: H on all, X on all, CCZ on all (same construction), X on all, H on all.
+3. In `def main()`, uses StatevectorSampler (1000 shots) and prints the most-likely bitstring and its probability.
+Output exactly:
+  Most likely: <3-char bitstring>
+  Probability: <value rounded to 3 decimals>
+Call main() under `if __name__ == "__main__":`.

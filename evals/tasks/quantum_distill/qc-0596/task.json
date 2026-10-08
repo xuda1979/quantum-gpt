@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0596",
+  "name": "Quantum computing task: Simulate a Bell circuit in Cirq under depolarizing noise",
+  "task_prompt": "Quantum computing task: Simulate a Bell circuit in Cirq under depolarizing noise (p=0.073) using the density matrix simulator. Print the final density matrix purity and the fidelity with the ideal Bell state. Return the entire program in one piece, ready to run without any modification."
+}

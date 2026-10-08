@@ -1,0 +1,30 @@
+Task ID: quantum_error_correction_shor_9qubit
+Task: Shor 9-qubit error correction code simulation
+Domain: quantum
+Category: algorithm_implementation
+Output file: candidate.py
+
+Required public API (signatures and docstrings only):
+def shor_encode(logical_bit: int) -> list[float]
+    """Encode a single logical qubit (0 or 1) using the Shor 9-qubit code.
+
+|0_L> = (|000> + |111>)(|000> + |111>)(|000> + |111>) / (2*sqrt(2))
+|1_L> = (|000> - |111>)(|000> - |111>)(|000> - |111>) / (2*sqrt(2))"""
+def apply_x_error(state: list[float], qubit: int) -> list[float]
+    """Apply a bit-flip (X) error on the given qubit index (0-8, MSB first)."""
+def shor_decode(state: list[float]) -> int
+    """Decode a (possibly single-bit-flip-corrupted) Shor-encoded state.
+
+Steps:
+1. Bit-flip correction via majority vote within each 3-qubit block.
+2. Phase detection: compare the sign of amplitude at |000 000 000>
+   vs |111 000 000> in the corrected state. Same sign → logical 0,
+   opposite sign → logical 1.
+
+Returns the logical bit (0 or 1)."""
+
+Implement the requested file. Hidden tests will verify behavior.
+Return only the complete Python source, without markdown fences or explanation.
+
+Write a Python file that passes the supplied tests.
+Return only the candidate file contents.

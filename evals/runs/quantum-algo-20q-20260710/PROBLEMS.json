@@ -1,0 +1,154 @@
+[
+  {
+    "id": "quantum_bell_state_probability",
+    "title": "Bell-state measurement probabilities",
+    "expected_substrings": [
+      "P(00) = 0.",
+      "P(11) = 0."
+    ]
+  },
+  {
+    "id": "quantum_qft_3qubit_phase",
+    "title": "3-qubit QFT phase pattern",
+    "expected_substrings": [
+      "Top: ",
+      "2nd: "
+    ]
+  },
+  {
+    "id": "quantum_grover_2qubit_marked11",
+    "title": "Grover's algorithm finds |11> on 2 qubits",
+    "expected_substrings": [
+      "Most likely: 11",
+      "Probability:"
+    ]
+  },
+  {
+    "id": "quantum_maxcut_bruteforce_4vertices",
+    "title": "Brute-force MaxCut on a 4-vertex graph",
+    "expected_substrings": [
+      "Max cut value: 4",
+      "Optimal bitstring: "
+    ]
+  },
+  {
+    "id": "quantum_qaoa_maxcut_triangle",
+    "title": "QAOA Max-Cut on a triangle graph",
+    "expected_substrings": [
+      "Binary solution: ",
+      "Max-cut value: 2"
+    ]
+  },
+  {
+    "id": "quantum_deutsch_jozsa_balanced",
+    "title": "Deutsch-Jozsa on a balanced function",
+    "expected_substrings": [
+      "Measurement: ",
+      "Function is: balanced"
+    ]
+  },
+  {
+    "id": "quantum_bernstein_vazirani_hidden",
+    "title": "Bernstein-Vazirani hidden string s=101",
+    "expected_substrings": [
+      "Hidden string: 101"
+    ]
+  },
+  {
+    "id": "quantum_swap_test_overlap",
+    "title": "SWAP test overlap of |0> and |+>",
+    "expected_substrings": [
+      "P(0) = 0.7",
+      "|<A|B>|^2 = 0."
+    ]
+  },
+  {
+    "id": "quantum_teleportation_fidelity",
+    "title": "Quantum teleportation of |+> state (coherent)",
+    "expected_substrings": [
+      "<X> on Bob = 1.000000"
+    ]
+  },
+  {
+    "id": "quantum_density_matrix_pure_state",
+    "title": "Density matrix purity of a Bell state",
+    "expected_substrings": [
+      "Purity = 1.000000",
+      "Entropy = 0.000000"
+    ]
+  },
+  {
+    "id": "quantum_partial_trace_bipartite",
+    "title": "Partial trace of a bipartite pure state",
+    "expected_substrings": [
+      "Reduced density matrix:",
+      "Purity = 0.500000"
+    ]
+  },
+  {
+    "id": "quantum_pauli_expectation_x",
+    "title": "<X> expectation value for |+>",
+    "expected_substrings": [
+      "<X> = 1.000000"
+    ]
+  },
+  {
+    "id": "quantum_ising_ground_state_energy",
+    "title": "Transverse-field Ising ground energy on 2 qubits",
+    "expected_substrings": [
+      "Ground state energy = -1.414214"
+    ]
+  },
+  {
+    "id": "quantum_vqe_h2_energy",
+    "title": "VQE on H2 (2-qubit) with 2-layer Ry ansatz + COBYLA",
+    "expected_substrings": [
+      "VQE energy = -1.85"
+    ]
+  },
+  {
+    "id": "quantum_grover_3qubit_marked101",
+    "title": "Grover 3-qubit finds |101>",
+    "expected_substrings": [
+      "Most likely: 101",
+      "Probability: 0."
+    ]
+  },
+  {
+    "id": "quantum_phase_estimation_pi4",
+    "title": "QPE estimates phase 1/4 for unitary S",
+    "expected_substrings": [
+      "Measurement: ",
+      "Estimated phase: 0.2500"
+    ]
+  },
+  {
+    "id": "quantum_bit_flip_code_recovery",
+    "title": "3-qubit bit-flip code with X error on qubit 1",
+    "expected_substrings": [
+      "P(majority=1) = 1.000"
+    ]
+  },
+  {
+    "id": "quantum_superdense_coding_11",
+    "title": "Superdense coding sends 2 bits '11' via 1 qubit",
+    "expected_substrings": [
+      "Decoded bits: 11",
+      "Probability: 1.000"
+    ]
+  },
+  {
+    "id": "quantum_ghz_state_5qubit",
+    "title": "5-qubit GHZ state measurement",
+    "expected_substrings": [
+      "P(all-0 or all-1) ="
+    ]
+  },
+  {
+    "id": "quantum_trotterized_xxz",
+    "title": "Trotterized XXZ Heisenberg on 2 qubits: <Z on q0> at t=1.0",
+    "expected_substrings": [
+      "<Z on q0> = "
+    ]
+  }
+]

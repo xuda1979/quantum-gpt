@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3_sampling",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0047",
+  "name": "Write a complete Qiskit program that prepares a 7-qubit GHZ state and prints the",
+  "task_prompt": "Write a complete Qiskit program that prepares a 7-qubit GHZ state and prints the measurement counts from 4096 shots. Write the full runnable code (all imports included); executing it should print the results."
+}

@@ -1,0 +1,9 @@
+{
+  "id": "quantum_cirq_qaoa_line",
+  "name": "Cirq QAOA on a 4-node line graph MaxCut",
+  "domain": "quantum",
+  "category": "algorithm_implementation",
+  "framework": "cirq",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

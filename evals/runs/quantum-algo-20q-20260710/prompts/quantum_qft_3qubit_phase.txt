@@ -1,0 +1,8 @@
+Write a complete, runnable Python program using Qiskit that:
+1. Builds the state |5> = |101> on 3 qubits (X on q0 and q2).
+2. Applies the 3-qubit Quantum Fourier Transform.
+3. In `def main()`, simulates with StatevectorSampler (2000 shots) and prints the two most-probable measurement bitstrings and their counts.
+Output exactly two lines:
+  Top: <bitstring> count=<count>
+  2nd: <bitstring> count=<count>
+Call main() under `if __name__ == "__main__":`.

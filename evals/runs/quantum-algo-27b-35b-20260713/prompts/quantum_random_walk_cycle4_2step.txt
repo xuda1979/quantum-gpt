@@ -1,0 +1,27 @@
+Write a complete, runnable Python program using only numpy that:
+1. Simulates a discrete-time coined quantum walk on a cycle of n=4 nodes.
+   The Hilbert space is 2*n = 8 dimensional (one coin qubit per node).
+   Basis order: |node, coin>, with index = 2*node + coin.
+2. Initial state: node 0, coin |+> = (|0> + |1>)/sqrt(2).
+3. Each step consists of:
+   - Coin operator: H (Hadamard) applied to the coin subspace.
+   - Shift operator S: |node, 0> -> |node-1 mod n, 0>,
+                       |node, 1> -> |node+1 mod n, 1>.
+   Build S as an 8x8 permutation matrix and the coin operator as
+   I_n (x) H. Apply U = S * (I_n (x) H) for the given number of steps.
+4. Run for 2 steps and marginalize the final state over the coin to get the
+   probability distribution over the 4 nodes.
+5. Also compute the classical random walk distribution on the same cycle for
+   2 steps (50/50 left/right) starting at node 0.
+6. Compute the total variation distance (TVD) between the quantum and
+   classical distributions.
+7. In `def main()`, prints exactly:
+     Cycle nodes = 4
+     Steps = 2
+     Quantum distribution = [<4 values rounded to 4 decimals>]
+     Classical distribution = [<4 values rounded to 4 decimals>]
+     Quantum total = 1.0000
+     TVD vs classical = <value rounded to 4 decimals>
+     Different from classical: <True|False>
+   where Different from classical is True iff TVD > 0.01.
+Call main() under `if __name__ == "__main__":`.

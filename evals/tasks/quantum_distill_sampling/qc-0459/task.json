@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3_sampling",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0459",
+  "name": "Implement quantum phase estimation in Cirq with 5 counting qubits for the unitar",
+  "task_prompt": "Implement quantum phase estimation in Cirq with 5 counting qubits for the unitary Z**(2*0.59375) acting on eigenstate |1>. Report the estimated phase. Give one complete script that runs end-to-end on its own and prints the outcome."
+}

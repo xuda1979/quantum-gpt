@@ -1,0 +1,17 @@
+Write a complete, runnable Python program using Qiskit 2.x and qiskit_algorithms
+that:
+1. Defines the 4-qubit transverse-field Ising model (TFIM) Hamiltonian with
+   open boundary conditions, J = 1, h = 1:
+     H = -sum_{i=0}^{2} Z_i Z_{i+1} - sum_{i=0}^{3} X_i
+   Use SparsePauliOp. Pauli strings are written left-to-right as
+   q3 q2 q1 q0 (Qiskit convention).
+2. Uses VQE from qiskit_algorithms.minimum_eigensolvers with
+   StatevectorEstimator, a 3-layer Ry + entangler ansatz on 4 qubits
+   (12 parameters). For each layer: apply RY(param) to each of 4 qubits,
+   then apply CX(0,1), CX(1,2), CX(2,3). Use COBYLA(maxiter=800).
+3. In `def main()`, prints:
+     VQE energy = <value rounded to 4 decimals>
+     exact = -4.759
+   The VQE energy should be within 0.10 of the exact ground-state energy
+   -4.75877048314363...
+Call main() under `if __name__ == "__main__":`.

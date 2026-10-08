@@ -1,0 +1,102 @@
+{
+  "status": "blocked",
+  "current_stage": "gemma_audit",
+  "last_completed_stage": "remote_launcher_gate",
+  "next_action": "python3 training/audit_model_source.py --model-id google/gemma-4-E2B-it --expected-family-substring gemma",
+  "stop_reason": "Gemma source audit has not yet succeeded for this iteration.",
+  "ready_for_remote_finetune": false,
+  "stages": [
+    {
+      "stage": "local_eval_gate",
+      "status": "passed",
+      "blocking": false,
+      "command": "python3 evals/runner/run_eval.py",
+      "result": {
+        "ok": true,
+        "exit_code": 0,
+        "stdout_preview": "[PASS] quantum_bell_pair_construction - Bell pair construction (reference)\n    candidate: /Users/daxu/software/quantum-gpt/evals/tasks/quantum/bell_pair_construction/candidate.py\n    - state=[0.7071067811865476, 0.0, 0.0, 0.7071067811865476"
+      },
+      "reason": "Local eval gate passed in this iteration."
+    },
+    {
+      "stage": "holdout_integrity",
+      "status": "passed",
+      "blocking": false,
+      "command": "python3 scripts/verify_holdout_dataset.py --train-file data/generated/omnicoder-quantum-generalization-holdout-v1/train.jsonl --eval-file data/generated/omnicoder-quantum-generalization-holdout-v1/eval.jsonl --manifest data/generated/omnicoder-quantum-generalization-holdout-v1/manifest.json --min-eval-count 500 --require-task-disjoint --require-prompt-family-disjoint",
+      "result": {
+        "ok": true,
+        "exit_code": 0,
+        "stdout_preview": "{\n  \"train_file\": \"/Users/daxu/software/quantum-gpt/data/generated/omnicoder-quantum-generalization-holdout-v1/train.jsonl\",\n  \"eval_file\": \"/Users/daxu/software/quantum-gpt/data/generated/omnicoder-quantum-generalization-holdout-v1/eval.js"
+      },
+      "reason": "Holdout integrity was verified for this iteration."
+    },
+    {
+      "stage": "gemma_audit",
+      "status": "pending",
+      "blocking": true,
+      "command": "python3 training/audit_model_source.py --model-id google/gemma-4-E2B-it --expected-family-substring gemma",
+      "next_action": "python3 training/audit_model_source.py --model-id google/gemma-4-E2B-it --expected-family-substring gemma",
+      "reason": "Gemma source audit has not yet succeeded for this iteration."
+    },
+    {
+      "stage": "gemma_snapshot_verify",
+      "status": "pending",
+      "blocking": true,
+      "command": "python3 training/verify_qwen_snapshot.py models/gemma-4-E2B-it --expected-substring gemma-4-E2B-it --expected-family-substring gemma",
+      "next_action": "python3 training/verify_qwen_snapshot.py models/gemma-4-E2B-it --expected-substring gemma-4-E2B-it --expected-family-substring gemma",
+      "reason": "Local Gemma snapshot is present but still needs offline verification.",
+      "evidence": {
+        "exists": true,
+        "has_any_files": true,
+        "has_weight_files": true,
+        "has_incomplete_weight_files": false,
+        "present_files": [
+          ".gitattributes",
+          "README.md",
+          "chat_template.jinja",
+          "config.json",
+          "generation_config.json",
+          "model.safetensors",
+          "processor_config.json",
+          "tokenizer.json",
+          "tokenizer_config.json"
+        ],
+        "weight_files": [
+          "model.safetensors"
+        ],
+        "incomplete_weight_files": [],
+        "snapshot_dir": "models/gemma-4-E2B-it",
+        "total_file_count": 28,
+        "total_size_bytes": 10278841587,
+        "total_size_human": "9.6GB",
+        "incomplete_total_bytes": 0,
+        "incomplete_total_human": "0B"
+      }
+    },
+    {
+      "stage": "gemma_smoke",
+      "status": "blocked",
+      "blocking": true,
+      "command": "python3 training/huanxin_cpu_smoke.py --model-name models/gemma-4-E2B-it --dataset data/seed/splits-auto-seed/train.jsonl --max-samples 1",
+      "result": {
+        "ok": false,
+        "exit_code": 1,
+        "stdout_preview": "{\n  \"python\": \"3.9.6\",\n  \"platform\": \"macOS-26.3-arm64-arm-64bit\",\n  \"machine\": \"arm64\",\n  \"target_model\": \"models/gemma-4-E2B-it\",\n  \"load_model_requested\": false,\n  \"modules\": {\n    \"torch\": \"2.8.0\",\n    \"transformers\": \"4.49.0\",\n    \"acc",
+        "stderr_preview": "/Users/daxu/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib"
+      },
+      "next_action": "python3 training/huanxin_cpu_smoke.py --model-name models/gemma-4-E2B-it --dataset data/seed/splits-auto-seed/train.jsonl --max-samples 1",
+      "reason": "Gemma trainer/backend preflight has not yet passed on the local stack."
+    },
+    {
+      "stage": "remote_launcher_gate",
+      "status": "passed",
+      "blocking": false,
+      "command": "scripts/queue_ai2_timeboxed_pipeline.sh --stage-only",
+      "reason": "Remote launcher is target-aware for Gemma and now exits early with a concrete preflight blocker instead of pretending launch readiness.",
+      "evidence": {
+        "launcher_path": "scripts/queue_ai2_timeboxed_pipeline.sh",
+        "gemma_guard_present": true
+      }
+    }
+  ]
+}

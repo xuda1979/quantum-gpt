@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0897",
+  "name": "Implement a UCC-style ansatz by hand in Qiskit: the double-excitation rotation e",
+  "task_prompt": "Implement a UCC-style ansatz by hand in Qiskit: the double-excitation rotation exp(-i theta/2 (X0 Y1 - Y0 X1)/... ) simplified to a Givens rotation between |01> and |10>, optimize theta with scipy for the Hamiltonian H = 0.93 (X0 X1 + Y0 Y1)/2 + 0.97 (Z0 - Z1)/2 and compare with exact diagonalization. The code must be a complete standalone script that can be executed directly and produces output."
+}

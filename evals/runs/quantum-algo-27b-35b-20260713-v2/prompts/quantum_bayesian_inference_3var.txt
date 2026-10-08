@@ -1,0 +1,24 @@
+Write a complete, runnable Python program using numpy and qiskit that:
+1. Defines a 3-qubit Bayesian network with 3 binary random variables
+   A, B, C. The prior P(A) is encoded on q0, P(B|A) on q1 (controlled
+   by q0), and P(C|B) on q2 (controlled by q1).
+   Use the probabilities:
+     P(A=1) = 0.3
+     P(B=1|A=0) = 0.2, P(B=1|A=1) = 0.8
+     P(C=1|B=0) = 0.1, P(C=1|B=1) = 0.7
+2. Builds a quantum circuit that prepares the joint state
+   |psi> = sum_{a,b,c} sqrt(P(A=a) P(B=b|A=a) P(C=c|B=b)) |abc>.
+   Use R_y(2*arcsin(sqrt(p))) rotations and controlled-R_y rotations.
+3. Computes the marginal P(C=1) by tracing out qubits 0 and 1 from |psi>.
+4. Computes the conditional P(A=1 | C=1) using Bayes' rule:
+   P(A=1|C=1) = P(C=1|A=1) P(A=1) / P(C=1).
+   Verify by also computing it directly from the joint state:
+   measure q2 = 1, then q0 = 1, divided by P(C=1).
+5. In `def main()`, prints exactly these lines (values rounded to 4 decimals):
+     P(A=1) = 0.3000
+     P(C=1) = <value>
+     P(A=1|C=1) = <value>
+     Quantum P(A=1|C=1) = <value from quantum state>
+     Match: <True|False>
+   where Match is True iff the analytic and quantum values agree to 4 decimals.
+Call main() under `if __name__ == "__main__":`.

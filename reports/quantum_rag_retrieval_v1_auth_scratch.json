@@ -1,0 +1,304 @@
+{
+  "benchmark": "/Users/daxu/software/quantum-gpt/evals/benchmarks/quantum_rag_retrieval_v1.json",
+  "index": "artifacts/quantum-rag/authoritative-index.pkl.gz",
+  "top_k": 5,
+  "alpha": 0.55,
+  "query_expansion_enabled": true,
+  "max_chunks_per_source": 1,
+  "excluded_source_substrings": [
+    "/Users/daxu/software/quantum-gpt/evals/benchmarks/quantum_rag_retrieval_v1.json",
+    "reports/quantum_rag_retrieval_"
+  ],
+  "metrics": {
+    "hit@5": 1.0,
+    "mrr": 1.0,
+    "total_examples": 15,
+    "hit_count": 15
+  },
+  "examples": [
+    {
+      "id": "rag_eval_holdout_local_rule",
+      "query": "How should this repo evaluate strict quantum holdout tasks before remote training?",
+      "expected_source_substrings": [
+        "PROJECT.md",
+        "research/quantum_rag_low_compute.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/PROJECT.md",
+        "/Users/daxu/software/quantum-gpt/research/quantum_rag_low_compute.md",
+        "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/error_detection_bit_flip/task.json",
+        "/Users/daxu/software/quantum-gpt/evals/benchmarks/gemma4_quantum_generalization_holdout_v1.txt",
+        "/Users/daxu/software/quantum-gpt/evals/benchmarks/quantum_generalization_holdout_v1.txt"
+      ]
+    },
+    {
+      "id": "rag_qiskit_task_contract",
+      "query": "Which repo task covers VQE energy expectation from a parameterized ansatz?",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/vqe_energy_minimization/task.json",
+        "evals/tasks/quantum/vqe_energy_minimization/candidate.py"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/vqe_energy_minimization/candidate.py",
+        "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/error_detection_bit_flip/task.json",
+        "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/vqe_energy_minimization/tests.py",
+        "/Users/daxu/software/quantum-gpt/research/quantum_rag_low_compute.md",
+        "/Users/daxu/software/quantum-gpt/evals/benchmarks/quantum_grpo_training_v2_disjoint.txt"
+      ]
+    },
+    {
+      "id": "rag_qft_task_contract",
+      "query": "Where is the QFT phase pattern task defined in this repo?",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/qft_phase_pattern/task.json",
+        "evals/tasks/quantum/qft_phase_pattern/candidate.py"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/qft_phase_pattern/candidate.py",
+        "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/qft_phase_pattern/tests.py",
+        "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/error_detection_bit_flip/task.json",
+        "/Users/daxu/software/quantum-gpt/evals/benchmarks/quantum_grpo_training_v1.txt",
+        "/Users/daxu/software/quantum-gpt/AGENTS.md"
+      ]
+    },
+    {
+      "id": "rag_huanxin_sync_rule",
+      "query": "How does this repo say code should be moved to Huanxin before training?",
+      "expected_source_substrings": [
+        "PROJECT.md",
+        "AGENTS.md",
+        "TOOLS.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/PROJECT.md",
+        "/Users/daxu/software/quantum-gpt/research/quantum_rag_low_compute.md",
+        "/Users/daxu/software/quantum-gpt/AGENTS.md",
+        "/Users/daxu/software/quantum-gpt/HEARTBEAT.md",
+        "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/qaoa_maxcut/tests.py"
+      ]
+    },
+    {
+      "id": "rag_grpo_quantum_benchmark_file",
+      "query": "What benchmark file should GRPO use for quantum training tasks in this repo?",
+      "expected_source_substrings": [
+        "HEARTBEAT.md",
+        "evals/benchmarks/quantum_grpo_training"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/evals/benchmarks/quantum_grpo_training_v2_disjoint.txt",
+        "/Users/daxu/software/quantum-gpt/evals/benchmarks/quantum_grpo_training_v1.txt",
+        "/Users/daxu/software/quantum-gpt/evals/benchmarks/quantum_grpo_training_v3_hard_disjoint.txt",
+        "/Users/daxu/software/quantum-gpt/evals/benchmarks/quantum_grpo_training_v5_failure_shape_disjoint.txt",
+        "/Users/daxu/software/quantum-gpt/evals/benchmarks/quantum_grpo_training_v4_targeted_disjoint.txt"
+      ]
+    },
+    {
+      "id": "rag_rag_usage_doc",
+      "query": "What does the current low-compute quantum RAG implementation support and what are its gaps?",
+      "expected_source_substrings": [
+        "research/quantum_rag_low_compute.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/research/quantum_rag_low_compute.md",
+        "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/circuit_depth_optimization/candidate.py",
+        "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/error_detection_bit_flip/task.json",
+        "/Users/daxu/software/quantum-gpt/evals/benchmarks/quantum_strict_repair_support_v1.txt",
+        "/Users/daxu/software/quantum-gpt/evals/benchmarks/delivery_pass1_quantum_hard_v1.txt"
+      ]
+    },
+    {
+      "id": "rag_ghz_task_contract",
+      "query": "Where is the GHZ state witness task and its reference candidate?",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/ghz_state_witness/task.json",
+        "evals/tasks/quantum/ghz_state_witness/candidate.py"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/ghz_state_witness/candidate.py",
+        "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/circuit_depth_optimization/candidate.py",
+        "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/grover_oracle_diffusion/candidate.py",
+        "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/vqe_energy_minimization/candidate.py",
+        "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/error_detection_bit_flip/task.json"
+      ]
+    },
+    {
+      "id": "rag_error_detection_task",
+      "query": "How does the bit flip error detection task work in this repo?",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/error_detection_bit_flip/task.json",
+        "evals/tasks/quantum/error_detection_bit_flip/candidate.py"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/error_detection_bit_flip/task.json",
+        "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/error_detection_bit_flip/candidate.py",
+        "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/error_detection_bit_flip/tests.py",
+        "/Users/daxu/software/quantum-gpt/HEARTBEAT.md",
+        "/Users/daxu/software/quantum-gpt/AGENTS.md"
+      ]
+    },
+    {
+      "id": "rag_qaoa_maxcut_task",
+      "query": "Where is the QAOA MaxCut task defined and what does its candidate implementation look like?",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/qaoa_maxcut/task.json",
+        "evals/tasks/quantum/qaoa_maxcut/candidate.py"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/qaoa_maxcut/candidate.py",
+        "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/circuit_depth_optimization/candidate.py",
+        "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/bitstring_maxcut_landscape/candidate.py",
+        "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/error_detection_bit_flip/task.json",
+        "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/phase_estimation_circuit/candidate.py"
+      ]
+    },
+    {
+      "id": "rag_superdense_coding_task",
+      "query": "Which task in this repo implements superdense coding?",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/superdense_coding/task.json",
+        "evals/tasks/quantum/superdense_coding/candidate.py"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/superdense_coding/candidate.py",
+        "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/superdense_pauli_router/candidate.py",
+        "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/superdense_identity_lookup/candidate.py",
+        "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/binary_measurement_decoder/candidate.py",
+        "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/bitstring_maxcut_landscape/candidate.py"
+      ]
+    },
+    {
+      "id": "rag_grover_oracle_task",
+      "query": "What is the Grover oracle diffusion task and where is it defined?",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/grover_oracle_diffusion/task.json",
+        "evals/tasks/quantum/grover_oracle_diffusion/candidate.py"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/grover_oracle_diffusion/candidate.py",
+        "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/error_detection_bit_flip/task.json",
+        "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/grover_oracle_diffusion/tests.py",
+        "/Users/daxu/software/quantum-gpt/HEARTBEAT.md",
+        "/Users/daxu/software/quantum-gpt/AGENTS.md"
+      ]
+    },
+    {
+      "id": "rag_teleportation_task",
+      "query": "How does the quantum teleportation corrections task work?",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/teleportation_corrections/task.json",
+        "evals/tasks/quantum/teleportation_corrections/candidate.py"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/teleportation_corrections/candidate.py",
+        "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/error_detection_bit_flip/task.json",
+        "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/teleportation_corrections/tests.py",
+        "/Users/daxu/software/quantum-gpt/evals/benchmarks/quantum_grpo_training_v3_hard_disjoint.txt",
+        "/Users/daxu/software/quantum-gpt/evals/benchmarks/quantum_grpo_training_v2_disjoint.txt"
+      ]
+    },
+    {
+      "id": "rag_shor_error_correction",
+      "query": "Where is the Shor 9-qubit quantum error correction task?",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/quantum_error_correction_shor_9qubit/task.json",
+        "evals/tasks/quantum/quantum_error_correction_shor_9qubit/candidate.py"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/quantum_error_correction_shor_9qubit/candidate.py",
+        "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/error_detection_bit_flip/task.json",
+        "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/quantum_error_correction_shor_9qubit/tests.py",
+        "/Users/daxu/software/quantum-gpt/HEARTBEAT.md",
+        "/Users/daxu/software/quantum-gpt/evals/benchmarks/quantum_grpo_training_v1.txt"
+      ]
+    },
+    {
+      "id": "rag_build_rag_script",
+      "query": "How do I build the quantum RAG index using the build script?",
+      "expected_source_substrings": [
+        "scripts/build_quantum_rag.py",
+        "research/quantum_rag_low_compute.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/research/quantum_rag_low_compute.md",
+        "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/quantum_error_correction_shor_9qubit/candidate.py",
+        "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/trotterized_hamiltonian_evolution/candidate.py",
+        "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/quantum_channel_depolarizing/candidate.py",
+        "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/quantum_error_correction_shor_9qubit/tests.py"
+      ]
+    },
+    {
+      "id": "rag_training_workflow",
+      "query": "What is the verified GRPO training command for this project?",
+      "expected_source_substrings": [
+        "HEARTBEAT.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/HEARTBEAT.md",
+        "/Users/daxu/software/quantum-gpt/evals/benchmarks/quantum_grpo_training_v1.txt",
+        "/Users/daxu/software/quantum-gpt/evals/benchmarks/quantum_grpo_training_v5_failure_shape_disjoint.txt",
+        "/Users/daxu/software/quantum-gpt/evals/benchmarks/quantum_grpo_training_v4_targeted_disjoint.txt",
+        "/Users/daxu/software/quantum-gpt/evals/benchmarks/quantum_grpo_training_v3_hard_disjoint.txt"
+      ]
+    }
+  ]
+}

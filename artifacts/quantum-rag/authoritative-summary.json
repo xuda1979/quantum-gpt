@@ -1,0 +1,22 @@
+{
+  "output": "artifacts/quantum-rag/authoritative-index.pkl.gz",
+  "profile": "authoritative",
+  "roots": [
+    "/Users/daxu/software/quantum-gpt/AGENTS.md",
+    "/Users/daxu/software/quantum-gpt/HEARTBEAT.md",
+    "/Users/daxu/software/quantum-gpt/PROJECT.md",
+    "/Users/daxu/software/quantum-gpt/TOOLS.md",
+    "/Users/daxu/software/quantum-gpt/evals/benchmarks",
+    "/Users/daxu/software/quantum-gpt/evals/tasks",
+    "/Users/daxu/software/quantum-gpt/training",
+    "/Users/daxu/software/quantum-gpt/scripts",
+    "/Users/daxu/software/quantum-gpt/research/quantum_rag_low_compute.md",
+    "/Users/daxu/software/quantum-gpt/research/model-target.md",
+    "/Users/daxu/software/quantum-gpt/research/eval-spec-v0.md",
+    "/Users/daxu/software/quantum-gpt/research/eval-difficulty-jump-v2.md"
+  ],
+  "chunk_count": 805,
+  "source_count": 194,
+  "vectorizer_features": 50000,
+  "dense_dimensions": 50000
+}

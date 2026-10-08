@@ -1,0 +1,35 @@
+# GRPO training task set v10 DE-OVERLAPPED (C-9544; replaces C-9458).
+# C-9458 expanded this set to cover ALL 18 frozen holdout tasks:
+# leakage - a frozen holdout trained on is not a holdout. C-9544
+# removes the 18 holdout ids; remaining = 23-task union of
+# v8-adjacent + v1-continuity. For holdout-adjacent difficulty signal
+# use quantum_grpo_training_v8_holdout_adjacent.txt (0 overlap).
+# dropped_holdout_ids=18 kept=23
+# source=evals/benchmarks/quantum_grpo_training_v7_targeted_integrity.txt sha256=49e0598bdefe63feb3e70a54b3fad5945f539c310cc7b519b3efd4b24b8ca14e
+# task_contract_sha256=a1ad49adbe4061ee5f97143845da662d594093763c5c965ea16785770b1b8e7c
+# targeted=23 deterministic=0 semantic=0
+# required_import_roots=
+# reference_execution_verified=true runs=3
+quantum_bitstring_maxcut_landscape
+quantum_circuit_depth_optimization
+quantum_circuit_phase_repair
+quantum_error_detection_bit_flip
+quantum_gate_alias_casefold_barrier
+quantum_measurement_bug_repair
+quantum_phase_measurement_register
+quantum_stabilizer_tableau_update_repair
+quantum_superdense_pauli_router
+quantum_teleportation_corrections
+quantum_three_qubit_entropy
+quantum_shor_phase_error_correction
+quantum_trotter_heisenberg_evolution
+quantum_depolarizing_entanglement_decay
+quantum_vqe_heisenberg_energy
+quantum_qaoa_ring4_landscape
+quantum_bell_basis_discrimination
+quantum_qft_periodic_state
+quantum_stabilizer_shor_generators
+quantum_qml_variational_classifier
+quantum_bell_pair_construction
+quantum_qft_phase_pattern
+quantum_vqe_energy_minimization

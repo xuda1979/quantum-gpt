@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3_sampling",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0434",
+  "name": "Quantum computing task: Write a Stim program that builds a 3-qubit GHZ circuit, ",
+  "task_prompt": "Quantum computing task: Write a Stim program that builds a 3-qubit GHZ circuit, samples measurements, and also uses the TableauSimulator to print the stabilizers of the final state. Give one complete script that runs end-to-end on its own and prints the outcome."
+}

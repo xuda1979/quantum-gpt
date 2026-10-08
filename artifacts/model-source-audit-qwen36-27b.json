@@ -1,0 +1,44 @@
+{
+  "timestamp_utc": "2026-05-15T12:29:51.952745+00:00",
+  "python": "3.9.6",
+  "platform": "macOS-26.3-arm64-arm-64bit",
+  "model_id": "Qwen/Qwen3.6-27B",
+  "hf_endpoint": "https://huggingface.co",
+  "status": "ok",
+  "resolved_id": "Qwen/Qwen3.6-27B",
+  "private": false,
+  "disabled": false,
+  "gated": false,
+  "downloads": 3099139,
+  "likes": 1283,
+  "pipeline_tag": "image-text-to-text",
+  "library_name": "transformers",
+  "tags_sample": [
+    "transformers",
+    "safetensors",
+    "qwen3_5",
+    "image-text-to-text",
+    "conversational",
+    "license:apache-2.0",
+    "eval-results",
+    "endpoints_compatible",
+    "deploy:azure",
+    "region:us"
+  ],
+  "file_count": 29,
+  "config_model_type": "qwen3_5",
+  "config_architectures": [
+    "Qwen3_5ForConditionalGeneration"
+  ],
+  "family_evidence": {
+    "expected_family_substring": "qwen",
+    "matched": true,
+    "hits": [
+      "Qwen/Qwen3.6-27B",
+      "Qwen",
+      "qwen3_5",
+      "qwen3_5",
+      "Qwen3_5ForConditionalGeneration"
+    ]
+  }
+}

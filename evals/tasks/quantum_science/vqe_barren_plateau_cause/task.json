@@ -1,0 +1,11 @@
+{
+  "id": "quantum_science_vqe_barren_plateau_cause",
+  "name": "Explain the barren plateau phenomenon in variational quantum...",
+  "domain": "quantum_science",
+  "category": "limitation",
+  "level": "L5",
+  "field": "vqe",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py",
+  "question": "Explain the barren plateau phenomenon in variational quantum algorithms. Why does the gradient variance decay exponentially with the number of qubits for deep random parameterized circuits, and what circuit-architecture and initialization strategies mitigate this?"
+}

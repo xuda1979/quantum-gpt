@@ -1,0 +1,285 @@
+Task ID: quantum_ghz_state_witness
+Task name: GHZ state preparation and entanglement witness
+Domain: quantum
+Category: algorithm_implementation
+
+Reference documentation (use these only as background; do not echo them):
+--- BEGIN REFERENCE DOCS ---
+[DOC 1] source=ghz_state.md
+[source: quantum-gpt/docs/quantum_libraries/ghz_state.md] [quantum-gpt/docs/quantum libraries/ghz state.md]
+
+# GHZ state and entanglement witness
+
+## Concept
+The Greenberger-Horne-Zeilinger (GHZ) state is a tripartite (or
+n-partite) maximally entangled state. For three qubits:
+
+|GHZ> = (|000> + |111>) / sqrt(2)
+
+For n qubits the state is (|0...0> + |1...1>) / sqrt(2). It is the
+canonical multi-partite entanglement resource.
+
+## Amplitudes (n=3)
+Indexed by big-endian (|000>, |001>, ..., |111>):
+
+```
+amp = 2 ** -0.5
+ghz3 = [amp, 0, 0, 0, 0, 0, 0, amp]
+```
+
+## Reference circuit
+1. H on qubit 0
+2. CNOT(0, 1)
+3. CNOT(1, 2)  (or CNOT(0, 2))
+
+```python
+def ghz_state(n: int) -> list[float]:
+    amp = 2 ** -0.5
+    state = [0.0] * (1 << n)
+    state[0] = amp
+    state[(1 << n) - 1] = amp
+    return state
+```
+
+## Entanglement witness
+A witness W is an observable with `Tr(W rho_separable) >= 0` for all
+separable states and `Tr(W rho) < 0` for some entangled rho. A common
+GHZ witness is
+
+  W = 1/2 I - |GHZ><GHZ|
+
+For the perfect GHZ state, <GHZ|W|GHZ> = 1/2 - 1 = -1/2 < 0, signalling
+entanglemen  ...[truncated]
+
+[DOC 2] source=ghz_state.md
+[source: quantum-gpt/docs/quantum_libraries/ghz_state.md] [quantum-gpt/docs/quantum libraries/ghz state.md]
+
+<GHZ|
+
+For the perfect GHZ state, <GHZ|W|GHZ> = 1/2 - 1 = -1/2 < 0, signalling
+entanglement. Numerically the witness expectation can be computed as:
+
+```python
+def ghz_witness(state):
+    # state is a length-2**n complex vector for n qubits
+    n = (len(state)).bit_length() - 1
+    amp = 2 ** -0.5
+    target_first, target_last = 0, (1 << n) - 1
+    overlap = abs(state[target_first].conjugate() * amp
+                  + state[target_last].conjugate() * amp)
+    fidelity = overlap ** 2
+    return 0.5 - fidelity   # negative => entanglement detected
+```
+
+## Common pitfalls
+- The "all-zero plus all-one" pattern only works in the computational
+  basis with big-endian indexing.
+- Using CNOT(0, 1) followed by CNOT(0, 2) is functionally equivalent to
+  CNOT(0,1) then CNOT(1,2) for producing GHZ.
+
+[DOC 3] source=PROJECT.md
+[source: daxu/software/quantum-gpt/PROJECT.md] [daxu/software/quantum-gpt/PROJECT.md]
+
+lity
+5. CPU-feasible fine-tuning or adaptation experiments
+6. Research notes documenting findings, tradeoffs, and next steps
+
+## Domain Requirements
+
+- Focus on quantum algorithm code in frameworks like Qiskit, Cirq, PennyLane, and small educational simulators when appropriate
+- Cover algorithm families such as QFT, Grover, VQE, QAOA, teleportation, superdense coding, phase estimation, error mitigation, and circuit optimization
+- Preserve software-engineering quality: testing, refactoring, documentation, interfaces, and maintainable Python tooling
+- Prefer verifiable tasks with executable tests or simulators
+
+## Operating Rules
+
+- Start each cycle by reading AGENTS.md, PROJECT.md, HEARTBEAT.md, USER.md, and any recent notes under memory/
+- Keep a running log in memory/YYYY-MM-DD.md
+- When a substantial decision is made, update MEMORY.md if it exists or create it if needed
+- If code is changed, leave the repo in a runnable state and record how to verify it
+- Before any remote training attempt, run t  ...[truncated]
+--- END REFERENCE DOCS ---
+
+Write the simplest Python file that satisfies the supplied tests and return only that file.
+
+Reference candidate style example (for format guidance, not for blind copying):
+--- BEGIN REFERENCE CANDIDATE ---
+import math
+
+
+def ghz_state(n_qubits: int) -> list[float]:
+    """
+    Construct the n-qubit GHZ state: (|00...0> + |11...1>) / sqrt(2).
+    Returns a list of 2^n real amplitudes.
+    """
+    dim = 2 ** n_qubits
+    state = [0.0] * dim
+    amp = 1.0 / math.sqrt(2)
+    state[0] = amp          # |00...0>
+    state[dim - 1] = amp    # |11...1>
+    return state
+
+
+def w_state(n_qubits: int) -> list[float]:
+    """
+    Construct the n-qubit W state: equal superposition of all single-excitation
+    basis states (|00..01> + |00..10> + ... + |10..00>) / sqrt(n).
+    """
+    dim = 2 ** n_qubits
+    state = [0.0] * dim
+    amp = 1.0 / math.sqrt(n_qubits)
+    for k in range(n_qubits):
+        idx = 1 << k
+        state[idx] = amp
+    return state
+
+
+def ghz_witness_expectation(state: list[float], n_qubits: int) -> float:
+    """
+    Compute the expectation value of the GHZ entanglement witness:
+    W = I/2 - |GHZ><GHZ|
+
+    <W> = 1/2 - |<GHZ|state>|^2
+    Negative value certifies GHZ-type entanglement.
+    """
+    ghz = ghz_state(n_qubits)
+    overlap = sum(g * s for g, s in zip(ghz, state))
+    return 0.5 - overlap ** 2
+
+
+def concurrence_2qubit(state: list[float]) -> float:
+    """
+    Compute the concurrence of a 2-qubit pure state |psi>.
+    C = 2 |a*d - b*c| for state [a, b, c, d].
+    """
+    a, b, c, d = state
+    return 2 * abs(a * d - b * c)
+
+--- END REFERENCE CANDIDATE ---
+
+Tests the candidate must satisfy:
+--- BEGIN TESTS ---
+import importlib.util
+import math
+
+
+def _load(candidate_path: str):
+    spec = importlib.util.spec_from_file_location("candidate", candidate_path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
+def _close(a, b, tol=1e-9):
+    return abs(a - b) < tol
+
+
+def run_tests(candidate_path: str) -> dict:
+    module = _load(candidate_path)
+    failures = []
+
+    # --- ghz_state ---
+    # 2-qubit GHZ = Bell state: (|00> + |11>)/sqrt(2)
+    ghz2 = module.ghz_state(2)
+    if len(ghz2) != 4:
+        failures.append(f"ghz_state(2) length={len(ghz2)}, expected 4")
+    else:
+        s2 = 1.0 / math.sqrt(2)
+        if not _close(ghz2[0], s2) or not _close(ghz2[3], s2):
+            failures.append(f"ghz_state(2)[0]={ghz2[0]}, [3]={ghz2[3]}, expected {s2}")
+        if not _close(ghz2[1], 0) or not _close(ghz2[2], 0):
+            failures.append(f"ghz_state(2) middle amplitudes nonzero: {ghz2}")
+
+    # 3-qubit GHZ: (|000> + |111>)/sqrt(2)
+    ghz3 = module.ghz_state(3)
+    if len(ghz3) != 8:
+        failures.append(f"ghz_state(3) length={len(ghz3)}, expected 8")
+    else:
+        s2 = 1.0 / math.sqrt(2)
+        if not _close(ghz3[0], s2) or not _close(ghz3[7], s2):
+            failures.append(f"ghz_state(3) endpoints wrong: [0]={ghz3[0]}, [7]={ghz3[7]}")
+        for i in range(1, 7):
+            if not _close(ghz3[i], 0):
+                failures.append(f"ghz_state(3)[{i}]={ghz3[i]}, expected 0")
+                break
+
+    # 4-qubit GHZ
+    ghz4 = module.ghz_state(4)
+    if len(ghz4) != 16:
+        failures.append(f"ghz_state(4) length={len(ghz4)}, expected 16")
+    else:
+        s2 = 1.0 / math.sqrt(2)
+        if not _close(ghz4[0], s2) or not _close(ghz4[15], s2):
+            failures.append(f"ghz_state(4) endpoints wrong")
+
+    # Normalization
+    for n, state in [(2, ghz2), (3, ghz3), (4, ghz4)]:
+        norm = sum(a ** 2 for a in state)
+        if not _close(norm, 1.0, tol=1e-6):
+            failures.append(f"ghz_state({n}) not normalized: {norm}")
+
+    # --- w_state ---
+    # 3-qubit W state: (|001> + |010> + |100>)/sqrt(3)
+    w3 = module.w_state(3)
+    if len(w3) != 8:
+        failures.append(f"w_state(3) length={len(w3)}, expected 8")
+    else:
+        s3 = 1.0 / math.sqrt(3)
+        expected_nonzero = {1, 2, 4}  # |001>, |010>, |100>
+        for i in range(8):
+            if i in expected_nonzero:
+                if not _close(w3[i], s3):
+                    failures.append(f"w_state(3)[{i}]={w3[i]}, expected {s3}")
+            else:
+                if not _close(w3[i], 0):
+                    failures.append(f"w_state(3)[{i}]={w3[i]}, expected 0")
+
+    # --- ghz_witness_expectation ---
+    # The GHZ witness W = I/2 - |GHZ><GHZ|
+    # For the GHZ state: <W> = 1/2 - 1 = -1/2 (negative = entangled)
+    # For a separable state: <W> >= 0
+
+    witness_ghz = module.ghz_witness_expectation(ghz3, 3)
+    if not _close(witness_ghz, -0.5, tol=1e-6):
+        failures.append(f"ghz_witness(GHZ_3) = {witness_ghz}, expected -0.5")
+
+    # Separable state |000>: <W> = 1/2 - |<000|GHZ>|^2 = 1/2 - 1/2 = 0
+    sep = [0.0] * 8
+    sep[0] = 1.0
+    witness_sep = module.ghz_witness_expectation(sep, 3)
+    if not _close(witness_sep, 0.0, tol=1e-6):
+        failures.append(f"ghz_witness(|000>) = {witness_sep}, expected 0.0")
+
+    # W state: <W> = 1/2 - |<W|GHZ>|^2 = 1/2 - 0 = 0.5
+    witness_w = module.ghz_witness_expectation(w3, 3)
+    if not _close(witness_w, 0.5, tol=1e-6):
+        failures.append(f"ghz_witness(W_3) = {witness_w}, expected 0.5")
+
+    # --- concurrence_2qubit ---
+    # Bell state concurrence = 1
+    c_bell = module.concurrence_2qubit(ghz2)
+    if not _close(c_bell, 1.0, tol=1e-6):
+        failures.append(f"concurrence(Bell) = {c_bell}, expected 1.0")
+
+    # Product state |00> concurrence = 0
+    prod = [1.0, 0.0, 0.0, 0.0]
+    c_prod = module.concurrence_2qubit(prod)
+    if not _close(c_prod, 0.0, tol=1e-6):
+        failures.append(f"concurrence(|00>) = {c_prod}, expected 0.0")
+
+    # Partially entangled: cos(pi/8)|00> + sin(pi/8)|11>
+    a = math.cos(math.pi / 8)
+    b = math.sin(math.pi / 8)
+    partial = [a, 0.0, 0.0, b]
+    c_partial = module.concurrence_2qubit(partial)
+    expected_c = 2 * a * b  # = sin(pi/4) = 1/sqrt(2)
+    if not _close(c_partial, expected_c, tol=1e-6):
+        failures.append(f"concurrence(partial) = {c_partial}, expected {expected_c}")
+
+    return {
+        "passed": not failures,
+        "details": failures or ["GHZ/W state construction and entanglement witness correct for all test cases"],
+    }
+
+--- END TESTS ---

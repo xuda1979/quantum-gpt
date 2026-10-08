@@ -1,0 +1,54 @@
+{
+  "status": "ok",
+  "target": "gemma4-e2b-it",
+  "model_id": "google/gemma-4-E2B-it",
+  "audit_out": "artifacts/model-source-audit-gemma4-e2b-it.json",
+  "snapshot_dir": "/Users/daxu/software/quantum-gpt/models/gemma-4-E2B-it",
+  "remote_model_dir": "/root/root/work/quantum-gpt/models/gemma-4-E2B-it",
+  "handoff_note": "research/papers/gemma4_text_path_enablement/paper.md",
+  "handoff_manifest": "artifacts/gemma4-e2b-it-local-snapshot-handoff.json",
+  "next_step_hint": "If this target is approved for execution, continue with research/papers/gemma4_text_path_enablement/paper.md",
+  "verify_summary": {
+    "snapshot_dir": "/Users/daxu/software/quantum-gpt/models/gemma-4-E2B-it",
+    "expected_substring": "gemma-4-E2B-it",
+    "present_config_files": [
+      "config.json"
+    ],
+    "present_tokenizer_files": [
+      "tokenizer.json",
+      "tokenizer_config.json"
+    ],
+    "present_weight_files": [
+      "model.safetensors"
+    ],
+    "present_processor_files": [
+      "processor_config.json"
+    ],
+    "present_chat_template_files": [
+      "chat_template.jinja"
+    ],
+    "accepted_tokenizer_evidence": [
+      "tokenizer.json",
+      "tokenizer_config.json"
+    ],
+    "accepted_weight_evidence": [
+      "model.safetensors"
+    ],
+    "accepted_processor_evidence": [
+      "processor_config.json"
+    ],
+    "accepted_chat_template_evidence": [
+      "chat_template.jinja"
+    ],
+    "config_model_type": "gemma4",
+    "config_architectures": [
+      "Gemma4ForConditionalGeneration"
+    ],
+    "expected_substring_hit": true,
+    "expected_family_substring": "gemma",
+    "family_metadata_hit": true,
+    "directory_file_count": 10,
+    "requires_processor_artifacts": true,
+    "status": "ok"
+  }
+}

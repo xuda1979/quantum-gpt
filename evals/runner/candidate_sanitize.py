@@ -31,6 +31,22 @@ def _remove_standalone_fence_lines(text: str) -> str:
     return "\n".join(lines).strip()
 
 
+def _strip_known_terminal_markers(text: str) -> str:
+    stripped = text.strip()
+    terminal_markers = (
+        "<|im_end|>",
+        "<|endoftext|>",
+    )
+    changed = True
+    while changed and stripped:
+        changed = False
+        for marker in terminal_markers:
+            if stripped.endswith(marker):
+                stripped = stripped[: -len(marker)].rstrip()
+                changed = True
+    return stripped
+
+
 def _longest_parseable_python_prefix(text: str) -> str:
     stripped = text.strip()
     if not stripped:
@@ -59,7 +75,20 @@ def sanitize_candidate_text(text: str) -> str:
     if stripped.startswith("```"):
         stripped = _extract_leading_fenced_block(stripped)
     elif "```" in stripped:
-        stripped = stripped.split("```", 1)[0].rstrip()
+        # C-9231: when text contains a fence but does not start with one,
+        # distinguish two cases:
+        #   (a) prose before an opening fence -> extract the fenced block
+        #   (b) valid code followed by a stray closing fence -> keep the code
+        before_fence = stripped.split("```", 1)[0].rstrip()
+        try:
+            ast.parse(before_fence)
+            # Case (b): code before the fence is valid Python; keep it.
+            stripped = before_fence
+        except SyntaxError:
+            # Case (a): prose before the fence; extract the fenced block.
+            idx = stripped.find("```")
+            stripped = _extract_leading_fenced_block(stripped[idx:])
     stripped = _remove_standalone_fence_lines(stripped)
+    stripped = _strip_known_terminal_markers(stripped)
     stripped = _longest_parseable_python_prefix(stripped)
     return stripped + ("\n" if stripped else "")

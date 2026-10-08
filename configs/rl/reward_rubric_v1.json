@@ -1,0 +1,93 @@
+{
+  "rubric_version": 1,
+  "created": "2026-07-07",
+  "author": "Track D (parallel session B)",
+  "description": "Framework-aware reward rubric for quantum-coding GRPO/RLVR. See docs/quantum-coding-reward-rubric-2026-07-07.md.",
+  "weights": {
+    "w_pass": 1.0,
+    "w_partial": 0.3,
+    "w_runnable": 0.2,
+    "w_api": 0.2,
+    "w_style": 0.1,
+    "w_len": 0.05,
+    "w_halluc": 0.5
+  },
+  "components": {
+    "R_pass": {
+      "type": "binary",
+      "range": [0, 1],
+      "source": "tests.run_tests(candidate_path)['passed']"
+    },
+    "R_partial": {
+      "type": "fraction",
+      "range": [0, 1],
+      "source": "n_passed_test_cases / n_total_test_cases",
+      "fallback_on_no_details": 0.0
+    },
+    "R_runnable": {
+      "type": "binary",
+      "range": [0, 1],
+      "source": "importlib.util.exec_module succeeds and entry_function is callable"
+    },
+    "R_api_correct": {
+      "type": "fraction",
+      "range": [0, 1],
+      "source": "1 - (n_deprecated_calls / max(1, n_framework_calls))",
+      "framework_aware": true
+    },
+    "R_style": {
+      "type": "binary",
+      "range": [0, 1],
+      "source": "pyflakes clean"
+    },
+    "R_length_penalty": {
+      "type": "piecewise_linear",
+      "range": [0, 1],
+      "source": "min(1, max(0, (len_chars - 4000) / 4000))",
+      "threshold_chars": 4000,
+      "saturation_chars": 8000
+    },
+    "R_hallucination_penalty": {
+      "type": "fraction",
+      "range": [0, 1],
+      "source": "n_hallucinated_imports / max(1, n_total_imports)",
+      "framework_aware": true
+    }
+  },
+  "framework_detection": {
+    "prefer_task_spec_field": true,
+    "fallback_to_import_scan": true,
+    "if_undetected": {"R_api_correct": 0.0, "R_hallucination_penalty": 0.0}
+  },
+  "deprecated_apis": {
+    "qiskit": {
+      "qiskit.Aer": "qiskit_aer.AerSimulator",
+      "qiskit.execute": "backend.run",
+      "qiskit.tools.monitor": "qiskit.providers.job_status",
+      "qiskit.circuit.QuantumCircuit.qasm": "qiskit.qasm2.export"
+    },
+    "cirq": {
+      "cirq.google.XmonDevice": "cirq.google.devices.XmonDevice"
+    },
+    "pennylane": {
+      "pennylane.DefaultQubit": "pennylane.devices.DefaultQubit"
+    },
+    "braket": {}
+  },
+  "normalization": {
+    "clamp_min": -0.5,
+    "clamp_max": 1.6,
+    "per_batch_minmax": true
+  },
+  "training": {
+    "reward_floor_for_train": 0.20,
+    "drop_below_floor": true
+  },
+  "ablation_presets": {
+    "A_default": {"weights": {"w_pass": 1.0, "w_partial": 0.3, "w_runnable": 0.2, "w_api": 0.2, "w_style": 0.1, "w_len": 0.05, "w_halluc": 0.5}},
+    "B_no_partial": {"weights": {"w_partial": 0.0}},
+    "C_no_halluc": {"weights": {"w_halluc": 0.0}},
+    "D_no_len": {"weights": {"w_len": 0.0}},
+    "E_binary_only": {"weights": {"w_pass": 2.0, "w_partial": 0.0, "w_runnable": 0.0, "w_api": 0.0, "w_style": 0.0, "w_len": 0.0, "w_halluc": 0.0}}
+  }
+}

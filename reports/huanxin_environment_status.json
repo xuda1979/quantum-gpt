@@ -1,0 +1,120 @@
+{
+  "environments": [
+    {
+      "auth_state": "authenticated",
+      "browser_daemon_operational": true,
+      "browser_daemon_state": "healthy",
+      "command_channel_age_seconds": 55116.532588,
+      "command_channel_recent_success": false,
+      "command_channel_status_path": "/Users/daxu/software/quantum-gpt/.huanxin_shell_connections/ASI1.json",
+      "command_channel_transport": "daemon",
+      "current_url": "https://aihuanxin.cn/kunlun/kl-web?poolId=6&projectId=21b4208dde424e96b159362ef49c9c96#/train-dev/environment/dl-9a5a098accce31c28cf4c6ca23391341?name=ASI1",
+      "env_name": "ASI1",
+      "job_count": 55,
+      "keepalive_loaded": false,
+      "keepalive_operational": false,
+      "keepalive_recent_error": false,
+      "latest_fast_iteration_job": {
+        "_meta_path": "/Users/daxu/software/quantum-gpt/.huanxin_jobs/omnicoder-8npu-fastiter-eval-retry2-20260409T122456Z.json",
+        "command": "cd /root/root/work/quantum-gpt && rclone copy 'nm-aihuanxin:jtdlp-3ed7854b946a47b1a49ad754baa76cd3/quantum-qwen25-coder-main/scripts' '/root/root/work/quantum-gpt/scripts' --include 'run_hf_pass1_eval.py' --include 'run_base_vs_adapter_eval.py' --ignore-times --fast-list --transfers 2 --checkers 4 && rclone copy 'nm-aihuanxin:jtdlp-3ed7854b946a47b1a49ad754baa76cd3/quantum-qwen25-coder-main/evals/runner' '/root/root/work/quantum-gpt/evals/runner' --include 'run_eval.py' --include 'candidate_sanitize.py' --ignore-times --fast-list --transfers 2 --checkers 4 && if test -e 'evals/runs/omnicoder-quantum-generalization-holdout-8npu-fastiter-eval-20260409T122347Z'; then exit 9; fi && cp -R 'evals/runs/omnicoder-quantum-generalization-holdout-v1-clean' 'evals/runs/omnicoder-quantum-generalization-holdout-8npu-fastiter-eval-20260409T122347Z' && test -f 'outputs/omnicoder9b-quantum-generalization-sft-8npu-fastiter-20260409T1451CST/adapter/adapter_model.safetensors' && PYTHONPYCACHEPREFIX=/tmp/pycache TOKENIZERS_PARALLELISM=false ASCEND_RT_VISIBLE_DEVICES=6 python3 scripts/run_hf_pass1_eval.py --run-dir 'evals/runs/omnicoder-quantum-generalization-holdout-8npu-fastiter-eval-20260409T122347Z' --base-model models/OmniCoder-9B --adapter 'outputs/omnicoder9b-quantum-generalization-sft-8npu-fastiter-20260409T1451CST/adapter' --device npu --score",
+        "created_at": "2026-04-09T12:24:59.778174+00:00",
+        "duration_ms": 2874,
+        "job_id": "omnicoder-8npu-fastiter-eval-retry2-20260409T122456Z",
+        "log_path": "/tmp/omnicoder_8npu_fastiter_eval_retry2_20260409.log",
+        "meta_file": "/Users/daxu/software/quantum-gpt/.huanxin_jobs/omnicoder-8npu-fastiter-eval-retry2-20260409T122456Z.json",
+        "name": "omnicoder-8npu-fastiter-eval-retry2",
+        "pid": 298657,
+        "remote_root": "/root/root/work/quantum-gpt",
+        "transport": "daemon"
+      },
+      "latest_job": {
+        "_meta_path": "/Users/daxu/software/quantum-gpt/.huanxin_jobs/qwen36-35b-sft-v2-asi2-20260618T052854Z.json",
+        "command": "bash scripts/asi2_run_finetune_35b_decompressed.sh",
+        "created_at": "2026-06-18T05:29:24.488209+00:00",
+        "duration_ms": 25199,
+        "job_id": "qwen36-35b-sft-v2-asi2-20260618T052854Z",
+        "log_path": "/tmp/asi2_35b_sft_v2_20260618.log",
+        "meta_file": "/Users/daxu/software/quantum-gpt/.huanxin_jobs/qwen36-35b-sft-v2-asi2-20260618T052854Z.json",
+        "name": "qwen36-35b-sft-v2-asi2",
+        "pid": 15055,
+        "remote_root": "/vllm-workspace/quantum-gpt",
+        "transport": "standalone"
+      },
+      "recent_job_ids": [
+        "omnicoder-base-holdout-v4-20260410T091129Z",
+        "omnicoder-base-holdout-npu-20260410T114339Z",
+        "omnicoder-base-npu-v2-20260410T142112Z",
+        "qwen36-35b-sft-verified10k-asi2-20260618T050651Z",
+        "qwen36-35b-sft-v2-asi2-20260618T052854Z"
+      ],
+      "returncode": 0,
+      "shell_endpoint_failure": false,
+      "shell_endpoint_summary": "",
+      "startup_state": "ready",
+      "summary": "keepalive_not_loaded",
+      "train_dev_url": "https://aihuanxin.cn/kunlun/kl-web?poolId=6&projectId=21b4208dde424e96b159362ef49c9c96#/train-dev/environment/dl-9a5a098accce31c28cf4c6ca23391341?name=ASI1"
+    },
+    {
+      "auth_state": "unknown",
+      "browser_daemon_operational": false,
+      "browser_daemon_state": "not_running",
+      "command_channel_age_seconds": 2753481.391961,
+      "command_channel_recent_success": false,
+      "command_channel_status_path": "/Users/daxu/software/quantum-gpt/.huanxin_shell_connections/AI.json",
+      "command_channel_transport": "daemon",
+      "current_url": "",
+      "env_name": "AI",
+      "job_count": 55,
+      "keepalive_loaded": false,
+      "keepalive_operational": false,
+      "keepalive_recent_error": false,
+      "latest_fast_iteration_job": {
+        "_meta_path": "/Users/daxu/software/quantum-gpt/.huanxin_jobs/omnicoder-8npu-fastiter-eval-retry2-20260409T122456Z.json",
+        "command": "cd /root/root/work/quantum-gpt && rclone copy 'nm-aihuanxin:jtdlp-3ed7854b946a47b1a49ad754baa76cd3/quantum-qwen25-coder-main/scripts' '/root/root/work/quantum-gpt/scripts' --include 'run_hf_pass1_eval.py' --include 'run_base_vs_adapter_eval.py' --ignore-times --fast-list --transfers 2 --checkers 4 && rclone copy 'nm-aihuanxin:jtdlp-3ed7854b946a47b1a49ad754baa76cd3/quantum-qwen25-coder-main/evals/runner' '/root/root/work/quantum-gpt/evals/runner' --include 'run_eval.py' --include 'candidate_sanitize.py' --ignore-times --fast-list --transfers 2 --checkers 4 && if test -e 'evals/runs/omnicoder-quantum-generalization-holdout-8npu-fastiter-eval-20260409T122347Z'; then exit 9; fi && cp -R 'evals/runs/omnicoder-quantum-generalization-holdout-v1-clean' 'evals/runs/omnicoder-quantum-generalization-holdout-8npu-fastiter-eval-20260409T122347Z' && test -f 'outputs/omnicoder9b-quantum-generalization-sft-8npu-fastiter-20260409T1451CST/adapter/adapter_model.safetensors' && PYTHONPYCACHEPREFIX=/tmp/pycache TOKENIZERS_PARALLELISM=false ASCEND_RT_VISIBLE_DEVICES=6 python3 scripts/run_hf_pass1_eval.py --run-dir 'evals/runs/omnicoder-quantum-generalization-holdout-8npu-fastiter-eval-20260409T122347Z' --base-model models/OmniCoder-9B --adapter 'outputs/omnicoder9b-quantum-generalization-sft-8npu-fastiter-20260409T1451CST/adapter' --device npu --score",
+        "created_at": "2026-04-09T12:24:59.778174+00:00",
+        "duration_ms": 2874,
+        "job_id": "omnicoder-8npu-fastiter-eval-retry2-20260409T122456Z",
+        "log_path": "/tmp/omnicoder_8npu_fastiter_eval_retry2_20260409.log",
+        "meta_file": "/Users/daxu/software/quantum-gpt/.huanxin_jobs/omnicoder-8npu-fastiter-eval-retry2-20260409T122456Z.json",
+        "name": "omnicoder-8npu-fastiter-eval-retry2",
+        "pid": 298657,
+        "remote_root": "/root/root/work/quantum-gpt",
+        "transport": "daemon"
+      },
+      "latest_job": {
+        "_meta_path": "/Users/daxu/software/quantum-gpt/.huanxin_jobs/qwen36-35b-sft-v2-asi2-20260618T052854Z.json",
+        "command": "bash scripts/asi2_run_finetune_35b_decompressed.sh",
+        "created_at": "2026-06-18T05:29:24.488209+00:00",
+        "duration_ms": 25199,
+        "job_id": "qwen36-35b-sft-v2-asi2-20260618T052854Z",
+        "log_path": "/tmp/asi2_35b_sft_v2_20260618.log",
+        "meta_file": "/Users/daxu/software/quantum-gpt/.huanxin_jobs/qwen36-35b-sft-v2-asi2-20260618T052854Z.json",
+        "name": "qwen36-35b-sft-v2-asi2",
+        "pid": 15055,
+        "remote_root": "/vllm-workspace/quantum-gpt",
+        "transport": "standalone"
+      },
+      "recent_job_ids": [
+        "omnicoder-base-holdout-v4-20260410T091129Z",
+        "omnicoder-base-holdout-npu-20260410T114339Z",
+        "omnicoder-base-npu-v2-20260410T142112Z",
+        "qwen36-35b-sft-verified10k-asi2-20260618T050651Z",
+        "qwen36-35b-sft-v2-asi2-20260618T052854Z"
+      ],
+      "returncode": 0,
+      "shell_endpoint_failure": false,
+      "shell_endpoint_summary": "",
+      "startup_state": "unknown",
+      "summary": "keepalive_not_loaded",
+      "train_dev_url": "https://aihuanxin.cn/kunlun/kl-web?poolId=6&projectId=21b4208dde424e96b159362ef49c9c96#/train-dev/environment/dl-9a5a098accce31c28cf4c6ca23391341?name=AI"
+    }
+  ],
+  "generated_at_utc": "2026-07-07T05:57:45.148580+00:00",
+  "manual_mode": {
+    "automation_enabled": true,
+    "enable_path": "/Users/daxu/software/quantum-gpt/.huanxin_automation_enabled",
+    "lock_path": "/Users/daxu/software/quantum-gpt/.huanxin_manual_mode",
+    "manual_mode": false
+  },
+  "schema_version": 1
+}

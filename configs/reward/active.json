@@ -1,0 +1,24 @@
+{
+  "version": "v9-r1",
+  "dataset": {
+    "benchmark": "evals/benchmarks/quantum_grpo_training_v9_rl_questions_v2.txt",
+    "holdout": "evals/holdout/18task_frozen.jsonl",
+    "overlap_check": "exact-id",
+    "s3_prefix": "datasets/v9"
+  },
+  "reward": {
+    "mode": "p_dominant",
+    "pass_mass": 0.50,
+    "shaped_mass": 0.40,
+    "judge_mass": 0.10,
+    "truncation_penalty": 0.0,
+    "dim_weights": {
+      "correctness": 0.40,
+      "completeness": 0.30,
+      "rigor": 0.20,
+      "style": 0.10
+    }
+  },
+  "min_rms_for_update": 0.01,
+  "notes": "reward shaping + dataset selection are CONFIG, not code. Version this file; relaunch reads it."
+}

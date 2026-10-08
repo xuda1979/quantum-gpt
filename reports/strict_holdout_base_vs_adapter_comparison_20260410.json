@@ -1,0 +1,16 @@
+{
+  "strict_override": {
+    "qwen_passes": 0,
+    "qwen_total": 4,
+    "base_passes": 3,
+    "base_total": 4,
+    "adapter_passes": 2,
+    "adapter_total": 4,
+    "adapter_minus_base_passes": -1,
+    "adapter_minus_base_pass_rate": -0.25,
+    "base_minus_qwen_passes": 3,
+    "base_minus_qwen_pass_rate": 0.75,
+    "adapter_minus_qwen_passes": 2,
+    "adapter_minus_qwen_pass_rate": 0.5
+  }
+}

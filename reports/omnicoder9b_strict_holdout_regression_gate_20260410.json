@@ -1,0 +1,17 @@
+{
+  "kind": "strict_holdout_regression_gate",
+  "comparison": "/Users/daxu/software/quantum-gpt/reports/strict_holdout_base_vs_adapter_comparison_20260410.json",
+  "schema": "legacy_strict_override",
+  "baseline_label": "base",
+  "candidate_label": "adapter",
+  "base_strict_score": "3/4",
+  "candidate_strict_score": "2/4",
+  "strict_delta_passes": -1,
+  "full_delta_passes": null,
+  "min_strict_delta_passes": 0,
+  "min_full_delta_passes": null,
+  "ok": false,
+  "failures": [
+    "strict delta -1 < required 0"
+  ]
+}

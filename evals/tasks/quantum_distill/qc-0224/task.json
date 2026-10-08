@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0224",
+  "name": "Quantum computing task: Implement the Quantum Fourier Transform on 3 qubits from",
+  "task_prompt": "Quantum computing task: Implement the Quantum Fourier Transform on 3 qubits from scratch in Qiskit (Hadamards, controlled phases, swaps). Verify it against the exact DFT matrix using Operator. Return the entire program in one piece, ready to run without any modification."
+}

@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3_sampling",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0098",
+  "name": "Here is a quantum coding exercise. Write a complete Cirq program that creates a ",
+  "task_prompt": "Here is a quantum coding exercise. Write a complete Cirq program that creates a Bell state, samples it 2000 times, and prints the histogram of outcomes. Return the entire program in one piece, ready to run without any modification."
+}

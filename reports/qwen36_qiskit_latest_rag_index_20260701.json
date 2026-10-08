@@ -1,0 +1,12 @@
+{
+  "output": "artifacts/quantum-rag/qwen36-quantum-docs-index.pkl.gz",
+  "profile": "qwen36_quantum_docs",
+  "roots": [
+    "/Users/daxu/software/quantum-gpt/docs/quantum_libraries",
+    "/Users/daxu/software/quantum-gpt/docs/external/quantum-sdk-docs-latest"
+  ],
+  "chunk_count": 18637,
+  "source_count": 1194,
+  "vectorizer_features": 50000,
+  "dense_dimensions": 50000
+}

@@ -1,0 +1,18 @@
+Write a complete, runnable Python program using numpy and qiskit that:
+1. Encodes the 3-SAT formula
+   F(x0,x1,x2,x3) = (x0 OR ~x1 OR x2) AND (~x0 OR x1 OR ~x3) AND (~x1 OR x2 OR x3)
+   as a 4-qubit phase oracle that adds a phase of -1 to satisfying assignments.
+   Use qiskit.quantum_info.Operator or basic gates to build the oracle.
+2. Implements Grover's algorithm with the optimal number of iterations
+   for 2 satisfying assignments out of 16 (round(pi/4 * sqrt(16/2)) = 2).
+3. Uses qiskit.primitives.StatevectorSampler with shots=4096.
+4. Reports the most-likely bitstring and verifies it satisfies F.
+5. In `def main()`, prints exactly these lines:
+     Satisfying count = 2
+     Most likely = <bitstring>
+     Valid: <True|False>
+     Peak prob = <value rounded to 4 decimals>
+   where Most likely is the highest-count bitstring (qiskit little-endian
+   order: bit b0 is the rightmost character), Valid is True iff it satisfies
+   F, and Peak prob is the probability of the most-likely bitstring.
+Call main() under `if __name__ == "__main__":`.

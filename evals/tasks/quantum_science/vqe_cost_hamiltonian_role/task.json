@@ -1,0 +1,11 @@
+{
+  "id": "quantum_science_vqe_cost_hamiltonian_role",
+  "name": "Explain the role of the cost Hamiltonian in the Variational ...",
+  "domain": "quantum_science",
+  "category": "concept",
+  "level": "L1",
+  "field": "vqe",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py",
+  "question": "Explain the role of the cost Hamiltonian in the Variational Quantum Eigensolver (VQE). Why is it diagonal in the computational basis, and how does its expectation value relate to the target ground-state energy?"
+}

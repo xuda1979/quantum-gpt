@@ -1,0 +1,27 @@
+Task ID: quantum_channel_depolarizing
+Write a Python file that satisfies the public task contract; hidden tests will verify it.
+Return only the candidate file contents.
+
+Task: Depolarizing quantum channel simulation
+Domain: quantum
+Category: algorithm_implementation
+Output file: candidate.py
+
+Required public API (signatures and docstrings only):
+def depolarizing_channel(rho, p)
+    """Apply the depolarizing channel with probability p:
+rho' = (1 - p) * rho + p * (I / 2)
+
+p=0: no noise (identity channel)
+p=1: fully depolarizing (output is maximally mixed)"""
+def amplitude_damping_channel(rho, gamma)
+    """Apply the amplitude damping channel with damping rate gamma.
+K0 = [[1, 0], [0, sqrt(1-gamma)]]
+K1 = [[0, sqrt(gamma)], [0, 0]]"""
+def channel_fidelity(rho, sigma)
+    """Compute the quantum state fidelity F(rho, sigma) for 2x2 density matrices.
+Uses the 2x2 closed-form:
+F = Tr(rho sigma) + 2*sqrt(det(rho)*det(sigma))"""
+
+Implement the requested file. Hidden tests will verify behavior.
+Return only the complete Python source, without markdown fences or explanation.

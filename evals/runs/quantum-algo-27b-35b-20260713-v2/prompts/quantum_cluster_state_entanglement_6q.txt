@@ -1,0 +1,15 @@
+Write a complete, runnable Python program using numpy and qiskit that:
+1. Prepares a 6-qubit 1D cluster state: start from |+>^6, then apply CZ(i, i+1)
+   for i=0..4.
+2. Computes the reduced density matrix rho_A of the first 3 qubits by
+   tracing out qubits 3, 4, 5.
+3. Computes the von Neumann entropy S = -Tr(rho_A * log2 rho_A).
+4. Computes the second Renyi entropy S_2 = -log2 Tr(rho_A^2).
+5. In `def main()`, prints exactly these lines (values rounded to 4 decimals):
+     Statevector norm = 1.0000
+     Von Neumann entropy = <value>
+     Renyi-2 entropy = <value>
+     Largest Schmidt coeff = <value>
+   where Largest Schmidt coeff is the largest Schmidt coefficient of the
+   bipartition (the square root of the largest eigenvalue of rho_A).
+Call main() under `if __name__ == "__main__":`.

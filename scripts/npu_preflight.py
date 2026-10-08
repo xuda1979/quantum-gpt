@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """
 NPU Pre-flight Check Script (NPU 预检脚本)
 
@@ -188,7 +187,7 @@ def main():
         print(f"\n{RED}Pre-flight FAILED.{RESET} The following checks did not pass:")
         for name in failed:
             print(f"  - {name}")
-        print(f"\nPlease fix the issues above before running training with --use_npu.")
+        print("\nPlease fix the issues above before running training with --use_npu.")
         sys.exit(1)
     else:
         print(f"\n{GREEN}All pre-flight checks passed!{RESET}")

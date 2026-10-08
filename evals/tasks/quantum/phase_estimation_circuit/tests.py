@@ -18,18 +18,16 @@ def run_tests(candidate_path: str) -> dict:
     cases = [
         # (phase, n_bits, expected_measurement)
         (0.0, 3, 0),
-        (0.25, 3, 2),    # 0.25 * 8 = 2
-        (0.5, 3, 4),     # 0.5 * 8 = 4
-        (0.75, 4, 12),   # 0.75 * 16 = 12
-        (0.125, 3, 1),   # 0.125 * 8 = 1
+        (0.25, 3, 2),  # 0.25 * 8 = 2
+        (0.5, 3, 4),  # 0.5 * 8 = 4
+        (0.75, 4, 12),  # 0.75 * 16 = 12
+        (0.125, 3, 1),  # 0.125 * 8 = 1
         (1.0 / 3.0, 3, 3),  # round(8/3) = round(2.667) = 3
     ]
     for phase, n_bits, expected in cases:
         actual = module.phase_estimation(phase, n_bits)
         if actual != expected:
-            failures.append(
-                f"phase_estimation({phase}, {n_bits}) -> {actual}, expected {expected}"
-            )
+            failures.append(f"phase_estimation({phase}, {n_bits}) -> {actual}, expected {expected}")
 
     # phase_from_measurement tests (round-trip for exact phases)
     for phase in [0.0, 0.25, 0.5, 0.75, 0.125]:

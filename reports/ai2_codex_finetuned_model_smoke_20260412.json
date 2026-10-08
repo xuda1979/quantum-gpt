@@ -1,0 +1,41 @@
+{
+  "test_date": "2026-04-12",
+  "environment": "huanxin-ai2",
+  "workspace_root": "/root/work/david/software/quantum-gpt",
+  "model_alias": "omnicoder9b-quantum-generalization-sft-8npu-fastiter-20260409T1451CST",
+  "provider_id": "quantum_local",
+  "provider_api_base": "http://127.0.0.1:8000/v1",
+  "device": "npu",
+  "codex_binary": "/root/.local/bin/codex",
+  "codex_version": "0.120.0",
+  "repair_actions": [
+    "reinstalled Linux aarch64 Codex binary on ai2",
+    "restored /usr/local/bin/codex symlink",
+    "restored Codex env exports in /root/.bashrc",
+    "regenerated /root/.codex/config.toml",
+    "verified local provider health on port 8000"
+  ],
+  "health_check": {
+    "endpoint": "http://127.0.0.1:8000/health",
+    "response": {
+      "ok": true,
+      "model": "omnicoder9b-quantum-generalization-sft-8npu-fastiter-20260409T1451CST"
+    }
+  },
+  "provider_log": {
+    "path": "/tmp/quantum_codex_server.log",
+    "server_ready_model": "omnicoder9b-quantum-generalization-sft-8npu-fastiter-20260409T1451CST",
+    "base_model": "outputs/omnicoder9b-quantum-generalization-sft-8npu-fastiter-20260409T1451CST/merged_full",
+    "device": "npu"
+  },
+  "exec_command": "printf '' | codex exec --skip-git-repo-check --color never -C /root/work/david/software/quantum-gpt -p local -m omnicoder9b-quantum-generalization-sft-8npu-fastiter-20260409T1451CST -o /tmp/codex_last.txt 'Reply with exactly OK and nothing else.'",
+  "codex_result": {
+    "output_file": "/tmp/codex_last.txt",
+    "output_text": "OK",
+    "status": "success"
+  },
+  "fresh_login_shell_check": {
+    "command": "bash -lc 'command -v codex && codex --version && cd /root/work/david/software/quantum-gpt && printf \"\" | codex exec --skip-git-repo-check --color never -C /root/work/david/software/quantum-gpt -p local -m omnicoder9b-quantum-generalization-sft-8npu-fastiter-20260409T1451CST -o /tmp/codex_login_shell.txt \"Reply with exactly OK and nothing else.\" && cat /tmp/codex_login_shell.txt'",
+    "result": "OK"
+  }
+}

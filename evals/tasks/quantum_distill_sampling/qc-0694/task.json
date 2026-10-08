@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3_sampling",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0694",
+  "name": "You are given the following quantum programming task. Write a complete Qiskit pr",
+  "task_prompt": "You are given the following quantum programming task. Write a complete Qiskit program demonstrating the effect of depolarizing noise (p1=0.0018, p2=0.0459) on a GHZ state using AerSimulator and a custom NoiseModel. The code must be a complete standalone script that can be executed directly and produces output."
+}

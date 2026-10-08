@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0748",
+  "name": "Implement a Python function `second_order_trotter_step(hamiltonian_terms, dt)` t",
+  "task_prompt": "Implement a Python function `second_order_trotter_step(hamiltonian_terms, dt)` that returns the unitary matrix for one second-order (symmetric) Trotter step for a Hamiltonian given as a list of exactly two terms (A and B), each represented as a numpy array. Use the formula: S2(dt) = exp(-i A dt/2) @ exp(-i B dt) @ exp(-i A dt/2). Then implement `second_order_trotter_evolve(hamiltonian_terms, t, n_steps)` that repeats this step n_steps times to approximate the total evolution exp(-i H t). Also implement `first_order_trotter_evolve(hamiltonian_terms, t, n_steps)` using the reference code from the documentation (apply each term sequentially). Finally, write a test that compares the two methods for a simple 1-qubit Hamiltonian H = X + Z (Pauli matrices) at t=1.0 with n_steps=10, and print the Frobenius norm of the difference between the two resulting unitaries. Use scipy.linalg.expm for matrix exponentiation."
+}

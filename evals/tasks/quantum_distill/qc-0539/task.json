@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0539",
+  "name": "You are given the following quantum programming task. Using Amazon Braket FreePa",
+  "task_prompt": "You are given the following quantum programming task. Using Amazon Braket FreeParameter, build a parametrized circuit RY(theta) on qubit 0 + CNOT, sweep theta over 5 points in [0, pi], and print <ZZ> for each value using shots=0 expectation results. Write the full runnable code (all imports included); executing it should print the results."
+}

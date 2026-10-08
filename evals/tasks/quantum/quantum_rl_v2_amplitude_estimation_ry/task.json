@@ -1,0 +1,9 @@
+{
+  "id": "quantum_rl_v2_amplitude_estimation_ry",
+  "name": "Canonical amplitude estimation in Qiskit for A=RY(0.6) with 3 evaluation qubits",
+  "domain": "quantum",
+  "category": "algorithm_implementation",
+  "task_prompt": "Implement canonical amplitude estimation from scratch in Qiskit for A=RY(0.6) with 3 evaluation qubits. Define Q=-A S0 A^dagger S_chi for good state |1>, perform QPE on Q, map the two symmetric phase peaks to a=sin^2(theta/2), print the estimate and true value, and assert the amplitude error is at most pi/2**3, a conservative bound from the phase-grid spacing. Return only one complete Python script with no Markdown fences. It must run locally without network access, use fixed seeds whenever randomness is involved, print concise results, and assert every required invariant.",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

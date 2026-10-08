@@ -1,0 +1,8 @@
+{
+  "id": "quantum_two_qubit_iswap_decomposition",
+  "name": "iSWAP gate decomposition into sqrt-iSWAP and single-qubit gates",
+  "domain": "quantum",
+  "category": "circuit_construction",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

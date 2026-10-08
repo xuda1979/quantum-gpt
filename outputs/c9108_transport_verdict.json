@@ -1,0 +1,28 @@
+{
+ "card": "C-9108",
+ "conclusion": "VERDICT (worker31, 2026-09-19T04:52Z): transport leg of C-9108 RE-VERIFIED by 31ST independent worker; UNCHANGED from worker30. Battery 13/13 GREEN fresh under BOTH bare python3 3.14.7 (crypto imports OK) AND /usr/bin/python3 3.9 at 04:48Z. Verify-only gate REAL_RC=1 at 04:49:27Z: 0 slices, 18/18 task-ids NAMED. asi2-eval.lock acquired (pid 12897) + released true around ALL /exec traffic (card rule). POSITIVE CONTROL EXACT this tick: marker C9108_W31_MARK_k31x echoed EXACT; commandCount 27->37 delta +10 = my 10 execs EXACTLY (1 marker + 3 slice stats + 6 re-stat, no concurrent prober inflight); lastCommand ended on MY OWN slice12 stat then MY load cat verbatim = answering daemon IS executing daemon. ASI2 pid 75585 UNCHANGED from workers 29-30 (uptime 2548s at my boot, no 4th recycle; B-187 boot-restart loop still paused). Live pull LIVE_RC=1 13.8s under canon 3.14.7: 3/3 slices rejected FAIL-CLOSED carrying REAL box-side stat error text (cannot statx, No such file or directory); NOTHING landed Mac-side (0 slices, no receipt, 0 tmp strays pre+post). Box re-stat MEASURED 04:51Z: outputs 405 entries UNCHANGED across all 3 recycles today, 0 c9003 in outputs, tree-wide find c9003_base_slice* EMPTY, find *c9029* EMPTY (quoted), bracketed launcher-proc probe EMPTY, load 18.41. C-9029 has NEVER been dispatched, never produced outputs, across 31 workers and all 3 ASI2 recycles today. C-9108 verifier remains DONE-what-can: slice LANDING BLOCKED upstream on C-9029 dispatch (USER-GO; resident USER-GO claims remain uncorroborated). OBSERVATION: health_before lastCommand showed a FOREIGN probe (stat slice0 + pgrep -f c9003_base_leg_driver) right before my window = concurrent prober at my boot; it dispatched nothing box-side per my re-stat.",
+ "gate_verdict": {
+  "card": "C-9108",
+  "checked_utc": "2026-09-19T04:49:27Z",
+  "duplicate_task_ids": [],
+  "expected_tasks": 18,
+  "missing_named": 18,
+  "n_slices": 0,
+  "n_tasks": 0,
+  "ok": false
+ },
+ "worker31_evidence": {
+  "battery": "13/13 GREEN fresh under BOTH bare python3 3.14.7 AND /usr/bin/python3 3.9 (04:48Z)",
+  "box_restat": "405 entries unchanged across all 3 recycles today, 0 c9003 (ls AND quoted tree-wide find), 0 c9029 (quoted find), launcher procs EMPTY (bracketed), load 18.41",
+  "foreign_activity": "health_before lastCommand = foreign stat slice0 + pgrep -f c9003_base_leg_driver right before my window (concurrent prober at my boot); my own window clean at +10 EXACT",
+  "live_pull": "LIVE_RC=1 13.8s on daemon 75585 under bare 3.14.7; 3/3 rejected w/ real box stat text (cannot statx, No such file)",
+  "lock": "harness/state/locks/asi2-eval.lock acquired (pid 12897) + released true, held across ALL /exec traffic",
+  "mac_landed": "nothing (0 slices, no receipt, 0 strays pre+post)",
+  "marker": "C9108_W31_MARK_k31x echoed EXACT",
+  "pid": 75585,
+  "positive_control": "commandCount 27->37 delta +10 EXACT = my 10 execs (1 marker + 3 stats + 6 restat), NO concurrent inflight; lastCommand = MY slice12 stat then MY load cat",
+  "scratch": ".sapo-loop/c9108_w31_live.py (derived from committed w30 script)",
+  "transport": "chunked-b64 via harness.slice_transport (stat then dd|base64, never raw cat)",
+  "verify_only": "REAL_RC=1 04:49:27Z, 0 slices, 18/18 ids NAMED"
+ }
+}

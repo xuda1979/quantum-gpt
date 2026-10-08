@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0632",
+  "name": "Using cirq, define a custom three-qubit gate named `ToffoliWithRelativePhase` th",
+  "task_prompt": "Using cirq, define a custom three-qubit gate named `ToffoliWithRelativePhase` that behaves like a Toffoli gate (CCX) but also applies a relative phase factor `exp(i * pi / 4)` on the |111⟩ state only. The gate must be a subclass of `cirq.Gate`, implement `_num_qubits_()` returning 3, and implement `_unitary_()` that returns a 8x8 unitary matrix. Then, construct a circuit that applies this gate to qubits `q0, q1, q2` (where q2 is the target), simulate the circuit with `cirq.Simulator()` for input state |111⟩, and print the final state vector. Finally, verify that the output state matches the expected unitary action: the probability of |111⟩ should remain 1, but the global phase should show the relative phase factor."
+}

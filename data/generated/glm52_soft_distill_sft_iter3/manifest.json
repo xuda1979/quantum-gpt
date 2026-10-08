@@ -1,0 +1,45 @@
+{
+  "iteration": 3,
+  "created": "2026-07-07",
+  "status": "scaffold_pending_iter2_eval",
+  "train_rows": 0,
+  "eval_rows": 0,
+  "base_source": {
+    "path": "data/generated/glm52_soft_distill_sft_iter2/manifest.json",
+    "sha256": "TBD_after_iter2_eval"
+  },
+  "gap_report_source": "docs/iter2-eval-gap-report-2026-07-11.md (manual draft; machine recs pending dataset_gap.py run on verified scorecards + iter2-pull re-pull)",
+  "quality_gates": {
+    "structural": false,
+    "content": false,
+    "disjoint": false
+  },
+  "composition_target": {
+    "iter2_carryforward": 142,
+    "glm52_teacher_correction": 50,
+    "multi_framework_task": 30,
+    "swe_retention": 20,
+    "eval_held_out": 20
+  },
+  "recommended_training": {
+    "ASI1": {"base_model": "Qwen/Qwen3.6-27B", "max_length": 1600, "lr": 3e-5,
+             "adapter_init": "outputs/qg-asi1-glm52-distill-sft-iter2/adapter",
+             "lora_rank": 16, "lora_alpha": 32,
+             "target_modules": ["q_proj","k_proj","v_proj","o_proj","gate_proj","up_proj","down_proj"]},
+    "ASI2": {"base_model": "Qwen/Qwen3.6-35B-A3B", "max_length": 2048, "lr": 5e-6,
+             "adapter_init": "outputs/qg-35b-asi2-glm52-distill-sft-iter2/adapter",
+             "lora_rank": 16, "lora_alpha": 32,
+             "target_modules": ["q_proj","k_proj","v_proj","o_proj","gate_proj","up_proj","down_proj"]},
+    "ASI3": {"base_model": "Qwen/Qwen3.6-35B-A3B", "max_length": 2048, "lr": 5e-6,
+             "adapter_init": "outputs/qg-35b-asi3-glm52-distill-sft-iter2/adapter",
+             "lora_rank": 16, "lora_alpha": 32,
+             "target_modules": ["q_proj","k_proj","v_proj","o_proj","gate_proj","up_proj","down_proj"]}
+  },
+  "decision_gates": [
+    "iter-2 eval JSON present for ASI1 and ASI2/ASI3",
+    "dataset_gap.py recommend executed on iter-2 eval",
+    "no >5% software-task regression vs iter-2 base",
+    "0% truncation at per-env max_length",
+    "iter-3 eval task ids disjoint from all prior train splits"
+  ]
+}

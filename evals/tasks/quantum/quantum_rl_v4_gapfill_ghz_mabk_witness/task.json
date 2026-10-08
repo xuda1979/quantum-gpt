@@ -1,0 +1,9 @@
+{
+  "id": "quantum_rl_v4_gapfill_ghz_mabk_witness",
+  "name": "GHZ state builder and Mermin witness with exact API contract",
+  "domain": "quantum",
+  "category": "algorithm_implementation",
+  "task_prompt": "Using NumPy only, build the 3-qubit GHZ state and verify entanglement with a Mermin (MABK) witness. The GHZ state is (|000> + |111>)/sqrt(2). The Mermin operator is M = XXX - XYY - YXY - YYX; the Mermin inequality |<M>| <= 2 holds for all local hidden variable theories while the GHZ state achieves <M> = 4. Required API (the grader imports these exact attributes; a missing or misnamed entry point fails the task immediately): ghz_state() -> length-8 numpy vector; mermin_operator() -> 8x8 numpy matrix; expectation(psi, M) -> float real part of psi^dagger M psi; witness_value(psi) -> float |<M>| minus the LHV bound 2.0; density_matrix(psi) -> outer(psi, psi^dagger); run_checks() -> dict with keys m_exp (Mermin expectation for the GHZ state), witness (witness_value), is_pure (trace of rho^2 for the GHZ density matrix). Assertions must verify |<M>| = 4 within 1e-9, the witness is positive (= 2), the density matrix is Hermitian with unit trace, and purity is 1.0 within 1e-12. Respond with a single runnable Python file and no prose outside the code.",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

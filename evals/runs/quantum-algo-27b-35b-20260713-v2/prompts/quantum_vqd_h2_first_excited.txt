@@ -1,0 +1,32 @@
+Write a complete, runnable Python program using numpy, qiskit, and scipy that:
+1. Builds the 4-qubit molecular Hamiltonian for H2 at R=0.735 Angstrom in
+   the STO-3G basis using these fixed Pauli strings (already mapped via
+   parity mapping, 2 frozen-core electrons removed):
+   H = -0.810547980537 + 0.17218393212*Z0 + 0.17218393212*Z1
+       - 0.225753492224*(Z0*Z1) - 0.225753492224*(Z2*Z3)
+       + 0.120912632617*(Z0*Z1*Z2*Z3)
+       + 0.168927538701*(Z0*Z2) + 0.168927538701*(Z1*Z3)
+       + 0.045232799946*(Z0*Z3) + 0.045232799946*(Z1*Z2)
+   (Qubit 0 is the most-significant qubit in qiskit's Pauli string order,
+   i.e. the leftmost Pauli acts on qubit 0.)
+   Use qiskit.quantum_info.SparsePauliOp.from_list with the above terms.
+2. Uses a 2-qubit Ry-CX-Ry ansatz on qubits 2 and 3 (the active ones),
+   with 1 layer of Ry(theta_0) on q2, Ry(theta_1) on q3, CX(q2,q3), then
+   Ry(theta_2) on q2 and Ry(theta_3) on q3.
+3. Computes the ground state (k=0) energy with scipy.optimize.minimize
+   (method='COBYLA', maxiter=500, tol=1e-6).
+4. Then computes the first excited state (k=1) energy with VQD:
+   minimize <psi|H|psi> + beta * |<psi|psi_0>|^2 where beta=5.0 and
+   psi_0 is the optimized ground state. Start from a different initial
+   point than the ground-state optimum.
+5. Independently computes exact eigenvalues by diagonalizing the 16x16
+   Hamiltonian matrix.
+6. In `def main()`, prints exactly these lines (values rounded to 4 decimals):
+     VQE ground = <value>
+     VQD excited = <value>
+     Exact GS = <value>
+     Exact ES = <value>
+     GS error = <value>
+     ES error = <value>
+   where GS error = |VQE ground - Exact GS| and ES error = |VQD excited - Exact ES|.
+Call main() under `if __name__ == "__main__":`.

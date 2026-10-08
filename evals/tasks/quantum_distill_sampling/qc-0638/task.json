@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3_sampling",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0638",
+  "name": "Write a complete Simon's-algorithm program in Qiskit (oracle with period '0001' ",
+  "task_prompt": "Write a complete Simon's-algorithm program in Qiskit (oracle with period '0001' plus classical GF(2) post-processing). Provide a complete, self-contained program that runs as-is and prints its results."
+}

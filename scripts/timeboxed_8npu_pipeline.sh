@@ -4,9 +4,9 @@ set -euo pipefail
 usage() {
   cat >&2 <<'EOF'
 Usage:
-  scripts/timeboxed_8npu_pipeline.sh --sft-command "<cmd>" --grpo-command "<cmd>" [--timeout-sec 7200] [--poll-sec 60] [--status-file <path>] [--sft-log <path>] [--grpo-log <path>]
+  scripts/timeboxed_8npu_pipeline.sh --sft-command "<cmd>" --grpo-command "<cmd>" [--timeout-sec 7200] [--poll-sec 60] [--required-idle-npus 8] [--status-file <path>] [--sft-log <path>] [--grpo-log <path>]
 
-Waits for all 8 NPUs to become idle, then runs the SFT command followed by
+Waits for the requested number of NPUs to become idle, then runs the SFT command followed by
 the GRPO command under one shared wall-clock budget.
 Intended to run on ai2.
 EOF
@@ -17,6 +17,7 @@ SFT_COMMAND=""
 GRPO_COMMAND=""
 TIMEOUT_SEC=7200
 POLL_SEC=60
+REQUIRED_IDLE_NPUS=8
 STATUS_FILE="/tmp/timeboxed_8npu_pipeline_status.log"
 SFT_LOG="/tmp/timeboxed_8npu_sft.log"
 GRPO_LOG="/tmp/timeboxed_8npu_grpo.log"
@@ -37,6 +38,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --poll-sec)
       POLL_SEC="${2:-}"
+      shift 2
+      ;;
+    --required-idle-npus)
+      REQUIRED_IDLE_NPUS="${2:-}"
       shift 2
       ;;
     --status-file)
@@ -61,7 +66,7 @@ done
 [[ -n "$GRPO_COMMAND" ]] || usage
 
 start_ts="$(date +%s)"
-echo "$(date -Iseconds) pipeline_waiting_for_8_idle_npus" >> "$STATUS_FILE"
+echo "$(date -Iseconds) pipeline_waiting_for_${REQUIRED_IDLE_NPUS}_idle_npus" >> "$STATUS_FILE"
 
 wait_for_idle() {
   while true; do
@@ -72,11 +77,11 @@ wait_for_idle() {
       return 124
     fi
     idle_count="$(npu-smi info | grep -c 'No running processes found in NPU' || true)"
-    if [[ "$idle_count" -ge 8 ]]; then
-      echo "$(date -Iseconds) all_8_idle elapsed=${elapsed}s" >> "$STATUS_FILE"
+    if [[ "$idle_count" -ge "$REQUIRED_IDLE_NPUS" ]]; then
+      echo "$(date -Iseconds) required_idle_npus_ready idle_count=${idle_count} required=${REQUIRED_IDLE_NPUS} elapsed=${elapsed}s" >> "$STATUS_FILE"
       return 0
     fi
-    echo "$(date -Iseconds) still_waiting idle_count=${idle_count} elapsed=${elapsed}s" >> "$STATUS_FILE"
+    echo "$(date -Iseconds) still_waiting idle_count=${idle_count} required=${REQUIRED_IDLE_NPUS} elapsed=${elapsed}s" >> "$STATUS_FILE"
     sleep "$POLL_SEC"
   done
 }

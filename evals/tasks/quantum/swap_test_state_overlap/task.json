@@ -1,0 +1,8 @@
+{
+  "id": "quantum_swap_test_state_overlap",
+  "name": "SWAP test state overlap from measurement probability",
+  "domain": "quantum",
+  "category": "algorithm_implementation",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

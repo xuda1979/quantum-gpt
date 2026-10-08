@@ -1,0 +1,7 @@
+Write a complete, runnable Python program using numpy that:
+1. Constructs the Hamiltonian H = -Z (x) Z - 0.5*(X (x) I + I (x) X) for 2 qubits (where (x) is the Kronecker product).
+2. Computes the ground-state energy E0 = min(eigenvalues of H) using numpy.linalg.eigvalsh.
+3. In `def main()`, prints E0 rounded to 6 decimals.
+Output exactly:
+  Ground state energy = <value>
+Call main() under `if __name__ == "__main__":`.

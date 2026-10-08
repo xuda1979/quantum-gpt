@@ -1,0 +1,17 @@
+{
+  "label": "with-rag",
+  "created_at_utc": "2026-04-28T05:15:06.804597+00:00",
+  "system_prompt": "You are solving a single quantum-computing evaluation task. Use the provided reference documentation chunks (delimited by [DOC k]) as authoritative background, then produce only the full contents of the requested Python candidate file. Do not include markdown fences, explanations, citations, or commentary.",
+  "tasks": [
+    {
+      "id": "quantum_density_matrix_partial_trace",
+      "name": "Density matrix construction and partial trace",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "prompt_file": "prompts/quantum_density_matrix_partial_trace.txt",
+      "candidate_file": "candidates/quantum_density_matrix_partial_trace.py"
+    }
+  ],
+  "model": "Qwen2.5-1.5B-Instruct",
+  "rag_enabled": true
+}

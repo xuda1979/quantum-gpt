@@ -1,0 +1,8 @@
+Write a complete, runnable Python program using Qiskit that:
+1. Builds a 2-qubit Bell state |Phi+> = (|00> + |11>)/sqrt(2) (apply H on q0, then CX q0->q1).
+2. Uses StatevectorSampler to sample 2000 shots.
+3. In `def main()`, compute and print the empirical probability of measuring "00" and "11" (each should be approximately 0.5).
+Output exactly two lines:
+  P(00) = <value rounded to 3 decimals>
+  P(11) = <value rounded to 3 decimals>
+The script must call main() under `if __name__ == "__main__":`.

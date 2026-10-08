@@ -1,0 +1,8 @@
+{
+  "id": "quantum_swap_test_overlap",
+  "title": "SWAP test overlap of |0> and |+>",
+  "expected_substrings": [
+    "P(0) = 0.7",
+    "|<A|B>|^2 = 0."
+  ]
+}

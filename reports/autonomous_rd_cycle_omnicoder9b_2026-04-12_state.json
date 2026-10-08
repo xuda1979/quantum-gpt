@@ -1,0 +1,314 @@
+{
+  "status": "blocked",
+  "current_stage": "local_eval_gate",
+  "last_completed_stage": "remote_launcher_gate",
+  "next_action": "python3 evals/runner/run_eval.py",
+  "stop_reason": "The full local eval suite must pass before remote work on the active target is credible.",
+  "ready_for_remote_finetune": false,
+  "stages": [
+    {
+      "stage": "local_eval_gate",
+      "status": "pending",
+      "blocking": true,
+      "command": "python3 evals/runner/run_eval.py",
+      "next_action": "python3 evals/runner/run_eval.py",
+      "reason": "The full local eval suite must pass before remote work on the active target is credible."
+    },
+    {
+      "stage": "holdout_integrity",
+      "status": "pending",
+      "blocking": true,
+      "command": "python3 scripts/verify_holdout_dataset.py --train-file data/generated/omnicoder-quantum-generalization-holdout-v1/train.jsonl --eval-file data/generated/omnicoder-quantum-generalization-holdout-v1/eval.jsonl --manifest data/generated/omnicoder-quantum-generalization-holdout-v1/manifest.json --min-eval-count 500 --require-task-disjoint --require-prompt-family-disjoint",
+      "next_action": "python3 scripts/verify_holdout_dataset.py --train-file data/generated/omnicoder-quantum-generalization-holdout-v1/train.jsonl --eval-file data/generated/omnicoder-quantum-generalization-holdout-v1/eval.jsonl --manifest data/generated/omnicoder-quantum-generalization-holdout-v1/manifest.json --min-eval-count 500 --require-task-disjoint --require-prompt-family-disjoint",
+      "reason": "Holdout integrity is still unverified for this iteration."
+    },
+    {
+      "stage": "gemma_audit",
+      "status": "passed",
+      "blocking": false,
+      "command": "python3 training/audit_model_source.py --model-id Tesslate/OmniCoder-9B --expected-family-substring qwen",
+      "reason": "Target model source audit is satisfied by a cached verified local artifact for this target.",
+      "evidence": {
+        "audit_artifact": "artifacts/model-source-audit-omnicoder9b.json",
+        "timestamp_utc": "2026-03-28T07:35:57.893006+00:00",
+        "model_id": "Tesslate/OmniCoder-9B",
+        "config_model_type": "qwen3_5",
+        "config_architectures": [
+          "Qwen3_5ForConditionalGeneration"
+        ],
+        "pipeline_tag": "text-generation"
+      }
+    },
+    {
+      "stage": "gemma_snapshot_verify",
+      "status": "passed",
+      "blocking": false,
+      "command": "python3 training/verify_qwen_snapshot.py models/OmniCoder-9B --expected-substring OmniCoder-9B --expected-family-substring qwen",
+      "reason": "Local target snapshot verification is satisfied by a cached successful handoff artifact for this target.",
+      "evidence": {
+        "handoff_manifest": "artifacts/omnicoder9b-local-snapshot-handoff.json",
+        "model_id": "Tesslate/OmniCoder-9B",
+        "snapshot_dir": "/Users/daxu/software/quantum-gpt/models/OmniCoder-9B",
+        "present_weight_files": [
+          "model.safetensors"
+        ],
+        "indexed_weight_shards": null,
+        "config_model_type": "qwen3_5",
+        "config_architectures": [
+          "Qwen3_5ForConditionalGeneration"
+        ],
+        "requires_processor_artifacts": true
+      }
+    },
+    {
+      "stage": "gemma_smoke",
+      "status": "pending",
+      "blocking": true,
+      "command": "PYTHON_BIN=\"$(python3 scripts/resolve_python_interpreter.py --min-version 3.10 --print-path)\" && \"$PYTHON_BIN\" training/huanxin_cpu_smoke.py --model-name models/OmniCoder-9B --dataset data/seed/splits-auto-seed/train.jsonl --max-samples 1",
+      "next_action": "PYTHON_BIN=\"$(python3 scripts/resolve_python_interpreter.py --min-version 3.10 --print-path)\" && \"$PYTHON_BIN\" training/huanxin_cpu_smoke.py --model-name models/OmniCoder-9B --dataset data/seed/splits-auto-seed/train.jsonl --max-samples 1",
+      "reason": "Target-model trainer/backend preflight has not yet passed on the local stack."
+    },
+    {
+      "stage": "remote_launcher_gate",
+      "status": "passed",
+      "blocking": false,
+      "command": "scripts/queue_ai2_timeboxed_pipeline.sh --target omnicoder9b --iteration-profile fast --visible-devices 6,7 --nproc-per-node 2 --required-idle-npus 2 --stage-only",
+      "reason": "Remote launcher is parameterized for the active target and its current preflight checks.",
+      "evidence": {
+        "launcher_path": "scripts/queue_ai2_timeboxed_pipeline.sh",
+        "gemma_guard_present": true
+      }
+    }
+  ],
+  "autonomous_evolution_state": {
+    "registry_sources": {
+      "model_registry": {
+        "path": "artifacts/model-registry/index.json",
+        "exists": true,
+        "archive_version": "model-run-index-v2"
+      },
+      "delivery_registry": {
+        "path": "artifacts/delivery-registry/index.json",
+        "exists": true,
+        "generated_at_utc": "2026-04-11T06:20:08.872677+00:00"
+      }
+    },
+    "tracked_run_count": 4,
+    "delivery_issue_count": 3,
+    "best_runnable_run": {
+      "label": "omnicoder9b-quantum-generalization-sft-8npu-fastiter-20260409",
+      "output_dir": "outputs/omnicoder9b-quantum-generalization-sft-8npu-fastiter-20260409T1451CST",
+      "archive_path": "artifacts/model-registry/omnicoder9b-quantum-generalization-sft-8npu-fastiter-20260409T1451CST.json",
+      "archived_at_utc": "2026-04-11T06:18:43.365307+00:00",
+      "base_model": "models/OmniCoder-9B",
+      "training_method": "LoRA SFT",
+      "completed_steps": 12,
+      "final_eval_loss": 0.38625643340249854,
+      "final_eval_perplexity": 1.4714619544342373,
+      "parent_output_dir": "outputs/interface-prefix-omnicoder9b-semantic-v4-2npu-true20-20260329T2219CST",
+      "adapter_init": "outputs/interface-prefix-omnicoder9b-semantic-v4-2npu-true20-20260329T2219CST/adapter",
+      "paper_ids": [
+        "ast_anchor_interface_grounding",
+        "verifier_guided_repair_curriculum"
+      ],
+      "headline_summary": {
+        "kind": "override_summary",
+        "override_passes": 2,
+        "override_total": 4,
+        "override_pass_rate": 0.5
+      },
+      "strict_holdout_summary": {
+        "source": "headline_summary",
+        "kind": "override_summary",
+        "passes": 2,
+        "total": 4,
+        "pass_rate": 0.5
+      },
+      "strict_holdout_comparison": {
+        "source": "reports/strict_holdout_base_vs_adapter_comparison_20260410.json",
+        "kind": "strict_override_comparison",
+        "base_passes": 3,
+        "base_total": 4,
+        "adapter_passes": 2,
+        "adapter_total": 4,
+        "adapter_minus_base_passes": -1,
+        "adapter_minus_base_pass_rate": -0.25,
+        "base_pass_rate": 0.75,
+        "adapter_pass_rate": 0.5
+      },
+      "delivery_manifest": null,
+      "handoff_manifest": null,
+      "has_output_dir": true,
+      "delivery_issues": [
+        {
+          "scope": "deliveries",
+          "identifier": "omnicoder9b_first_working_adapter_20260330",
+          "problem": "missing-adapter-weights",
+          "target": "outputs/interface-prefix-omnicoder9b-semantic-v4-2npu-true20-20260329T2219CST/adapter/adapter_model.safetensors"
+        },
+        {
+          "scope": "deliveries",
+          "identifier": "omnicoder9b-qual-eval-handoff_20260330T021144Z",
+          "problem": "missing-handoff-adapter-weights",
+          "target": "outputs/interface-prefix-omnicoder9b-semantic-v4-2npu-true20-20260329T2219CST/adapter/adapter_model.safetensors"
+        }
+      ],
+      "delivery_issue_count": 2,
+      "delivery_ready": false
+    },
+    "best_delivery_ready_run": null,
+    "best_strict_holdout_run": {
+      "label": "omnicoder9b-quantum-generalization-sft-8npu-fastiter-20260409",
+      "output_dir": "outputs/omnicoder9b-quantum-generalization-sft-8npu-fastiter-20260409T1451CST",
+      "archive_path": "artifacts/model-registry/omnicoder9b-quantum-generalization-sft-8npu-fastiter-20260409T1451CST.json",
+      "archived_at_utc": "2026-04-11T06:18:43.365307+00:00",
+      "base_model": "models/OmniCoder-9B",
+      "training_method": "LoRA SFT",
+      "completed_steps": 12,
+      "final_eval_loss": 0.38625643340249854,
+      "final_eval_perplexity": 1.4714619544342373,
+      "parent_output_dir": "outputs/interface-prefix-omnicoder9b-semantic-v4-2npu-true20-20260329T2219CST",
+      "adapter_init": "outputs/interface-prefix-omnicoder9b-semantic-v4-2npu-true20-20260329T2219CST/adapter",
+      "paper_ids": [
+        "ast_anchor_interface_grounding",
+        "verifier_guided_repair_curriculum"
+      ],
+      "headline_summary": {
+        "kind": "override_summary",
+        "override_passes": 2,
+        "override_total": 4,
+        "override_pass_rate": 0.5
+      },
+      "strict_holdout_summary": {
+        "source": "headline_summary",
+        "kind": "override_summary",
+        "passes": 2,
+        "total": 4,
+        "pass_rate": 0.5
+      },
+      "strict_holdout_comparison": {
+        "source": "reports/strict_holdout_base_vs_adapter_comparison_20260410.json",
+        "kind": "strict_override_comparison",
+        "base_passes": 3,
+        "base_total": 4,
+        "adapter_passes": 2,
+        "adapter_total": 4,
+        "adapter_minus_base_passes": -1,
+        "adapter_minus_base_pass_rate": -0.25,
+        "base_pass_rate": 0.75,
+        "adapter_pass_rate": 0.5
+      },
+      "delivery_manifest": null,
+      "handoff_manifest": null,
+      "has_output_dir": true,
+      "delivery_issues": [
+        {
+          "scope": "deliveries",
+          "identifier": "omnicoder9b_first_working_adapter_20260330",
+          "problem": "missing-adapter-weights",
+          "target": "outputs/interface-prefix-omnicoder9b-semantic-v4-2npu-true20-20260329T2219CST/adapter/adapter_model.safetensors"
+        },
+        {
+          "scope": "deliveries",
+          "identifier": "omnicoder9b-qual-eval-handoff_20260330T021144Z",
+          "problem": "missing-handoff-adapter-weights",
+          "target": "outputs/interface-prefix-omnicoder9b-semantic-v4-2npu-true20-20260329T2219CST/adapter/adapter_model.safetensors"
+        }
+      ],
+      "delivery_issue_count": 2,
+      "delivery_ready": false
+    },
+    "latest_children_by_parent": [
+      {
+        "parent_output_dir": "outputs/interface-prefix-omnicoder9b-semantic-v4-2npu-true20-20260329T2219CST",
+        "latest_child": {
+          "label": "omnicoder9b-quantum-generalization-sft-8npu-fastiter-20260409",
+          "output_dir": "outputs/omnicoder9b-quantum-generalization-sft-8npu-fastiter-20260409T1451CST",
+          "archive_path": "artifacts/model-registry/omnicoder9b-quantum-generalization-sft-8npu-fastiter-20260409T1451CST.json",
+          "archived_at_utc": "2026-04-11T06:18:43.365307+00:00",
+          "base_model": "models/OmniCoder-9B",
+          "training_method": "LoRA SFT",
+          "completed_steps": 12,
+          "final_eval_loss": 0.38625643340249854,
+          "final_eval_perplexity": 1.4714619544342373,
+          "parent_output_dir": "outputs/interface-prefix-omnicoder9b-semantic-v4-2npu-true20-20260329T2219CST",
+          "adapter_init": "outputs/interface-prefix-omnicoder9b-semantic-v4-2npu-true20-20260329T2219CST/adapter",
+          "paper_ids": [
+            "ast_anchor_interface_grounding",
+            "verifier_guided_repair_curriculum"
+          ],
+          "headline_summary": {
+            "kind": "override_summary",
+            "override_passes": 2,
+            "override_total": 4,
+            "override_pass_rate": 0.5
+          },
+          "strict_holdout_summary": {
+            "source": "headline_summary",
+            "kind": "override_summary",
+            "passes": 2,
+            "total": 4,
+            "pass_rate": 0.5
+          },
+          "strict_holdout_comparison": {
+            "source": "reports/strict_holdout_base_vs_adapter_comparison_20260410.json",
+            "kind": "strict_override_comparison",
+            "base_passes": 3,
+            "base_total": 4,
+            "adapter_passes": 2,
+            "adapter_total": 4,
+            "adapter_minus_base_passes": -1,
+            "adapter_minus_base_pass_rate": -0.25,
+            "base_pass_rate": 0.75,
+            "adapter_pass_rate": 0.5
+          },
+          "delivery_manifest": null,
+          "handoff_manifest": null,
+          "has_output_dir": true,
+          "delivery_issues": [
+            {
+              "scope": "deliveries",
+              "identifier": "omnicoder9b_first_working_adapter_20260330",
+              "problem": "missing-adapter-weights",
+              "target": "outputs/interface-prefix-omnicoder9b-semantic-v4-2npu-true20-20260329T2219CST/adapter/adapter_model.safetensors"
+            },
+            {
+              "scope": "deliveries",
+              "identifier": "omnicoder9b-qual-eval-handoff_20260330T021144Z",
+              "problem": "missing-handoff-adapter-weights",
+              "target": "outputs/interface-prefix-omnicoder9b-semantic-v4-2npu-true20-20260329T2219CST/adapter/adapter_model.safetensors"
+            }
+          ],
+          "delivery_issue_count": 2,
+          "delivery_ready": false
+        }
+      }
+    ],
+    "delivery_blockers": [
+      {
+        "scope": "deliveries",
+        "identifier": "omnicoder9b_first_working_adapter_20260330",
+        "problem": "missing-adapter-weights",
+        "target": "outputs/interface-prefix-omnicoder9b-semantic-v4-2npu-true20-20260329T2219CST/adapter/adapter_model.safetensors"
+      },
+      {
+        "scope": "deliveries",
+        "identifier": "omnicoder9b_first_working_adapter_20260330",
+        "problem": "missing-delivery-artifact",
+        "target": "artifacts/deliveries/omnicoder9b_first_working_adapter_20260330.tar.gz"
+      },
+      {
+        "scope": "deliveries",
+        "identifier": "omnicoder9b-qual-eval-handoff_20260330T021144Z",
+        "problem": "missing-handoff-adapter-weights",
+        "target": "outputs/interface-prefix-omnicoder9b-semantic-v4-2npu-true20-20260329T2219CST/adapter/adapter_model.safetensors"
+      }
+    ],
+    "next_recommended_action": {
+      "kind": "repair_or_supersede_delivery",
+      "reason": "Delivery registry still has unresolved blockers, so unattended promotion should repair or formally supersede the affected delivery chain before relying on it.",
+      "command": "python3 scripts/build_delivery_artifact.py artifacts/deliveries/omnicoder9b_first_working_adapter_20260330.json --check-only"
+    }
+  },
+  "fallback_ready": false
+}

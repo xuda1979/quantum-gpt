@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0574",
+  "name": "Build a 3-qubit GHZ circuit in pytket, export it to OpenQASM 2 with circuit_to_q",
+  "task_prompt": "Build a 3-qubit GHZ circuit in pytket, export it to OpenQASM 2 with circuit_to_qasm_str, then re-import it and check the round trip preserves the statevector. Give one complete script that runs end-to-end on its own and prints the outcome."
+}

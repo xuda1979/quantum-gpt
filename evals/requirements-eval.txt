@@ -1,0 +1,8 @@
+# Eval-environment quantum libs (C-9753): the 18-task holdout includes tasks whose
+# reference candidates import these. Without them 5/18 tasks fail 'import failed'
+# for ANY model (see reports/plateau-rootcause-2026-09-24.md).
+pennylane==0.45.1
+cirq==1.7.0
+qiskit==2.5.2
+amazon-braket-sdk
+numpy==1.26.4

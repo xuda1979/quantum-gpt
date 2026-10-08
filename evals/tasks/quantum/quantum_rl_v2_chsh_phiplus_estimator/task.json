@@ -1,0 +1,9 @@
+{
+  "id": "quantum_rl_v2_chsh_phiplus_estimator",
+  "name": "Phi+ Bell CHSH evaluation with StatevectorEstimator",
+  "domain": "quantum",
+  "category": "algorithm_implementation",
+  "task_prompt": "Prepare the two-qubit Phi+ Bell state in Qiskit and evaluate a CHSH operator with StatevectorEstimator. Choose the measurement observables consistently so the expected absolute value is 2*sqrt(2), print all four correlators and S, and assert |S| agrees with 2*sqrt(2) within 1e-12 and exceeds the classical bound 2. Return only one complete Python script with no Markdown fences. It must run locally without network access, use fixed seeds whenever randomness is involved, print concise results, and assert every required invariant.",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

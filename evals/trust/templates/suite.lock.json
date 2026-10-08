@@ -1,0 +1,19 @@
+{
+  "suite_hash": "01252700826be70047a571540e4f4c8446fba896e8117b8a2014e7c544417d93",
+  "source_dir": "evals/tasks/quantum",
+  "n_tasks": 37,
+  "notes": "example — regenerate with `quantum_eval suite-init`",
+  "tasks": [
+    {
+      "task_id": "quantum_bell_pair_construction",
+      "name": "Bell pair construction",
+      "domain": "quantum",
+      "category": "circuit_construction",
+      "task_dir": "evals/tasks/quantum/bell_pair_construction",
+      "task_json_hash": "<sha256>",
+      "tests_py_hash": "<sha256>",
+      "candidate_ref_hash": "<sha256>",
+      "workspace_mode": false
+    }
+  ]
+}

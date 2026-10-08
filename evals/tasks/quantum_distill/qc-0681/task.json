@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0681",
+  "name": "Quantum computing task: Write a complete QAOA MaxCut solver in Qiskit (depth p=1",
+  "task_prompt": "Quantum computing task: Write a complete QAOA MaxCut solver in Qiskit (depth p=1) for edges [(0, 1), (1, 2), (2, 3)], including manual cost/mixer construction, classical optimization, and sampling of the final state. Provide a complete, self-contained program that runs as-is and prints its results."
+}

@@ -1,0 +1,143 @@
+# Timeboxed 8-NPU Scale-Up Command Sheet
+# target: gemma4-26b-a4b-it
+# iteration_profile: fast
+# target: under 45 minutes per run, fast-iteration prioritized, all 8 NPUs when available
+
+## Bootstrap
+python3 -m pip install --upgrade pip
+python3 -m pip install -r training/requirements-gemma4-runtime.txt
+
+## Paper Dataset
+python3 scripts/build_paper_sft_dataset.py \
+  paper \
+  --output-dir data/generated/quantum-paper-router-warmup-v1 \
+  --dataset-name quantum_paper_router_warmup
+
+## Paper Router Warmup
+PYTORCH_NPU_ALLOC_CONF=max_split_size_mb:256 \
+TOKENIZERS_PARALLELISM=false \
+ASCEND_RT_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 \
+torchrun --nproc_per_node=8 training/qwen_sft_peft.py \
+  --model-name models/gemma-4-26B-A4B-it \
+  --train-file data/generated/quantum-paper-router-warmup-v1/messages/quantum_paper_router_warmup_messages_train.jsonl \
+  --eval-file data/generated/quantum-paper-router-warmup-v1/messages/quantum_paper_router_warmup_messages_valid.jsonl \
+  --output-dir outputs/gemma4-26b-a4b-it-quantum-paper-router-warmup-fastiter \
+  --device npu \
+  --max-length 1024 \
+  --per-device-batch-size 1 \
+  --gradient-accumulation-steps 2 \
+  --learning-rate 1e-4 \
+  --num-epochs 1 \
+  --max-steps 8 \
+  --eval-steps 8 \
+  --log-steps 1 \
+  --train-on-completions-only \
+  --target-module-regex '(?:^|\.)(?:router|gate)(?:$|\.)' \
+  --trainable-param-regex 'lora_'
+
+## SFT
+PYTORCH_NPU_ALLOC_CONF=max_split_size_mb:256 \
+TOKENIZERS_PARALLELISM=false \
+ASCEND_RT_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 \
+torchrun --nproc_per_node=8 training/qwen_sft_peft.py \
+  --model-name models/gemma-4-26B-A4B-it \
+  --train-file data/generated/omnicoder-quantum-generalization-holdout-v1/train.jsonl \
+  --eval-file data/generated/omnicoder-quantum-generalization-holdout-v1/eval.jsonl \
+  --output-dir outputs/gemma4-26b-a4b-it-quantum-generalization-sft-8npu-true40-fastiter \
+  --device npu \
+  --max-length 512 \
+  --per-device-batch-size 1 \
+  --gradient-accumulation-steps 2 \
+  --learning-rate 2e-4 \
+  --num-epochs 1 \
+  --max-steps 12 \
+  --eval-steps 6 \
+  --log-steps 1 \
+  --train-on-completions-only \
+  --research-methods verifier_guided_repair_curriculum ast_anchor_interface_grounding
+
+## GRPO
+PYTORCH_NPU_ALLOC_CONF=max_split_size_mb:256 \
+TOKENIZERS_PARALLELISM=false \
+ASCEND_RT_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 \
+torchrun --nproc_per_node=8 --master_port=29531 training/grpo_trainer.py \
+  --model-name models/gemma-4-26B-A4B-it \
+  --adapter-init outputs/gemma4-26b-a4b-it-quantum-generalization-sft-8npu-true40/adapter \
+  --benchmark-file evals/benchmarks/quantum_generalization_holdout_v1.txt \
+  --domain-filter quantum \
+  --output-dir outputs/gemma4-26b-a4b-it-quantum-generalization-grpo-8npu-true8-fastiter \
+  --device npu \
+  --group-size 2 \
+  --grpo-steps 2 \
+  --max-new-tokens 96 \
+  --max-seq-length 1536 \
+  --temperature 0.4 \
+  --lr 5e-6 \
+  --kl-coeff 0.05 \
+  --reward-pass-weight 0.6 \
+  --reward-syntax-weight 0.1 \
+  --reward-interface-weight 0.15 \
+  --reward-verifier-weight 0.15 \
+  --ratio-clip-log-delta 4.0 \
+  --logit-clip 30.0 \
+  --min-reward-std 0.02 \
+  --curriculum-ema-decay 0.8 \
+  --curriculum-min-weight 0.1 \
+  --quantum-priority 1.1 \
+  --curriculum-uncertainty-bonus 0.2 \
+  --log-steps 1 \
+  --research-methods clause_aware_verifier_reward ast_anchor_interface_grounding
+
+## JSON
+{
+  "target": "gemma4-26b-a4b-it",
+  "resolved_config": {
+    "bootstrap_requirements": "training/requirements-gemma4-runtime.txt",
+    "model_name": "models/gemma-4-26B-A4B-it",
+    "train_file": "data/generated/omnicoder-quantum-generalization-holdout-v1/train.jsonl",
+    "eval_file": "data/generated/omnicoder-quantum-generalization-holdout-v1/eval.jsonl",
+    "benchmark_file": "evals/benchmarks/quantum_generalization_holdout_v1.txt",
+    "paper_inputs": "paper",
+    "paper_output_dir": "data/generated/quantum-paper-router-warmup-v1",
+    "paper_dataset_name": "quantum_paper_router_warmup",
+    "paper_train_file": "data/generated/quantum-paper-router-warmup-v1/messages/quantum_paper_router_warmup_messages_train.jsonl",
+    "paper_eval_file": "data/generated/quantum-paper-router-warmup-v1/messages/quantum_paper_router_warmup_messages_valid.jsonl",
+    "paper_router_output_dir": "outputs/gemma4-26b-a4b-it-quantum-paper-router-warmup-fastiter",
+    "paper_router_target_module_regex": "(?:^|\\.)(?:router|gate)(?:$|\\.)",
+    "paper_router_trainable_param_regex": "lora_",
+    "paper_router_freeze_param_regex": null,
+    "sft_adapter_init": null,
+    "grpo_adapter_init": "outputs/gemma4-26b-a4b-it-quantum-generalization-sft-8npu-true40/adapter",
+    "sft_output_dir": "outputs/gemma4-26b-a4b-it-quantum-generalization-sft-8npu-true40-fastiter",
+    "grpo_output_dir": "outputs/gemma4-26b-a4b-it-quantum-generalization-grpo-8npu-true8-fastiter",
+    "iteration_profile": "fast",
+    "profile_headline": "under 45 minutes per run, fast-iteration prioritized, all 8 NPUs when available",
+    "paper_router_max_steps": "8",
+    "paper_router_eval_steps": "8",
+    "paper_router_log_steps": "1",
+    "sft_max_steps": "12",
+    "sft_eval_steps": "6",
+    "sft_log_steps": "1",
+    "grpo_group_size": "2",
+    "grpo_steps": "2",
+    "grpo_max_new_tokens": "96",
+    "grpo_max_seq_length": "1536",
+    "grpo_temperature": "0.4",
+    "grpo_log_steps": "1"
+  },
+  "bootstrap": "python3 -m pip install --upgrade pip\npython3 -m pip install -r training/requirements-gemma4-runtime.txt",
+  "paper_dataset": "python3 scripts/build_paper_sft_dataset.py \\\n  paper \\\n  --output-dir data/generated/quantum-paper-router-warmup-v1 \\\n  --dataset-name quantum_paper_router_warmup",
+  "paper_router_warmup": "PYTORCH_NPU_ALLOC_CONF=max_split_size_mb:256 \\\nTOKENIZERS_PARALLELISM=false \\\nASCEND_RT_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 \\\ntorchrun --nproc_per_node=8 training/qwen_sft_peft.py \\\n  --model-name models/gemma-4-26B-A4B-it \\\n  --train-file data/generated/quantum-paper-router-warmup-v1/messages/quantum_paper_router_warmup_messages_train.jsonl \\\n  --eval-file data/generated/quantum-paper-router-warmup-v1/messages/quantum_paper_router_warmup_messages_valid.jsonl \\\n  --output-dir outputs/gemma4-26b-a4b-it-quantum-paper-router-warmup-fastiter \\\n  --device npu \\\n  --max-length 1024 \\\n  --per-device-batch-size 1 \\\n  --gradient-accumulation-steps 2 \\\n  --learning-rate 1e-4 \\\n  --num-epochs 1 \\\n  --max-steps 8 \\\n  --eval-steps 8 \\\n  --log-steps 1 \\\n  --train-on-completions-only \\\n  --target-module-regex '(?:^|\\.)(?:router|gate)(?:$|\\.)' \\\n  --trainable-param-regex 'lora_'",
+  "sft": "PYTORCH_NPU_ALLOC_CONF=max_split_size_mb:256 \\\nTOKENIZERS_PARALLELISM=false \\\nASCEND_RT_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 \\\ntorchrun --nproc_per_node=8 training/qwen_sft_peft.py \\\n  --model-name models/gemma-4-26B-A4B-it \\\n  --train-file data/generated/omnicoder-quantum-generalization-holdout-v1/train.jsonl \\\n  --eval-file data/generated/omnicoder-quantum-generalization-holdout-v1/eval.jsonl \\\n  --output-dir outputs/gemma4-26b-a4b-it-quantum-generalization-sft-8npu-true40-fastiter \\\n  --device npu \\\n  --max-length 512 \\\n  --per-device-batch-size 1 \\\n  --gradient-accumulation-steps 2 \\\n  --learning-rate 2e-4 \\\n  --num-epochs 1 \\\n  --max-steps 12 \\\n  --eval-steps 6 \\\n  --log-steps 1 \\\n  --train-on-completions-only \\\n  --research-methods verifier_guided_repair_curriculum ast_anchor_interface_grounding",
+  "grpo": "PYTORCH_NPU_ALLOC_CONF=max_split_size_mb:256 \\\nTOKENIZERS_PARALLELISM=false \\\nASCEND_RT_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 \\\ntorchrun --nproc_per_node=8 --master_port=29531 training/grpo_trainer.py \\\n  --model-name models/gemma-4-26B-A4B-it \\\n  --adapter-init outputs/gemma4-26b-a4b-it-quantum-generalization-sft-8npu-true40/adapter \\\n  --benchmark-file evals/benchmarks/quantum_generalization_holdout_v1.txt \\\n  --domain-filter quantum \\\n  --output-dir outputs/gemma4-26b-a4b-it-quantum-generalization-grpo-8npu-true8-fastiter \\\n  --device npu \\\n  --group-size 2 \\\n  --grpo-steps 2 \\\n  --max-new-tokens 96 \\\n  --max-seq-length 1536 \\\n  --temperature 0.4 \\\n  --lr 5e-6 \\\n  --kl-coeff 0.05 \\\n  --reward-pass-weight 0.6 \\\n  --reward-syntax-weight 0.1 \\\n  --reward-interface-weight 0.15 \\\n  --reward-verifier-weight 0.15 \\\n  --ratio-clip-log-delta 4.0 \\\n  --logit-clip 30.0 \\\n  --min-reward-std 0.02 \\\n  --curriculum-ema-decay 0.8 \\\n  --curriculum-min-weight 0.1 \\\n  --quantum-priority 1.1 \\\n  --curriculum-uncertainty-bonus 0.2 \\\n  --log-steps 1 \\\n  --research-methods clause_aware_verifier_reward ast_anchor_interface_grounding",
+  "papers": [
+    "research/papers/timeboxed_eight_npu_sft/paper.md",
+    "research/papers/timeboxed_eight_npu_grpo/paper.md",
+    "research/papers/verifier_guided_repair_curriculum/paper.md",
+    "research/papers/clause_aware_verifier_reward/paper.md",
+    "research/papers/ast_anchor_interface_grounding/paper.md",
+    "research/papers/self_consistency_verifier_routing/paper.md",
+    "research/papers/uncertainty_triggered_repair_replay/paper.md",
+    "research/papers/gemma4_26b_a4b_weekend_demo/paper.md"
+  ]
+}

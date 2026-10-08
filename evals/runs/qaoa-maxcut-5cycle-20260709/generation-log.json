@@ -1,0 +1,26 @@
+{
+  "generated_at_utc": "2026-07-09T05:59:14Z",
+  "tasks": [
+    {
+      "model": "glm5.2",
+      "status": "ok",
+      "wall_seconds": 59.18,
+      "output_chars": 1260,
+      "head": "from qiskit.primitives import StatevectorSampler\nfrom qiskit_algorithms import QAOA\nfrom qiskit_algorithms.optimizers import COBYLA\nfrom qiskit_optimization import QuadraticProgram\nfrom qiskit_optimization.algorithms import MinimumEigenOptimizer\nimport networkx as nx\n\nG = nx.Graph()\nG.add_edges_from"
+    },
+    {
+      "model": "deepseek-v4-pro",
+      "status": "ok",
+      "wall_seconds": 24.76,
+      "output_chars": 1237,
+      "head": "from qiskit_algorithms import QAOA, MinimumEigenOptimizer\nfrom qiskit_algorithms.optimizers import COBYLA\nfrom qiskit.primitives import StatevectorSampler\nfrom qiskit.quantum_info import SparsePauliOp\nfrom qiskit_optimization import QuadraticProgram\nfrom qiskit_optimization.algorithms import Minimum"
+    },
+    {
+      "model": "qwen3.6-27b-rag",
+      "status": "ok",
+      "wall_seconds": 7.49,
+      "output_chars": 800,
+      "head": "# classical (latest version) | IBM Quantum Documentation Source: https://quantum.cloud.ibm.com/docs/api/qiskit/circuit_classical Documentation set: IBM Quantum and Qiskit documentation Fetched at: 2026-04-30T02:22:31.614026+00:00 classical (latest version) | IBM Quantum Documentation Skip to main co"
+    }
+  ]
+}

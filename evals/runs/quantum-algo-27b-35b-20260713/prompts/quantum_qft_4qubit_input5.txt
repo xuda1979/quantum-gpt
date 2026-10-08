@@ -1,0 +1,21 @@
+Write a complete, runnable Python program using numpy and qiskit that:
+1. Builds a 4-qubit circuit that prepares the basis state |5> = |0101>.
+2. Applies the 4-qubit Quantum Fourier Transform (you may use
+   qiskit.circuit.library.QFT or implement it from scratch with H and
+   controlled-phase gates).
+3. Simulate with qiskit.quantum_info.Statevector.
+4. Compute the analytic QFT output for input |5>:
+   QFT|x> = (1/sqrt(N)) * sum_{k=0}^{N-1} exp(2*pi*i*k*x/N) |k>, N = 2^4 = 16.
+5. Compute the overlap |<expected|actual>|^2 and verify that all output
+   probabilities are equal to 1/N (a hallmark of QFT on a basis state).
+6. In `def main()`, prints exactly:
+     N = 16
+     Input state = |5>
+     QFT output overlap = <value rounded to 6 decimals>
+     Top amplitude index = <value>
+     Max prob = <value rounded to 4 decimals>
+     All probs equal: True
+     Correct: <True|False>
+   where Correct is True iff overlap > 0.9999 AND all probabilities are
+   approximately 1/16.
+Call main() under `if __name__ == "__main__":`.

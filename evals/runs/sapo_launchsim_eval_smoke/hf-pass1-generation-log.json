@@ -1,0 +1,28 @@
+{
+  "generated_at_utc": "2026-08-26T02:19:06Z",
+  "base_model": "/tmp/sapo_launchsim/tiny_qwen2vl",
+  "adapter": "/tmp/sapo_launchsim/tiny_sapo_adapter",
+  "device": "cpu",
+  "device_map": null,
+  "npu_max_memory_gib": 54,
+  "max_new_tokens": 16,
+  "temperature": 0.0,
+  "turboquant": null,
+  "public_eval_contract_sha256": "da435fd7467348824ecda45b4c24447db2db48e3397637dfe22ef538ed01072d",
+  "tasks": [
+    {
+      "task_id": "quantum_gate_alias_casefold_barrier",
+      "candidate_path": "candidates/quantum_gate_alias_casefold_barrier.py",
+      "candidate_sha256": "49ca07c74651b676c2657cd2a066474cb4037368857ab37380d429de9e80f4fd",
+      "output_chars": 112,
+      "started_at_sec": 0.025
+    },
+    {
+      "task_id": "quantum_error_detection_bit_flip",
+      "candidate_path": "candidates/quantum_error_detection_bit_flip.py",
+      "candidate_sha256": "49ca07c74651b676c2657cd2a066474cb4037368857ab37380d429de9e80f4fd",
+      "output_chars": 112,
+      "started_at_sec": 0.042
+    }
+  ]
+}

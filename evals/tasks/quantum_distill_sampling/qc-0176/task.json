@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3_sampling",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0176",
+  "name": "Quantum computing task: Write a Q# operation (modern QDK syntax) that prepares a",
+  "task_prompt": "Quantum computing task: Write a Q# operation (modern QDK syntax) that prepares a Bell state and returns both measurement results, plus the Python driver that runs it 2000 times and prints the correlation statistics. Write the full runnable code (all imports included); executing it should print the results."
+}

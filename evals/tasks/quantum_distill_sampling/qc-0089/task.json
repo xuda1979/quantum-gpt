@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3_sampling",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0089",
+  "name": "Solve this quantum programming problem. Create and measure a Bell pair in Cirq w",
+  "task_prompt": "Solve this quantum programming problem. Create and measure a Bell pair in Cirq with 2000 repetitions; print the histogram. Return the entire program in one piece, ready to run without any modification."
+}

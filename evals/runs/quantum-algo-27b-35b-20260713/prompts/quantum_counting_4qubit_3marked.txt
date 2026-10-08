@@ -1,0 +1,26 @@
+Write a complete, runnable Python program using numpy and qiskit that:
+1. Implements quantum counting to estimate the number M of marked items in a
+   search space of size N = 2^4 = 16. The marked items are integers 3, 7, 11
+   (so M = 3).
+2. Builds the Grover operator G = (2|s><s| - I) * Oracle, where:
+   - Oracle flips the phase of |m> for each marked m (using X gates to convert
+     0 bits, then H-MCX-H, then undo X).
+   - Diffuser = H^n X^n (H-MCX-H) X^n H^n.
+3. Performs QPE on G with n_count = 4 counting qubits and the search register
+   initialized to a uniform superposition (H on all n qubits). For each
+   counting qubit q, apply controlled-G^(2^q). Then apply inverse QFT.
+4. Simulate with qiskit.quantum_info.Statevector, take the most-probable
+   bitstring as the phase estimate.
+5. Convert the measured integer to a phase in [0, 1) (use 1 - phase if
+   phase > 0.5). Then theta = pi * phase (since the Grover eigenvalues are
+   exp(±2*i*theta)). The estimate of M is N * sin^2(theta).
+6. In `def main()`, prints exactly:
+     N = 16
+     True M = 3
+     Counting qubits = 4
+     Estimated theta = <value rounded to 4 decimals>
+     Estimated M = <value rounded to 4 decimals>
+     Rounded M = <integer>
+     Correct: <True|False>
+   where Correct is True iff |estimated M - 3| < 0.5.
+Call main() under `if __name__ == "__main__":`.

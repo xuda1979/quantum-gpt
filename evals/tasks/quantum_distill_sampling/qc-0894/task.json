@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3_sampling",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0894",
+  "name": "Build an Ising chain of 8 spins with couplings J=1.51 (ferromagnetic, h=0 except",
+  "task_prompt": "Build an Ising chain of 8 spins with couplings J=1.51 (ferromagnetic, h=0 except h_0=-0.87) in dimod, sample with SimulatedAnnealingSampler, and verify the ground state is fully aligned against the field on spin 0. Provide a complete, self-contained program that runs as-is and prints its results."
+}

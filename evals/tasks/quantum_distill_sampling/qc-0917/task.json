@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3_sampling",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0917",
+  "name": "You are given the following quantum programming task. Write a complete QAOA MaxC",
+  "task_prompt": "You are given the following quantum programming task. Write a complete QAOA MaxCut solver in Qiskit (depth p=2) for edges [(0, 1), (0, 2), (0, 4), (0, 5), (1, 3), (1, 5), (2, 4), (2, 5), (3, 4), (4, 5)], including manual cost/mixer construction, classical optimization, and sampling of the final state. Give one complete script that runs end-to-end on its own and prints the outcome."
+}

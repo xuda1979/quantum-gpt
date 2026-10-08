@@ -1,0 +1,9 @@
+{
+  "id": "quantum_rl_v2_bell_chsh",
+  "name": "Singlet Bell state CHSH correlation S=2*sqrt(2)",
+  "domain": "quantum",
+  "category": "algorithm_implementation",
+  "task_prompt": "Prepare the two-qubit singlet Bell state in Qiskit and evaluate a CHSH operator with StatevectorEstimator. Choose the measurement observables consistently so the expected absolute value is 2*sqrt(2), print all four correlators and S, and assert |S| agrees with 2*sqrt(2) within 1e-12 and exceeds the classical bound 2. Output code only as a self-contained Python program. Use documented public APIs, require no cloud credentials, make stochastic behavior reproducible, and include executable checks with justified tolerances.",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

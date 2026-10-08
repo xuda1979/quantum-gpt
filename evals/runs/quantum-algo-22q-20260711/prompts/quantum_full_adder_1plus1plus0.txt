@@ -1,0 +1,20 @@
+Write a complete, runnable Python program using Qiskit 2.x that:
+1. Implements a reversible quantum full adder on 4 qubits: q0 = a, q1 = b,
+   q2 = carry_in, q3 = (output sum), plus an ancilla q4 for the carry_out.
+   Use the standard Peres-gate or Toffoli-based construction:
+     - CX(q0, q3); CX(q1, q3); CX(q2, q3)   -> q3 holds a XOR b XOR cin
+     - Compute carry_out into ancilla:
+       Toffoli(q0, q1, q4); CX(q2, q4) [does maj-style]; etc.
+   A simpler approach: use two Toffolis and CNOTs:
+     - maj(a, b, cin) -> (a, b XOR a, cin XOR a) [Peres]
+     - sum = cin (after maj)
+     - To get carry: Toffoli(c, b, a) then uncompute.
+   Any correct reversible construction is fine.
+2. Initialize a = 1 (X on q0), b = 1 (X on q1), carry_in = 0 (no gate).
+3. After the adder, measure the sum (q3) and carry_out (ancilla q4).
+4. Use StatevectorSampler (>= 2000 shots).
+5. In `def main()`, prints:
+     sum = <integer>
+     carry = <integer>
+   Expected: sum = 0 and carry = 1 (since 1 + 1 + 0 = 2 = binary 10).
+Call main() under `if __name__ == "__main__":`.

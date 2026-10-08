@@ -1,0 +1,12 @@
+Write a complete, runnable Python program using Qiskit 2.x that:
+1. Prepares a Bell state |Phi+> = (|00>+|11>)/sqrt(2) (H on qubit 0, then CNOT(0,1)).
+2. Defines a helper measure_correlation(angle_a, angle_b) that applies Ry(2*angle_a) to qubit 0,
+   Ry(2*angle_b) to qubit 1, measures both in the computational basis with StatevectorSampler
+   (>= 4000 shots), and returns E(a,b) = P(00)+P(11)-P(01)-P(10).
+3. Uses the optimal CHSH angles: Alice a=0, a'=pi/4; Bob b=pi/8, b'=-pi/8.
+4. Computes S = E(a,b) + E(a,b') + E(a',b) - E(a',b').
+5. In `def main()`, prints:
+     S = <value rounded to 3 decimals>
+     violation: <True|False>
+   Expected: S ≈ 2.828 (close to 2*sqrt(2)), violation: True (S > 2.0 violates classical bound).
+Call main() under `if __name__ == "__main__":`.

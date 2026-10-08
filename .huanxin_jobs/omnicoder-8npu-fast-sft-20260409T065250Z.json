@@ -1,0 +1,12 @@
+{
+  "job_id": "omnicoder-8npu-fast-sft-20260409T065250Z",
+  "name": "omnicoder-8npu-fast-sft",
+  "pid": 287095,
+  "log_path": "/tmp/omnicoder_8npu_fast_sft_20260409_r2.log",
+  "remote_root": "/root/root/work/quantum-gpt",
+  "command": "cd /root/root/work/quantum-gpt && rclone copy 'nm-aihuanxin:jtdlp-3ed7854b946a47b1a49ad754baa76cd3/quantum-qwen25-coder-main/training' '/root/root/work/quantum-gpt/training' --include 'qwen_sft_peft.py' --include 'research_plugins.py' --include 'model_backend.py' --include 'text_preprocessor_backend.py' --ignore-times --fast-list --transfers 4 --checkers 8 && test -f data/generated/omnicoder-quantum-generalization-holdout-v1/train.jsonl && test -f data/generated/omnicoder-quantum-generalization-holdout-v1/eval.jsonl && test -f outputs/interface-prefix-omnicoder9b-semantic-v4-2npu-true20-20260329T2219CST/adapter/adapter_model.safetensors && PYTORCH_NPU_ALLOC_CONF=max_split_size_mb:256 ASCEND_RT_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 torchrun --nproc_per_node=8 training/qwen_sft_peft.py --model-name models/OmniCoder-9B --adapter-init outputs/interface-prefix-omnicoder9b-semantic-v4-2npu-true20-20260329T2219CST/adapter --train-file data/generated/omnicoder-quantum-generalization-holdout-v1/train.jsonl --eval-file data/generated/omnicoder-quantum-generalization-holdout-v1/eval.jsonl --output-dir outputs/omnicoder9b-quantum-generalization-sft-8npu-fastiter-20260409T1451CST --device npu --max-length 512 --max-steps 12 --num-epochs 1 --per-device-batch-size 1 --gradient-accumulation-steps 2 --eval-steps 6 --log-steps 1 --train-on-completions-only --research-methods verifier_guided_repair_curriculum ast_anchor_interface_grounding",
+  "created_at": "2026-04-09T06:52:54.287267+00:00",
+  "transport": "standalone",
+  "duration_ms": 2895,
+  "meta_file": "/Users/daxu/software/quantum-gpt/.huanxin_jobs/omnicoder-8npu-fast-sft-20260409T065250Z.json"
+}

@@ -67,7 +67,7 @@ fi
 
 build_remote_cmd() {
   cat <<EOF
-cd /root/root/work/quantum-gpt && echo __REPORT__ && if [ -f ${REMOTE_REPORT_Q} ]; then stat -c '%n %s bytes %y' ${REMOTE_REPORT_Q}; echo __REPORT_PRESENT__; else echo MISSING; fi && ${REMOTE_LOG_SNIPPET}
+cd /root/work/quantum-gpt && echo __REPORT__ && if [ -f ${REMOTE_REPORT_Q} ]; then stat -c '%n %s bytes %y' ${REMOTE_REPORT_Q}; echo __REPORT_PRESENT__; else echo MISSING; fi && ${REMOTE_LOG_SNIPPET}
 EOF
 }
 
@@ -79,12 +79,12 @@ while true; do
   remote_cmd="$(build_remote_cmd)"
   if ! JSON_OUT="$(
     HUANXIN_USE_DAEMON=1 HUANXIN_WAIT_MS="$WAIT_MS" \
-      "$ROOT_DIR/scripts/huanxin_shell.sh" "$ENV_NAME" "$remote_cmd"
+      bash "$ROOT_DIR/scripts/huanxin_shell.sh" "$ENV_NAME" "$remote_cmd"
   )"; then
     echo "[watch_base_vs_adapter_report] daemon poll failed; retrying once with standalone transport" >&2
     JSON_OUT="$(
       HUANXIN_USE_DAEMON=0 HUANXIN_WAIT_MS="$WAIT_MS" \
-        "$ROOT_DIR/scripts/huanxin_shell.sh" "$ENV_NAME" "$remote_cmd"
+        bash "$ROOT_DIR/scripts/huanxin_shell.sh" "$ENV_NAME" "$remote_cmd"
     )"
   fi
 

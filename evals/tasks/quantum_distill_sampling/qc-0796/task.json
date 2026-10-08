@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3_sampling",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0796",
+  "name": "Here is a quantum coding exercise. Write a full Qiskit teleportation program usi",
+  "task_prompt": "Here is a quantum coding exercise. Write a full Qiskit teleportation program using mid-circuit measurement and classically controlled corrections, teleporting RY(2.703)|0>. Provide a complete, self-contained program that runs as-is and prints its results."
+}

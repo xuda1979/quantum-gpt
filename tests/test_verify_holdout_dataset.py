@@ -29,8 +29,14 @@ def test_summarize_rows_counts_tasks_and_prompt_families() -> None:
 
 def test_summarize_rows_detects_duplicate_example_ids() -> None:
     rows = [
-        {"example_id": "dup", "metadata": {"task_id": "t1", "prompt_family": "p1", "domain": "quantum"}},
-        {"example_id": "dup", "metadata": {"task_id": "t2", "prompt_family": "p2", "domain": "quantum"}},
+        {
+            "example_id": "dup",
+            "metadata": {"task_id": "t1", "prompt_family": "p1", "domain": "quantum"},
+        },
+        {
+            "example_id": "dup",
+            "metadata": {"task_id": "t2", "prompt_family": "p2", "domain": "quantum"},
+        },
     ]
     summary = summarize_rows(rows)
     assert summary["duplicate_example_ids"] == ["dup"]

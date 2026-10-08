@@ -1,0 +1,8 @@
+{
+  "id": "quantum_qft_3qubit_phase",
+  "title": "3-qubit QFT phase pattern",
+  "expected_substrings": [
+    "Top: ",
+    "2nd: "
+  ]
+}

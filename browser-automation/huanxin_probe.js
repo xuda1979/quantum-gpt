@@ -5,7 +5,8 @@ const { chromium } = require('playwright');
 const { launchPersistentContext } = require('./huanxin_browser_launch');
 
 const HUANXIN_URL =
-  'https://aihuanxin.cn/kunlun/kl-web?poolId=1&projectId=3ed7854b946a47b1a49ad754baa76cd3#/train-dev';
+  process.env.HUANXIN_TRAIN_DEV_URL ||
+  'https://aihuanxin.cn/kunlun/kl-web?poolId=6&projectId=21b4208dde424e96b159362ef49c9c96#/train-dev/environment/dl-9a5a098accce31c28cf4c6ca23391341?name=AI';
 
 function parseArgs(argv) {
   const args = {

@@ -5,113 +5,271 @@ from __future__ import annotations
 
 import argparse
 import copy
-from dataclasses import dataclass
 import hashlib
 import json
 import math
 import os
+import re
+import sys
 import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-import torch
-from torch.utils.data import DataLoader, Dataset
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from training.runtime_overlay import (
+    apply_transformers_peft_compat_shims,
+    configure_runtime_overlay_from_env,
+    register_qwen35_moe_runtime,
+)
+
+configure_runtime_overlay_from_env()
 
 if TYPE_CHECKING:
-    from transformers import AutoProcessor, AutoTokenizer
+    pass
 
 try:
     from torch.distributed.elastic.multiprocessing.errors import record as elastic_record
 except Exception:  # noqa: BLE001
+
     def elastic_record(function: Any) -> Any:
         return function
 
-from training.research_plugins import load_research_methods, summarize_methods
 
-DEFAULT_LORA_TARGET_MODULES = ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]
+from training.model_backend import (
+    probe_model_runtime_compat,
+    run_text_forward_preflight,
+    select_transformers_model_loader,
+)
+from training.research_plugins import load_research_methods, summarize_methods
+from training.text_preprocessor_backend import (
+    TextPreprocessorBackend,
+    build_supervised_text_example,
+    load_text_preprocessor_backend,
+    pad_supervised_text_batch,
+)
+
+DEFAULT_LORA_TARGET_MODULES = [
+    "q_proj",
+    "k_proj",
+    "v_proj",
+    "o_proj",
+    "gate_proj",
+    "up_proj",
+    "down_proj",
+]
 COMMON_LORA_TARGET_MODULE_GROUPS = [
     DEFAULT_LORA_TARGET_MODULES,
     ["query_proj", "key_proj", "value_proj", "o_proj", "gate_proj", "up_proj", "down_proj"],
     ["q_proj", "k_proj", "v_proj", "o_proj"],
 ]
+# Standard projection suffix set used for full-path Gemma 4 / MoE-family discovery.
+_PROJECTION_SUFFIXES = frozenset(
+    [
+        "q_proj",
+        "k_proj",
+        "v_proj",
+        "o_proj",
+        "gate_proj",
+        "up_proj",
+        "down_proj",
+        "query_proj",
+        "key_proj",
+        "value_proj",
+    ]
+)
 
 
-@dataclass
-class TextPreprocessorBackend:
-    render_backend: Any
-    text_backend: Any
-    save_backend: Any
-    backend_kind: str
+def build_native_lora_linear(
+    torch_module: Any, base_layer: Any, rank: int, alpha: int, dropout: float
+) -> Any:
+    class _NativeLoraLinear(torch_module.nn.Module):
+        def __init__(self, wrapped: Any) -> None:
+            super().__init__()
+            self.wrapped = wrapped
+            for parameter in self.wrapped.parameters():
+                parameter.requires_grad = False
+            in_features = int(wrapped.in_features)
+            out_features = int(wrapped.out_features)
+            self.rank = int(rank)
+            self.lora_alpha = int(alpha)
+            self.scaling = float(alpha) / float(rank)
+            self.lora_dropout = (
+                torch_module.nn.Dropout(float(dropout))
+                if dropout > 0
+                else torch_module.nn.Identity()
+            )
+            self.lora_A = torch_module.nn.Linear(in_features, rank, bias=False)
+            self.lora_B = torch_module.nn.Linear(rank, out_features, bias=False)
+            torch_module.nn.init.kaiming_uniform_(self.lora_A.weight, a=math.sqrt(5))
+            torch_module.nn.init.zeros_(self.lora_B.weight)
+            device = wrapped.weight.device
+            dtype = (
+                wrapped.weight.dtype
+                if getattr(wrapped.weight, "is_floating_point", lambda: False)()
+                else torch_module.float32
+            )
+            self.lora_A.to(device=device, dtype=dtype)
+            self.lora_B.to(device=device, dtype=dtype)
+
+        def forward(self, x: Any) -> Any:
+            result = self.wrapped(x)
+            lora_input = x.to(dtype=self.lora_A.weight.dtype)
+            update = self.lora_B(self.lora_A(self.lora_dropout(lora_input))) * self.scaling
+            return result + update.to(dtype=result.dtype)
+
+    return _NativeLoraLinear(base_layer)
 
 
-def load_model_config_metadata(model_name: str) -> dict[str, Any]:
-    from transformers import PretrainedConfig
-
-    config_dict, _unused_kwargs = PretrainedConfig.get_config_dict(model_name, trust_remote_code=True)
-    return config_dict
-
-
-def load_tokenizer_config_metadata(model_name: str) -> dict[str, Any]:
-    tokenizer_config_path = Path(model_name) / "tokenizer_config.json"
-    if not tokenizer_config_path.exists():
-        return {}
-    return json.loads(tokenizer_config_path.read_text(encoding="utf-8"))
+def _get_parent_module(model: Any, module_name: str) -> tuple[Any, str]:
+    parts = module_name.split(".")
+    parent = model
+    for part in parts[:-1]:
+        parent = getattr(parent, part)
+    return parent, parts[-1]
 
 
-def probe_model_runtime_compat(model_name: str, auto_config_cls: Any) -> dict[str, Any] | None:
-    try:
-        config_dict = load_model_config_metadata(model_name)
-    except Exception:
-        return None
-
-    model_type = str(config_dict.get("model_type") or "")
-    architectures = [str(item) for item in (config_dict.get("architectures") or [])]
-    summary: dict[str, Any] = {
-        "config_model_type": model_type,
-        "config_architectures": architectures,
-        "runtime_autoconfig_ok": False,
+def apply_native_lora(
+    model: Any,
+    torch_module: Any,
+    target_modules: list[str],
+    rank: int,
+    alpha: int,
+    dropout: float,
+) -> dict[str, Any]:
+    suffixes = tuple(target_modules)
+    wrapped_names: list[str] = []
+    for name, module in list(model.named_modules()):
+        if not name or not any(
+            name == suffix or name.endswith("." + suffix) for suffix in suffixes
+        ):
+            continue
+        if not all(hasattr(module, attr) for attr in ("in_features", "out_features", "weight")):
+            continue
+        parent, child_name = _get_parent_module(model, name)
+        setattr(
+            parent, child_name, build_native_lora_linear(torch_module, module, rank, alpha, dropout)
+        )
+        wrapped_names.append(name)
+    if not wrapped_names:
+        raise SystemExit(
+            "Native LoRA did not wrap any torch.nn.Linear modules. "
+            f"Requested target modules: {target_modules}"
+        )
+    for name, parameter in model.named_parameters():
+        parameter.requires_grad = ".lora_A." in name or ".lora_B." in name
+    return {
+        "backend": "native",
+        "wrapped_module_count": len(wrapped_names),
+        "wrapped_module_sample": wrapped_names[:20],
     }
-    try:
-        runtime_config = auto_config_cls.from_pretrained(model_name, trust_remote_code=True)
-        summary["runtime_autoconfig_ok"] = True
-        summary["runtime_config_class"] = runtime_config.__class__.__name__
-    except Exception as exc:  # noqa: BLE001
-        summary["runtime_autoconfig_error_type"] = type(exc).__name__
-        summary["runtime_autoconfig_error"] = str(exc)
-        if runtime_autoconfig_requires_upgrade(model_type, exc):
-            extra_hint = ""
-            if model_type == "gemma4":
-                extra_hint = (
-                    " Gemma 4 instruction checkpoints also advertise an any-to-any conditional-generation "
-                    "architecture, so the current text-only AutoModelForCausalLM path may still need a "
-                    "processor-aware conditional-generation backend after the runtime upgrade."
-                )
-            raise SystemExit(
-                f"Transformers runtime is too old for '{model_name}' "
-                f"(model_type='{model_type}', architectures={architectures}). "
-                "This path now supports processor-aware text preprocessing, but the active "
-                "runtime still cannot resolve this config. Upgrade the bootstrap stack to a "
-                f"{model_type or 'model-family'}-capable Transformers build before launching this fine-tune."
-                f"{extra_hint}"
-            ) from exc
-    return summary
 
 
-def runtime_autoconfig_requires_upgrade(model_type: str, exc: Exception) -> bool:
-    if not model_type:
-        return False
-    message = str(exc).lower()
-    return (
-        "does not recognize this architecture" in message
-        or "does not recognize this model type" in message
-        or "unrecognized configuration class" in message
-        or "transformers does not recognize this architecture" in message
+def save_native_lora_adapter(
+    model: Any, adapter_dir: Path, torch_module: Any, config: dict[str, Any]
+) -> None:
+    adapter_dir.mkdir(parents=True, exist_ok=True)
+    state = {
+        name: parameter.detach().cpu()
+        for name, parameter in model.named_parameters()
+        if ".lora_A." in name or ".lora_B." in name
+    }
+    torch_module.save(state, adapter_dir / "adapter_model.bin")
+    (adapter_dir / "adapter_config.json").write_text(
+        json.dumps(config, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
 
 
-def resolve_lora_target_modules(requested_target_modules: list[str] | None, model: Any) -> list[str]:
+def persist_adapter(
+    *,
+    save_model: Any,
+    adapter_dir: Path,
+    torch_module: Any,
+    lora_backend: str,
+    adapter_init: Any,
+    native_config: dict[str, Any],
+    text_preprocessor: Any,
+) -> None:
+    """Save a LoRA adapter to ``adapter_dir`` using the same logic as the final
+    end-of-training save. Reused by periodic (hourly) checkpointing so that any
+    saved checkpoint is directly loadable for evaluation."""
+    adapter_dir.mkdir(parents=True, exist_ok=True)
+    if lora_backend == "native" and adapter_init is None:
+        save_native_lora_adapter(save_model, adapter_dir, torch_module, native_config)
+    else:
+        save_model.save_pretrained(adapter_dir)
+    text_preprocessor.save_backend.save_pretrained(adapter_dir)
+
+
+def _resolve_lora_targets_full_path(model: Any) -> list[str] | None:
+    """Return explicit full-path target module names for architectures where suffix-only
+    discovery is unreliable (e.g. Gemma 4 MoE, which has vision-tower modules that are
+    *not* standard ``nn.Linear`` and would cause PEFT to error).
+
+    Strategy: look for a ``language_model`` sub-tree.  If found, collect full module
+    paths whose leaf suffix is a known projection name and whose underlying module class
+    is ``torch.nn.Linear`` (exact match — not a subclass).  This avoids wrapping
+    ``Gemma4ClippableLinear`` or any other custom vision-tower wrapper.
+
+    Returns ``None`` when the model does not appear to need full-path resolution (i.e.
+    there is no ``language_model`` attribute), so the caller can fall back to the
+    standard suffix-group heuristic.
+    """
+    import torch.nn as nn
+
+    # Only activate for models that expose a language_model sub-tree (e.g. Gemma 4).
+    has_language_model_subtree = any(
+        name == "model.language_model" or name.startswith("model.language_model.")
+        for name, _ in model.named_modules()
+    )
+    if not has_language_model_subtree:
+        return None
+
+    targets: list[str] = []
+    for name, mod in model.named_modules():
+        if type(mod) is not nn.Linear:  # exact type check — exclude subclasses
+            continue
+        suffix = name.rsplit(".", 1)[-1] if "." in name else name
+        if suffix not in _PROJECTION_SUFFIXES:
+            continue
+        # Must be inside the language_model sub-tree.
+        if "language_model" not in name:
+            continue
+        targets.append(name)
+
+    return targets if targets else None
+
+
+def resolve_lora_target_modules(
+    requested_target_modules: list[str] | None,
+    model: Any,
+    requested_target_module_regex: list[str] | None = None,
+) -> list[str]:
     if requested_target_modules:
         return list(requested_target_modules)
+
+    if requested_target_module_regex:
+        patterns = [re.compile(pattern) for pattern in requested_target_module_regex]
+        matched = [
+            module_name
+            for module_name, _module in model.named_modules()
+            if module_name and any(pattern.search(module_name) for pattern in patterns)
+        ]
+        if not matched:
+            raise SystemExit(
+                "Unable to resolve any LoRA target modules from --target-module-regex. "
+                f"Requested regexes: {requested_target_module_regex}"
+            )
+        return matched
+
+    # For architectures with a language_model sub-tree (e.g. Gemma 4), use full-path
+    # discovery to avoid accidentally wrapping vision-tower modules that may be
+    # non-standard Linear subclasses unsupported by PEFT.
+    full_path_targets = _resolve_lora_targets_full_path(model)
+    if full_path_targets is not None:
+        return full_path_targets
 
     leaf_names = sorted(
         {
@@ -133,6 +291,130 @@ def resolve_lora_target_modules(requested_target_modules: list[str] | None, mode
     )
 
 
+def _compile_name_patterns(patterns: list[str] | None, *, flag_name: str) -> list[re.Pattern[str]]:
+    if not patterns:
+        return []
+    compiled: list[re.Pattern[str]] = []
+    for pattern in patterns:
+        try:
+            compiled.append(re.compile(pattern))
+        except re.error as exc:
+            raise SystemExit(f"Invalid regex for {flag_name}: {pattern!r} ({exc})") from exc
+    return compiled
+
+
+def _matches_any_pattern(name: str, patterns: list[re.Pattern[str]]) -> bool:
+    return any(pattern.search(name) for pattern in patterns)
+
+
+def apply_selective_training_controls(
+    model: Any,
+    trainable_param_regex: list[str] | None = None,
+    freeze_param_regex: list[str] | None = None,
+) -> dict[str, Any]:
+    trainable_patterns = _compile_name_patterns(
+        trainable_param_regex, flag_name="--trainable-param-regex"
+    )
+    freeze_patterns = _compile_name_patterns(freeze_param_regex, flag_name="--freeze-param-regex")
+
+    params = list(model.named_parameters())
+    initially_trainable_names = {name for name, parameter in params if parameter.requires_grad}
+
+    trainable_regex_matches: list[str] = []
+    if trainable_patterns:
+        for name, parameter in params:
+            if parameter.requires_grad and _matches_any_pattern(name, trainable_patterns):
+                trainable_regex_matches.append(name)
+            if parameter.requires_grad and not _matches_any_pattern(name, trainable_patterns):
+                parameter.requires_grad = False
+        if not trainable_regex_matches:
+            raise SystemExit(
+                "No trainable parameters matched --trainable-param-regex. "
+                f"Requested patterns: {trainable_param_regex}"
+            )
+
+    frozen_by_regex: list[str] = []
+    if freeze_patterns:
+        for name, parameter in params:
+            if parameter.requires_grad and _matches_any_pattern(name, freeze_patterns):
+                parameter.requires_grad = False
+                frozen_by_regex.append(name)
+
+    final_trainable_names = [name for name, parameter in params if parameter.requires_grad]
+    if not final_trainable_names:
+        raise SystemExit(
+            "Selective training controls froze all parameters. "
+            "Adjust --trainable-param-regex/--freeze-param-regex so at least one parameter stays trainable."
+        )
+
+    return {
+        "trainable_param_regex": list(trainable_param_regex) if trainable_param_regex else None,
+        "freeze_param_regex": list(freeze_param_regex) if freeze_param_regex else None,
+        "initial_trainable_count": len(initially_trainable_names),
+        "final_trainable_count": len(final_trainable_names),
+        "trainable_regex_match_count": len(trainable_regex_matches),
+        "frozen_by_regex_count": len(frozen_by_regex),
+        "final_trainable_sample": final_trainable_names[:12],
+    }
+
+
+def collect_trainable_parameters(model: Any) -> tuple[list[Any], list[str], int]:
+    named_trainable = [
+        (name, parameter) for name, parameter in model.named_parameters() if parameter.requires_grad
+    ]
+    if not named_trainable:
+        raise SystemExit("No trainable parameters found after selective training controls.")
+    trainable_tensors = [parameter for _name, parameter in named_trainable]
+    trainable_names = [name for name, _parameter in named_trainable]
+    trainable_count = int(sum(parameter.numel() for parameter in trainable_tensors))
+    return trainable_tensors, trainable_names, trainable_count
+
+
+def enable_layernorm_training(model: Any) -> dict[str, Any]:
+    trainable_names: list[str] = []
+    trainable_count = 0
+    for name, parameter in model.named_parameters():
+        normalized = name.lower()
+        if not any(
+            token in normalized
+            for token in ("layernorm", "layer_norm", "rmsnorm", ".norm", "_norm")
+        ):
+            continue
+        parameter.requires_grad = True
+        trainable_names.append(name)
+        trainable_count += int(parameter.numel())
+    return {
+        "enabled": True,
+        "trainable_layernorm_count": len(trainable_names),
+        "trainable_layernorm_parameter_count": trainable_count,
+        "trainable_layernorm_sample": trainable_names[:12],
+    }
+
+
+def enforce_trainable_parameter_budget(trainable_count: int, budget: int | None) -> dict[str, Any]:
+    if budget is not None and trainable_count > budget:
+        raise SystemExit(
+            "Trainable parameter count exceeds --max-trainable-parameters: "
+            f"{trainable_count} > {budget}. Reduce LoRA rank or target modules."
+        )
+    return {
+        "max_trainable_parameters": budget,
+        "within_budget": budget is None or trainable_count <= budget,
+    }
+
+
+def enforce_min_trainable_parameters(trainable_count: int, minimum: int | None) -> dict[str, Any]:
+    if minimum is not None and trainable_count < minimum:
+        raise SystemExit(
+            "Trainable parameter count is below --min-trainable-parameters: "
+            f"{trainable_count} < {minimum}. Increase LoRA rank or target more modules."
+        )
+    return {
+        "min_trainable_parameters": minimum,
+        "meets_minimum": minimum is None or trainable_count >= minimum,
+    }
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--model-name", required=True)
@@ -146,10 +428,39 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--eval-file", type=Path)
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--device", choices=["auto", "cpu", "cuda", "npu"], default="auto")
+    parser.add_argument(
+        "--npu-device-map",
+        choices=["auto", "balanced-layers"],
+        default="auto",
+        help="For non-DDP NPU launches, optionally shard language-model layers explicitly across visible NPUs.",
+    )
+    parser.add_argument(
+        "--npu-max-memory-gib",
+        type=int,
+        default=56,
+        help="Per-NPU max_memory GiB used with --npu-device-map balanced-layers.",
+    )
+    parser.add_argument(
+        "--npu-cpu-offload-fraction",
+        type=float,
+        default=0.0,
+        help=(
+            "With --npu-device-map balanced-layers: fraction of transformer "
+            "layers to place on CPU (accelerate dispatch hooks move them to "
+            "NPU on-demand). Use ~0.25 for a 70 GiB model on a single 62 GiB "
+            "Ascend910B2. 0 disables CPU offload."
+        ),
+    )
     parser.add_argument("--max-length", type=int, default=2048)
     parser.add_argument("--per-device-batch-size", type=int, default=1)
     parser.add_argument("--gradient-accumulation-steps", type=int, default=8)
     parser.add_argument("--learning-rate", type=float, default=2e-4)
+    parser.add_argument(
+        "--warmup-steps",
+        type=int,
+        default=0,
+        help="Number of linear LR warmup steps before cosine decay. 0 disables warmup.",
+    )
     parser.add_argument("--num-epochs", type=int, default=1)
     parser.add_argument("--max-steps", type=int, default=10)
     parser.add_argument("--eval-steps", type=int, default=5)
@@ -157,31 +468,336 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--lora-rank", type=int, default=16)
     parser.add_argument("--lora-alpha", type=int, default=32)
     parser.add_argument("--lora-dropout", type=float, default=0.05)
+    parser.add_argument(
+        "--lora-backend",
+        choices=["peft", "native"],
+        default="peft",
+        help="Use PEFT when available, or a minimal built-in LoRA wrapper for offline Huanxin task images.",
+    )
+    parser.add_argument(
+        "--train-layernorm",
+        action="store_true",
+        help="Also unfreeze per-layer norm parameters as a tiny, uniform low-risk companion to LoRA.",
+    )
+    parser.add_argument(
+        "--max-trainable-parameters",
+        type=int,
+        default=None,
+        help="Fail if the trainable parameter count exceeds this budget.",
+    )
+    parser.add_argument(
+        "--min-trainable-parameters",
+        type=int,
+        default=None,
+        help="Fail if the trainable parameter count is below this floor.",
+    )
     parser.add_argument("--load-in-8bit", action="store_true")
+    parser.add_argument(
+        "--gradient-checkpointing",
+        action="store_true",
+        help="Reduce activation memory by enabling gradient checkpointing and disabling KV cache.",
+    )
     parser.add_argument("--train-on-completions-only", action="store_true")
     parser.add_argument("--research-methods", nargs="*", default=[])
     parser.add_argument("--overwrite-output-dir", action="store_true")
     parser.add_argument("--allow-output-dir-reuse", action="store_true")
+    parser.add_argument(
+        "--checkpoint-interval-seconds",
+        type=int,
+        default=0,
+        help=(
+            "If > 0, periodically save a timestamped LoRA adapter checkpoint to "
+            "<output-dir>/checkpoints/step-<N>/adapter every N seconds of wall-clock "
+            "training time (rank 0 only). 0 disables periodic checkpointing."
+        ),
+    )
     parser.add_argument(
         "--target-modules",
         nargs="*",
         default=None,
         help="Optional explicit LoRA target module suffixes. Defaults to auto-discovery from the loaded model.",
     )
+    parser.add_argument(
+        "--target-module-regex",
+        nargs="*",
+        default=None,
+        help="Optional regex patterns matched against full module names for router-only or expert-specific LoRA targeting.",
+    )
+    parser.add_argument(
+        "--trainable-param-regex",
+        nargs="*",
+        default=None,
+        help="Optional regex allowlist for trainable parameter names. Non-matching trainable params are frozen.",
+    )
+    parser.add_argument(
+        "--freeze-param-regex",
+        nargs="*",
+        default=None,
+        help="Optional regex denylist for parameter names to freeze after allowlist filtering.",
+    )
     return parser.parse_args()
 
 
-def require_training_dependencies() -> tuple[Any, Any, Any, Any, Any, Any, Any, Any, Any, Any, Any]:
+def _visible_npu_indices() -> list[int]:
+    raw = os.environ.get("ASCEND_RT_VISIBLE_DEVICES") or os.environ.get("ASCEND_VISIBLE_DEVICES")
+    if not raw:
+        # Audit #4: returning [0] here silently collapsed every unset-env run
+        # to a single NPU (7/8 cards idle) with no log line. Query the real
+        # device count and WARN loudly instead.
+        count = 0
+        try:
+            import torch
+
+            if hasattr(torch, "npu") and torch.npu.is_available():
+                count = int(torch.npu.device_count())
+        except Exception:
+            count = 0
+        if count <= 0:
+            # npu-smi fallback: each device row starts "| <NPU-id> <chip-id> |".
+            try:
+                import subprocess
+
+                out = subprocess.run(
+                    ["npu-smi", "info"],
+                    capture_output=True,
+                    text=True,
+                    timeout=15,
+                ).stdout
+                rows = [
+                    line
+                    for line in out.splitlines()
+                    if re.match(r"^\s*\|\s*\d+\s+\|\s*\d+\s+\|", line)
+                ]
+                count = max(0, len(rows))
+            except Exception:
+                count = 0
+        indices = list(range(count)) if count > 0 else [0]
+        print(
+            json.dumps(
+                {
+                    "stage": "visible_npu_fallback",
+                    "count": count,
+                    "indices": indices,
+                    "note": (
+                        "ASCEND_RT_VISIBLE_DEVICES/ASCEND_VISIBLE_DEVICES unset — "
+                        "queried device count instead of silently using 1 NPU"
+                    ),
+                }
+            ),
+            flush=True,
+        )
+        return indices
+    indices: list[int] = []
+    for item in raw.split(","):
+        item = item.strip()
+        if not item:
+            continue
+        try:
+            indices.append(int(item))
+        except ValueError:
+            indices.append(len(indices))
+    return indices or [0]
+
+
+def _config_get(config: Any, key: str) -> Any:
+    if hasattr(config, key):
+        return getattr(config, key)
+    if isinstance(config, dict):
+        return config.get(key)
+    return None
+
+
+def build_balanced_npu_layer_device_map(
+    config: Any,
+    visible_npus: list[int],
+    cpu_offload_fraction: float = 0.0,
+) -> dict[str, str]:
+    text_config = _config_get(config, "text_config") or _config_get(config, "llm_config") or config
+    num_layers = _config_get(text_config, "num_hidden_layers") or _config_get(
+        text_config, "num_layers"
+    )
+    if not num_layers:
+        raise SystemExit(
+            "Cannot build balanced NPU device map: config does not expose num_hidden_layers."
+        )
+    # NOTE: torch.device(int) is always interpreted as a CUDA device index by PyTorch'sassing
+    # bare ints here (as this function used to) breaks NPU-only pods with
+    # "AssertionError: Torch not compiled with CUDA enabled" once the device_map dict
+    # values reach torch.device() construction inside transformers' weight-materialization
+    # path. Use explicit "npu:N" device strings instead, mirroring the fix already applied
+    # to the DDP device_map branch above.
+    indices = list(range(len(visible_npus)))
+    devices = [f"npu:{i}" for i in indices]
+    # When ``cpu_offload_fraction`` > 0 (e.g. a 70 GiB model on a single
+    # 62 GiB NPU), append ``"cpu"`` to the device rotation so the LAST
+    # ``cpu_offload_fraction`` of transformer layers is materialised on
+    # CPU and brought to the NPU on-demand by accelerate's dispatch hooks.
+    # The LM head and final norm stay on the last NPU so logits/loss never
+    # round-trip through CPU.
+    if cpu_offload_fraction > 0.0:
+        devices.append("cpu")
+    last_device = devices[-1] if cpu_offload_fraction <= 0.0 else devices[-2]
+    device_map: dict[str, str] = {
+        "model.embed_tokens": devices[0],
+        "model.norm": last_device,
+        "model.rotary_emb": devices[0],
+        "model.language_model.embed_tokens": devices[0],
+        "model.language_model.norm": last_device,
+        "model.language_model.rotary_emb": devices[0],
+        "lm_head": last_device,
+        # Multimodal checkpoints (e.g. Qwen3.5-MoE W8A8) ship a vision tower that
+        # text-only SFT never runs, but accelerate's check_device_map still
+        # requires every parameter to be placed. When CPU offloading is active,
+        # pin the vision/audio towers and projectors to ``cpu`` (they are never
+        # executed for text-only SFT, so keeping them off the NPU frees HBM for
+        # the transformer layers we actually train). Otherwise pin to device 0.
+        "model.visual": "cpu" if cpu_offload_fraction > 0.0 else devices[0],
+        "visual": "cpu" if cpu_offload_fraction > 0.0 else devices[0],
+        "model.vision_tower": "cpu" if cpu_offload_fraction > 0.0 else devices[0],
+        "model.audio_tower": "cpu" if cpu_offload_fraction > 0.0 else devices[0],
+        "model.multi_modal_projector": "cpu" if cpu_offload_fraction > 0.0 else devices[0],
+    }
+    npu_layer_count = int(num_layers)
+    if cpu_offload_fraction > 0.0:
+        cpu_layers = max(1, round(int(num_layers) * float(cpu_offload_fraction)))
+        npu_layer_count = max(1, int(num_layers) - cpu_layers)
+
+    # Preserve the measured four-card Qwen3.6-27B balance (device 0 also owns
+    # embeddings and device 3 owns the final norm/head).  All other device
+    # counts use a real N-way contiguous split.  The previous unconditional
+    # four-element boundary list silently left NPUs 4-6 empty in an eight-card
+    # ASI3 launch.
+    four_card_bounds = [13, 31, 49, 64]
+    for layer_idx in range(int(num_layers)):
+        if layer_idx >= npu_layer_count:
+            layer_device = "cpu"
+        elif len(indices) == 4 and int(num_layers) == 64 and npu_layer_count == int(num_layers):
+            device_idx = next(i for i, bound in enumerate(four_card_bounds) if layer_idx < bound)
+            layer_device = devices[device_idx]
+        else:
+            device_idx = min(
+                len(indices) - 1,
+                (layer_idx * len(indices)) // max(npu_layer_count, 1),
+            )
+            layer_device = devices[device_idx]
+        device_map[f"model.layers.{layer_idx}"] = layer_device
+        device_map[f"model.language_model.layers.{layer_idx}"] = layer_device
+    return device_map
+
+
+def checkpoint_has_quantization_config(config: Any) -> bool:
+    quantization_config = _config_get(config, "quantization_config")
+    return bool(quantization_config)
+
+
+def resolve_gradient_checkpointing_reentrant(
+    device: str,
+    has_device_map: bool,
+    env: dict[str, str] | None = None,
+) -> bool | None:
+    """Decide whether ``gradient_checkpointing_enable`` should pass
+    ``use_reentrant=True`` / ``False`` / ``None`` (transformers default).
+
+    On Ascend NPU, when the model is loaded with a non-trivial ``device_map``
+    (e.g. ``balanced-layers``) AND ``low_cpu_mem_usage=True``, accelerate
+    installs per-parameter pre/post-forward dispatch hooks that move tensors
+    between the ``meta`` device (used during ``init_empty_weights``) and the
+    real NPU device. The default ``use_reentrant=True`` checkpointing path
+    stores ``SavedVariable`` tensors *without* going through those hooks, so
+    during backward the matmul (``MmBackward0``) receives a gradient on
+    ``npu:0`` while its saved input is still on ``meta`` — raising::
+
+        RuntimeError: Function MmBackward0 returned an invalid gradient
+        at index 1 - expected device meta but got npu:0
+
+    The fix is to force ``use_reentrant=False`` on NPU whenever a device_map
+    is in play. The DDP path (``device_map={"": "npu:{rank}"}``) does not
+    strictly need this — every param lives on exactly one device — but we
+    still default it on for consistency unless overridden.
+
+    Override via env var ``QWEN_SFT_GRADIENT_CHECKPOINTING_REENTRANT``:
+
+    * ``"1"`` -> force ``use_reentrant=True``
+    * ``"0"`` -> force ``use_reentrant=False``
+    * unset  -> auto: non-reentrant on NPU + device_map, else ``None``
+    """
+    env = env if env is not None else os.environ
+    _reentrant_env = env.get("QWEN_SFT_GRADIENT_CHECKPOINTING_REENTRANT", "").strip()
+    if _reentrant_env == "1":
+        return True
+    if _reentrant_env == "0":
+        return False
+    if device == "npu" and has_device_map:
+        return False
+    return None
+
+
+def maybe_force_compressed_tensors_decompression(config: Any) -> bool:
+    """Force compressed-tensors checkpoints to decompress to their native float
+    dtype at load time.
+
+    Ascend NPUs reject the frozen int8 (W8A8) matmul path (``aclnnMm`` rejects
+    ``DT_INT8``). Setting ``run_compressed=False`` makes compressed-tensors
+    materialize bf16 weights so plain Linear matmuls run on the NPU and LoRA can
+    train on top of a frozen bf16 base. Returns True when the override was
+    applied.
+    """
+    quantization_config = _config_get(config, "quantization_config")
+    if quantization_config is None:
+        return False
+    quant_method = _config_get(quantization_config, "quant_method")
+    if quant_method is None and isinstance(quantization_config, dict):
+        quant_method = quantization_config.get("quant_method")
+    if str(quant_method).replace("_", "-").lower() != "compressed-tensors":
+        return False
+    if isinstance(quantization_config, dict):
+        quantization_config["run_compressed"] = False
+    else:
+        try:
+            quantization_config.run_compressed = False
+        except Exception:
+            return False
+    return True
+
+
+def first_parameter_device(model: Any, fallback: Any) -> Any:
+    try:
+        return next(model.parameters()).device
+    except Exception:
+        return fallback
+
+
+def require_training_dependencies(
+    lora_backend: str, adapter_init: Path | None
+) -> tuple[Any, Any, Any, Any, Any, Any, Any, Any, Any, Any, Any, Any]:
     try:
         import torch
-        from peft import LoraConfig, PeftModel, TaskType, get_peft_model
+        import transformers
         from torch.utils.data import DataLoader, Dataset
-        from transformers import AutoConfig, AutoModelForCausalLM, AutoProcessor, AutoTokenizer, PreTrainedTokenizerFast
+        from transformers import (
+            AutoConfig,
+            AutoModelForCausalLM,
+            AutoProcessor,
+            AutoTokenizer,
+            PreTrainedTokenizerFast,
+        )
     except ImportError as exc:
         raise SystemExit(
             "Missing training dependencies. Install the bootstrap stack first, for example: "
             "python3 -m pip install -r training/requirements-huanxin-cpu.txt"
         ) from exc
+
+    LoraConfig = PeftModel = TaskType = get_peft_model = None
+    if lora_backend == "peft" or adapter_init is not None:
+        try:
+            from peft import LoraConfig, PeftModel, TaskType, get_peft_model
+        except ImportError as exc:
+            raise SystemExit(
+                "Missing PEFT dependency. Use --lora-backend native for first-run LoRA without adapter-init, "
+                "or install peft before running this trainer."
+            ) from exc
+
+    apply_transformers_peft_compat_shims(transformers)
 
     try:
         import torch_npu  # noqa: F401
@@ -190,6 +806,7 @@ def require_training_dependencies() -> tuple[Any, Any, Any, Any, Any, Any, Any, 
 
     return (
         torch,
+        transformers,
         LoraConfig,
         PeftModel,
         TaskType,
@@ -202,83 +819,6 @@ def require_training_dependencies() -> tuple[Any, Any, Any, Any, Any, Any, Any, 
         AutoProcessor,
         PreTrainedTokenizerFast,
     )
-
-
-def supports_text_backend(candidate: Any) -> bool:
-    return candidate is not None and hasattr(candidate, "__call__") and hasattr(candidate, "pad")
-
-
-def load_tokenizers_backend_fallback(model_name: str, pretrained_tokenizer_fast_cls: Any) -> TextPreprocessorBackend | None:
-    tokenizer_config = load_tokenizer_config_metadata(model_name)
-    if tokenizer_config.get("tokenizer_class") != "TokenizersBackend":
-        return None
-
-    tokenizer_path = Path(model_name) / "tokenizer.json"
-    if not tokenizer_path.exists():
-        return None
-
-    additional_special_tokens = []
-    for key in (
-        "image_token",
-        "video_token",
-        "vision_bos_token",
-        "vision_eos_token",
-        "audio_bos_token",
-        "audio_eos_token",
-        "audio_token",
-    ):
-        value = tokenizer_config.get(key)
-        if value and value not in additional_special_tokens:
-            additional_special_tokens.append(value)
-
-    tokenizer = pretrained_tokenizer_fast_cls(
-        tokenizer_file=str(tokenizer_path),
-        pad_token=tokenizer_config.get("pad_token"),
-        eos_token=tokenizer_config.get("eos_token"),
-        additional_special_tokens=additional_special_tokens or None,
-        clean_up_tokenization_spaces=bool(tokenizer_config.get("clean_up_tokenization_spaces", False)),
-        model_max_length=int(tokenizer_config.get("model_max_length", 262144)),
-    )
-    return TextPreprocessorBackend(
-        render_backend=tokenizer,
-        text_backend=tokenizer,
-        save_backend=tokenizer,
-        backend_kind="pretrained_tokenizer_fast_fallback",
-    )
-
-
-def load_text_preprocessor_backend(model_name: str, auto_tokenizer_cls: Any, auto_processor_cls: Any, pretrained_tokenizer_fast_cls: Any) -> TextPreprocessorBackend:
-    processor_error: Exception | None = None
-    try:
-        processor = auto_processor_cls.from_pretrained(model_name, trust_remote_code=True)
-        processor_tokenizer = getattr(processor, "tokenizer", None)
-        if supports_text_backend(processor_tokenizer):
-            render_backend = processor if hasattr(processor, "apply_chat_template") else processor_tokenizer
-            return TextPreprocessorBackend(
-                render_backend=render_backend,
-                text_backend=processor_tokenizer,
-                save_backend=processor,
-                backend_kind="processor.tokenizer",
-            )
-    except Exception as exc:  # noqa: BLE001
-        processor_error = exc
-
-    try:
-        tokenizer = auto_tokenizer_cls.from_pretrained(model_name, trust_remote_code=True)
-        return TextPreprocessorBackend(
-            render_backend=tokenizer,
-            text_backend=tokenizer,
-            save_backend=tokenizer,
-            backend_kind="tokenizer",
-        )
-    except Exception as exc:  # noqa: BLE001
-        fallback = load_tokenizers_backend_fallback(model_name, pretrained_tokenizer_fast_cls)
-        if fallback is not None:
-            return fallback
-        error_parts = [f"AutoTokenizer load failed: {type(exc).__name__}: {exc}"]
-        if processor_error is not None:
-            error_parts.append(f"AutoProcessor fallback also failed: {type(processor_error).__name__}: {processor_error}")
-        raise SystemExit("Unable to load a text preprocessing backend. " + " | ".join(error_parts)) from exc
 
 
 def resolve_device(torch: Any, choice: str) -> Any:
@@ -315,21 +855,6 @@ def load_jsonl(path: Path) -> list[dict]:
     return rows
 
 
-def render_messages(render_backend: Any, record: dict) -> str:
-    messages = record.get("messages")
-    if not isinstance(messages, list) or not messages:
-        raise ValueError(f"Record {record.get('example_id')} has no messages")
-    if hasattr(render_backend, "apply_chat_template"):
-        return render_backend.apply_chat_template(messages, tokenize=False, add_generation_prompt=False)
-
-    parts = []
-    for message in messages:
-        role = str(message.get("role", "user")).upper()
-        content = str(message.get("content", ""))
-        parts.append(f"{role}: {content}")
-    return "\n\n".join(parts)
-
-
 class ChatSftDataset:
     def __init__(
         self,
@@ -342,37 +867,27 @@ class ChatSftDataset:
     ) -> None:
         rows = load_jsonl(path)
         self.examples = []
+        self.skipped_empty_completion_examples: list[Any] = []
         research_methods = research_methods or []
         for record in rows:
             working_record = copy.deepcopy(record)
             for method in research_methods:
                 working_record = method.augment_sft_record(working_record, stage=stage)
-            full_text = render_messages(backend.render_backend, working_record)
-            encoded = backend.text_backend(
-                full_text,
-                truncation=True,
-                max_length=max_length,
-                padding=False,
-                return_attention_mask=True,
+            example = build_supervised_text_example(
+                working_record,
+                backend,
+                max_length,
+                train_on_completions_only=train_on_completions_only,
             )
-            example = {
-                "input_ids": encoded["input_ids"],
-                "attention_mask": encoded["attention_mask"],
-                "example_id": working_record.get("example_id"),
-            }
-            if train_on_completions_only:
-                messages = working_record.get("messages", [])
-                if len(messages) >= 2 and messages[-1].get("role") == "assistant":
-                    prompt_text = render_messages(backend.render_backend, {"messages": messages[:-1]})
-                    prompt_ids = backend.text_backend(
-                        prompt_text,
-                        truncation=True,
-                        max_length=max_length,
-                        padding=False,
-                        return_attention_mask=False,
-                    )["input_ids"]
-                    example["prompt_token_count"] = min(len(prompt_ids), len(example["input_ids"]))
+            if train_on_completions_only and count_trainable_label_tokens(example) <= 0:
+                self.skipped_empty_completion_examples.append(example.get("example_id"))
+                continue
             self.examples.append(example)
+        if not self.examples:
+            raise ValueError(
+                "No usable SFT examples remain after tokenization/truncation. "
+                "Increase --max-length or use a shorter smoke split."
+            )
 
     def __len__(self) -> int:
         return len(self.examples)
@@ -381,34 +896,139 @@ class ChatSftDataset:
         return self.examples[index]
 
 
+def count_trainable_label_tokens(example: dict[str, Any]) -> int:
+    return max(0, len(example["input_ids"]) - int(example.get("prompt_token_count") or 0))
+
+
+def summarize_trainable_label_counts(dataset: ChatSftDataset) -> dict[str, Any]:
+    counts = [count_trainable_label_tokens(example) for example in dataset.examples]
+    if not counts:
+        return {"min": 0, "max": 0, "mean": 0.0, "p50": 0, "p90": 0, "sample": []}
+    ordered = sorted(counts)
+
+    def percentile_index(fraction: float) -> int:
+        return min(len(ordered) - 1, max(0, round((len(ordered) - 1) * fraction)))
+
+    return {
+        "min": min(counts),
+        "max": max(counts),
+        "mean": round(sum(counts) / len(counts), 3),
+        "p50": ordered[percentile_index(0.5)],
+        "p90": ordered[percentile_index(0.9)],
+        "sample": counts[:8],
+    }
+
+
 class PaddingCollator:
-    def __init__(self, text_backend: Any) -> None:
+    def __init__(
+        self,
+        text_backend: Any,
+        torch_module: Any,
+        *,
+        add_mm_token_type_ids: bool = False,
+        pad_to_max_length: int | None = None,
+    ) -> None:
         self.text_backend = text_backend
+        self.torch_module = torch_module
+        self.add_mm_token_type_ids = add_mm_token_type_ids
+        self.pad_to_max_length = pad_to_max_length
 
-    def __call__(self, batch: list[dict]) -> dict[str, torch.Tensor]:
-        padded = self.text_backend.pad(
-            [{"input_ids": item["input_ids"], "attention_mask": item["attention_mask"]} for item in batch],
-            padding=True,
-            return_tensors="pt",
+    def __call__(self, batch: list[dict]) -> dict[str, Any]:
+        return pad_supervised_text_batch(
+            batch,
+            self.text_backend,
+            self.torch_module,
+            add_mm_token_type_ids=self.add_mm_token_type_ids,
+            pad_to_max_length=self.pad_to_max_length,
         )
-        labels = padded["input_ids"].clone()
-        labels[padded["attention_mask"] == 0] = -100
-        for row_index, item in enumerate(batch):
-            prompt_token_count = item.get("prompt_token_count")
-            if prompt_token_count:
-                labels[row_index, :prompt_token_count] = -100
-        padded["labels"] = labels
-        return padded
 
 
-def evaluate(model: Any, loader: Any, device: Any) -> dict[str, float]:
+def _unwrap_causal_lm(model: Any) -> Any:
+    """Return the underlying HF CausalLM, unwrapping DDP/PEFT wrappers."""
+    inner = getattr(model, "module", model)  # DDP
+    inner = getattr(inner, "base_model", inner)  # PEFT LoraModel -> base_model
+    inner = getattr(inner, "model", inner)  # PEFT base_model.model -> HF model
+    return inner
+
+
+def _resolve_lm_head_and_backbone(model: Any):
+    """Best-effort locate the lm_head and the backbone that returns hidden states."""
+    inner = _unwrap_causal_lm(model)
+    lm_head = getattr(inner, "lm_head", None)
+    backbone = getattr(inner, "model", None)
+    return inner, backbone, lm_head
+
+
+def chunked_causal_lm_loss(
+    model: Any,
+    batch: dict,
+    torch_module: Any,
+    chunk_size: int = 1024,
+    ignore_index: int = -100,
+) -> Any:
+    """Compute causal-LM cross-entropy WITHOUT materializing the full
+    [B, seq, vocab] logits tensor.
+
+    The vocab is ~150k, so on a 61 GiB Ascend NPU the fp32 logits+loss tensor at
+    seq_len 512-768 alone OOMs. We run the transformer backbone once to get hidden
+    states, then apply the lm_head + cross-entropy over short slices of the
+    sequence so peak memory is capped at chunk_size tokens of logits at a time.
+
+    Falls back to the model's built-in loss if we cannot locate the lm_head /
+    backbone (so behaviour is never silently wrong).
+    """
+    inner, backbone, lm_head = _resolve_lm_head_and_backbone(model)
+    labels = batch.get("labels")
+    if labels is None or backbone is None or lm_head is None:
+        # Cannot do the memory-frugal path; defer to the model's own loss.
+        return model(**batch).loss
+
+    backbone_inputs = {k: v for k, v in batch.items() if k != "labels"}
+    outputs = backbone(**backbone_inputs)
+    hidden = outputs[0] if isinstance(outputs, tuple) else outputs.last_hidden_state
+
+    # Standard causal shift: predict token t+1 from hidden state at t.
+    shift_hidden = hidden[:, :-1, :].contiguous()
+    shift_labels = labels[:, 1:].contiguous()
+    flat_hidden = shift_hidden.view(-1, shift_hidden.size(-1))
+    flat_labels = shift_labels.view(-1)
+
+    total_tokens = int((flat_labels != ignore_index).sum().item())
+    if total_tokens == 0:
+        return flat_hidden.sum() * 0.0  # keep graph, zero loss
+
+    loss_sum = None
+    n = flat_hidden.size(0)
+    for start in range(0, n, chunk_size):
+        end = min(start + chunk_size, n)
+        logits_chunk = lm_head(flat_hidden[start:end])
+        if logits_chunk.dtype not in (torch_module.float32, torch_module.float64):
+            logits_chunk = logits_chunk.float()
+        labels_chunk = flat_labels[start:end].to(logits_chunk.device)
+        chunk_loss = torch_module.nn.functional.cross_entropy(
+            logits_chunk,
+            labels_chunk,
+            ignore_index=ignore_index,
+            reduction="sum",
+        )
+        loss_sum = chunk_loss if loss_sum is None else loss_sum + chunk_loss
+        del logits_chunk
+    return loss_sum / total_tokens
+
+
+def evaluate(model: Any, loader: Any, device: Any, torch_module: Any) -> dict[str, float]:
+    use_chunked = os.environ.get("QWEN_SFT_CHUNKED_LOSS", "0") == "1"
+    chunk_size = int(os.environ.get("QWEN_SFT_LOSS_CHUNK", "1024") or "1024")
     model.eval()
     total_loss = 0.0
     total_items = 0
-    with torch.no_grad():
+    with torch_module.no_grad():
         for batch in loader:
             batch = {name: tensor.to(device) for name, tensor in batch.items()}
-            loss = model(**batch).loss
+            if use_chunked:
+                loss = chunked_causal_lm_loss(model, batch, torch_module, chunk_size=chunk_size)
+            else:
+                loss = model(**batch).loss
             batch_items = batch["input_ids"].size(0)
             total_loss += float(loss.item()) * batch_items
             total_items += batch_items
@@ -423,6 +1043,8 @@ def build_run_signature(args: argparse.Namespace) -> dict[str, Any]:
         "train_file": str(args.train_file),
         "eval_file": str(args.eval_file) if args.eval_file else None,
         "device": args.device,
+        "npu_device_map": args.npu_device_map,
+        "npu_max_memory_gib": args.npu_max_memory_gib,
         "max_length": args.max_length,
         "per_device_batch_size": args.per_device_batch_size,
         "gradient_accumulation_steps": args.gradient_accumulation_steps,
@@ -434,10 +1056,19 @@ def build_run_signature(args: argparse.Namespace) -> dict[str, Any]:
         "lora_rank": args.lora_rank,
         "lora_alpha": args.lora_alpha,
         "lora_dropout": args.lora_dropout,
+        "lora_backend": args.lora_backend,
+        "train_layernorm": args.train_layernorm,
+        "max_trainable_parameters": args.max_trainable_parameters,
+        "min_trainable_parameters": args.min_trainable_parameters,
         "load_in_8bit": args.load_in_8bit,
         "train_on_completions_only": args.train_on_completions_only,
         "research_methods": list(args.research_methods),
         "target_modules": list(args.target_modules) if args.target_modules else None,
+        "target_module_regex": list(args.target_module_regex) if args.target_module_regex else None,
+        "trainable_param_regex": list(args.trainable_param_regex)
+        if args.trainable_param_regex
+        else None,
+        "freeze_param_regex": list(args.freeze_param_regex) if args.freeze_param_regex else None,
     }
     signature_json = json.dumps(signature, sort_keys=True)
     signature["signature_sha256"] = hashlib.sha256(signature_json.encode("utf-8")).hexdigest()
@@ -446,7 +1077,11 @@ def build_run_signature(args: argparse.Namespace) -> dict[str, Any]:
 
 def validate_output_dir(args: argparse.Namespace, run_signature: dict[str, Any]) -> None:
     config_path = args.output_dir / "run_config.json"
-    has_existing_artifacts = config_path.exists() or (args.output_dir / "adapter").exists() or (args.output_dir / "metrics.json").exists()
+    has_existing_artifacts = (
+        config_path.exists()
+        or (args.output_dir / "adapter").exists()
+        or (args.output_dir / "metrics.json").exists()
+    )
 
     if args.overwrite_output_dir:
         return
@@ -477,11 +1112,29 @@ def main() -> int:
     run_signature = build_run_signature(args)
     validate_output_dir(args, run_signature)
     research_methods = load_research_methods(args.research_methods)
-    print(json.dumps({"stage": "args_parsed", "output_dir": str(args.output_dir), "train_file": str(args.train_file), "eval_file": str(args.eval_file) if args.eval_file else None}, ensure_ascii=False), flush=True)
-    print(json.dumps({"stage": "research_methods_loaded", "methods": summarize_methods(research_methods)}, ensure_ascii=False), flush=True)
+    print(
+        json.dumps(
+            {
+                "stage": "args_parsed",
+                "output_dir": str(args.output_dir),
+                "train_file": str(args.train_file),
+                "eval_file": str(args.eval_file) if args.eval_file else None,
+            },
+            ensure_ascii=False,
+        ),
+        flush=True,
+    )
+    print(
+        json.dumps(
+            {"stage": "research_methods_loaded", "methods": summarize_methods(research_methods)},
+            ensure_ascii=False,
+        ),
+        flush=True,
+    )
 
     (
         torch,
+        transformers,
         LoraConfig,
         PeftModel,
         TaskType,
@@ -493,10 +1146,51 @@ def main() -> int:
         AutoTokenizer,
         AutoProcessor,
         PreTrainedTokenizerFast,
-    ) = require_training_dependencies()
+    ) = require_training_dependencies(args.lora_backend, args.adapter_init)
+    qwen35_runtime_registration = None
+    try:
+        qwen35_runtime_registration = register_qwen35_moe_runtime(
+            transformers,
+            auto_config_cls=AutoConfig,
+            auto_model_for_causal_lm_cls=AutoModelForCausalLM,
+        )
+    except Exception as exc:  # noqa: BLE001
+        qwen35_runtime_registration = {
+            "error_type": type(exc).__name__,
+            "error": str(exc),
+        }
     print(json.dumps({"stage": "deps_loaded"}, ensure_ascii=False), flush=True)
+    print(
+        json.dumps(
+            {"stage": "qwen35_moe_runtime_registration", **qwen35_runtime_registration},
+            ensure_ascii=False,
+        ),
+        flush=True,
+    )
 
-    runtime_compat = probe_model_runtime_compat(args.model_name, AutoConfig)
+    try:
+        model_loader, runtime_compat, model_loader_metadata = select_transformers_model_loader(
+            args.model_name,
+            auto_config_cls=AutoConfig,
+            auto_model_for_causal_lm_cls=AutoModelForCausalLM,
+            transformers_module=transformers,
+        )
+    except SystemExit as exc:
+        runtime_compat = probe_model_runtime_compat(args.model_name, AutoConfig)
+        print(
+            json.dumps(
+                {
+                    "stage": "trainer_backend_preflight",
+                    "state": "blocked",
+                    "model_type": (runtime_compat or {}).get("config_model_type"),
+                    "architectures": (runtime_compat or {}).get("config_architectures"),
+                    "error": str(exc),
+                },
+                ensure_ascii=False,
+            ),
+            flush=True,
+        )
+        raise
     if runtime_compat is not None:
         print(
             json.dumps(
@@ -508,8 +1202,14 @@ def main() -> int:
             ),
             flush=True,
         )
+    print(
+        json.dumps({"stage": "model_loader_selected", **model_loader_metadata}, ensure_ascii=False),
+        flush=True,
+    )
 
-    text_preprocessor = load_text_preprocessor_backend(args.model_name, AutoTokenizer, AutoProcessor, PreTrainedTokenizerFast)
+    text_preprocessor = load_text_preprocessor_backend(
+        args.model_name, AutoTokenizer, AutoProcessor, PreTrainedTokenizerFast
+    )
     print(
         json.dumps(
             {
@@ -525,13 +1225,22 @@ def main() -> int:
     )
 
     device = resolve_device(torch, args.device)
-    print(json.dumps({"stage": "device_resolved", "device": str(device), "requested": args.device}, ensure_ascii=False), flush=True)
+    print(
+        json.dumps(
+            {"stage": "device_resolved", "device": str(device), "requested": args.device},
+            ensure_ascii=False,
+        ),
+        flush=True,
+    )
 
     # DDP setup
-    distributed = "RANK" in os.environ and "WORLD_SIZE" in os.environ
     local_rank = int(os.environ.get("LOCAL_RANK", 0))
     rank = int(os.environ.get("RANK", 0))
     world_size = int(os.environ.get("WORLD_SIZE", 1))
+    distributed = world_size > 1
+    if not distributed:
+        local_rank = 0
+        rank = 0
 
     if distributed:
         if device.type == "npu":
@@ -541,13 +1250,39 @@ def main() -> int:
     else:
         if device.type == "npu":
             torch.npu.set_device(0)
-    print(json.dumps({"stage": "ddp_ready", "distributed": distributed, "rank": rank, "world_size": world_size, "device": str(device)}, ensure_ascii=False), flush=True)
+    print(
+        json.dumps(
+            {
+                "stage": "ddp_ready",
+                "distributed": distributed,
+                "rank": rank,
+                "world_size": world_size,
+                "device": str(device),
+            },
+            ensure_ascii=False,
+        ),
+        flush=True,
+    )
+
+    if rank == 0:
+        (args.output_dir / "sft_step_metrics.jsonl").unlink(missing_ok=True)
+        (args.output_dir / "metrics.json").unlink(missing_ok=True)
 
     tokenizer = text_preprocessor.text_backend
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
     tokenizer.padding_side = "right"
-    print(json.dumps({"stage": "tokenizer_loaded", "pad_token": tokenizer.pad_token, "padding_side": tokenizer.padding_side}, ensure_ascii=False), flush=True)
+    print(
+        json.dumps(
+            {
+                "stage": "tokenizer_loaded",
+                "pad_token": tokenizer.pad_token,
+                "padding_side": tokenizer.padding_side,
+            },
+            ensure_ascii=False,
+        ),
+        flush=True,
+    )
 
     train_dataset = ChatSftDataset(
         args.train_file,
@@ -557,22 +1292,94 @@ def main() -> int:
         research_methods=research_methods,
         stage="sft_train",
     )
-    eval_dataset = ChatSftDataset(
-        args.eval_file,
-        text_preprocessor,
-        args.max_length,
-        train_on_completions_only=args.train_on_completions_only,
-        research_methods=research_methods,
-        stage="sft_eval",
-    ) if args.eval_file else None
-    print(json.dumps({"stage": "datasets_ready", "train_examples": len(train_dataset), "eval_examples": len(eval_dataset) if eval_dataset is not None else 0, "max_length": args.max_length}, ensure_ascii=False), flush=True)
+    eval_dataset = (
+        ChatSftDataset(
+            args.eval_file,
+            text_preprocessor,
+            args.max_length,
+            train_on_completions_only=args.train_on_completions_only,
+            research_methods=research_methods,
+            stage="sft_eval",
+        )
+        if args.eval_file
+        else None
+    )
+    train_label_summary = summarize_trainable_label_counts(train_dataset)
+    eval_label_summary = (
+        summarize_trainable_label_counts(eval_dataset) if eval_dataset is not None else None
+    )
+    print(
+        json.dumps(
+            {
+                "stage": "datasets_ready",
+                "train_examples": len(train_dataset),
+                "eval_examples": len(eval_dataset) if eval_dataset is not None else 0,
+                "max_length": args.max_length,
+                "train_label_tokens": train_label_summary,
+                "eval_label_tokens": eval_label_summary,
+                "train_skipped_empty_completion_examples": len(
+                    train_dataset.skipped_empty_completion_examples
+                ),
+                "train_skipped_empty_completion_sample": train_dataset.skipped_empty_completion_examples[
+                    :5
+                ],
+                "eval_skipped_empty_completion_examples": len(
+                    eval_dataset.skipped_empty_completion_examples
+                )
+                if eval_dataset is not None
+                else 0,
+                "eval_skipped_empty_completion_sample": eval_dataset.skipped_empty_completion_examples[
+                    :5
+                ]
+                if eval_dataset is not None
+                else [],
+            },
+            ensure_ascii=False,
+        ),
+        flush=True,
+    )
 
-    collator = PaddingCollator(text_preprocessor.text_backend)
-    train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset, num_replicas=world_size, rank=rank, shuffle=True) if distributed else None
-    train_loader = DataLoader(train_dataset, batch_size=args.per_device_batch_size, shuffle=(train_sampler is None), collate_fn=collator, sampler=train_sampler)
+    # Static padding (constant shapes) avoids Ascend TBE kernel recompilation
+    # per sequence length, which otherwise stalls training on low-core NPU hosts.
+    # Enable with QWEN_SFT_PAD_TO_MAX_LENGTH=1 (pads to --max-length), or set it
+    # to an explicit integer length.
+    _pad_env = os.environ.get("QWEN_SFT_PAD_TO_MAX_LENGTH", "").strip()
+    if _pad_env in ("1", "true", "True"):
+        _pad_to_max_length: int | None = args.max_length
+    elif _pad_env.isdigit():
+        _pad_to_max_length = int(_pad_env)
+    else:
+        _pad_to_max_length = None
+    collator = PaddingCollator(
+        text_preprocessor.text_backend,
+        torch,
+        add_mm_token_type_ids=(
+            str(
+                runtime_compat.get("config_model_type") if runtime_compat is not None else ""
+            ).startswith("gemma4")
+        ),
+        pad_to_max_length=_pad_to_max_length,
+    )
+    train_sampler = (
+        torch.utils.data.distributed.DistributedSampler(
+            train_dataset, num_replicas=world_size, rank=rank, shuffle=True
+        )
+        if distributed
+        else None
+    )
+    train_loader = DataLoader(
+        train_dataset,
+        batch_size=args.per_device_batch_size,
+        shuffle=(train_sampler is None),
+        collate_fn=collator,
+        sampler=train_sampler,
+    )
     eval_loader = None
     if eval_dataset is not None:
-        eval_loader = DataLoader(eval_dataset, batch_size=args.per_device_batch_size, shuffle=False, collate_fn=collator)
+        eval_loader = DataLoader(
+            eval_dataset, batch_size=args.per_device_batch_size, shuffle=False, collate_fn=collator
+        )
+    preflight_batch = collator([train_dataset[0]])
 
     optimizer_steps_per_epoch = len(train_loader) // args.gradient_accumulation_steps
     max_available_steps = optimizer_steps_per_epoch * args.num_epochs
@@ -581,6 +1388,9 @@ def main() -> int:
             "Not enough batches to produce one optimizer step. "
             "Lower --gradient-accumulation-steps or increase training data."
         )
+    # --max-steps <= 0 means "train all available steps" (full requested epochs).
+    if args.max_steps <= 0:
+        args.max_steps = max_available_steps
     if args.max_steps > max_available_steps:
         raise ValueError(
             f"Requested --max-steps {args.max_steps} but current settings only allow "
@@ -603,19 +1413,101 @@ def main() -> int:
 
     # Keep remote multi-rank launches from spiking host RAM while preserving the
     # checkpoint's native precision for OmniCoder/Qwen-family snapshots.
+    model_config = AutoConfig.from_pretrained(args.model_name, trust_remote_code=True)
+    checkpoint_is_quantized = checkpoint_has_quantization_config(model_config)
+    decompress_quantized = (
+        checkpoint_is_quantized
+        and args.device == "npu"
+        and os.environ.get("QWEN_SFT_DECOMPRESS_COMPRESSED_TENSORS", "1") != "0"
+    )
+    decompressed_compressed_tensors = (
+        maybe_force_compressed_tensors_decompression(model_config)
+        if decompress_quantized
+        else False
+    )
+    if decompressed_compressed_tensors:
+        load_dtype: Any = torch.bfloat16
+    elif checkpoint_is_quantized:
+        load_dtype = "auto"
+    elif args.device == "npu":
+        load_dtype = torch.bfloat16
+    else:
+        load_dtype = "auto"
     model_kwargs = {
         "trust_remote_code": True,
         "low_cpu_mem_usage": True,
-        "torch_dtype": "auto",
+        "torch_dtype": load_dtype,
+        "config": model_config,
     }
-    if args.load_in_8bit:
+    # Allow forcing the attention backend (e.g. eager) via env. On Ascend NPU the
+    # Qwen3.5 hybrid model's flash-attention backward op
+    # (aclnnFlashAttentionScoreGrad) fails, so QWEN_SFT_ATTN_IMPL=eager routes the
+    # softmax-attention layers through the eager path instead.
+    _attn_impl = os.environ.get("QWEN_SFT_ATTN_IMPL", "").strip()
+    if _attn_impl:
+        model_kwargs["attn_implementation"] = _attn_impl
+        try:
+            model_config._attn_implementation = _attn_impl
+        except Exception:
+            pass
+    print(
+        json.dumps(
+            {
+                "stage": "quantized_checkpoint_load_plan",
+                "checkpoint_is_quantized": checkpoint_is_quantized,
+                "decompressed_compressed_tensors": decompressed_compressed_tensors,
+                "load_dtype": str(load_dtype),
+            },
+            ensure_ascii=False,
+        ),
+        flush=True,
+    )
+    if args.device == "npu":
+        if distributed:
+            model_kwargs["device_map"] = {"": f"npu:{local_rank}"}
+        elif args.npu_device_map == "balanced-layers":
+            visible_npus = _visible_npu_indices()
+            model_kwargs["device_map"] = build_balanced_npu_layer_device_map(
+                model_config,
+                visible_npus,
+                cpu_offload_fraction=getattr(args, "npu_cpu_offload_fraction", 0.0) or 0.0,
+            )
+            # max_memory keys must match the device_map's device identifiers
+            # ("npu:N" strings), not bare ints (which torch.device() would treat as CUDA).
+            model_kwargs["max_memory"] = {
+                f"npu:{device_idx}": f"{args.npu_max_memory_gib}GiB"
+                for device_idx in range(len(visible_npus))
+            }
+            print(
+                json.dumps(
+                    {
+                        "stage": "balanced_npu_device_map_ready",
+                        "visible_npus": visible_npus,
+                        "device_map_entries": len(model_kwargs["device_map"]),
+                        "max_memory": model_kwargs["max_memory"],
+                        "checkpoint_is_quantized": checkpoint_is_quantized,
+                        "torch_dtype": str(model_kwargs.get("torch_dtype")),
+                    },
+                    ensure_ascii=False,
+                ),
+                flush=True,
+            )
+        else:
+            model_kwargs["device_map"] = "auto"
+    elif args.load_in_8bit:
         model_kwargs.pop("torch_dtype", None)
         model_kwargs["load_in_8bit"] = True
         model_kwargs["device_map"] = "auto"
-    print(json.dumps({"stage": "model_load_start", "model_name": args.model_name, "t": time.time()}, ensure_ascii=False), flush=True)
+    print(
+        json.dumps(
+            {"stage": "model_load_start", "model_name": args.model_name, "t": time.time()},
+            ensure_ascii=False,
+        ),
+        flush=True,
+    )
     model_load_started_at = time.time()
     try:
-        model = AutoModelForCausalLM.from_pretrained(args.model_name, **model_kwargs)
+        model = model_loader.from_pretrained(args.model_name, **model_kwargs)
     except Exception as exc:
         print(
             json.dumps(
@@ -631,9 +1523,25 @@ def main() -> int:
             flush=True,
         )
         raise
-    print(json.dumps({"stage": "model_loaded", "t": time.time(), "dt_model_load_sec": round(time.time() - model_load_started_at, 3)}, ensure_ascii=False), flush=True)
+    print(
+        json.dumps(
+            {
+                "stage": "model_loaded",
+                "t": time.time(),
+                "dt_model_load_sec": round(time.time() - model_load_started_at, 3),
+            },
+            ensure_ascii=False,
+        ),
+        flush=True,
+    )
+    lora_wrap_summary: dict[str, Any] = {"backend": args.lora_backend}
     if args.adapter_init is not None:
+        if PeftModel is None:
+            raise SystemExit(
+                "--adapter-init requires PEFT; native backend can only create new LoRA adapters."
+            )
         model = PeftModel.from_pretrained(model, str(args.adapter_init), is_trainable=True)
+        resolved_target_modules = None
         print(
             json.dumps(
                 {
@@ -644,8 +1552,14 @@ def main() -> int:
             ),
             flush=True,
         )
-    else:
-        resolved_target_modules = resolve_lora_target_modules(args.target_modules, model)
+    elif args.lora_backend == "peft":
+        if LoraConfig is None or TaskType is None or get_peft_model is None:
+            raise SystemExit("PEFT backend selected but PEFT imports are unavailable.")
+        resolved_target_modules = resolve_lora_target_modules(
+            args.target_modules,
+            model,
+            args.target_module_regex,
+        )
         lora_config = LoraConfig(
             task_type=TaskType.CAUSAL_LM,
             r=args.lora_rank,
@@ -655,105 +1569,604 @@ def main() -> int:
             bias="none",
         )
         model = get_peft_model(model, lora_config)
-        print(json.dumps({"stage": "lora_wrapped", "resolved_target_modules": resolved_target_modules}, ensure_ascii=False), flush=True)
-    model.to(device)
-    print(json.dumps({"stage": "model_on_device", "device": str(device)}, ensure_ascii=False), flush=True)
+        lora_wrap_summary = {"backend": "peft"}
+        print(
+            json.dumps(
+                {
+                    "stage": "lora_wrapped",
+                    "resolved_target_modules": resolved_target_modules,
+                    **lora_wrap_summary,
+                },
+                ensure_ascii=False,
+            ),
+            flush=True,
+        )
+    else:
+        resolved_target_modules = resolve_lora_target_modules(
+            args.target_modules,
+            model,
+            args.target_module_regex,
+        )
+        lora_wrap_summary = apply_native_lora(
+            model,
+            torch,
+            resolved_target_modules,
+            args.lora_rank,
+            args.lora_alpha,
+            args.lora_dropout,
+        )
+        print(
+            json.dumps(
+                {
+                    "stage": "lora_wrapped",
+                    "resolved_target_modules": resolved_target_modules,
+                    **lora_wrap_summary,
+                },
+                ensure_ascii=False,
+            ),
+            flush=True,
+        )
+    if args.gradient_checkpointing:
+        if hasattr(model, "config"):
+            model.config.use_cache = False
+        if hasattr(model, "enable_input_require_grads"):
+            model.enable_input_require_grads()
+        _use_reentrant: Any = resolve_gradient_checkpointing_reentrant(
+            args.device, "device_map" in model_kwargs
+        )
+        if hasattr(model, "gradient_checkpointing_enable"):
+            # NPU + accelerate device_map reentrant-checkpointing fix.
+            # See ``resolve_gradient_checkpointing_reentrant`` for the full
+            # rationale. ``_use_reentrant`` is ``False`` on NPU + device_map
+            # to avoid "MmBackward0 returned an invalid gradient - expected
+            # device meta but got npu:0".
+            _gc_kwargs: dict[str, Any] = {}
+            if _use_reentrant is not None:
+                _gc_kwargs["gradient_checkpointing_kwargs"] = {
+                    "use_reentrant": _use_reentrant,
+                }
+            try:
+                model.gradient_checkpointing_enable(**_gc_kwargs)
+            except TypeError:
+                # Older transformers versions may not accept
+                # ``gradient_checkpointing_kwargs`` — fall back to the bare
+                # call so the run still proceeds (the reentrant fix is a
+                # no-op on those versions anyway because they default to
+                # reentrant=True with no kwarg surface).
+                model.gradient_checkpointing_enable()
+        print(
+            json.dumps(
+                {
+                    "stage": "gradient_checkpointing_enabled",
+                    "use_cache": getattr(getattr(model, "config", None), "use_cache", None),
+                    "use_reentrant": _use_reentrant,
+                    "has_device_map": "device_map" in model_kwargs,
+                },
+                ensure_ascii=False,
+            ),
+            flush=True,
+        )
+    layernorm_training = {
+        "enabled": False,
+        "trainable_layernorm_count": 0,
+        "trainable_layernorm_parameter_count": 0,
+    }
+    if args.train_layernorm:
+        layernorm_training = enable_layernorm_training(model)
+        print(
+            json.dumps(
+                {"stage": "layernorm_training_enabled", **layernorm_training}, ensure_ascii=False
+            ),
+            flush=True,
+        )
+    selective_training = apply_selective_training_controls(
+        model,
+        trainable_param_regex=getattr(args, "trainable_param_regex", None),
+        freeze_param_regex=getattr(args, "freeze_param_regex", None),
+    )
+    trainable_param_tensors, trainable_param_names, trainable_param_count = (
+        collect_trainable_parameters(model)
+    )
+    trainable_parameter_budget = enforce_trainable_parameter_budget(
+        trainable_param_count, args.max_trainable_parameters
+    )
+    trainable_parameter_floor = enforce_min_trainable_parameters(
+        trainable_param_count, args.min_trainable_parameters
+    )
+    print(
+        json.dumps(
+            {
+                "stage": "selective_training_applied",
+                **selective_training,
+                "layernorm_training": layernorm_training,
+                "trainable_parameter_budget": trainable_parameter_budget,
+                "trainable_parameter_floor": trainable_parameter_floor,
+                "trainable_parameter_count": trainable_param_count,
+                "trainable_parameter_sample": trainable_param_names[:12],
+            },
+            ensure_ascii=False,
+        ),
+        flush=True,
+    )
+    if "device_map" not in model_kwargs:
+        model.to(device)
+    batch_device = first_parameter_device(model, device)
+    print(
+        json.dumps(
+            {
+                "stage": "model_on_device",
+                "device": str(device),
+                "batch_device": str(batch_device),
+                "has_device_map": "device_map" in model_kwargs,
+            },
+            ensure_ascii=False,
+        ),
+        flush=True,
+    )
+    text_forward_preflight = run_text_forward_preflight(
+        model,
+        preflight_batch,
+        torch_module=torch,
+        device=batch_device,
+    )
+    print(
+        json.dumps(
+            {
+                "stage": "text_forward_preflight",
+                **text_forward_preflight,
+            },
+            ensure_ascii=False,
+        ),
+        flush=True,
+    )
     if distributed:
-        model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[local_rank])
+        model = torch.nn.parallel.DistributedDataParallel(
+            model,
+            device_ids=[local_rank],
+            find_unused_parameters=True,
+            gradient_as_bucket_view=True,
+        )
         print(json.dumps({"stage": "ddp_wrapped"}, ensure_ascii=False), flush=True)
     model.train()
     print(json.dumps({"stage": "train_mode"}, ensure_ascii=False), flush=True)
 
-    optimizer = torch.optim.AdamW(model.parameters(), lr=args.learning_rate)
+    optimizer = torch.optim.AdamW(trainable_param_tensors, lr=args.learning_rate)
     total_train_steps = max(args.max_steps, 1)
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=total_train_steps)
+    warmup_steps = max(int(getattr(args, "warmup_steps", 0) or 0), 0)
+    warmup_steps = min(warmup_steps, max(total_train_steps - 1, 0))
+    if warmup_steps > 0:
+        warmup_scheduler = torch.optim.lr_scheduler.LinearLR(
+            optimizer, start_factor=0.1, end_factor=1.0, total_iters=warmup_steps
+        )
+        cosine_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+            optimizer, T_max=max(total_train_steps - warmup_steps, 1)
+        )
+        scheduler = torch.optim.lr_scheduler.SequentialLR(
+            optimizer, schedulers=[warmup_scheduler, cosine_scheduler], milestones=[warmup_steps]
+        )
+    else:
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=total_train_steps)
 
     metrics: list[dict[str, float | int]] = []
     global_step = 0
     optimizer.zero_grad(set_to_none=True)
-    print(json.dumps({"stage": "optimizer_ready", "max_steps": args.max_steps, "gradient_accumulation_steps": args.gradient_accumulation_steps}, ensure_ascii=False), flush=True)
+
+    # Native LoRA adapter config reused by both periodic and final saves.
+    native_adapter_config = {
+        "peft_type": "LORA",
+        "task_type": "CAUSAL_LM",
+        "lora_backend": "native",
+        "r": args.lora_rank,
+        "lora_alpha": args.lora_alpha,
+        "lora_dropout": args.lora_dropout,
+        "target_modules": resolved_target_modules,
+        "base_model_name_or_path": args.model_name,
+        "bias": "none",
+    }
+    checkpoint_interval_seconds = max(int(getattr(args, "checkpoint_interval_seconds", 0) or 0), 0)
+    last_checkpoint_time = time.time()
+    # Memory-frugal loss: avoid materializing full [B, seq, vocab] logits, which
+    # OOMs on Ascend NPU. Enabled via QWEN_SFT_CHUNKED_LOSS=1.
+    use_chunked_loss = os.environ.get("QWEN_SFT_CHUNKED_LOSS", "0") == "1"
+    loss_chunk_size = int(os.environ.get("QWEN_SFT_LOSS_CHUNK", "1024") or "1024")
+    print(
+        json.dumps(
+            {"stage": "loss_mode", "chunked": use_chunked_loss, "chunk_size": loss_chunk_size},
+            ensure_ascii=False,
+        ),
+        flush=True,
+    )
+    print(
+        json.dumps(
+            {
+                "stage": "optimizer_ready",
+                "max_steps": args.max_steps,
+                "gradient_accumulation_steps": args.gradient_accumulation_steps,
+                "trainable_parameter_count": trainable_param_count,
+            },
+            ensure_ascii=False,
+        ),
+        flush=True,
+    )
 
     for epoch in range(args.num_epochs):
         if train_sampler is not None:
             train_sampler.set_epoch(epoch)
-        print(json.dumps({"stage": "epoch_start", "epoch": epoch + 1}, ensure_ascii=False), flush=True)
+        print(
+            json.dumps({"stage": "epoch_start", "epoch": epoch + 1}, ensure_ascii=False), flush=True
+        )
         for batch_index, batch in enumerate(train_loader, start=1):
             if batch_index == 1:
                 first_batch_time = time.time()
-                print(json.dumps({"stage": "first_batch_loaded", "batch_index": batch_index, "input_shape": list(batch["input_ids"].shape), "t": first_batch_time}, ensure_ascii=False), flush=True)
-            batch = {name: tensor.to(device) for name, tensor in batch.items()}
-            outputs = model(**batch)
+                print(
+                    json.dumps(
+                        {
+                            "stage": "first_batch_loaded",
+                            "batch_index": batch_index,
+                            "input_shape": list(batch["input_ids"].shape),
+                            "t": first_batch_time,
+                        },
+                        ensure_ascii=False,
+                    ),
+                    flush=True,
+                )
+            batch = {name: tensor.to(batch_device) for name, tensor in batch.items()}
+            if use_chunked_loss:
+                raw_loss = chunked_causal_lm_loss(model, batch, torch, chunk_size=loss_chunk_size)
+            else:
+                outputs = model(**batch)
+                raw_loss = outputs.loss
             if batch_index == 1:
-                print(json.dumps({"stage": "first_forward_done", "batch_index": batch_index, "t": time.time(), "dt_from_batch_loaded_sec": round(time.time() - first_batch_time, 3)}, ensure_ascii=False), flush=True)
-            loss = outputs.loss / args.gradient_accumulation_steps
+                print(
+                    json.dumps(
+                        {
+                            "stage": "first_forward_done",
+                            "batch_index": batch_index,
+                            "t": time.time(),
+                            "dt_from_batch_loaded_sec": round(time.time() - first_batch_time, 3),
+                        },
+                        ensure_ascii=False,
+                    ),
+                    flush=True,
+                )
+            loss = raw_loss / args.gradient_accumulation_steps
             if batch_index == 1:
-                print(json.dumps({"stage": "first_loss_ready", "batch_index": batch_index, "loss": float(loss.item())}, ensure_ascii=False), flush=True)
+                print(
+                    json.dumps(
+                        {
+                            "stage": "first_loss_ready",
+                            "batch_index": batch_index,
+                            "loss": float(loss.item()),
+                        },
+                        ensure_ascii=False,
+                    ),
+                    flush=True,
+                )
             loss.backward()
             if batch_index == 1:
-                print(json.dumps({"stage": "first_backward_done", "batch_index": batch_index}, ensure_ascii=False), flush=True)
+                print(
+                    json.dumps(
+                        {"stage": "first_backward_done", "batch_index": batch_index},
+                        ensure_ascii=False,
+                    ),
+                    flush=True,
+                )
 
             if batch_index % args.gradient_accumulation_steps == 0:
-                torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+                # Manual grad-norm clipping that is safe for model-parallel
+                # (balanced-layers) layouts where trainable tensors live on
+                # different NPUs. clip_grad_norm_ tries a single fused
+                # aclnnLinalgVectorNorm across a list of tensors and fails on
+                # Ascend when the list spans devices, so we compute per-tensor
+                # norms on each parameter's own device and aggregate on CPU.
+                total_norm_sq = 0.0
+                for p in trainable_param_tensors:
+                    if p.grad is None:
+                        continue
+                    local_norm = p.grad.detach().float().norm(2).item()
+                    total_norm_sq += local_norm * local_norm
+                total_norm = total_norm_sq**0.5
+                clip_coef = 1.0
+                if total_norm > 0:
+                    clip_coef = min(1.0, 1.0 / total_norm)
+                if clip_coef < 1.0:
+                    for p in trainable_param_tensors:
+                        if p.grad is not None:
+                            p.grad.detach().mul_(clip_coef)
                 if batch_index == 1:
-                    print(json.dumps({"stage": "first_clip_done", "batch_index": batch_index}, ensure_ascii=False), flush=True)
+                    print(
+                        json.dumps(
+                            {"stage": "first_clip_done", "batch_index": batch_index},
+                            ensure_ascii=False,
+                        ),
+                        flush=True,
+                    )
                 optimizer.step()
                 if batch_index == 1:
-                    print(json.dumps({"stage": "first_optimizer_step_done", "batch_index": batch_index}, ensure_ascii=False), flush=True)
+                    print(
+                        json.dumps(
+                            {"stage": "first_optimizer_step_done", "batch_index": batch_index},
+                            ensure_ascii=False,
+                        ),
+                        flush=True,
+                    )
                 scheduler.step()
                 if batch_index == 1:
-                    print(json.dumps({"stage": "first_scheduler_step_done", "batch_index": batch_index}, ensure_ascii=False), flush=True)
+                    print(
+                        json.dumps(
+                            {"stage": "first_scheduler_step_done", "batch_index": batch_index},
+                            ensure_ascii=False,
+                        ),
+                        flush=True,
+                    )
                 optimizer.zero_grad(set_to_none=True)
                 if batch_index == 1:
-                    print(json.dumps({"stage": "first_zero_grad_done", "batch_index": batch_index}, ensure_ascii=False), flush=True)
+                    print(
+                        json.dumps(
+                            {"stage": "first_zero_grad_done", "batch_index": batch_index},
+                            ensure_ascii=False,
+                        ),
+                        flush=True,
+                    )
                 global_step += 1
 
                 if global_step % args.log_steps == 0:
-                    record: dict[str, float | int] = {
+                    import datetime
+
+                    record: dict[str, Any] = {
                         "step": global_step,
                         "epoch": epoch + 1,
                         "train_loss": float(loss.item() * args.gradient_accumulation_steps),
                         "lr": float(scheduler.get_last_lr()[0]),
+                        "timestamp_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(),
                     }
                     if batch_index == 1:
-                        print(json.dumps({"stage": "first_record_ready", "batch_index": batch_index}, ensure_ascii=False), flush=True)
+                        print(
+                            json.dumps(
+                                {"stage": "first_record_ready", "batch_index": batch_index},
+                                ensure_ascii=False,
+                            ),
+                            flush=True,
+                        )
                     if eval_loader is not None and global_step % args.eval_steps == 0:
                         if batch_index == 1:
-                            print(json.dumps({"stage": "first_eval_start", "batch_index": batch_index, "t": time.time()}, ensure_ascii=False), flush=True)
+                            print(
+                                json.dumps(
+                                    {
+                                        "stage": "first_eval_start",
+                                        "batch_index": batch_index,
+                                        "t": time.time(),
+                                    },
+                                    ensure_ascii=False,
+                                ),
+                                flush=True,
+                            )
                         eval_started_at = time.time()
-                        record.update({f"eval_{k}": v for k, v in evaluate(model.module if distributed else model, eval_loader, device).items()})
-                        if batch_index == 1:
-                            print(json.dumps({"stage": "first_eval_done", "batch_index": batch_index, "t": time.time(), "dt_eval_sec": round(time.time() - eval_started_at, 3)}, ensure_ascii=False), flush=True)
+                        try:
+                            record.update(
+                                {
+                                    f"eval_{k}": v
+                                    for k, v in evaluate(
+                                        model.module if distributed else model,
+                                        eval_loader,
+                                        batch_device,
+                                        torch,
+                                    ).items()
+                                }
+                            )
+                            if batch_index == 1:
+                                print(
+                                    json.dumps(
+                                        {
+                                            "stage": "first_eval_done",
+                                            "batch_index": batch_index,
+                                            "t": time.time(),
+                                            "dt_eval_sec": round(time.time() - eval_started_at, 3),
+                                        },
+                                        ensure_ascii=False,
+                                    ),
+                                    flush=True,
+                                )
+                        except Exception as eval_err:  # in-loop eval must never kill training
+                            record["eval_error"] = str(eval_err)
+                            print(
+                                json.dumps(
+                                    {
+                                        "stage": "eval_skipped",
+                                        "step": global_step,
+                                        "error": str(eval_err),
+                                    },
+                                    ensure_ascii=False,
+                                ),
+                                flush=True,
+                            )
+                            try:
+                                if getattr(torch, "npu", None) is not None and hasattr(
+                                    torch.npu, "empty_cache"
+                                ):
+                                    torch.npu.empty_cache()
+                            except Exception:
+                                pass
                         model.train()
                     metrics.append(record)
                     if rank == 0:
                         print(json.dumps(record, ensure_ascii=False))
+                        step_metrics_file = args.output_dir / "sft_step_metrics.jsonl"
+                        try:
+                            step_metrics_file.parent.mkdir(parents=True, exist_ok=True)
+                            with step_metrics_file.open("a", encoding="utf-8") as handle:
+                                handle.write(
+                                    json.dumps(record, ensure_ascii=False, sort_keys=True) + "\n"
+                                )
+                        except Exception as e:
+                            print(
+                                f"Warning: failed to write sft_step_metrics.jsonl: {e}", sys.stderr
+                            )
+
+                # Periodic (hourly) wall-clock checkpoint to a durable path so no
+                # progress is lost if the session/pod ends mid-run. Rank 0 only.
+                if (
+                    rank == 0
+                    and checkpoint_interval_seconds > 0
+                    and (time.time() - last_checkpoint_time) >= checkpoint_interval_seconds
+                ):
+                    ckpt_adapter_dir = (
+                        args.output_dir / "checkpoints" / f"step-{global_step}" / "adapter"
+                    )
+                    ckpt_started_at = time.time()
+                    print(
+                        json.dumps(
+                            {
+                                "stage": "periodic_checkpoint_start",
+                                "step": global_step,
+                                "t": ckpt_started_at,
+                                "adapter_dir": str(ckpt_adapter_dir),
+                            },
+                            ensure_ascii=False,
+                        ),
+                        flush=True,
+                    )
+                    try:
+                        persist_adapter(
+                            save_model=model.module if distributed else model,
+                            adapter_dir=ckpt_adapter_dir,
+                            torch_module=torch,
+                            lora_backend=args.lora_backend,
+                            adapter_init=args.adapter_init,
+                            native_config=native_adapter_config,
+                            text_preprocessor=text_preprocessor,
+                        )
+                        (ckpt_adapter_dir.parent / "checkpoint_meta.json").write_text(
+                            json.dumps(
+                                {
+                                    "step": global_step,
+                                    "epoch": epoch + 1,
+                                    "saved_at_utc": datetime.datetime.now(
+                                        datetime.timezone.utc
+                                    ).isoformat(),
+                                },
+                                indent=2,
+                            )
+                            + "\n",
+                            encoding="utf-8",
+                        )
+                        last_checkpoint_time = time.time()
+                        print(
+                            json.dumps(
+                                {
+                                    "stage": "periodic_checkpoint_done",
+                                    "step": global_step,
+                                    "t": last_checkpoint_time,
+                                    "dt_ckpt_sec": round(last_checkpoint_time - ckpt_started_at, 3),
+                                },
+                                ensure_ascii=False,
+                            ),
+                            flush=True,
+                        )
+                    except Exception as e:  # never let checkpointing kill the run
+                        print(
+                            f"Warning: periodic checkpoint failed at step {global_step}: {e}",
+                            file=sys.stderr,
+                            flush=True,
+                        )
+                        model.train()
 
                 if global_step >= args.max_steps:
                     break
         if global_step >= args.max_steps:
             break
 
-    final_eval = None
-    if eval_loader is not None:
-        print(json.dumps({"stage": "final_eval_start", "t": time.time()}, ensure_ascii=False), flush=True)
-        final_eval_started_at = time.time()
-        final_eval = evaluate(model.module if distributed else model, eval_loader, device)
-        print(json.dumps({"stage": "final_eval_done", "t": time.time(), "dt_final_eval_sec": round(time.time() - final_eval_started_at, 3)}, ensure_ascii=False), flush=True)
-
+    # DURABILITY: save the trained adapter BEFORE running final eval. The final
+    # eval can OOM on the NPU (full-vocab logits), and if it crashes the process
+    # before the save, an otherwise-complete training run loses its adapter. By
+    # persisting first, a finished run is always recoverable. Final eval is then
+    # best-effort and wrapped so it can never destroy the saved adapter.
     if rank == 0:
         save_model = model.module if distributed else model
         adapter_dir = args.output_dir / "adapter"
-        print(json.dumps({"stage": "save_start", "t": time.time(), "adapter_dir": str(adapter_dir)}, ensure_ascii=False), flush=True)
+        print(
+            json.dumps(
+                {"stage": "save_start", "t": time.time(), "adapter_dir": str(adapter_dir)},
+                ensure_ascii=False,
+            ),
+            flush=True,
+        )
         save_started_at = time.time()
-        save_model.save_pretrained(adapter_dir)
-        text_preprocessor.save_backend.save_pretrained(adapter_dir)
-        print(json.dumps({"stage": "save_done", "t": time.time(), "dt_save_sec": round(time.time() - save_started_at, 3)}, ensure_ascii=False), flush=True)
+        persist_adapter(
+            save_model=save_model,
+            adapter_dir=adapter_dir,
+            torch_module=torch,
+            lora_backend=args.lora_backend,
+            adapter_init=args.adapter_init,
+            native_config=native_adapter_config,
+            text_preprocessor=text_preprocessor,
+        )
+        print(
+            json.dumps(
+                {
+                    "stage": "save_done",
+                    "t": time.time(),
+                    "dt_save_sec": round(time.time() - save_started_at, 3),
+                },
+                ensure_ascii=False,
+            ),
+            flush=True,
+        )
 
+    final_eval = None
+    if eval_loader is not None:
+        print(
+            json.dumps({"stage": "final_eval_start", "t": time.time()}, ensure_ascii=False),
+            flush=True,
+        )
+        final_eval_started_at = time.time()
+        try:
+            final_eval = evaluate(
+                model.module if distributed else model, eval_loader, batch_device, torch
+            )
+            print(
+                json.dumps(
+                    {
+                        "stage": "final_eval_done",
+                        "t": time.time(),
+                        "dt_final_eval_sec": round(time.time() - final_eval_started_at, 3),
+                    },
+                    ensure_ascii=False,
+                ),
+                flush=True,
+            )
+        except Exception as eval_err:  # never let final eval destroy the saved adapter
+            final_eval = {"error": str(eval_err)}
+            print(
+                json.dumps(
+                    {"stage": "final_eval_failed", "t": time.time(), "error": str(eval_err)},
+                    ensure_ascii=False,
+                ),
+                flush=True,
+            )
+            try:
+                empty = getattr(torch, "npu", None)
+                if empty is not None and hasattr(empty, "empty_cache"):
+                    empty.empty_cache()
+            except Exception:
+                pass
+
+    if rank == 0:
         summary = {
             "model_name": args.model_name,
             "signature": run_signature,
-            "resolved_target_modules": resolved_target_modules if args.adapter_init is None else None,
+            "resolved_target_modules": resolved_target_modules
+            if args.adapter_init is None
+            else None,
+            "lora_wrap_summary": lora_wrap_summary,
             "device": str(device),
+            "text_forward_preflight": text_forward_preflight,
+            "selective_training": selective_training,
+            "layernorm_training": layernorm_training,
+            "trainable_parameter_budget": trainable_parameter_budget,
+            "trainable_parameter_floor": trainable_parameter_floor,
+            "trainable_parameter_count": trainable_param_count,
+            "trainable_parameter_sample": trainable_param_names[:12],
             "world_size": world_size,
             "train_examples": len(train_dataset),
             "eval_examples": len(eval_dataset) if eval_dataset is not None else 0,
@@ -770,16 +2183,25 @@ def main() -> int:
             json.dumps(
                 {
                     "signature": run_signature,
-                    "resolved_target_modules": resolved_target_modules if args.adapter_init is None else None,
+                    "resolved_target_modules": resolved_target_modules
+                    if args.adapter_init is None
+                    else None,
+                    "lora_wrap_summary": lora_wrap_summary,
+                    "selective_training": selective_training,
+                    "layernorm_training": layernorm_training,
+                    "trainable_parameter_budget": trainable_parameter_budget,
+                    "trainable_parameter_count": trainable_param_count,
+                    "trainable_parameter_sample": trainable_param_names[:12],
                 },
                 indent=2,
             )
             + "\n",
             encoding="utf-8",
         )
-        (args.output_dir / "metrics.json").write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
+        (args.output_dir / "metrics.json").write_text(
+            json.dumps(summary, indent=2) + "\n", encoding="utf-8"
+        )
         print(json.dumps(summary, ensure_ascii=False, indent=2))
-
 
     if distributed:
         torch.distributed.destroy_process_group()

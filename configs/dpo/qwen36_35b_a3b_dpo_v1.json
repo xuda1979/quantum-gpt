@@ -1,0 +1,27 @@
+{
+  "name": "qwen36_35b_a3b_dpo_v1",
+  "base_checkpoint": "qwen36_35b_a3b_lora_sft_v1",
+  "method": "dpo",
+  "precision": "bf16",
+  "sequence_length": 8192,
+  "beta": 0.07,
+  "learning_rate": 0.00003,
+  "epochs": 1,
+  "reference_model": "sft_checkpoint_frozen",
+  "chosen_signals": [
+    "passes public and hidden tests",
+    "minimal secure patch",
+    "runs relevant tests",
+    "preserves public APIs",
+    "clear root-cause diagnosis"
+  ],
+  "rejected_signals": [
+    "no test run",
+    "broad rewrite",
+    "passes public tests but fails hidden tests",
+    "insecure patch",
+    "hardcoded benchmark-specific behavior",
+    "breaks compatibility"
+  ],
+  "reward_source_policy": "execution and verifier results dominate; model-judge-only preference pairs are audit-only until corroborated"
+}

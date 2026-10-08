@@ -1,0 +1,7 @@
+请用 Python 和 Qiskit 写一个简洁、完整、可运行的程序：
+
+创建一个包含5个顶点的无向环图，边为 (0,1)、(1,2)、(2,3)、(3,4)、(4,0)。
+使用 QAOA 求解 Max-Cut。
+使用 StatevectorSampler、COBYLA 和 MinimumEigenOptimizer。
+打印二进制解、两个顶点集合和最大割值。
+只输出完整代码，不要展开长篇原理。

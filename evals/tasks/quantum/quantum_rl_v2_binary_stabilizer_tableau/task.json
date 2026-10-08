@@ -1,0 +1,9 @@
+{
+  "id": "quantum_rl_v2_binary_stabilizer_tableau",
+  "name": "Aaronson-Gottesman binary stabilizer tableau for 3 qubits",
+  "domain": "quantum",
+  "category": "quantum_error_correction",
+  "task_prompt": "Implement an Aaronson-Gottesman style binary stabilizer tableau for 3 qubits with destabilizer rows X_i and stabilizer rows Z_i, supporting H, S, and CNOT conjugation with sign updates computed from original bits. Prepare GHZ and cluster-state test circuits, convert stabilizer rows to signed Pauli strings, and assert the expected generators and commutation relations. Remove all contradictory initialization commentary and encode one unambiguous convention. Output code only as a self-contained Python program. Use documented public APIs, require no cloud credentials, make stochastic behavior reproducible, and include executable checks with justified tolerances.",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

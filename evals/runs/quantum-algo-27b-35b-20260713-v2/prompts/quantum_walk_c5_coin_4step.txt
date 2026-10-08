@@ -1,0 +1,23 @@
+Write a complete, runnable Python program using numpy and qiskit that:
+1. Implements a discrete-time quantum walk on the cycle graph C5
+   (5 vertices numbered 0..4, edges (i, (i+1)%5)).
+   Use a 3-qubit coin register (only |0>..|4> are valid coin states;
+   treat states |5>..|7> as a 0-movement) and a 3-qubit position register
+   encoding vertices 0..4.
+2. The coin operator is the Grover diffuser on the 3-qubit coin space
+   (with coin states |5>, |6>, |7> absorbing in the diffuser as zeros).
+   Use a simpler coin: the 5x5 Grover coin
+   C = 2/5 * J_5 - I_5  where J_5 is the 5x5 all-ones matrix,
+   embedded into the 8x8 coin space with identity on |5>,|6>,|7>.
+3. The shift operator S maps |c>|p> -> |c>| (p + (1 if c is odd else -1)) mod 5 >,
+   where c ranges over 0..4. Treat c >= 5 as identity on position.
+4. Performs 4 steps of the walk starting from |coin=0>|pos=0>.
+5. In `def main()`, prints exactly these lines (values rounded to 4 decimals):
+     Steps = 4
+     P(0) = <probability at vertex 0>
+     P(1) = <probability at vertex 1>
+     P(2) = <probability at vertex 2>
+     Total prob = <sum of probabilities at vertices 0..4>
+   where probabilities are computed from the full statevector,
+   summing over all coin states at each vertex.
+Call main() under `if __name__ == "__main__":`.

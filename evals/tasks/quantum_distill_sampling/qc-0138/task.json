@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3_sampling",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0138",
+  "name": "You are given the following quantum programming task. Write a complete Qiskit pr",
+  "task_prompt": "You are given the following quantum programming task. Write a complete Qiskit program that prepares a 3-qubit GHZ state and prints the measurement counts from 2000 shots. Your answer must be the complete working code only, runnable from top to bottom."
+}

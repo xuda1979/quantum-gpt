@@ -1,0 +1,22 @@
+Write a complete, runnable Python program using numpy that:
+1. Builds the Kitaev chain Hamiltonian for N=6 sites with open boundary
+   conditions, parameterized by J=1.0 (hopping), Delta=0.8 (pairing),
+   mu=0.5 (chemical potential):
+   H = -J * sum_i (c_i^dagger c_{i+1} + h.c.)
+       + Delta * sum_i (c_i c_{i+1} + c_{i+1}^dagger c_i^dagger)
+       - mu * sum_i (n_i - 1/2)
+   Build the 2^6 x 2^6 matrix by mapping c_i, c_i^dagger to Jordan-Wigner
+   spin operators: c_i = (prod_{j<i} Z_j) * (X_i - i*Y_i) / 2,
+   c_i^dagger = (prod_{j<i} Z_j) * (X_i + i*Y_i) / 2.
+2. Diagonalizes H to get the ground-state energy E0 and the ground-state
+   fermionic parity P = (-1)^{N_particles} computed from the ground state.
+3. Also computes the single-particle spectrum via the BdG (Bogoliubov-de
+   Gennes) matrix: build the 2N x 2N BdG matrix and report its
+   lowest positive eigenvalue E_BdG.
+4. In `def main()`, prints exactly these lines (values rounded to 4 decimals):
+     Ground state energy = <E0>
+     Ground state parity = <+1 or -1>
+     BdG gap = <lowest positive BdG eigenvalue>
+     Majorana overlap = <|c_0 + c_0^dagger| in ground state>
+   where Majorana overlap is <GS| (c_0 + c_0^dagger) |GS>.
+Call main() under `if __name__ == "__main__":`.

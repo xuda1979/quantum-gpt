@@ -1,0 +1,8 @@
+Write a complete, runnable Python program using Qiskit that:
+1. Builds the Bell state |Phi+> = (|00> + |11>)/sqrt(2).
+2. Uses qiskit.quantum_info.DensityMatrix to compute the density matrix rho = |Phi+><Phi+|.
+3. In `def main()`, computes Tr(rho^2) (purity) and the von-Neumann entropy S(rho) = -Tr(rho log2 rho), and prints both.
+Output exactly:
+  Purity = <value rounded to 6 decimals>
+  Entropy = <value rounded to 6 decimals>
+Call main() under `if __name__ == "__main__":`.

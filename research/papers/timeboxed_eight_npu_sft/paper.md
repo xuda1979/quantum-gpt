@@ -15,6 +15,8 @@ Run a meaningful OmniCoder SFT scale-up on all 8 NPUs while staying under a 2-ho
 ## Proposed Run
 
 - Base model: `models/OmniCoder-9B`
+- Adapter init:
+  - `outputs/interface-prefix-omnicoder9b-semantic-v4-2npu-true20-20260329T2219CST/adapter`
 - Dataset:
   - `data/generated/omnicoder-quantum-generalization-holdout-v1/train.jsonl`
   - `data/generated/omnicoder-quantum-generalization-holdout-v1/eval.jsonl`
@@ -30,5 +32,6 @@ Run a meaningful OmniCoder SFT scale-up on all 8 NPUs while staying under a 2-ho
 ## Rationale
 
 - Prior 8-NPU runs in this workspace completed 20-step LoRA SFT jobs successfully
+- The strongest verified OmniCoder 9B adapter in this workspace already clears the delivery gate and the clean 25/25 evaluation thread, so continuing from that adapter is a better use of ai2 compute than restarting from a weaker continuation base
 - 32 steps is a modest scale-up that is still leadership-friendly and time-bounded
 - The strict holdout dataset is already leadership-compliant on split hygiene and eval size

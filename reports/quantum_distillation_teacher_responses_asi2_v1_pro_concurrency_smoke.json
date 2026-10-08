@@ -1,0 +1,11 @@
+{
+  "already_completed": 3,
+  "errors": [],
+  "generated": 4,
+  "input_jsonl": "/Users/daxu/software/quantum-gpt/data/seed/quantum_distillation_seed_questions_asi2_v1.jsonl",
+  "model": "deepseek-v4-pro",
+  "ok": true,
+  "output_jsonl": "/Users/daxu/software/quantum-gpt/data/generated/quantum_distillation_teacher_responses_asi2_v1.jsonl",
+  "seed_rows": 480,
+  "selected": 4
+}

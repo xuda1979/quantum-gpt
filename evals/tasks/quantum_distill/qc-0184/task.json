@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0184",
+  "name": "Solve a 0/1 knapsack (values [7, 2, 5, 11, 3, 10], weights [1, 8, 4, 1, 7, 1], c",
+  "task_prompt": "Solve a 0/1 knapsack (values [7, 2, 5, 11, 3, 10], weights [1, 8, 4, 1, 7, 1], capacity 12) by building a penalized QUBO in dimod (slack-variable encoding for the capacity constraint) and sampling with SimulatedAnnealingSampler. Compare to brute force. Your answer must be the complete working code only, runnable from top to bottom."
+}

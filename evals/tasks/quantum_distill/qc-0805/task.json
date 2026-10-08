@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0805",
+  "name": "Quantum computing task: Write a Qiskit program demonstrating entanglement distil",
+  "task_prompt": "Quantum computing task: Write a Qiskit program demonstrating entanglement distillation (BBPSSW one round): start with two noisy Bell pairs (Werner states with fidelity 0.62 built via DensityMatrix), apply bilateral CNOT + post-selected measurement classically with numpy, and show the output fidelity exceeds the input. Give one complete script that runs end-to-end on its own and prints the outcome."
+}

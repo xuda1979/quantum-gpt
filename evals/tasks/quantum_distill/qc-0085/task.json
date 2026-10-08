@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0085",
+  "name": "Solve this quantum programming problem. Write a complete Qiskit Bernstein-Vazira",
+  "task_prompt": "Solve this quantum programming problem. Write a complete Qiskit Bernstein-Vazirani program for the secret string '110' and print the recovered string. The code must be a complete standalone script that can be executed directly and produces output."
+}

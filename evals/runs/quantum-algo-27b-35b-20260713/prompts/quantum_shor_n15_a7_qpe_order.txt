@@ -1,0 +1,23 @@
+Write a complete, runnable Python program using numpy, qiskit, and fractions that:
+1. Implements controlled-a^power mod 15 for a=7 as a 4-qubit unitary with one
+   control qubit (you may use SWAP + X sequences as in the standard textbook
+   construction).
+2. Builds an 8-qubit counting register plus 4 target qubits, initializes the
+   target to |1>, applies H to all counting qubits, then appends controlled
+   a^(2^q) mod 15 for q=0..7, then applies the inverse QFT to the counting
+   register, and measures it.
+3. Simulate the circuit with qiskit.quantum_info.Statevector (no hardware):
+   take the most-probable bitstring as the measured phase estimate.
+4. Convert the measured integer to a phase in [0,1), use
+   fractions.Fraction(...).limit_denominator(15) to recover the denominator r,
+   and verify a^r mod 15 == 1.
+5. If r is even, compute gcd(a^(r/2) - 1, 15) as a non-trivial factor.
+6. In `def main()`, print exactly:
+     a = 7
+     N = 15
+     Measured order r = <value>
+     a^r mod N = <value>
+     Valid order: <True|False>
+     Factor found: <value>
+   The order r must be > 1 and a^r mod 15 must equal 1.
+Call main() under `if __name__ == "__main__":`.

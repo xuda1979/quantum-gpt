@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3_sampling",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0756",
+  "name": "Write a standalone OpenQASM 3 program preparing an 3-qubit GHZ state with measur",
+  "task_prompt": "Write a standalone OpenQASM 3 program preparing an 3-qubit GHZ state with measurement, plus Python code that loads it with qiskit.qasm3 and samples 1000 shots. Your answer must be the complete working code only, runnable from top to bottom."
+}

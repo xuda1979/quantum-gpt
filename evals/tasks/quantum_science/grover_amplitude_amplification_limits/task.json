@@ -1,0 +1,11 @@
+{
+  "id": "quantum_science_grover_amplitude_amplification_limits",
+  "name": "Grover search gives a quadratic speedup, but it requires the...",
+  "domain": "quantum_science",
+  "category": "limitation",
+  "level": "L5",
+  "field": "grover",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py",
+  "question": "Grover search gives a quadratic speedup, but it requires the oracle to be a quantum circuit. Explain why this oracle requirement limits the practical advantage of Grover, and discuss the lower bound result showing that O(sqrt(N)) queries are optimal for unstructured search."
+}

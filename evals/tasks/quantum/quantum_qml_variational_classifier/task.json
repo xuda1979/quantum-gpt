@@ -1,0 +1,9 @@
+{
+  "id": "quantum_qml_variational_classifier",
+  "name": "PennyLane variational classifier on the XOR dataset",
+  "domain": "quantum",
+  "category": "quantum_ml",
+  "framework": "pennylane",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

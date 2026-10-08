@@ -1,0 +1,7 @@
+Write a complete, runnable Python program using Qiskit that:
+1. Teleports the state |+> from Alice (q0) to Bob (q2) using a Bell pair (q1, q2) and coherent (no mid-circuit measurement) classical corrections.
+   Steps: prepare |+> on q0; create Bell pair on (q1, q2); apply CX q0->q1 then H q0; apply CX q1->q2 and CZ q0->q2 (coherent corrections).
+2. In `def main()`, uses qiskit.primitives.StatevectorEstimator to compute the expectation value <X> on qubit q2 (the teleported state, which should be |+>).
+Output exactly:
+  <X> on Bob = <value rounded to 6 decimals>
+Call main() under `if __name__ == "__main__":`.

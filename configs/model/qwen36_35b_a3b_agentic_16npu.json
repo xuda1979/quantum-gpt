@@ -1,0 +1,38 @@
+{
+  "name": "qwen36_35b_a3b_agentic_16npu",
+  "base_model": "Qwen/Qwen3.6-35B-A3B",
+  "asi1_remote_model_path": "/root/work/filestorage/Qwen3.6-35B-A3B-W8A8",
+  "license": "Apache-2.0",
+  "target": {
+    "model": "agentic software-engineering policy",
+    "runtime": "thin monolithic tool-using agent",
+    "hardware": "16 Ascend-like NPUs"
+  },
+  "capability_goals": [
+    "repo navigation before editing",
+    "minimal patch generation",
+    "test-writing and test-running discipline",
+    "tool calls over long trajectories",
+    "execution-feedback debugging",
+    "prompt-injection resistance inside repositories"
+  ],
+  "moe_training_policy": {
+    "initial_strategy": "adapter training only",
+    "router": "freeze for SFT/DPO and early RL",
+    "later_strategy": "optionally add selected expert adapters, then very low-LR router bias only after load-balance telemetry is available",
+    "load_balance_required": true
+  },
+  "context_curriculum": [
+    {"phase": "sft_early", "sequence_length": 8192},
+    {"phase": "sft_late", "sequence_length": 32768},
+    {"phase": "agent_rl_early", "sequence_length": 32768},
+    {"phase": "agent_rl_late", "sequence_length": 131072},
+    {"phase": "final_long_context", "sequence_length": 262144}
+  ],
+  "serving_eval_settings": {
+    "deterministic_patch": {"temperature": 0.3, "max_output_tokens": 32768},
+    "hard_debugging": {"temperature": 0.6, "max_output_tokens": 65536},
+    "pass_k_exploration": {"temperature": 0.9, "max_output_tokens": 81920},
+    "final_answer": {"temperature": 0.2, "max_output_tokens": 8192}
+  }
+}

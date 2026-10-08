@@ -1,0 +1,19 @@
+Write a complete, runnable Python program using Qiskit 2.x that:
+1. Prepares the 3-qubit W state |W> = (|100> + |010> + |001>) / sqrt(3) on
+   qubits q0, q1, q2 using the standard construction:
+     - Start in |000>.
+     - RY(2*arccos(1/sqrt(3))) on q0 (rotates |0> toward |1> with the right amp)
+     - CX(q0, q1)  [controlled on q0 being |1>]
+     - Then RY(2*arccos(1/sqrt(2))) on q0
+     - CX(q0, q2), CX(q1, q2) with appropriate controls
+   Any equivalent construction is fine as long as the final state has equal
+   amplitudes on |100>, |010>, |001>.
+2. Measures all 3 qubits with StatevectorSampler (>= 4000 shots).
+3. In `def main()`:
+   - Prints `W-state count: <n>` where n is the number of measured bitstrings
+     with exactly one qubit in |1> (i.e. Hamming weight 1). Should be 3
+     (the strings "001", "010", "100").
+   - Prints `P(single excitation) = <value rounded to 3 decimals>` — the
+     total probability of measuring a Hamming-weight-1 bitstring. Should be
+     ~1.000.
+Call main() under `if __name__ == "__main__":`.

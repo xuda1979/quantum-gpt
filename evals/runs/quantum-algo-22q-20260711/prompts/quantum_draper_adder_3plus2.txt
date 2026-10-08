@@ -1,0 +1,22 @@
+Write a complete, runnable Python program using Qiskit 2.x that:
+1. Implements the Draper QFT adder. Use two 2-qubit registers: register A
+   (qubits q0, q1) holds the integer 3 (= binary 11, so q0=1, q1=1), and
+   register B (qubits q2, q3) holds the integer 2 (= binary 10, so q2=0,
+   q3=1).
+2. The Draper adder:
+   - Applies QFT to register A.
+   - Applies controlled-phase rotations from B to A: for each bit b_j of B
+     (j=0,1), apply controlled-P(2*pi/2^(k+1)) from b_j to a_k for all k
+     such that k >= j. (Standard Draper rotation pattern.)
+   - Applies inverse QFT to register A.
+3. Measures register A. The measured integer should equal 3 + 2 = 5
+   (= binary 01 with q1=0, q0=1? No: 5 = binary 101 which needs 3 bits —
+    so this would overflow a 2-qubit register.)
+   Use a 3-qubit register A (qubits q0, q1, q2) and a 2-qubit register B
+   (qubits q3, q4). Initialize A = 3 = |011> (q0=1, q1=1, q2=0), B = 2 = |10>
+   (q3=0, q4=1). Measure A: should give 5 = |101> (q0=1, q1=0, q2=1).
+4. Use StatevectorSampler (>= 2000 shots).
+5. In `def main()`, prints:
+     sum = <integer>
+   Expected: sum = 5.
+Call main() under `if __name__ == "__main__":`.

@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0822",
+  "name": "Here is a quantum coding exercise. Implement VQE in qulacs with a ParametricQuan",
+  "task_prompt": "Here is a quantum coding exercise. Implement VQE in qulacs with a ParametricQuantumCircuit and scipy for the Hamiltonian H = 1.34 Z0Z1 + 0.41 X0 + 0.41 X1; compare to exact diagonalization. The code must be a complete standalone script that can be executed directly and produces output."
+}

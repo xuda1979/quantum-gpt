@@ -1,0 +1,45 @@
+# Pre-commit hooks for quantum-gpt.
+# Install once:  pre-commit install
+# Run manually:  pre-commit run --all-files
+#
+# Design: keep hooks fast (<30s on staged changes) and additive. Ruff fixes
+# what it can; pytest is a *smoke* subset so the hook stays usable interactively.
+# Full test suite still runs in CI / pre-merge manually.
+
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.9
+    hooks:
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+      - id: ruff-format
+
+  - repo: local
+    hooks:
+      - id: pytest-smoke
+        name: pytest smoke (subsystem + scoring)
+        entry: pytest
+        args: ["-q", "tests/test_artifact_scoring.py", "tests/test_eval_subsystem_v1_scorecard.py"]
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
+
+      - id: harness-hygiene-gate
+        name: harness hygiene (strays, doc staleness, port drift)
+        entry: python3 harness/scripts/lint_gate.py
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-yaml
+        args: [--allow-multiple-documents]
+      - id: check-json
+      - id: check-toml
+      - id: end-of-file-fixer
+        exclude: '^(data/|evals/runs/|browser-automation/)'
+      - id: trailing-whitespace
+        exclude: '^(data/|evals/runs/|browser-automation/)'
+      - id: check-merge-conflict

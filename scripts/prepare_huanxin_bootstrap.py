@@ -2,7 +2,7 @@
 """Prepare a minimal validated bootstrap bundle for Huanxin remote fine-tuning.
 
 This script intentionally packages only the smallest set of files needed to
-recreate the next remote step inside `/root/root/work/quantum-gpt`.
+recreate the next remote step inside `/root/work/quantum-gpt`.
 
 Workflow:
 1. Confirm required local artifacts exist.
@@ -25,7 +25,7 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_OUT_ROOT = ROOT / "artifacts" / "huanxin-bootstrap"
-REMOTE_ROOT = "/root/root/work/quantum-gpt"
+REMOTE_ROOT = "/root/work/quantum-gpt"
 
 
 def utc_stamp() -> str:
@@ -69,7 +69,9 @@ def build_remote_commands(files: list[dict[str, Any]]) -> str:
         "",
         "# Create required directories before pasting file contents.",
     ]
-    dirs = sorted({str(Path(item['path']).parent) for item in files if str(Path(item['path']).parent) != "."})
+    dirs = sorted(
+        {str(Path(item["path"]).parent) for item in files if str(Path(item["path"]).parent) != "."}
+    )
     for rel_dir in dirs:
         lines.append(f"mkdir -p {rel_dir}")
 
@@ -127,12 +129,17 @@ def main() -> int:
     (bundle_root / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
     (bundle_root / "REMOTE_COMMANDS.sh").write_text(build_remote_commands(copied))
 
-    print(json.dumps({
-        "bundle_root": str(bundle_root),
-        "file_count": len(copied),
-        "manifest": str(bundle_root / 'manifest.json'),
-        "remote_commands": str(bundle_root / 'REMOTE_COMMANDS.sh'),
-    }, indent=2))
+    print(
+        json.dumps(
+            {
+                "bundle_root": str(bundle_root),
+                "file_count": len(copied),
+                "manifest": str(bundle_root / "manifest.json"),
+                "remote_commands": str(bundle_root / "REMOTE_COMMANDS.sh"),
+            },
+            indent=2,
+        )
+    )
     return 0
 
 

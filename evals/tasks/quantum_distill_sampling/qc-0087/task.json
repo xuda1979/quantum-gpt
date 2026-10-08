@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3_sampling",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0087",
+  "name": "You are given the following quantum programming task. Implement Simon's algorith",
+  "task_prompt": "You are given the following quantum programming task. Implement Simon's algorithm in Qiskit for the hidden period s = '1111'. Collect measurement outcomes, solve the linear system over GF(2) with numpy, and recover s. Provide a complete, self-contained program that runs as-is and prints its results."
+}

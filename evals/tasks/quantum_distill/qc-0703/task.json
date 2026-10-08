@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0703",
+  "name": "You are given the following quantum programming task. Using PennyLane's default.",
+  "task_prompt": "You are given the following quantum programming task. Using PennyLane's default.mixed device, study how amplitude damping with gamma=0.297 degrades a Bell state: print <Z0 Z1> and the state purity. Your answer must be the complete working code only, runnable from top to bottom."
+}

@@ -1,0 +1,56 @@
+{
+  "generated_at_utc": "2026-04-28T05:17:45.803283+00:00",
+  "model_path": "/Users/daxu/.openclaw/workspace-quantum-rnd/models/Qwen2.5-1.5B-Instruct",
+  "index_path": "/Users/daxu/software/quantum-gpt/artifacts/quantum-rag/quantum-docs-only-index.pkl.gz",
+  "device": "cpu",
+  "task_count": 1,
+  "max_new_tokens": 512,
+  "temperature": 0.0,
+  "rag": {
+    "top_k": 1,
+    "alpha": 0.55,
+    "max_doc_chars": 4200
+  },
+  "prompt_variant": "compact",
+  "requested_task_ids": [
+    "quantum_density_matrix_partial_trace"
+  ],
+  "summaries": {
+    "with_rag": {
+      "total": 1,
+      "passed": 0,
+      "pass_rate": 0.0,
+      "by_category": {
+        "algorithm_implementation": {
+          "pass_rate": 0.0,
+          "pass": 0,
+          "total": 1
+        }
+      },
+      "per_task": {
+        "quantum_density_matrix_partial_trace": false
+      },
+      "failures": [
+        {
+          "id": "quantum_density_matrix_partial_trace",
+          "details": [
+            "runner_exception: TypeError: object of type 'NoneType' has no len()",
+            "traceback:",
+            "Traceback (most recent call last):",
+            "  File \"/Users/daxu/software/quantum-gpt/evals/runner/run_eval.py\", line 171, in run_task",
+            "    result = run_single_file_task(module, only_candidate_path)",
+            "  File \"/Users/daxu/software/quantum-gpt/evals/runner/run_eval.py\", line 125, in run_single_file_task",
+            "    return module.run_tests(str(candidate_path))",
+            "  File \"/Users/daxu/software/quantum-gpt/evals/tasks/quantum/density_matrix_partial_trace/tests.py\", line 62, in run_tests",
+            "    if not _mat_close(pt_b, [[0.0, 0.0], [0.0, 1.0]]):",
+            "  File \"/Users/daxu/software/quantum-gpt/evals/tasks/quantum/density_matrix_partial_trace/tests.py\", line 14, in _mat_close",
+            "    if len(a) != len(b):",
+            "TypeError: object of type 'NoneType' has no len()"
+          ]
+        }
+      ],
+      "run_dir": "evals/runs/qwen25-1p5b-with-rag-20260428T051642Z",
+      "generation_wall_seconds": 63.51
+    }
+  }
+}

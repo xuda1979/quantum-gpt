@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3_sampling",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0881",
+  "name": "Solve this quantum programming problem. Write a standalone OpenQASM 3 program pr",
+  "task_prompt": "Solve this quantum programming problem. Write a standalone OpenQASM 3 program preparing an 3-qubit GHZ state with measurement, plus Python code that loads it with qiskit.qasm3 and samples 2000 shots. The code must be a complete standalone script that can be executed directly and produces output."
+}

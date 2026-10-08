@@ -1,0 +1,9 @@
+{
+  "id": "quantum_rl_v2_readout_mitigation",
+  "name": "One-qubit readout-error mitigation in Qiskit Aer",
+  "domain": "quantum",
+  "category": "algorithm_implementation",
+  "task_prompt": "Demonstrate one-qubit readout-error mitigation in Qiskit Aer. Prepare RY(2.0)|0>, add a readout assignment error with P(1|0)=0.1 and P(0|1)=0.04, and derive the exact 2x2 assignment matrix under an explicit row/column convention. Prove by exact probability algebra that matrix inversion recovers cos(2.0); then estimate calibration columns and target counts with 30000 seeded shots, reject ill-conditioned matrices, mitigate with normalization and physical clipping diagnostics, and assert the shot-based corrected Z agrees with cos(2.0) within a propagated statistical tolerance rather than merely requiring it to look better than one noisy draw. Provide only complete executable Python code. Do not use remote services. Seed random generators, print the requested quantities, and include robust self-tests rather than relying on visual inspection.",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

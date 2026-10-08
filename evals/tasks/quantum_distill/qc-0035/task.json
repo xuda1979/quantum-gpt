@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0035",
+  "name": "Here is a quantum coding exercise. Build a variational quantum classifier in Pen",
+  "task_prompt": "Here is a quantum coding exercise. Build a variational quantum classifier in PennyLane for 1D data: encode x via RX, use 2 trainable layers, train with square loss on the parity-like dataset y=sign(sin(1*x)), and report training accuracy. Write the full runnable code (all imports included); executing it should print the results."
+}

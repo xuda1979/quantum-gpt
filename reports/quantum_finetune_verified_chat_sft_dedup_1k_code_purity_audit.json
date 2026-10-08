@@ -1,0 +1,874 @@
+{
+  "train_file": "data/generated/quantum_finetune_verified_chat_sft_dedup_1k/train_chatml.jsonl",
+  "eval_file": "data/generated/quantum_finetune_verified_chat_sft_dedup_1k/eval_chatml.jsonl",
+  "row_count": 1000,
+  "eval_row_count": 495,
+  "json_parse_errors": [],
+  "eval_json_parse_errors": [],
+  "schema_issue_count": 0,
+  "schema_issue_examples": [],
+  "role_shapes": {
+    "('system', 'user', 'assistant')": 1000
+  },
+  "framework_distribution": {
+    "braket": 37,
+    "cirq": 125,
+    "dwave_ocean": 70,
+    "openqasm3": 41,
+    "pennylane": 100,
+    "pytket": 27,
+    "qiskit": 485,
+    "qsharp": 34,
+    "qulacs": 15,
+    "qutip": 30,
+    "stim": 36
+  },
+  "family_count": 83,
+  "question_issue_counts": {},
+  "question_issue_examples": {},
+  "assistant_issue_counts": {},
+  "assistant_issue_examples": {},
+  "python_framework_rows": 925,
+  "python_syntax_issue_count": 0,
+  "python_syntax_issue_examples": [],
+  "duplicate_example_id_extra_rows": 0,
+  "duplicate_question_extra_rows": 0,
+  "duplicate_code_extra_rows": 135,
+  "exact_duplicate_code_cluster_count": 44,
+  "largest_duplicate_code_clusters": [
+    {
+      "size": 17,
+      "frameworks": {
+        "qiskit": 17
+      },
+      "examples": [
+        [
+          22,
+          "qc-08258",
+          "qiskit",
+          "Quantum computing task: Implement a CHSH experiment in Qiskit and show the Bell state achieves S = 2*sqrt(2). Give one c"
+        ],
+        [
+          46,
+          "qc-04105",
+          "qiskit",
+          "Implement a CHSH experiment in Qiskit and show the Bell state achieves S = 2*sqrt(2). Write the full runnable code (all "
+        ],
+        [
+          54,
+          "qc-10191",
+          "qiskit",
+          "Write a Qiskit program that demonstrates violation of the CHSH inequality using a Bell state and StatevectorEstimator wi"
+        ],
+        [
+          160,
+          "qc-06203",
+          "qiskit",
+          "You are given the following quantum programming task. Implement a CHSH experiment in Qiskit and show the Bell state achi"
+        ],
+        [
+          175,
+          "qc-04837",
+          "qiskit",
+          "You are given the following quantum programming task. Write a Qiskit program that demonstrates violation of the CHSH ine"
+        ],
+        [
+          215,
+          "qc-02948",
+          "qiskit",
+          "You are given the following quantum programming task. Write a Qiskit program that demonstrates violation of the CHSH ine"
+        ],
+        [
+          241,
+          "qc-01420",
+          "qiskit",
+          "Implement a CHSH experiment in Qiskit and show the Bell state achieves S = 2*sqrt(2). Give one complete script that runs"
+        ],
+        [
+          414,
+          "qc-10185",
+          "qiskit",
+          "Solve this quantum programming problem. Implement a CHSH experiment in Qiskit and show the Bell state achieves S = 2*sqr"
+        ]
+      ]
+    },
+    {
+      "size": 13,
+      "frameworks": {
+        "qiskit": 13
+      },
+      "examples": [
+        [
+          32,
+          "qc-06502",
+          "qiskit",
+          "Here is a quantum coding exercise. Write a Qiskit program testing the 3-qubit Mermin inequality on a GHZ state: estimate"
+        ],
+        [
+          73,
+          "qc-00615",
+          "qiskit",
+          "Solve this quantum programming problem. Write a Qiskit program testing the 3-qubit Mermin inequality on a GHZ state: est"
+        ],
+        [
+          158,
+          "qc-08791",
+          "qiskit",
+          "Quantum computing task: Write a Qiskit program testing the 3-qubit Mermin inequality on a GHZ state: estimate <XXX>, <XY"
+        ],
+        [
+          381,
+          "qc-01004",
+          "qiskit",
+          "Write a Qiskit program testing the 3-qubit Mermin inequality on a GHZ state: estimate <XXX>, <XYY>, <YXY>, <YYX> with St"
+        ],
+        [
+          516,
+          "qc-03378",
+          "qiskit",
+          "Quantum computing task: Write a Qiskit program testing the 3-qubit Mermin inequality on a GHZ state: estimate <XXX>, <XY"
+        ],
+        [
+          621,
+          "qc-09103",
+          "qiskit",
+          "Here is a quantum coding exercise. Write a Qiskit program testing the 3-qubit Mermin inequality on a GHZ state: estimate"
+        ],
+        [
+          653,
+          "qc-04602",
+          "qiskit",
+          "Solve this quantum programming problem. Write a Qiskit program testing the 3-qubit Mermin inequality on a GHZ state: est"
+        ],
+        [
+          796,
+          "qc-05313",
+          "qiskit",
+          "You are given the following quantum programming task. Write a Qiskit program testing the 3-qubit Mermin inequality on a "
+        ]
+      ]
+    },
+    {
+      "size": 9,
+      "frameworks": {
+        "qiskit": 9
+      },
+      "examples": [
+        [
+          106,
+          "qc-05784",
+          "qiskit",
+          "Solve this quantum programming problem. Write a Qiskit program that prepares the 4-qubit W state exactly (using controll"
+        ],
+        [
+          112,
+          "qc-01722",
+          "qiskit",
+          "Write a Qiskit program that prepares the 4-qubit W state exactly (using controlled rotations) and verifies it by printin"
+        ],
+        [
+          187,
+          "qc-00478",
+          "qiskit",
+          "Here is a quantum coding exercise. Write a Qiskit program that prepares the 4-qubit W state exactly (using controlled ro"
+        ],
+        [
+          208,
+          "qc-08242",
+          "qiskit",
+          "Construct the W state on 4 qubits in Qiskit deterministically and verify the amplitudes from the statevector. Return the"
+        ],
+        [
+          403,
+          "qc-03048",
+          "qiskit",
+          "Solve this quantum programming problem. Construct the W state on 4 qubits in Qiskit deterministically and verify the amp"
+        ],
+        [
+          536,
+          "qc-06536",
+          "qiskit",
+          "You are given the following quantum programming task. Write a Qiskit program that prepares the 4-qubit W state exactly ("
+        ],
+        [
+          579,
+          "qc-10309",
+          "qiskit",
+          "You are given the following quantum programming task. Construct the W state on 4 qubits in Qiskit deterministically and "
+        ],
+        [
+          717,
+          "qc-05640",
+          "qiskit",
+          "Solve this quantum programming problem. Write a Qiskit program that prepares the 4-qubit W state exactly (using controll"
+        ]
+      ]
+    },
+    {
+      "size": 8,
+      "frameworks": {
+        "qiskit": 8
+      },
+      "examples": [
+        [
+          18,
+          "qc-04124",
+          "qiskit",
+          "Write a manual QFT circuit for 3 qubits in Qiskit and check its unitary equals the DFT matrix up to numerical precision."
+        ],
+        [
+          99,
+          "qc-05623",
+          "qiskit",
+          "Solve this quantum programming problem. Implement the Quantum Fourier Transform on 3 qubits from scratch in Qiskit (Hada"
+        ],
+        [
+          373,
+          "qc-10104",
+          "qiskit",
+          "Quantum computing task: Implement the Quantum Fourier Transform on 3 qubits from scratch in Qiskit (Hadamards, controlle"
+        ],
+        [
+          421,
+          "qc-07588",
+          "qiskit",
+          "Solve this quantum programming problem. Write a manual QFT circuit for 3 qubits in Qiskit and check its unitary equals t"
+        ],
+        [
+          424,
+          "qc-09755",
+          "qiskit",
+          "Quantum computing task: Write a manual QFT circuit for 3 qubits in Qiskit and check its unitary equals the DFT matrix up"
+        ],
+        [
+          631,
+          "qc-01337",
+          "qiskit",
+          "Here is a quantum coding exercise. Implement the Quantum Fourier Transform on 3 qubits from scratch in Qiskit (Hadamards"
+        ],
+        [
+          874,
+          "qc-07070",
+          "qiskit",
+          "Quantum computing task: Implement the Quantum Fourier Transform on 3 qubits from scratch in Qiskit (Hadamards, controlle"
+        ],
+        [
+          878,
+          "qc-08381",
+          "qiskit",
+          "Solve this quantum programming problem. Write a manual QFT circuit for 3 qubits in Qiskit and check its unitary equals t"
+        ]
+      ]
+    },
+    {
+      "size": 7,
+      "frameworks": {
+        "pennylane": 7
+      },
+      "examples": [
+        [
+          2,
+          "qc-03492",
+          "pennylane",
+          "Solve this quantum programming problem. Compare vanilla gradient descent with quantum natural gradient (QNGOptimizer) in"
+        ],
+        [
+          75,
+          "qc-03516",
+          "pennylane",
+          "Compare vanilla gradient descent with quantum natural gradient (QNGOptimizer) in PennyLane on a 2-qubit variational ener"
+        ],
+        [
+          120,
+          "qc-02803",
+          "pennylane",
+          "Quantum computing task: Compare vanilla gradient descent with quantum natural gradient (QNGOptimizer) in PennyLane on a "
+        ],
+        [
+          162,
+          "qc-02526",
+          "pennylane",
+          "Solve this quantum programming problem. Compare vanilla gradient descent with quantum natural gradient (QNGOptimizer) in"
+        ],
+        [
+          562,
+          "qc-06497",
+          "pennylane",
+          "Quantum computing task: Compare vanilla gradient descent with quantum natural gradient (QNGOptimizer) in PennyLane on a "
+        ],
+        [
+          778,
+          "qc-02784",
+          "pennylane",
+          "Compare vanilla gradient descent with quantum natural gradient (QNGOptimizer) in PennyLane on a 2-qubit variational ener"
+        ],
+        [
+          963,
+          "qc-07557",
+          "pennylane",
+          "You are given the following quantum programming task. Compare vanilla gradient descent with quantum natural gradient (QN"
+        ]
+      ]
+    },
+    {
+      "size": 6,
+      "frameworks": {
+        "qsharp": 6
+      },
+      "examples": [
+        [
+          17,
+          "qc-07508",
+          "qsharp",
+          "Quantum computing task: Write a Q# operation (modern QDK syntax) that prepares a Bell state and returns both measurement"
+        ],
+        [
+          227,
+          "qc-08800",
+          "qsharp",
+          "Write a Q# operation (modern QDK syntax) that prepares a Bell state and returns both measurement results, plus the Pytho"
+        ],
+        [
+          608,
+          "qc-05736",
+          "qsharp",
+          "You are given the following quantum programming task. Write a Q# operation (modern QDK syntax) that prepares a Bell stat"
+        ],
+        [
+          763,
+          "qc-07805",
+          "qsharp",
+          "You are given the following quantum programming task. Write a Q# operation (modern QDK syntax) that prepares a Bell stat"
+        ],
+        [
+          826,
+          "qc-09798",
+          "qsharp",
+          "Write a Q# operation (modern QDK syntax) that prepares a Bell state and returns both measurement results, plus the Pytho"
+        ],
+        [
+          973,
+          "qc-06673",
+          "qsharp",
+          "Solve this quantum programming problem. Write a Q# operation (modern QDK syntax) that prepares a Bell state and returns "
+        ]
+      ]
+    },
+    {
+      "size": 6,
+      "frameworks": {
+        "braket": 6
+      },
+      "examples": [
+        [
+          24,
+          "qc-06050",
+          "braket",
+          "Quantum computing task: Write an Amazon Braket program (LocalSimulator) that prepares a Bell state and prints both the e"
+        ],
+        [
+          52,
+          "qc-01415",
+          "braket",
+          "Here is a quantum coding exercise. Write an Amazon Braket program (LocalSimulator) that prepares a Bell state and prints"
+        ],
+        [
+          628,
+          "qc-01674",
+          "braket",
+          "Quantum computing task: Write an Amazon Braket program (LocalSimulator) that prepares a Bell state and prints both the e"
+        ],
+        [
+          784,
+          "qc-05030",
+          "braket",
+          "Solve this quantum programming problem. Write an Amazon Braket program (LocalSimulator) that prepares a Bell state and p"
+        ],
+        [
+          837,
+          "qc-00527",
+          "braket",
+          "Solve this quantum programming problem. Write an Amazon Braket program (LocalSimulator) that prepares a Bell state and p"
+        ],
+        [
+          1000,
+          "qc-04055",
+          "braket",
+          "Write an Amazon Braket program (LocalSimulator) that prepares a Bell state and prints both the exact probabilities (shot"
+        ]
+      ]
+    },
+    {
+      "size": 6,
+      "frameworks": {
+        "qiskit": 6
+      },
+      "examples": [
+        [
+          69,
+          "qc-10087",
+          "qiskit",
+          "Solve this quantum programming problem. Construct the W state on 3 qubits in Qiskit deterministically and verify the amp"
+        ],
+        [
+          312,
+          "qc-04687",
+          "qiskit",
+          "Quantum computing task: Write a Qiskit program that prepares the 3-qubit W state exactly (using controlled rotations) an"
+        ],
+        [
+          347,
+          "qc-00009",
+          "qiskit",
+          "Solve this quantum programming problem. Write a Qiskit program that prepares the 3-qubit W state exactly (using controll"
+        ],
+        [
+          459,
+          "qc-08148",
+          "qiskit",
+          "Construct the W state on 3 qubits in Qiskit deterministically and verify the amplitudes from the statevector. The code m"
+        ],
+        [
+          523,
+          "qc-05274",
+          "qiskit",
+          "Here is a quantum coding exercise. Construct the W state on 3 qubits in Qiskit deterministically and verify the amplitud"
+        ],
+        [
+          944,
+          "qc-07317",
+          "qiskit",
+          "Quantum computing task: Write a Qiskit program that prepares the 3-qubit W state exactly (using controlled rotations) an"
+        ]
+      ]
+    },
+    {
+      "size": 6,
+      "frameworks": {
+        "openqasm3": 6
+      },
+      "examples": [
+        [
+          149,
+          "qc-00566",
+          "openqasm3",
+          "You are given the following quantum programming task. Write an OpenQASM 3 program using mid-circuit measurement and an i"
+        ],
+        [
+          212,
+          "qc-07925",
+          "openqasm3",
+          "You are given the following quantum programming task. Write an OpenQASM 3 program using mid-circuit measurement and an i"
+        ],
+        [
+          461,
+          "qc-07289",
+          "openqasm3",
+          "You are given the following quantum programming task. Write an OpenQASM 3 program using mid-circuit measurement and an i"
+        ],
+        [
+          841,
+          "qc-01572",
+          "openqasm3",
+          "Here is a quantum coding exercise. Write an OpenQASM 3 program using mid-circuit measurement and an if statement to impl"
+        ],
+        [
+          856,
+          "qc-08977",
+          "openqasm3",
+          "Write an OpenQASM 3 program using mid-circuit measurement and an if statement to implement active qubit reset followed b"
+        ],
+        [
+          983,
+          "qc-04161",
+          "openqasm3",
+          "Solve this quantum programming problem. Write an OpenQASM 3 program using mid-circuit measurement and an if statement to"
+        ]
+      ]
+    },
+    {
+      "size": 5,
+      "frameworks": {
+        "cirq": 5
+      },
+      "examples": [
+        [
+          21,
+          "qc-04493",
+          "cirq",
+          "Quantum computing task: Implement the QFT manually in Cirq on 2 qubits and verify its unitary against cirq.qft using cir"
+        ],
+        [
+          526,
+          "qc-04007",
+          "cirq",
+          "Quantum computing task: Implement the QFT manually in Cirq on 2 qubits and verify its unitary against cirq.qft using cir"
+        ],
+        [
+          544,
+          "qc-03733",
+          "cirq",
+          "Implement the QFT manually in Cirq on 2 qubits and verify its unitary against cirq.qft using cirq.unitary(). Provide a c"
+        ],
+        [
+          607,
+          "qc-08726",
+          "cirq",
+          "You are given the following quantum programming task. Implement the QFT manually in Cirq on 2 qubits and verify its unit"
+        ],
+        [
+          972,
+          "qc-10368",
+          "cirq",
+          "Implement the QFT manually in Cirq on 2 qubits and verify its unitary against cirq.qft using cirq.unitary(). Write the f"
+        ]
+      ]
+    },
+    {
+      "size": 5,
+      "frameworks": {
+        "braket": 5
+      },
+      "examples": [
+        [
+          79,
+          "qc-05854",
+          "braket",
+          "You are given the following quantum programming task. Using Amazon Braket FreeParameter, build a parametrized circuit RY"
+        ],
+        [
+          405,
+          "qc-07824",
+          "braket",
+          "Quantum computing task: Using Amazon Braket FreeParameter, build a parametrized circuit RY(theta) on qubit 0 + CNOT, swe"
+        ],
+        [
+          660,
+          "qc-09884",
+          "braket",
+          "Quantum computing task: Using Amazon Braket FreeParameter, build a parametrized circuit RY(theta) on qubit 0 + CNOT, swe"
+        ],
+        [
+          765,
+          "qc-07216",
+          "braket",
+          "Quantum computing task: Using Amazon Braket FreeParameter, build a parametrized circuit RY(theta) on qubit 0 + CNOT, swe"
+        ],
+        [
+          828,
+          "qc-09689",
+          "braket",
+          "Using Amazon Braket FreeParameter, build a parametrized circuit RY(theta) on qubit 0 + CNOT, sweep theta over 9 points i"
+        ]
+      ]
+    },
+    {
+      "size": 5,
+      "frameworks": {
+        "qiskit": 5
+      },
+      "examples": [
+        [
+          89,
+          "qc-07381",
+          "qiskit",
+          "Here is a quantum coding exercise. Write a manual QFT circuit for 5 qubits in Qiskit and check its unitary equals the DF"
+        ],
+        [
+          92,
+          "qc-05676",
+          "qiskit",
+          "Implement the Quantum Fourier Transform on 5 qubits from scratch in Qiskit (Hadamards, controlled phases, swaps). Verify"
+        ],
+        [
+          103,
+          "qc-07880",
+          "qiskit",
+          "Write a manual QFT circuit for 5 qubits in Qiskit and check its unitary equals the DFT matrix up to numerical precision."
+        ],
+        [
+          564,
+          "qc-09570",
+          "qiskit",
+          "Solve this quantum programming problem. Implement the Quantum Fourier Transform on 5 qubits from scratch in Qiskit (Hada"
+        ],
+        [
+          767,
+          "qc-04980",
+          "qiskit",
+          "You are given the following quantum programming task. Write a manual QFT circuit for 5 qubits in Qiskit and check its un"
+        ]
+      ]
+    },
+    {
+      "size": 5,
+      "frameworks": {
+        "qiskit": 5
+      },
+      "examples": [
+        [
+          90,
+          "qc-07785",
+          "qiskit",
+          "Write a Qiskit program that prepares the 5-qubit W state exactly (using controlled rotations) and verifies it by printin"
+        ],
+        [
+          418,
+          "qc-09151",
+          "qiskit",
+          "Write a Qiskit program that prepares the 5-qubit W state exactly (using controlled rotations) and verifies it by printin"
+        ],
+        [
+          521,
+          "qc-04125",
+          "qiskit",
+          "Quantum computing task: Write a Qiskit program that prepares the 5-qubit W state exactly (using controlled rotations) an"
+        ],
+        [
+          724,
+          "qc-05815",
+          "qiskit",
+          "Here is a quantum coding exercise. Write a Qiskit program that prepares the 5-qubit W state exactly (using controlled ro"
+        ],
+        [
+          954,
+          "qc-04630",
+          "qiskit",
+          "Here is a quantum coding exercise. Write a Qiskit program that prepares the 5-qubit W state exactly (using controlled ro"
+        ]
+      ]
+    },
+    {
+      "size": 5,
+      "frameworks": {
+        "openqasm3": 5
+      },
+      "examples": [
+        [
+          332,
+          "qc-10180",
+          "openqasm3",
+          "Solve this quantum programming problem. Write an OpenQASM 3 program using mid-circuit measurement and an if statement to"
+        ],
+        [
+          368,
+          "qc-08741",
+          "openqasm3",
+          "Here is a quantum coding exercise. Write an OpenQASM 3 program using mid-circuit measurement and an if statement to impl"
+        ],
+        [
+          483,
+          "qc-08824",
+          "openqasm3",
+          "Write an OpenQASM 3 program using mid-circuit measurement and an if statement to implement active qubit reset followed b"
+        ],
+        [
+          817,
+          "qc-00030",
+          "openqasm3",
+          "Here is a quantum coding exercise. Write an OpenQASM 3 program using mid-circuit measurement and an if statement to impl"
+        ],
+        [
+          864,
+          "qc-03269",
+          "openqasm3",
+          "Solve this quantum programming problem. Write an OpenQASM 3 program using mid-circuit measurement and an if statement to"
+        ]
+      ]
+    },
+    {
+      "size": 5,
+      "frameworks": {
+        "qsharp": 5
+      },
+      "examples": [
+        [
+          598,
+          "qc-08682",
+          "qsharp",
+          "Here is a quantum coding exercise. Write a Q# operation (modern QDK syntax) that prepares a Bell state and returns both "
+        ],
+        [
+          663,
+          "qc-07920",
+          "qsharp",
+          "Quantum computing task: Write a Q# operation (modern QDK syntax) that prepares a Bell state and returns both measurement"
+        ],
+        [
+          682,
+          "qc-01422",
+          "qsharp",
+          "You are given the following quantum programming task. Write a Q# operation (modern QDK syntax) that prepares a Bell stat"
+        ],
+        [
+          832,
+          "qc-01764",
+          "qsharp",
+          "Write a Q# operation (modern QDK syntax) that prepares a Bell state and returns both measurement results, plus the Pytho"
+        ],
+        [
+          969,
+          "qc-06994",
+          "qsharp",
+          "Write a Q# operation (modern QDK syntax) that prepares a Bell state and returns both measurement results, plus the Pytho"
+        ]
+      ]
+    },
+    {
+      "size": 4,
+      "frameworks": {
+        "cirq": 4
+      },
+      "examples": [
+        [
+          129,
+          "qc-00915",
+          "cirq",
+          "Solve this quantum programming problem. Implement the QFT manually in Cirq on 4 qubits and verify its unitary against ci"
+        ],
+        [
+          295,
+          "qc-04525",
+          "cirq",
+          "Quantum computing task: Implement the QFT manually in Cirq on 4 qubits and verify its unitary against cirq.qft using cir"
+        ],
+        [
+          435,
+          "qc-08508",
+          "cirq",
+          "Solve this quantum programming problem. Implement the QFT manually in Cirq on 4 qubits and verify its unitary against ci"
+        ],
+        [
+          692,
+          "qc-01677",
+          "cirq",
+          "Quantum computing task: Implement the QFT manually in Cirq on 4 qubits and verify its unitary against cirq.qft using cir"
+        ]
+      ]
+    },
+    {
+      "size": 4,
+      "frameworks": {
+        "qiskit": 4
+      },
+      "examples": [
+        [
+          275,
+          "qc-03086",
+          "qiskit",
+          "Quantum computing task: Write a Qiskit program that builds a 3-qubit QFT circuit, exports it to OpenQASM 2 and OpenQASM "
+        ],
+        [
+          382,
+          "qc-09498",
+          "qiskit",
+          "Here is a quantum coding exercise. Write a Qiskit program that builds a 3-qubit QFT circuit, exports it to OpenQASM 2 an"
+        ],
+        [
+          533,
+          "qc-03615",
+          "qiskit",
+          "Write a Qiskit program that builds a 3-qubit QFT circuit, exports it to OpenQASM 2 and OpenQASM 3 strings, prints both, "
+        ],
+        [
+          593,
+          "qc-05742",
+          "qiskit",
+          "Here is a quantum coding exercise. Write a Qiskit program that builds a 3-qubit QFT circuit, exports it to OpenQASM 2 an"
+        ]
+      ]
+    },
+    {
+      "size": 4,
+      "frameworks": {
+        "braket": 4
+      },
+      "examples": [
+        [
+          476,
+          "qc-03754",
+          "braket",
+          "Solve this quantum programming problem. Write a Braket program building an 3-qubit GHZ circuit, print the circuit diagra"
+        ],
+        [
+          728,
+          "qc-03835",
+          "braket",
+          "Solve this quantum programming problem. Write a Braket program building an 3-qubit GHZ circuit, print the circuit diagra"
+        ],
+        [
+          793,
+          "qc-00711",
+          "braket",
+          "You are given the following quantum programming task. Write a Braket program building an 3-qubit GHZ circuit, print the "
+        ],
+        [
+          980,
+          "qc-03572",
+          "braket",
+          "Quantum computing task: Write a Braket program building an 3-qubit GHZ circuit, print the circuit diagram, and verify wi"
+        ]
+      ]
+    },
+    {
+      "size": 3,
+      "frameworks": {
+        "cirq": 3
+      },
+      "examples": [
+        [
+          16,
+          "qc-09850",
+          "cirq",
+          "Implement the QFT manually in Cirq on 5 qubits and verify its unitary against cirq.qft using cirq.unitary(). Return the "
+        ],
+        [
+          34,
+          "qc-09878",
+          "cirq",
+          "Implement the QFT manually in Cirq on 5 qubits and verify its unitary against cirq.qft using cirq.unitary(). Give one co"
+        ],
+        [
+          764,
+          "qc-08916",
+          "cirq",
+          "You are given the following quantum programming task. Implement the QFT manually in Cirq on 5 qubits and verify its unit"
+        ]
+      ]
+    },
+    {
+      "size": 3,
+      "frameworks": {
+        "braket": 3
+      },
+      "examples": [
+        [
+          134,
+          "qc-03879",
+          "braket",
+          "You are given the following quantum programming task. Using Amazon Braket FreeParameter, build a parametrized circuit RY"
+        ],
+        [
+          154,
+          "qc-00998",
+          "braket",
+          "Solve this quantum programming problem. Using Amazon Braket FreeParameter, build a parametrized circuit RY(theta) on qub"
+        ],
+        [
+          443,
+          "qc-09298",
+          "braket",
+          "Solve this quantum programming problem. Using Amazon Braket FreeParameter, build a parametrized circuit RY(theta) on qub"
+        ]
+      ]
+    }
+  ],
+  "train_eval_signature_overlap": 0,
+  "clean_questions": true,
+  "pure_code_answers": true,
+  "hard_issue_count": 0,
+  "warnings": {
+    "duplicate_code_extra_rows": 135,
+    "exact_duplicate_code_cluster_count": 44
+  }
+}

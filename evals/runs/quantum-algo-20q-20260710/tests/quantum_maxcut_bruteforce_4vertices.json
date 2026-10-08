@@ -1,0 +1,8 @@
+{
+  "id": "quantum_maxcut_bruteforce_4vertices",
+  "title": "Brute-force MaxCut on a 4-vertex graph",
+  "expected_substrings": [
+    "Max cut value: 4",
+    "Optimal bitstring: "
+  ]
+}

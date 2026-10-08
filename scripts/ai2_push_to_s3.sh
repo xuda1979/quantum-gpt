@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 S3_ROOT="nm-aihuanxin:jtdlp-3ed7854b946a47b1a49ad754baa76cd3/quantum-qwen25-coder-main"
-REMOTE_ROOT="/root/root/work/quantum-gpt"
+REMOTE_ROOT="/root/work/quantum-gpt"
 
 cd "$ROOT_DIR"
 
@@ -86,7 +86,7 @@ run_local_or_remote() {
   fi
 
   local json_out
-  json_out="$(bash scripts/ai2_shell.sh "$remote_cmd")"
+  json_out="$(bash scripts/ai2_fast_path.sh exec "$remote_cmd")"
   python3 - <<'PY' "$json_out"
 import json
 import re

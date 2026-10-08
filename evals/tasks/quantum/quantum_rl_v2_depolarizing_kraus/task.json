@@ -1,0 +1,9 @@
+{
+  "id": "quantum_rl_v2_depolarizing_kraus",
+  "name": "Depolarizing channel Kraus operators (numpy/scipy)",
+  "domain": "quantum",
+  "category": "algorithm_implementation",
+  "task_prompt": "Using NumPy and SciPy only, construct Kraus operators for the one-qubit channel 'depolarizing' with parameter p=0.25, using the explicit convention E(rho)=(1-p)rho+p/3*(XrhoX+YrhoY+ZrhoZ). Verify sum K^dagger K=I, apply the channel to |+><+| and a seeded random mixed state, and implement purity, trace distance, and squared Uhlmann fidelity with stable Hermitian eigendecompositions. Assert outputs are Hermitian positive semidefinite with unit trace and that fidelity remains in [0,1]. Return only one complete Python script with no Markdown fences. It must run locally without network access, use fixed seeds whenever randomness is involved, print concise results, and assert every required invariant.",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

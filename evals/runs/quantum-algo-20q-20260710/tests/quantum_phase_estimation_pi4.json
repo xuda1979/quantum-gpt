@@ -1,0 +1,8 @@
+{
+  "id": "quantum_phase_estimation_pi4",
+  "title": "QPE estimates phase 1/4 for unitary S",
+  "expected_substrings": [
+    "Measurement: ",
+    "Estimated phase: 0.2500"
+  ]
+}

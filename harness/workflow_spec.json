@@ -1,0 +1,35 @@
+{
+  "schema": "workflow_spec/v2",
+  "card": "C-9751",
+  "objective": "LoRA adapter on Qwen3.8-27B: 18/18 on the frozen 18-task quantum holdout, fail-closed verified, beats base.",
+  "att_dir": "harness/state/atts",
+  "stages": [
+    {
+      "id": "train",
+      "description": "Authoritative SFT_peft_resume training on ASI3 (training_source_of_truth).",
+      "requires": [],
+      "blocking_on_fail": true,
+      "cmd": "python3 harness/scripts/boot_verify_training.py --box ASI3",
+      "attest_cmd": "python3 harness/scripts/boot_verify_training.py --box ASI3 --json",
+      "audit": "recompute boot.alive from harness/state/resume_training.json"
+    },
+    {
+      "id": "eval_leg",
+      "description": "Fail-closed eval leg on a banked adapter checkpoint (requires living training att or explicit eval-while-training card).",
+      "requires": ["train"],
+      "blocking_on_fail": true,
+      "cmd": "python3 harness/scripts/run_eval_leg.py --preflight --box ASI2",
+      "attest_cmd": "python3 harness/scripts/run_eval_leg.py --box ASI2 --task-count 6 --json",
+      "audit": "recompute markers from the leg scores jsonl on the box"
+    },
+    {
+      "id": "compose_verdict",
+      "description": "Two-leg canonical verdict composition; retires the goal only on 18/18 + beats_base + independent leg2.",
+      "requires": ["eval_leg"],
+      "blocking_on_fail": true,
+      "cmd": "python3 scripts/holdout_verdict.py --check-only",
+      "attest_cmd": "python3 scripts/holdout_verdict.py leg1.json leg2.json out.json",
+      "audit": "recompute per_task agreement + sha pins from leg files"
+    }
+  ]
+}

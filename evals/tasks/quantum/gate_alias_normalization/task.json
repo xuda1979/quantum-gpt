@@ -3,6 +3,7 @@
   "name": "Gate alias normalization repair",
   "domain": "quantum",
   "category": "api_normalization",
+  "task_prompt": "Normalize a sequence of quantum gate names while preserving order. Strip surrounding whitespace and match names case-insensitively. Accept h and hadamard as H, x and pauli_x as X, and cx and cnot as CX. Return the canonical uppercase names as a list. Raise ValueError for any unknown gate name; an empty input sequence returns an empty list.",
   "candidate_file": "candidate.py",
   "test_file": "tests.py"
 }

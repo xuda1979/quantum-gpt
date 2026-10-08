@@ -1,0 +1,20 @@
+# Mixed coding + software-engineering task pool for Anthropic-style trajectory RL.
+# Quantum entries stay disjoint from the strict quantum holdout by reusing the
+# vetted v5 failure-shape training slice. Software entries focus on single-file
+# repair and implementation tasks that the current trajectory sandbox can edit.
+quantum_gate_alias_casefold_barrier
+quantum_gate_token_canonicalizer
+quantum_phase_measurement_register
+quantum_binary_measurement_decoder
+quantum_bitstring_maxcut_landscape
+quantum_maxcut_assignment_enumerator
+quantum_superdense_pauli_router
+quantum_superdense_identity_lookup
+software_config_merge
+software_docstring_contract
+software_duplicate_logic_refactor
+software_multifile_patch_conflict_repair
+software_off_by_one_bugfix
+software_parser_regression_tests
+software_patch_application_conflict_resolver
+software_retry_decorator

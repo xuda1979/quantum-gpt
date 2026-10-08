@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0195",
+  "name": "Write a Qiskit program that prepares an arbitrary state with amplitudes proporti",
+  "task_prompt": "Write a Qiskit program that prepares an arbitrary state with amplitudes proportional to [0.71, 0.94, 0.14, 0.55] using StatePreparation, then verifies the prepared statevector matches the normalized target. Your answer must be the complete working code only, runnable from top to bottom."
+}

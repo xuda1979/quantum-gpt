@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0678",
+  "name": "You are given the following quantum programming task. Using QuTiP, build a cat s",
+  "task_prompt": "You are given the following quantum programming task. Using QuTiP, build a cat state (|alpha> + |-alpha>)/norm with alpha=2.03 in a 25-dimensional Fock space and print its Wigner function values on a coarse grid, identifying the interference fringes. The code must be a complete standalone script that can be executed directly and produces output."
+}

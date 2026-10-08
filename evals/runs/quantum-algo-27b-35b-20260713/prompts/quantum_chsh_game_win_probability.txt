@@ -1,0 +1,24 @@
+Write a complete, runnable Python program using only numpy that:
+1. Defines the singlet state |Phi-> = (|01> - |10>)/sqrt2 as a 4-dimensional
+   complex vector.
+2. Defines the four measurement observables for the optimal CHSH strategy:
+   - Alice: A0 = Z, A1 = X
+   - Bob:   B0 = (Z + X)/sqrt(2), B1 = (Z - X)/sqrt(2)
+   where Z and X are the Pauli matrices.
+3. Computes the four correlations E(a,b) = <psi| A_a (x) B_b |psi> for
+   (a,b) in {0,1}^2 by applying the appropriate Kronecker product.
+4. Computes the CHSH game win probability: averaged over the 4 equally-likely
+   input pairs (x,y) in {0,1}^2, Alice and Bob win when (a XOR b) = (x AND y).
+   Use win_prob = (1 + E)/2 when a XOR b must equal 0, and (1 - E)/2 when it
+   must equal 1.
+5. Computes the CHSH value S = E00 - E01 + E10 + E11.
+6. In `def main()`, prints exactly:
+     CHSH quantum win prob = <value rounded to 4 decimals>
+     Classical best = 0.7500
+     Tsirelson S = <value rounded to 4 decimals>
+     Tsirelson bound = 2.8284
+     Saturates Tsirelson: <True|False>
+     Beats classical: <True|False>
+   where Saturates Tsirelson is True iff |S - 2*sqrt(2)| < 1e-6, and
+   Beats classical is True iff the win probability exceeds 0.75.
+Call main() under `if __name__ == "__main__":`.

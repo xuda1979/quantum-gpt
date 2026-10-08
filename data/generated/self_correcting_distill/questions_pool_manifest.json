@@ -1,0 +1,69 @@
+{
+  "actual_count": 8000,
+  "category_counts": {
+    "algorithm_implementation": 2183,
+    "algorithm_reasoning": 2,
+    "api_normalization": 3,
+    "circuit_construction": 7,
+    "circuit_optimization": 1,
+    "circuit_to_code": 1,
+    "debug_repair": 8,
+    "error_correction": 134,
+    "formula_derivation": 1,
+    "formula_to_code": 1,
+    "hardware_compilation": 1599,
+    "library_api_grounding": 1560,
+    "noise_and_mitigation": 1505,
+    "quantum_engineering": 989,
+    "reasoning": 2,
+    "state_simulation": 4
+  },
+  "difficulty_counts": {
+    "easy": 3,
+    "hard": 6002,
+    "medium": 1995
+  },
+  "framework_counts": {
+    "braket": 663,
+    "cirq": 890,
+    "cuda-quantum": 623,
+    "isq": 149,
+    "mitiq": 606,
+    "numpy": 7,
+    "pennylane": 715,
+    "pyquil": 609,
+    "pytket": 98,
+    "pyzx": 223,
+    "qiskit": 1240,
+    "qsharp": 659,
+    "qutip": 590,
+    "unknown": 928
+  },
+  "output_file": "data/generated/self_correcting_distill/questions_pool.jsonl",
+  "schema": "self-correcting-questions-pool-v1",
+  "seed": 20260702,
+  "sources_summary": {
+    "asi2_distill_seed_v1": 11172,
+    "eval_task_v1": 31,
+    "plan_seed_v1": 8,
+    "rag_seed_v1": 27
+  },
+  "target_count": 8000,
+  "task_type_counts": {
+    "agentic_trajectory": 660,
+    "api_grounded_qa": 654,
+    "benchmark_harness": 656,
+    "error_mitigation": 644,
+    "formula": 1,
+    "hardware_mapping": 676,
+    "implementation": 691,
+    "multi_framework_port": 690,
+    "noise_modeling": 695,
+    "optimization": 660,
+    "repair": 649,
+    "skeleton": 1,
+    "unit_testing": 649,
+    "verification_plan": 674
+  },
+  "with_test_harness": 20
+}

@@ -49,7 +49,9 @@ def clone_record(record: dict[str, Any]) -> dict[str, Any]:
     return copy.deepcopy(record)
 
 
-def merge_reward_overrides(base_reward: dict[str, Any], overrides: dict[str, Any]) -> dict[str, Any]:
+def merge_reward_overrides(
+    base_reward: dict[str, Any], overrides: dict[str, Any]
+) -> dict[str, Any]:
     merged = dict(base_reward)
     merged.update(overrides)
     return merged

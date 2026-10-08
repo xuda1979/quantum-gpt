@@ -1,7 +1,6 @@
 const { execFileSync } = require('child_process');
 const path = require('path');
 const { ensureProfileDir } = require('./huanxin_profile');
-const { chromium } = require('playwright');
 const { launchPersistentContext } = require('./huanxin_browser_launch');
 const { openShell, readTerminalText, sendCommand } = require('./huanxin_shell_exec');
 
@@ -49,7 +48,17 @@ function shellQuote(value) {
 }
 
 function buildArchiveBase64(workspaceRoot, sources) {
-  const archive = execFileSync('tar', ['-czf', '-', ...sources], {
+  const archive = execFileSync('tar', [
+    '--exclude=.DS_Store',
+    '--exclude=*.egg-info',
+    '--exclude=__pycache__',
+    '--exclude=.pytest_cache',
+    '--exclude=.mypy_cache',
+    '--exclude=.ruff_cache',
+    '-czf',
+    '-',
+    ...sources,
+  ], {
     cwd: workspaceRoot,
     env: { ...process.env, COPYFILE_DISABLE: '1' },
     maxBuffer: 1024 * 1024 * 64,
@@ -69,19 +78,17 @@ async function main() {
   const { envName, remoteDir, sources } = parseArgs(process.argv.slice(2));
   const workspaceRoot = process.cwd();
   const archiveBase64 = buildArchiveBase64(workspaceRoot, sources);
-  const chunks = chunkString(archiveBase64, 8000);
+  const chunkSizeRaw = parseInt(process.env.HUANXIN_SHELL_SYNC_CHUNK_SIZE || '1024', 10);
+  const chunkSize = Number.isFinite(chunkSizeRaw) && chunkSizeRaw > 0 ? chunkSizeRaw : 1024;
+  const chunkWaitRaw = parseInt(process.env.HUANXIN_SHELL_SYNC_CHUNK_WAIT_MS || '20000', 10);
+  const chunkWaitMs = Number.isFinite(chunkWaitRaw) && chunkWaitRaw > 0 ? chunkWaitRaw : 20000;
+  const extractWaitRaw = parseInt(process.env.HUANXIN_SHELL_SYNC_EXTRACT_WAIT_MS || '30000', 10);
+  const extractWaitMs = Number.isFinite(extractWaitRaw) && extractWaitRaw > 0 ? extractWaitRaw : 30000;
+  const chunks = chunkString(archiveBase64, chunkSize);
   const remoteBaseName = '/tmp/huanxin-quantum-gpt-upload';
 
   const { profileDir } = ensureProfileDir();
-  const headless = process.env.HUANXIN_HEADLESS !== '0';
-  const launch = headless
-    ? await launchPersistentContext(profileDir)
-    : { context: await chromium.launchPersistentContext(profileDir, {
-        headless: false,
-        executablePath: chromium.executablePath(),
-        viewport: { width: 1600, height: 1000 },
-        slowMo: 50,
-      }) };
+  const launch = await launchPersistentContext(profileDir);
   const context = launch.context;
 
   try {
@@ -91,13 +98,17 @@ async function main() {
     const activePage = await openShell(page, envName);
     await sendCommand(
       activePage,
-      `mkdir -p ${shellQuote(remoteDir)} && rm -f ${remoteBaseName}.tgz ${remoteBaseName}.tgz.b64 && : > ${remoteBaseName}.tgz.b64`,
-      1500
+      `mkdir -p ${shellQuote(remoteDir)} && rm -f ${remoteBaseName}.tgz ${remoteBaseName}.tgz.b64 && : > ${remoteBaseName}.tgz.b64 && echo __SYNC_INIT_OK__`,
+      5000
     );
 
-    for (const chunk of chunks) {
-      const appendCommand = `printf '%s' '${chunk}' >> ${remoteBaseName}.tgz.b64`;
-      await sendCommand(activePage, appendCommand, 400);
+    for (let index = 0; index < chunks.length; index += 1) {
+      const chunk = chunks[index];
+      const appendCommand = `printf '%s' '${chunk}' >> ${remoteBaseName}.tgz.b64 && echo __SYNC_CHUNK_${index + 1}__`;
+      await sendCommand(activePage, appendCommand, chunkWaitMs);
+      if ((index + 1) % 25 === 0 || index + 1 === chunks.length) {
+        console.error(`uploaded chunk ${index + 1}/${chunks.length}`);
+      }
     }
 
     const extractCommand = [
@@ -110,7 +121,7 @@ async function main() {
       `find . -maxdepth 3 -type f | sort | sed -n '1,200p'`,
     ].join(' && ');
 
-    const { before, after } = await sendCommand(activePage, extractCommand, 7000);
+    const { before, after } = await sendCommand(activePage, extractCommand, extractWaitMs);
     await activePage.screenshot({ path: `browser-automation/huanxin-shell-sync-${envName}.png`, fullPage: true });
 
     console.log(

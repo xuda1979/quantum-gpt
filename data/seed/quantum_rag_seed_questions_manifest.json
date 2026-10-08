@@ -1,0 +1,57 @@
+{
+  "docs_dir": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries",
+  "format": "chat-sft-v1",
+  "holdout_policy": "source_docs_only_no_eval_holdout_files",
+  "manifest_version": "quantum-rag-seed-questions-v1",
+  "output": "data/seed/quantum_rag_seed_questions.jsonl",
+  "summary": {
+    "category": {
+      "algorithm_implementation": 7,
+      "circuit_construction": 11,
+      "debug_repair": 5,
+      "state_simulation": 4
+    },
+    "count": 27,
+    "source_paths": [
+      "docs/quantum_libraries/bell_state_construction.md",
+      "docs/quantum_libraries/binary_measurement_decoders.md",
+      "docs/quantum_libraries/braket_basics.md",
+      "docs/quantum_libraries/circuit_repair_recipes.md",
+      "docs/quantum_libraries/cirq_basics.md",
+      "docs/quantum_libraries/density_matrix_eval_api.md",
+      "docs/quantum_libraries/density_matrix_partial_trace.md",
+      "docs/quantum_libraries/depolarizing_channel.md",
+      "docs/quantum_libraries/error_correction_basics.md",
+      "docs/quantum_libraries/ghz_state.md",
+      "docs/quantum_libraries/grover_search.md",
+      "docs/quantum_libraries/maxcut_classical_helpers.md",
+      "docs/quantum_libraries/measurement_and_classical_register.md",
+      "docs/quantum_libraries/pennylane_basics.md",
+      "docs/quantum_libraries/phase_register_roundtrip.md",
+      "docs/quantum_libraries/qaoa_maxcut.md",
+      "docs/quantum_libraries/qiskit_basics.md",
+      "docs/quantum_libraries/quantum_circuit_construction_patterns.md",
+      "docs/quantum_libraries/quantum_fourier_transform.md",
+      "docs/quantum_libraries/quantum_gates_reference.md",
+      "docs/quantum_libraries/quantum_phase_estimation.md",
+      "docs/quantum_libraries/quantum_teleportation.md",
+      "docs/quantum_libraries/stabilizer_formalism.md",
+      "docs/quantum_libraries/state_vector_simulation.md",
+      "docs/quantum_libraries/superdense_coding.md",
+      "docs/quantum_libraries/trotter_decomposition.md",
+      "docs/quantum_libraries/vqe_basics.md"
+    ],
+    "target_framework": {
+      "None": 9,
+      "braket": 1,
+      "cirq": 1,
+      "numpy": 10,
+      "pennylane": 1,
+      "qiskit": 5
+    },
+    "task_type": {
+      "implementation": 26,
+      "repair": 1
+    }
+  }
+}

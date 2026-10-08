@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0153",
+  "name": "Here is a quantum coding exercise. Implement quantum phase estimation in Cirq wi",
+  "task_prompt": "Here is a quantum coding exercise. Implement quantum phase estimation in Cirq with 4 counting qubits for the unitary Z**(2*0.5625) acting on eigenstate |1>. Report the estimated phase. Write the full runnable code (all imports included); executing it should print the results."
+}

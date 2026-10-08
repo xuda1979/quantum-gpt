@@ -1,0 +1,10 @@
+Write a complete, runnable Python program using Qiskit that:
+1. Encodes |1> into the 3-qubit bit-flip code: |111> (apply X on each of the 3 data qubits q0, q1, q2).
+2. Applies an X error on the middle qubit (qubit 1).
+3. Performs syndrome measurement: parity c0 = q0 XOR q1 (CX q0->q3, CX q1->q3) and c1 = q1 XOR q2 (CX q1->q4, CX q2->q4).
+4. Measures all 5 qubits (3 data + 2 syndrome).
+5. In `def main()`, uses StatevectorSampler (1000 shots), decodes the 3 data qubits via majority vote, and prints P(majority = 1), which should be 1.0.
+   Note: Qiskit measurement bitstring is in little-endian order (leftmost char = highest qubit index).
+Output exactly:
+  P(majority=1) = <value rounded to 3 decimals>
+Call main() under `if __name__ == "__main__":`.

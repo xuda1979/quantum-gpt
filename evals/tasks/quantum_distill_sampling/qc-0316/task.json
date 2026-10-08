@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3_sampling",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0316",
+  "name": "Quantum computing task: Using Cirq, build an 7-qubit GHZ state and print its fin",
+  "task_prompt": "Quantum computing task: Using Cirq, build an 7-qubit GHZ state and print its final statevector via simulate(), then sample it 1000 times. Write the full runnable code (all imports included); executing it should print the results."
+}

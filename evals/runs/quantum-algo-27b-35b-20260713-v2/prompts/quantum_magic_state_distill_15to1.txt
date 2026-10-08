@@ -1,0 +1,28 @@
+Write a complete, runnable Python program using numpy and qiskit that:
+1. Defines the magic state |T> = T|+> = (|0> + e^{i pi/4} |1>) / sqrt(2),
+   where T = diag(1, e^{i pi/4}).
+2. Builds the 15-to-1 T-state distillation protocol using the [[15,1,3]]
+   Reed-Muller quantum code. The protocol uses 15 noisy T-magic states
+   and produces 1 high-fidelity T-magic state, conditioned on passing
+   all stabilizer checks.
+3. For simulation purposes, use a simplified noise model: each of the 15
+   input |T> states is replaced with a noisy state
+     rho_noisy = (1 - p) * |T><T| + p * (I / 2)
+   with p = 0.01. Compute the average output fidelity of the distilled
+   T state conditioned on the stabilizer checks passing.
+   For this simulation, use the standard 15-qubit Reed-Muller code with
+   its 14 stabilizer generators (X-type and Z-type).
+4. Implement the encoding circuit of the [[15,1,3]] code.
+5. Implement a Monte Carlo simulation (1000 trials) where each trial:
+   - Prepares 15 noisy T magic states
+   - Applies the encoding circuit
+   - Checks the stabilizers
+   - If all pass, decodes the logical state and computes its fidelity to |T>
+6. In `def main()`, prints exactly these lines (values rounded to 4 decimals):
+     Input error rate = 0.0100
+     Trials = 1000
+     Accepted = <count>
+     Output fidelity = <average fidelity conditional on acceptance>
+     Rejection rate = <(1000 - accepted) / 1000>
+   Use a fixed random seed (np.random.seed(42)) for reproducibility.
+Call main() under `if __name__ == "__main__":`.

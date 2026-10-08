@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0325",
+  "name": "You are given the following quantum programming task. In pytket, implement exp(-",
+  "task_prompt": "You are given the following quantum programming task. In pytket, implement exp(-i*1.061*Z⊗Z) using a PauliExpBox, decompose it, and verify the statevector matches the scipy matrix exponential applied to |++>. Write the full runnable code (all imports included); executing it should print the results."
+}

@@ -1,0 +1,17 @@
+{
+  "label": "with-rag",
+  "created_at_utc": "2026-04-28T05:02:07.348237+00:00",
+  "system_prompt": "You are solving a single quantum-computing evaluation task. Use the provided reference documentation chunks (delimited by [DOC k]) as authoritative background, then produce only the full contents of the requested Python candidate file. Do not include markdown fences, explanations, citations, or commentary.",
+  "tasks": [
+    {
+      "id": "quantum_grover_oracle_diffusion",
+      "name": "Grover oracle and diffusion operator simulation",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "prompt_file": "prompts/quantum_grover_oracle_diffusion.txt",
+      "candidate_file": "candidates/quantum_grover_oracle_diffusion.py"
+    }
+  ],
+  "model": "Qwen2.5-1.5B-Instruct",
+  "rag_enabled": true
+}

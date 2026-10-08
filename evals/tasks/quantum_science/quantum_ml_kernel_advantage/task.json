@@ -1,0 +1,11 @@
+{
+  "id": "quantum_science_quantum_ml_kernel_advantage",
+  "name": "Compare quantum kernel methods to classical kernel methods. ...",
+  "domain": "quantum_science",
+  "category": "comparison",
+  "level": "L6",
+  "field": "quantum_ml",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py",
+  "question": "Compare quantum kernel methods to classical kernel methods. Under what conditions can a quantum kernel offer a provable advantage (e.g. the IQP feature map result by Havlicek et al.), and what are the practical limitations of quantum kernel methods on near-term hardware?"
+}

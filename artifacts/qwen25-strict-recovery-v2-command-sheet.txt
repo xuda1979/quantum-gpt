@@ -1,0 +1,89 @@
+# Qwen2.5 strict recovery v2 command sheet
+# Generated after local validation on 2026-04-13.
+#
+# Local validation status:
+# - python3 evals/runner/run_eval.py -> 30/30 passed
+# - python3 -m pytest -q tests/test_build_curriculum_mix_dataset.py tests/test_enrich_chat_sft_records.py -> pass
+#
+# New train-only support tasks:
+# - quantum_gate_alias_registry_cleanup
+# - quantum_phase_register_roundtrip
+# - quantum_maxcut_partition_ranker
+# - quantum_pauli_message_codec
+#
+# Dataset deltas:
+# - v1 curriculum train/eval: 1157 / 77
+# - v2 enriched curriculum train/eval: 3093 / 140
+# - strict support boost rows: 1416
+
+## Sync To S3
+bash scripts/push_to_s3.sh \
+  evals \
+  scripts \
+  training \
+  data/generated/omnicoder-quantum-generalization-holdout-v2 \
+  data/generated/omnicoder-quantum-generalization-holdout-v2-enriched \
+  data/generated/qwen25-strict-recovery-curriculum-v2-enriched
+
+## Sync S3 To AI1
+bash scripts/ai1_sync_from_s3.sh
+
+## Verify AI1 Workspace
+bash scripts/ai1_shell.sh "cd /root/root/work/quantum-gpt && pwd && whoami && ls outputs | tail -n 20"
+
+## Continue Qwen Training On AI1
+bash scripts/ai1_shell.sh "cd /root/root/work/quantum-gpt && nohup bash -lc '
+PYTORCH_NPU_ALLOC_CONF=max_split_size_mb:256 \
+TOKENIZERS_PARALLELISM=false \
+ASCEND_RT_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 \
+torchrun --nproc_per_node=8 training/qwen_sft_peft.py \
+  --model-name models/Qwen2.5-1.5B-Instruct \
+  --adapter-init outputs/qwen25-quantum-generalization-holdout-ai1-enriched-v1-20260412T224255CST/adapter \
+  --train-file data/generated/qwen25-strict-recovery-curriculum-v2-enriched/train.jsonl \
+  --eval-file data/generated/qwen25-strict-recovery-curriculum-v2-enriched/eval.jsonl \
+  --output-dir outputs/qwen25-strict-recovery-curriculum-v2-enriched-continue-ai1-8npu-20260413TXXXXCST \
+  --device npu \
+  --max-length 512 \
+  --per-device-batch-size 1 \
+  --gradient-accumulation-steps 2 \
+  --learning-rate 1e-4 \
+  --num-epochs 2 \
+  --max-steps 64 \
+  --eval-steps 16 \
+  --log-steps 4 \
+  --train-on-completions-only \
+  > /tmp/qwen25_strict_recovery_v2_train.log 2>&1 &'"
+
+## Monitor Training
+bash scripts/ai1_shell.sh "tail -n 40 /tmp/qwen25_strict_recovery_v2_train.log"
+bash scripts/ai1_shell.sh "ps aux | grep torchrun | grep qwen_sft_peft | grep -v grep || echo FINISHED"
+
+## Push Results Back
+bash scripts/ai1_push_results_to_s3.sh \
+  outputs/qwen25-strict-recovery-curriculum-v2-enriched-continue-ai1-8npu-20260413TXXXXCST
+
+## Strict Holdout Eval On AI1
+bash scripts/ai1_shell.sh "cd /root/root/work/quantum-gpt && python3 scripts/run_hf_pass1_eval.py \
+  --run-dir evals/runs/qwen25-quantum-generalization-holdout-ai1-v2-20260413TXXXXCST \
+  --base-model models/Qwen2.5-1.5B-Instruct \
+  --adapter outputs/qwen25-strict-recovery-curriculum-v2-enriched-continue-ai1-8npu-20260413TXXXXCST/adapter \
+  --device npu \
+  --token-budget-preset quantum_heavy \
+  --score"
+
+## Pull Eval Results Back
+bash scripts/ai1_push_results_to_s3.sh \
+  evals/runs/qwen25-quantum-generalization-holdout-ai1-v2-20260413TXXXXCST \
+  outputs/qwen25-strict-recovery-curriculum-v2-enriched-continue-ai1-8npu-20260413TXXXXCST
+
+## Local Analysis
+python3 scripts/summarize_override_scorecard.py \
+  --scorecard evals/runs/qwen25-quantum-generalization-holdout-ai1-v2-20260413TXXXXCST/scorecard.json \
+  --benchmark-file evals/benchmarks/quantum_generalization_holdout_v1.txt \
+  --output reports/qwen25_quantum_generalization_holdout_ai1_v2_20260413_override_summary.json
+
+python3 scripts/build_strict_scorecard_comparison.py \
+  --baseline evals/runs/qwen25-quantum-generalization-holdout-base-rerun-20260412/scorecard.json \
+  --candidate evals/runs/qwen25-quantum-generalization-holdout-ai1-v2-20260413TXXXXCST/scorecard.json \
+  --benchmark-file evals/benchmarks/quantum_generalization_holdout_v1.txt \
+  --output reports/qwen25_strict_holdout_base_vs_ai1_v2_20260413.json

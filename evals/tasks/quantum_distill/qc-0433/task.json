@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0433",
+  "name": "Write a complete Qiskit superdense-coding program for message '01' and print the",
+  "task_prompt": "Write a complete Qiskit superdense-coding program for message '01' and print the decoded counts. Your answer must be the complete working code only, runnable from top to bottom."
+}

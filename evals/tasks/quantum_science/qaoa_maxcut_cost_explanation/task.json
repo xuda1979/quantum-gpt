@@ -1,0 +1,11 @@
+{
+  "id": "quantum_science_qaoa_maxcut_cost_explanation",
+  "name": "In QAOA, the cost Hamiltonian for MaxCut is H_C = sum of (Z_...",
+  "domain": "quantum_science",
+  "category": "concept",
+  "level": "L1",
+  "field": "qaoa",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py",
+  "question": "In QAOA, the cost Hamiltonian for MaxCut is H_C = sum of (Z_i Z_j) over edges. Explain why measuring this Hamiltonian and maximizing its expectation corresponds to finding a maximum cut of the graph."
+}

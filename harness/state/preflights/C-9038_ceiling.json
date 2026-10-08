@@ -1,0 +1,41 @@
+{
+  "artifact": "ceiling",
+  "card": "C-9112",
+  "derivation": {
+    "grader": "evals/runner/single_candidate_eval.py via scripts/run_asi2_base_adapter_rubric_eval.py run_single_file_test path",
+    "headroom_factor": 1.25,
+    "headroom_tokens": 1359,
+    "holdout": "evals/benchmarks/sapo_promotion_holdout_v1_18.txt",
+    "max_tokens_passing": 1087,
+    "method": "longest known-correct holdout reference tokenized Mac-side, plus headroom",
+    "n_pass": 18,
+    "n_tasks": 18,
+    "probe_evidence": "harness/state/agents/c9112_floor_probe_out.jsonl",
+    "rounded_to": 1536,
+    "rounding_note": "1358.75 rounded up to the 1536 bucket; 1.41x over measured max; covers Qwen2.5-vs-box Qwen tokenizer drift + generation preamble (sanitizer trims)",
+    "tokenizer": "Qwen2.5-0.5B-Instruct local HF snapshot (151936-vocab Qwen BPE family), add_special_tokens=False"
+  },
+  "fixture": "evals/tasks/quantum/pennylane_qml_iris_classification",
+  "fixture_task_id": "quantum_pennylane_qml_iris_classification",
+  "fixture_tokens": 1087,
+  "max_new_tokens": 4096,
+  "produced_for": "C-9038",
+  "proven_pass": true,
+  "proven_pass_evidence": {
+    "interpreter": "3.14.7",
+    "n_pass": 18,
+    "what": "all 18 reference candidates PASS the canonical grader Mac-side; longest (this fixture, 1087 tokens) fits the 1536 floor"
+  },
+  "runner": "scripts/run_asi2_base_adapter_rubric_eval.py",
+  "runner_mtime": 1789891220.6832337,
+  "runner_sha256": "4e12361582b4782069db4009eac02f900a8f0241663c2b06241ff34fe695e177",
+  "scope_note": "Mac-side PRE-LEG feeder (C-9101 dep-cycle split); C-9038 keeps its live-leg truncation measurement scope; runner bytes edited only via documented re-banks (see rebank notes)",
+  "utc": "2026-09-18T12:22:27Z",
+  "rebank_note": "C-9038 rebank: runner bytes changed ONLY to add per-task truncation recording (truncated flag) and the scorer fail-closed consumer; budget derivation and proven_pass evidence unchanged, re-proven Mac-side by test_c9112_ceiling_feeder against the new bytes. mtime re-stamped after a content-identical touch by a co-tenant (sha unchanged, mtime +251s); B-223 pins the live bytes.",
+  "rebank2_note": "C-9051 rebank 2: runner argparse default raised 384->1536 to EQUAL the proven ceiling (card C-9051 acceptance; B-163 bare/default box invocation trap; RED-first test_mac_canonical_runner_default_equals_c9038_ceiling). Budget derivation, proven_pass evidence and scorer fail-closed consumer untouched; pins re-measured from live bytes per B-223.",
+  "rebank2_utc": "2026-09-18T18:53:44Z",
+  "rebank3_note": "C-9051 rebank 3: ruff-format hook reshaped the runner during a 2026-09-19 commit attempt (content-equivalent reformat of the default-raise + truncation-evidence bytes); pins re-measured per B-223. No semantic change.",
+  "rebank3_utc": "2026-09-18T19:04:07Z",
+  "rebank4_note": "C-9198 rebank 4: 13/15 s97 failures were truncation at 1536. Raised ceiling 1536->4096 to accommodate longer quantum solutions. Scripts run_holdout_leg1.py and run_holdout_leg2.py already carry 4096.",
+  "rebank4_utc": "2026-09-20T15:30:00Z"
+}

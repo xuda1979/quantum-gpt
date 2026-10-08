@@ -1,0 +1,18 @@
+Task ID: quantum_binary_measurement_decoder
+Task: Binary measurement decoder
+Domain: quantum
+Category: algorithm_implementation
+Output file: candidate.py
+
+Public task specification:
+Decode measurement-register bits in most-significant-bit-first order. bit_register_to_int returns the ordinary unsigned base-2 integer represented by a non-empty list of 0/1 values and raises ValueError for an empty register or any non-binary value. measurement_register_to_phase returns bit_register_to_int(bits) divided by 2**len(bits), using the same validation.
+
+Required public API (signatures and docstrings only):
+def bit_register_to_int(bits: list[int]) -> int
+def measurement_register_to_phase(bits: list[int]) -> float
+
+Implement the requested file. Hidden tests will verify behavior.
+Return only the complete Python source, without markdown fences or explanation.
+
+Write a Python file that passes the supplied tests.
+Return only the candidate file contents.

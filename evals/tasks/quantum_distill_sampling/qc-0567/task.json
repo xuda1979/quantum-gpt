@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3_sampling",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0567",
+  "name": "Here is a quantum coding exercise. Write a self-contained Qiskit Grover search f",
+  "task_prompt": "Here is a quantum coding exercise. Write a self-contained Qiskit Grover search for the 5-qubit marked bitstring '00010', including the diffusion operator, and report the probability of measuring it. Give one complete script that runs end-to-end on its own and prints the outcome."
+}

@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0388",
+  "name": "Solve this quantum programming problem. Write a complete VQE in Qiskit (Statevec",
+  "task_prompt": "Solve this quantum programming problem. Write a complete VQE in Qiskit (StatevectorEstimator + scipy COBYLA) for the 2-qubit H2 Hamiltonian at bond length 0.735 A and compare to exact diagonalization. The code must be a complete standalone script that can be executed directly and produces output."
+}

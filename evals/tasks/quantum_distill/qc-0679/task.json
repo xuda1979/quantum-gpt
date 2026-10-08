@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0679",
+  "name": "Logistics scheduling, sample_id 14, attempt_index 15, seed_cycle 0, diversity_si",
+  "task_prompt": "Logistics scheduling, sample_id 14, attempt_index 15, seed_cycle 0, diversity_signature 007a81ee6cd3: build an intermediate QAOA plan in Qiskit for a 5-job job-shop schedule, with a version-compatible API fallback and CPU-only simulator fallback; this scenario must be distinct from a generic template and keep the NPU boundary explicit."
+}

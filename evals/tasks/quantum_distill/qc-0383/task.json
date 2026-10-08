@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0383",
+  "name": "Quantum computing task: Write a PennyLane program with a QNode that applies RX(1",
+  "task_prompt": "Quantum computing task: Write a PennyLane program with a QNode that applies RX(1.011) and RY(2.049) to one qubit and returns <Z>. Print the result and the analytic value cos(1.011)*cos(2.049). Give one complete script that runs end-to-end on its own and prints the outcome."
+}

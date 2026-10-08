@@ -1,0 +1,33 @@
+{
+  "kind": "quantum_holdout_quality_report",
+  "benchmark_file": "evals/benchmarks/qwen36_27b_quantum_holdout_v1.txt",
+  "artifact_manifest": "data/generated/qwen36-27b-quantum-test-artifacts/manifest.json",
+  "source_manifest": "data/generated/qwen36-27b-domain-expert-curriculum-v1/manifest.json",
+  "tasks": [
+    "quantum_density_matrix_partial_trace",
+    "quantum_channel_depolarizing",
+    "quantum_ghz_state_witness",
+    "quantum_grover_oracle_diffusion",
+    "quantum_phase_register_roundtrip",
+    "quantum_binary_measurement_decoder"
+  ],
+  "metrics": {
+    "task_count": 6,
+    "train_task_overlap": 0,
+    "docs_grounded": 6,
+    "docs_grounded_rate": 1.0
+  },
+  "doc_references": [
+    "docs/quantum_libraries/density_matrix_eval_api.md",
+    "docs/quantum_libraries/depolarizing_channel.md",
+    "docs/quantum_libraries/ghz_state.md",
+    "docs/quantum_libraries/grover_search.md",
+    "docs/quantum_libraries/measurement_and_classical_register.md",
+    "docs/quantum_libraries/quantum_phase_estimation.md"
+  ],
+  "reference_notes": [
+    "PDF-derived curriculum note: expert data should sharpen the quantum holdout without leaking eval tasks into training.",
+    "The benchmark is intentionally narrow and docs-grounded so the verifier can be strong instead of generic."
+  ],
+  "ok": true
+}

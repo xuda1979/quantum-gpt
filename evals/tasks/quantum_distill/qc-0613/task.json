@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0613",
+  "name": "You are given the following quantum programming task. Perform single-qubit state",
+  "task_prompt": "You are given the following quantum programming task. Perform single-qubit state tomography in Qiskit by hand: prepare RY(1.396) RZ(5.476)|0>, measure X, Y, Z expectation values with StatevectorEstimator, reconstruct the density matrix rho = (I + <X>X + <Y>Y + <Z>Z)/2, and report fidelity with the true state. Provide a complete, self-contained program that runs as-is and prints its results."
+}

@@ -1,0 +1,148 @@
+{
+  "kind": "quantum_eval_artifact_verification",
+  "recommendation": {
+    "artifact": "qwen36_27b_quantum_holdout_v1",
+    "benchmark_file": "evals/benchmarks/qwen36_27b_quantum_holdout_v1.txt",
+    "use_for": "Qwen3.6-27B base vs trained checkpoint quantum coding comparison",
+    "reason": "It is task-disjoint from the Qwen3.6 domain-expert curriculum, resolves to executable quantum eval tasks, and every task is grounded in curated local quantum docs."
+  },
+  "artifact_manifest": "data/generated/qwen36-27b-quantum-test-artifacts/manifest.json",
+  "source_manifest": "data/generated/qwen36-27b-domain-expert-curriculum-v1/manifest.json",
+  "metrics": {
+    "task_count": 6,
+    "artifact_train_task_overlap": 0,
+    "source_train_task_overlap": 0,
+    "source_eval_task_overlap": 0,
+    "docs_grounded": 6,
+    "expected_doc_sources_hit": 6
+  },
+  "benchmark_task_ids": [
+    "quantum_density_matrix_partial_trace",
+    "quantum_channel_depolarizing",
+    "quantum_ghz_state_witness",
+    "quantum_grover_oracle_diffusion",
+    "quantum_phase_register_roundtrip",
+    "quantum_binary_measurement_decoder"
+  ],
+  "missing_task_ids": [],
+  "overlap": {
+    "artifact_train": [],
+    "source_train": [],
+    "source_eval": []
+  },
+  "doc_grounding": {
+    "quantum_density_matrix_partial_trace": {
+      "grounded": true,
+      "best_score": 4.281110948986477,
+      "matched_terms": [
+        "density",
+        "matrix",
+        "partial",
+        "trace"
+      ],
+      "expected_source_fragment": "density_matrix_eval_api.md",
+      "expected_source_hit": true,
+      "top_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_partial_trace.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_eval_api.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/depolarizing_channel.md"
+      ]
+    },
+    "quantum_channel_depolarizing": {
+      "grounded": true,
+      "best_score": 3.669999837875366,
+      "matched_terms": [
+        "algorithm",
+        "channel",
+        "depolarizing"
+      ],
+      "expected_source_fragment": "depolarizing_channel.md",
+      "expected_source_hit": true,
+      "top_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/depolarizing_channel.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/README.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_teleportation.md"
+      ]
+    },
+    "quantum_ghz_state_witness": {
+      "grounded": true,
+      "best_score": 2.716666618982951,
+      "matched_terms": [
+        "algorithm",
+        "entanglement",
+        "ghz",
+        "state",
+        "witness"
+      ],
+      "expected_source_fragment": "ghz_state.md",
+      "expected_source_hit": true,
+      "top_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/ghz_state.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/grover_search.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/README.md"
+      ]
+    },
+    "quantum_grover_oracle_diffusion": {
+      "grounded": true,
+      "best_score": 2.7444443967607284,
+      "matched_terms": [
+        "algorithm",
+        "diffusion",
+        "grover",
+        "operator",
+        "oracle"
+      ],
+      "expected_source_fragment": "grover_search.md",
+      "expected_source_hit": true,
+      "top_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/grover_search.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_circuit_construction_patterns.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/README.md"
+      ]
+    },
+    "quantum_phase_register_roundtrip": {
+      "grounded": true,
+      "best_score": 2.668749952316284,
+      "matched_terms": [
+        "phase",
+        "register",
+        "round-trip",
+        "roundtrip"
+      ],
+      "expected_source_fragment": "quantum_phase_estimation.md",
+      "expected_source_hit": true,
+      "top_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/phase_register_roundtrip.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_phase_estimation.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/quantum_circuit_construction_patterns.md"
+      ]
+    },
+    "quantum_binary_measurement_decoder": {
+      "grounded": true,
+      "best_score": 2.041987164815267,
+      "matched_terms": [
+        "algorithm",
+        "binary",
+        "measurement"
+      ],
+      "expected_source_fragment": "binary_measurement_decoders.md",
+      "expected_source_hit": true,
+      "top_sources": [
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/binary_measurement_decoders.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/circuit_repair_recipes.md",
+        "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/vqe_basics.md"
+      ]
+    }
+  },
+  "checks": {
+    "task_count_meets_min": true,
+    "all_benchmark_tasks_resolve": true,
+    "artifact_eval_matches_benchmark": true,
+    "artifact_train_excludes_benchmark": true,
+    "source_train_excludes_benchmark": true,
+    "source_eval_excludes_benchmark": true,
+    "docs_grounded": true,
+    "expected_doc_sources_hit": true
+  },
+  "ok": true
+}

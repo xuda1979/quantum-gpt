@@ -1,0 +1,9 @@
+{
+  "id": "quantum_rl_v2_zne_richardson_zz",
+  "name": "Zero-noise extrapolation for Bell <ZZ>",
+  "domain": "quantum",
+  "category": "algorithm_implementation",
+  "task_prompt": "Implement zero-noise extrapolation by hand for the Bell-state observable <ZZ> using Qiskit Aer with two-qubit CX depolarizing probability 0.04. Build locally folded circuits with CX replaced by 1, 3, and 5 consecutive CX gates. First obtain exact density-matrix expectations, compute the quadratic Richardson intercept with weights 15/8, -5/4, and 3/8, and verify it is closer to the noiseless value 1 than the scale-1 exact noisy value. Then obtain 50000 seeded-shot parity estimates, report linear and quadratic intercepts with bootstrap uncertainty, and do not make a brittle per-draw improvement assertion. Provide only complete executable Python code. Do not use remote services. Seed random generators, print the requested quantities, and include robust self-tests rather than relying on visual inspection.",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

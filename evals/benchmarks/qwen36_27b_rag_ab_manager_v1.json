@@ -1,0 +1,37 @@
+[
+  {
+    "id": "arclight_isq_install",
+    "query": "How do I install the Arclight ISQ language?",
+    "expected_terms": ["Binary Tarball", "Nix Flake", "Docker Container", "isqc --version"],
+    "minimum_term_hits": 3,
+    "manager_reason": "Arclight ISQ is a specialist compiler; RAG should recover the project-indexed install document."
+  },
+  {
+    "id": "braket_local_simulator",
+    "query": "According to the project quantum library notes, how do I run Braket LocalSimulator and get measurement_counts?",
+    "expected_terms": ["LocalSimulator", "Circuit", "device.run", "shots=1024", "measurement_counts"],
+    "minimum_term_hits": 4,
+    "manager_reason": "RAG should ground the answer in the project Braket basics note."
+  },
+  {
+    "id": "cirq_sampling_histogram",
+    "query": "According to the project quantum library notes, how do I sample a Cirq circuit and print a histogram?",
+    "expected_terms": ["cirq.LineQubit.range", "cirq.Circuit", "cirq.Simulator", "cirq.measure", "repetitions=1024", "histogram"],
+    "minimum_term_hits": 4,
+    "manager_reason": "RAG should include concrete Cirq API names from the project Cirq basics note."
+  },
+  {
+    "id": "qiskit_endianness",
+    "query": "According to the project quantum library notes, what is the Qiskit bit-ordering gotcha for measured bitstrings and Statevector indexing?",
+    "expected_terms": ["rightmost", "little-endian", "Statevector", "sum_i", "2^i"],
+    "minimum_term_hits": 3,
+    "manager_reason": "RAG should retrieve the project note that states Qiskit bitstring and Statevector indexing rules."
+  },
+  {
+    "id": "pennylane_qnode",
+    "query": "According to the project quantum library notes, show a minimal PennyLane QNode pattern and mention the trainable-parameter pitfall.",
+    "expected_terms": ["qml.device", "@qml.qnode", "qml.expval", "pennylane.numpy", "requires_grad=True"],
+    "minimum_term_hits": 4,
+    "manager_reason": "RAG should retrieve the PennyLane basics note and include the exact QNode and gradient hints."
+  }
+]

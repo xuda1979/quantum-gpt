@@ -1,0 +1,9 @@
+{
+  "id": "quantum_rl_v6_gapfill_bare_file_gate_norm",
+  "name": "Bare-file gate alias normalization (no-fence exemplar)",
+  "domain": "quantum",
+  "category": "wave6_no_fence_gapfill",
+  "task_prompt": "Respond with a single runnable Python file using only numpy and the standard library. Define every required function with the EXACT names given; a missing or misnamed entry point fails immediately. Include assert-based self-tests that fail loudly, print nothing on success, and use no randomness or remote services. CRITICAL OUTPUT CONTRACT: output the complete Python file directly with NO markdown code fences and NO prose. Your response is saved verbatim as a .py file and executed; a leading markdown code fence is a guaranteed SyntaxError. Budget your output to be one complete file within the response: never truncate mid-statement. Implement gate alias normalization as a compact drill: normalize_gate_sequence(gates) maps lowercase aliases h and hadamard to H, x and pauli_x to X, cx and cnot to CX, preserves input order, strips surrounding whitespace before lookup, and raises ValueError on any unknown gate string. Assert that [h, CX, pauli_x, hadamard] normalizes to [H, CX, X, H], that an unknown token such as toffoli raises ValueError, and that the empty list normalizes to the empty list.",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

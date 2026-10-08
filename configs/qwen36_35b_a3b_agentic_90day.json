@@ -1,0 +1,32 @@
+{
+  "plan_id": "qwen36_35b_a3b_agentic_90day",
+  "model_family": "qwen3.6_moe",
+  "base_model": "Qwen/Qwen3.6-35B-A3B",
+  "asi1_model_path": "/root/work/filestorage/Qwen3.6-35B-A3B-W8A8",
+  "local_root": "/Users/daxu/software/quantum-gpt",
+  "remote_root": "/root/work/quantum-gpt",
+  "huanxin_environment": "ASI1",
+  "current_fast_lance_path": "scripts/launch_qwen36_35b_a3b_agentic_grpo_asi1.sh",
+  "s3_relay": "iner:jtdlp-21b4208dde424e96b159362ef49c9c96/software/quantum-gpt",
+  "benchmark_files": {
+    "agentic_training": "evals/benchmarks/agentic_software_engineering_training_v1.txt",
+    "agentic_holdout": "evals/benchmarks/agentic_software_engineering_holdout_v1.txt",
+    "trajectory_training": "evals/benchmarks/agentic_coding_trajectory_training_v1.txt",
+    "quantum_holdout": "evals/benchmarks/quantum_generalization_holdout_v1.txt"
+  },
+  "configs": {
+    "model": "configs/model/qwen36_35b_a3b_agentic_16npu.json",
+    "sft": "configs/sft/qwen36_35b_a3b_lora_sft_v1.json",
+    "dpo": "configs/dpo/qwen36_35b_a3b_dpo_v1.json",
+    "rlvr": "configs/rl/qwen36_35b_a3b_grpo_rlvr_asi1.json",
+    "eval": "configs/eval/agentic_private_bench_v1.json"
+  },
+  "phases": [
+    {"name": "foundation", "days": "1-14", "status": "ready", "gate": "local validation, ASI1 preflight, and remote peft/accelerate availability"},
+    {"name": "data_engine", "days": "15-30", "status": "planned", "gate": "executable synthetic tasks and holdout integrity"},
+    {"name": "sft_v1", "days": "31-45", "status": "planned", "gate": "no private-holdout regression"},
+    {"name": "preference_optimization", "days": "46-60", "status": "planned", "gate": "objective verifier-backed pairs"},
+    {"name": "rlvr_v1", "days": "61-75", "status": "planned", "gate": "reward hacking audit and resumable checkpoints"},
+    {"name": "agentic_release_candidate", "days": "76-90", "status": "planned", "gate": "4/4 reliability and safety report"}
+  ]
+}

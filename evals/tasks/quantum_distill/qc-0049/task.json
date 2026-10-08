@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0049",
+  "name": "Solve this quantum programming problem. Construct the W state on 3 qubits in Qis",
+  "task_prompt": "Solve this quantum programming problem. Construct the W state on 3 qubits in Qiskit deterministically and verify the amplitudes from the statevector. Return the entire program in one piece, ready to run without any modification."
+}

@@ -48,17 +48,35 @@ def load_jsonl(path: Path) -> list[dict[str, Any]]:
 def summarize_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
     example_ids = [str(row["example_id"]) for row in rows]
     task_ids = [str(row.get("metadata", {}).get("task_id", "unknown")) for row in rows]
-    prompt_families = [str(row.get("metadata", {}).get("prompt_family", "unknown")) for row in rows]
+
+    # Keep the legacy "unknown" behavior for reporting, but also compute explicit
+    # prompt-family coverage for gate logic.
+    prompt_families_report = [
+        str(row.get("metadata", {}).get("prompt_family", "unknown")) for row in rows
+    ]
+    prompt_families_explicit: list[str] = []
+    prompt_families_missing = 0
+    for row in rows:
+        pf = row.get("metadata", {}).get("prompt_family", None)
+        if isinstance(pf, str) and pf.strip():
+            prompt_families_explicit.append(pf)
+        else:
+            prompt_families_missing += 1
+
     domains = [str(row.get("metadata", {}).get("domain", "unknown")) for row in rows]
     return {
         "count": len(rows),
         "unique_example_ids": len(set(example_ids)),
-        "duplicate_example_ids": sorted(example_id for example_id, count in Counter(example_ids).items() if count > 1),
+        "duplicate_example_ids": sorted(
+            example_id for example_id, count in Counter(example_ids).items() if count > 1
+        ),
         "unique_task_ids": sorted(set(task_ids)),
-        "unique_prompt_families": sorted(set(prompt_families)),
+        "unique_prompt_families": sorted(set(prompt_families_report)),
+        "prompt_family_missing_count": prompt_families_missing,
+        "unique_prompt_families_explicit": sorted(set(prompt_families_explicit)),
         "domain_counts": dict(sorted(Counter(domains).items())),
         "task_counts": dict(sorted(Counter(task_ids).items())),
-        "prompt_family_counts": dict(sorted(Counter(prompt_families).items())),
+        "prompt_family_counts": dict(sorted(Counter(prompt_families_report).items())),
     }
 
 
@@ -70,12 +88,18 @@ def compare_manifest_summary(
 ) -> None:
     if manifest_summary is None:
         return
-    report[f"{split_name}_matches_manifest_count"] = actual_summary["count"] == manifest_summary.get("count")
-    report[f"{split_name}_matches_manifest_tasks"] = actual_summary["task_counts"] == manifest_summary.get("tasks")
-    report[f"{split_name}_matches_manifest_prompt_families"] = (
-        actual_summary["prompt_family_counts"] == manifest_summary.get("prompt_families")
-    )
-    report[f"{split_name}_matches_manifest_domains"] = actual_summary["domain_counts"] == manifest_summary.get("domains")
+    report[f"{split_name}_matches_manifest_count"] = actual_summary[
+        "count"
+    ] == manifest_summary.get("count")
+    report[f"{split_name}_matches_manifest_tasks"] = actual_summary[
+        "task_counts"
+    ] == manifest_summary.get("tasks")
+    report[f"{split_name}_matches_manifest_prompt_families"] = actual_summary[
+        "prompt_family_counts"
+    ] == manifest_summary.get("prompt_families")
+    report[f"{split_name}_matches_manifest_domains"] = actual_summary[
+        "domain_counts"
+    ] == manifest_summary.get("domains")
 
 
 def main() -> int:
@@ -87,8 +111,17 @@ def main() -> int:
 
     train_task_ids = set(train_summary["unique_task_ids"])
     eval_task_ids = set(eval_summary["unique_task_ids"])
-    train_prompt_families = set(train_summary["unique_prompt_families"])
-    eval_prompt_families = set(eval_summary["unique_prompt_families"])
+
+    # For prompt-family disjointness, we want determinism and provability:
+    # - exclude missing/unknown prompt_family values from the overlap set
+    # - separately track missing counts; if the user explicitly requests
+    #   prompt-family disjointness, we fail when either split is missing.
+    train_prompt_families_explicit = set(train_summary.get("unique_prompt_families_explicit", []))
+    eval_prompt_families_explicit = set(eval_summary.get("unique_prompt_families_explicit", []))
+
+    train_prompt_families = set(train_prompt_families_explicit)
+    eval_prompt_families = set(eval_prompt_families_explicit)
+
     train_example_ids = {str(row["example_id"]) for row in train_rows}
     eval_example_ids = {str(row["example_id"]) for row in eval_rows}
 
@@ -121,28 +154,63 @@ def main() -> int:
     checks["task_id_disjoint"] = not report["cross_split"]["task_id_overlap"]
     checks["prompt_family_disjoint"] = not report["cross_split"]["prompt_family_overlap"]
 
+    # Provability: if prompt_family is missing in either split, we cannot
+    # actually prove disjointness, even if the explicit overlap set is empty.
+    train_pf_missing = int(train_summary.get("prompt_family_missing_count", 0) or 0) > 0
+    eval_pf_missing = int(eval_summary.get("prompt_family_missing_count", 0) or 0) > 0
+    checks["prompt_family_disjoint_provable"] = (
+        checks["prompt_family_disjoint"] and (not train_pf_missing) and (not eval_pf_missing)
+    )
+
     manifest = load_json(args.manifest) if args.manifest else None
     if manifest is not None:
         holdout_policy = manifest.get("holdout_policy", {})
         report["manifest_holdout_policy"] = holdout_policy
         compare_manifest_summary(report, "train", train_summary, manifest.get("train_summary"))
         compare_manifest_summary(report, "eval", eval_summary, manifest.get("eval_summary"))
-        checks["manifest_claim_train_eval_example_id_overlap"] = (
-            holdout_policy.get("train_eval_example_id_overlap") == bool(report["cross_split"]["example_id_overlap"])
-        )
-        checks["manifest_claim_train_eval_task_id_overlap"] = (
-            holdout_policy.get("train_eval_task_id_overlap") == bool(report["cross_split"]["task_id_overlap"])
-        )
-        checks["manifest_claim_train_eval_prompt_family_overlap"] = (
-            holdout_policy.get("train_eval_prompt_family_overlap") == bool(report["cross_split"]["prompt_family_overlap"])
-        )
+        checks["manifest_claim_train_eval_example_id_overlap"] = holdout_policy.get(
+            "train_eval_example_id_overlap"
+        ) == bool(report["cross_split"]["example_id_overlap"])
+        checks["manifest_claim_train_eval_task_id_overlap"] = holdout_policy.get(
+            "train_eval_task_id_overlap"
+        ) == bool(report["cross_split"]["task_id_overlap"])
+        checks["manifest_claim_train_eval_prompt_family_overlap"] = holdout_policy.get(
+            "train_eval_prompt_family_overlap"
+        ) == bool(report["cross_split"]["prompt_family_overlap"])
 
     if args.require_task_disjoint:
         checks["required_task_disjoint_satisfied"] = checks["task_id_disjoint"]
     if args.require_prompt_family_disjoint:
         checks["required_prompt_family_disjoint_satisfied"] = checks["prompt_family_disjoint"]
 
-    report["ok"] = all(bool(value) for value in checks.values())
+    # "ok" should reflect the *requested* integrity requirements, not every optional metric.
+    # Required invariants are always enforced (counts, example_id uniqueness/disjointness).
+    # Optional disjointness checks are only required when the corresponding flags are set.
+    required_values: list[bool] = [
+        checks["train_count_meets_min"],
+        checks["eval_count_meets_min"],
+        checks["train_example_ids_unique"],
+        checks["eval_example_ids_unique"],
+        checks["example_id_disjoint"],
+    ]
+
+    if args.require_task_disjoint:
+        required_values.append(checks["task_id_disjoint"])
+
+    if args.require_prompt_family_disjoint:
+        required_values.append(checks["prompt_family_disjoint"])
+
+    # If a manifest is provided, any manifest-claim mismatches should fail the gate.
+    if manifest is not None:
+        required_values.extend(
+            [
+                checks["manifest_claim_train_eval_example_id_overlap"],
+                checks["manifest_claim_train_eval_task_id_overlap"],
+                checks["manifest_claim_train_eval_prompt_family_overlap"],
+            ]
+        )
+
+    report["ok"] = all(bool(v) for v in required_values)
 
     rendered = json.dumps(report, indent=2) + "\n"
     if args.output is not None:

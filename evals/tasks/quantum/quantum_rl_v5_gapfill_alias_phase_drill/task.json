@@ -1,0 +1,9 @@
+{
+  "id": "quantum_rl_v5_gapfill_alias_phase_drill",
+  "name": "Combined alias + phase-register drill (exact holdout API)",
+  "domain": "quantum",
+  "category": "api_normalization",
+  "task_prompt": "Respond with a single runnable Python file using only numpy and the standard library. Define every required function with the EXACT names given; a missing or misnamed entry point fails immediately. Include assert-based self-tests that fail loudly, print nothing on success, and use no randomness or remote services. Implement a combined roundtrip drill: normalize_gate_sequence(gates) with the alias table {h, hadamard} -> H, {x, pauli_x} -> X, {cx, cnot} -> CX (ValueError on unknown gates), then phase_to_register_bits(phase, n_qubits) -> register_bits_to_phase(bits) quantization roundtrip (ValueError on phase outside [0, 1), non-binary bits, or an empty bit list; register_bits_to_phase([1, 0, 1]) == 0.625, register_bits_to_phase([1]) == 0.5). Assert the normalized alias list for [hadamard, cnot] equals [H, CX] and both roundtrips agree within 1e-12.",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

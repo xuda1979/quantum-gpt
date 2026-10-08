@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3_sampling",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0044",
+  "name": "Solve this quantum programming problem. Implement single-qubit randomized benchm",
+  "task_prompt": "Solve this quantum programming problem. Implement single-qubit randomized benchmarking from scratch in Qiskit: generate random Clifford sequences of lengths [1, 5, 10, 20, 40, 80] with recovery, run under depolarizing noise p=0.0092, fit the exponential decay, and report the error per Clifford. Give one complete script that runs end-to-end on its own and prints the outcome."
+}

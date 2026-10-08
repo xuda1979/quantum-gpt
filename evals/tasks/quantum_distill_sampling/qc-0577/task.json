@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3_sampling",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0577",
+  "name": "Quantum computing task: Implement VQE in qulacs with a ParametricQuantumCircuit ",
+  "task_prompt": "Quantum computing task: Implement VQE in qulacs with a ParametricQuantumCircuit and scipy for the Hamiltonian H = 1.32 Z0Z1 + 0.42 X0 + 0.42 X1; compare to exact diagonalization. Provide a complete, self-contained program that runs as-is and prints its results."
+}

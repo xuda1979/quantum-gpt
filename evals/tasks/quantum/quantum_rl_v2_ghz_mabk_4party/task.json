@@ -1,0 +1,9 @@
+{
+  "id": "quantum_rl_v2_ghz_mabk_4party",
+  "name": "4-party MABK witness on 4-qubit GHZ",
+  "domain": "quantum",
+  "category": "algorithm_implementation",
+  "task_prompt": "Prepare a 4-qubit GHZ state and use StatevectorEstimator to evaluate the eight correlators in the standard four-party MABK expression; define the exact sign convention in code, compute its quantum value, and verify it against a direct matrix calculation within numerical precision. Respond with a single runnable Python file and no prose outside the code. The program must be CPU-runnable, deterministic where practical, and fail loudly through assertions when a requested property is not met.",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

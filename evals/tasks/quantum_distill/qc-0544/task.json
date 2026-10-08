@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0544",
+  "name": "Using QuTiP, build a cat state (|alpha> + |-alpha>)/norm with alpha=2.09 in a 20",
+  "task_prompt": "Using QuTiP, build a cat state (|alpha> + |-alpha>)/norm with alpha=2.09 in a 20-dimensional Fock space and print its Wigner function values on a coarse grid, identifying the interference fringes. Return the entire program in one piece, ready to run without any modification."
+}

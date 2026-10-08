@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0442",
+  "name": "Quantum computing task: Use pytket to build a 6-qubit circuit of 5 layers (H + C",
+  "task_prompt": "Quantum computing task: Use pytket to build a 6-qubit circuit of 5 layers (H + CX ladder + RZ), then optimize it with FullPeepholeOptimise and rebase to {CX, Rz, H}. Print gate counts before and after. Your answer must be the complete working code only, runnable from top to bottom."
+}

@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3_sampling",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0268",
+  "name": "Quantum computing task: Implement 4 steps of a discrete-time quantum walk on a c",
+  "task_prompt": "Quantum computing task: Implement 4 steps of a discrete-time quantum walk on a cycle of 0 nodes in Qiskit (position register + coin qubit, increment/decrement circuits), and print the final position distribution showing ballistic spread. Provide a complete, self-contained program that runs as-is and prints its results."
+}

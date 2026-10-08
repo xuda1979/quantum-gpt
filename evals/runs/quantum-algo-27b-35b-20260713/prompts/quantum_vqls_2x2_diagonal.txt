@@ -1,0 +1,23 @@
+Write a complete, runnable Python program using numpy, qiskit, and scipy that:
+1. Defines a 2x2 linear system A x = b with:
+   A = [[1, 0], [0, 2]] (diagonal), b = (|0> + |1>)/sqrt(2) = (1/sqrt(2), 1/sqrt(2)).
+2. Uses a 1-qubit variational ansatz V(theta) = Ry(theta) on |0>.
+3. Defines the VQLS cost function
+   C(theta) = || A V(theta)|0> - b ||^2
+   computed using qiskit.quantum_info.Statevector to obtain V(theta)|0> and
+   numpy for the matrix-vector products.
+4. Minimizes C(theta) using scipy.optimize.minimize with method='COBYLA',
+   maxiter=200, tol=1e-8, starting from theta=0.5.
+5. Computes the exact solution x_exact = A^{-1} b, normalized to unit norm.
+6. Computes the overlap |<x_exact_normalized | x_vqls>|^2 between the VQLS
+   solution state and the exact normalized solution.
+7. In `def main()`, prints exactly:
+     System: A = diag(1, 2), b = |+>
+     VQLS theta = <value rounded to 6 decimals>
+     VQLS cost = <value rounded to 6 decimals>
+     Overlap with exact = <value rounded to 6 decimals>
+     Converged: <True|False>
+     Correct: <True|False>
+   where Converged is True iff overlap > 0.99, and Correct is True iff
+   overlap > 0.99 AND cost < 0.01.
+Call main() under `if __name__ == "__main__":`.

@@ -1,0 +1,18 @@
+# Quantum generalization holdout v2 (hard).
+# Extends v1 with 6 harder tasks requiring deeper quantum computing knowledge:
+# Grover search, density matrices, error correction, Hamiltonian simulation,
+# quantum channels, and entanglement witnesses.
+#
+# Original v1 holdout tasks (4):
+quantum_gate_alias_normalization
+quantum_phase_estimation_circuit
+quantum_qaoa_maxcut
+quantum_superdense_coding
+#
+# New hard holdout tasks (6):
+quantum_grover_oracle_diffusion
+quantum_density_matrix_partial_trace
+quantum_error_correction_shor_9qubit
+quantum_trotterized_hamiltonian_evolution
+quantum_channel_depolarizing
+quantum_ghz_state_witness

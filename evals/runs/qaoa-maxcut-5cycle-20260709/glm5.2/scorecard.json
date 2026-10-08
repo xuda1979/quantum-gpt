@@ -1,0 +1,1026 @@
+{
+  "scored_at_utc": "2026-07-09T06:14:37.405018+00:00",
+  "candidate_map": "/Users/daxu/software/quantum-gpt/evals/runs/qaoa-maxcut-5cycle-20260709/glm5.2/candidate-map.json",
+  "backend": {
+    "name": "huanxin",
+    "model": "glm5.2",
+    "settings": {
+      "max_output_tokens": 4096
+    }
+  },
+  "prompt_style": "direct",
+  "prompt_version": "v2",
+  "failure_category_summary": {
+    "assertion": 7
+  },
+  "results": [
+    {
+      "id": "quantum_bell_pair_construction",
+      "domain": "quantum",
+      "category": "circuit_construction",
+      "name": "Bell pair construction",
+      "passed": true,
+      "details": [
+        "state=[0.7071067811865476, 0.0, 0.0, 0.7071067811865476]"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/bell_pair_construction/candidate.py",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/bell_pair_construction/candidate.py"
+      },
+      "workspace_mode": false,
+      "source": "reference",
+      "error_type": null,
+      "failure_category": null
+    },
+    {
+      "id": "quantum_binary_measurement_decoder",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "name": "Binary measurement decoder",
+      "passed": true,
+      "details": [
+        "binary measurement decoder enforces {0,1} registers and correct phase conversion"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/binary_measurement_decoder/candidate.py",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/binary_measurement_decoder/candidate.py"
+      },
+      "workspace_mode": false,
+      "source": "reference",
+      "error_type": null,
+      "failure_category": null
+    },
+    {
+      "id": "quantum_bitstring_maxcut_landscape",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "name": "Bitstring MaxCut landscape",
+      "passed": true,
+      "details": [
+        "bitstring MaxCut landscape works without hidden helper names"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/bitstring_maxcut_landscape/candidate.py",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/bitstring_maxcut_landscape/candidate.py"
+      },
+      "workspace_mode": false,
+      "source": "reference",
+      "error_type": null,
+      "failure_category": null
+    },
+    {
+      "id": "quantum_braket_bell_state",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "name": "Amazon Braket Bell state preparation and parity check",
+      "passed": false,
+      "details": [
+        "import failed: No module named 'braket'"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/braket_bell_state/candidate.py",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/braket_bell_state/candidate.py"
+      },
+      "workspace_mode": false,
+      "source": "reference",
+      "error_type": null,
+      "failure_category": "assertion"
+    },
+    {
+      "id": "quantum_circuit_depth_optimization",
+      "domain": "quantum",
+      "category": "circuit_optimization",
+      "name": "Greedy circuit depth optimization via ASAP scheduling",
+      "passed": true,
+      "details": [
+        "Circuit depth optimization correct for all test cases"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/circuit_depth_optimization/candidate.py",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/circuit_depth_optimization/candidate.py"
+      },
+      "workspace_mode": false,
+      "source": "reference",
+      "error_type": null,
+      "failure_category": null
+    },
+    {
+      "id": "quantum_circuit_phase_repair",
+      "domain": "quantum",
+      "category": "debug_repair",
+      "name": "Circuit phase repair from noisy gate stream",
+      "passed": true,
+      "details": [
+        "Circuit phase repair handles normalization, cancellations, and unsupported gates"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/circuit_phase_repair/candidate.py",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/circuit_phase_repair/candidate.py"
+      },
+      "workspace_mode": false,
+      "source": "reference",
+      "error_type": null,
+      "failure_category": null
+    },
+    {
+      "id": "quantum_cirq_qaoa_line",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "name": "Cirq QAOA on a 4-node line graph MaxCut",
+      "passed": false,
+      "details": [
+        "measure_bitstrings() raised: module 'numpy' has no attribute 'ComplexWarning'"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/cirq_qaoa_line/candidate.py",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/cirq_qaoa_line/candidate.py"
+      },
+      "workspace_mode": false,
+      "source": "reference",
+      "error_type": null,
+      "failure_category": "assertion"
+    },
+    {
+      "id": "quantum_density_matrix_partial_trace",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "name": "Density matrix construction and partial trace",
+      "passed": true,
+      "details": [
+        "Density matrix and partial trace operations correct for all test cases"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/density_matrix_partial_trace/candidate.py",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/density_matrix_partial_trace/candidate.py"
+      },
+      "workspace_mode": false,
+      "source": "reference",
+      "error_type": null,
+      "failure_category": null
+    },
+    {
+      "id": "quantum_error_detection_bit_flip",
+      "domain": "quantum",
+      "category": "debug_repair",
+      "name": "Quantum Bit-Flip Error Detection",
+      "passed": true,
+      "details": [
+        "Bit-flip code correct for all initial states and error positions"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/error_detection_bit_flip/candidate.py",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/error_detection_bit_flip/candidate.py"
+      },
+      "workspace_mode": false,
+      "source": "reference",
+      "error_type": null,
+      "failure_category": null
+    },
+    {
+      "id": "quantum_gate_alias_casefold_barrier",
+      "domain": "quantum",
+      "category": "api_normalization",
+      "name": "Gate alias casefold barrier",
+      "passed": true,
+      "details": [
+        "gate alias casefold barrier normalizes x/X and rejects invalid aliases"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/gate_alias_casefold_barrier/candidate.py",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/gate_alias_casefold_barrier/candidate.py"
+      },
+      "workspace_mode": false,
+      "source": "reference",
+      "error_type": null,
+      "failure_category": null
+    },
+    {
+      "id": "quantum_gate_alias_normalization",
+      "domain": "quantum",
+      "category": "api_normalization",
+      "name": "Gate alias normalization repair",
+      "passed": true,
+      "details": [
+        "Gate alias normalization handles casing, whitespace, and invalid aliases"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/gate_alias_normalization/candidate.py",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/gate_alias_normalization/candidate.py"
+      },
+      "workspace_mode": false,
+      "source": "reference",
+      "error_type": null,
+      "failure_category": null
+    },
+    {
+      "id": "quantum_gate_alias_registry_cleanup",
+      "domain": "quantum",
+      "category": "api_normalization",
+      "name": "Gate alias registry cleanup",
+      "passed": true,
+      "details": [
+        "gate alias registry cleanup looks good"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/gate_alias_registry_cleanup/candidate.py",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/gate_alias_registry_cleanup/candidate.py"
+      },
+      "workspace_mode": false,
+      "source": "reference",
+      "error_type": null,
+      "failure_category": null
+    },
+    {
+      "id": "quantum_gate_token_canonicalizer",
+      "domain": "quantum",
+      "category": "api_normalization",
+      "name": "Gate token canonicalizer",
+      "passed": true,
+      "details": [
+        "gate token canonicalizer preserves uppercase X/H/CX outputs"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/gate_token_canonicalizer/candidate.py",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/gate_token_canonicalizer/candidate.py"
+      },
+      "workspace_mode": false,
+      "source": "reference",
+      "error_type": null,
+      "failure_category": null
+    },
+    {
+      "id": "quantum_ghz_state_witness",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "name": "GHZ state preparation and entanglement witness",
+      "passed": true,
+      "details": [
+        "GHZ/W state construction and entanglement witness correct for all test cases"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/ghz_state_witness/candidate.py",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/ghz_state_witness/candidate.py"
+      },
+      "workspace_mode": false,
+      "source": "reference",
+      "error_type": null,
+      "failure_category": null
+    },
+    {
+      "id": "quantum_grover_oracle_diffusion",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "name": "Grover oracle and diffusion operator simulation",
+      "passed": true,
+      "details": [
+        "Grover oracle and diffusion simulation correct for all test cases"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/grover_oracle_diffusion/candidate.py",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/grover_oracle_diffusion/candidate.py"
+      },
+      "workspace_mode": false,
+      "source": "reference",
+      "error_type": null,
+      "failure_category": null
+    },
+    {
+      "id": "quantum_maxcut_assignment_enumerator",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "name": "MaxCut assignment enumerator",
+      "passed": true,
+      "details": [
+        "maxcut assignment enumerator imports itertools and returns stable best cuts"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/maxcut_assignment_enumerator/candidate.py",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/maxcut_assignment_enumerator/candidate.py"
+      },
+      "workspace_mode": false,
+      "source": "reference",
+      "error_type": null,
+      "failure_category": null
+    },
+    {
+      "id": "quantum_maxcut_partition_ranker",
+      "domain": "quantum",
+      "category": "algorithm_reasoning",
+      "name": "MaxCut partition ranking from Ising-style assignments",
+      "passed": true,
+      "details": [
+        "MaxCut partition ranking works for deterministic Ising-style assignments"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/maxcut_partition_ranker/candidate.py",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/maxcut_partition_ranker/candidate.py"
+      },
+      "workspace_mode": false,
+      "source": "reference",
+      "error_type": null,
+      "failure_category": null
+    },
+    {
+      "id": "quantum_measurement_bug_repair",
+      "domain": "quantum",
+      "category": "debug_repair",
+      "name": "Measurement mapping bug repair",
+      "passed": true,
+      "details": [
+        "invalid input rejected correctly"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/measurement_bug_repair/candidate.py",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/measurement_bug_repair/candidate.py"
+      },
+      "workspace_mode": false,
+      "source": "reference",
+      "error_type": null,
+      "failure_category": null
+    },
+    {
+      "id": "quantum_pauli_message_codec",
+      "domain": "quantum",
+      "category": "api_normalization",
+      "name": "Pauli label codec for two-bit messages",
+      "passed": true,
+      "details": [
+        "Pauli message codec round-trips two-bit messages and normalizes labels correctly"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/pauli_message_codec/candidate.py",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/pauli_message_codec/candidate.py"
+      },
+      "workspace_mode": false,
+      "source": "reference",
+      "error_type": null,
+      "failure_category": null
+    },
+    {
+      "id": "quantum_pennylane_qml_iris_classification",
+      "domain": "quantum",
+      "category": "quantum_ml",
+      "name": "PennyLane quantum kernel logistic regression on Iris (2-class subset)",
+      "passed": false,
+      "details": [
+        "import failed: No module named 'pennylane'"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/pennylane_qml_iris_classification/candidate.py",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/pennylane_qml_iris_classification/candidate.py"
+      },
+      "workspace_mode": false,
+      "source": "reference",
+      "error_type": null,
+      "failure_category": "assertion"
+    },
+    {
+      "id": "quantum_pennylane_vqe_h2",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "name": "PennyLane VQE ground-state energy of H2",
+      "passed": false,
+      "details": [
+        "import failed: No module named 'pennylane'"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/pennylane_vqe_h2/candidate.py",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/pennylane_vqe_h2/candidate.py"
+      },
+      "workspace_mode": false,
+      "source": "reference",
+      "error_type": null,
+      "failure_category": "assertion"
+    },
+    {
+      "id": "quantum_phase_estimation_circuit",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "name": "Quantum phase estimation unitary eigenvalue extraction",
+      "passed": true,
+      "details": [
+        "Phase estimation simulation correct for all test cases"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/phase_estimation_circuit/candidate.py",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/phase_estimation_circuit/candidate.py"
+      },
+      "workspace_mode": false,
+      "source": "reference",
+      "error_type": null,
+      "failure_category": null
+    },
+    {
+      "id": "quantum_phase_measurement_register",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "name": "Phase measurement register",
+      "passed": true,
+      "details": [
+        "phase measurement register converts phases without tuple/pow mistakes"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/phase_measurement_register/candidate.py",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/phase_measurement_register/candidate.py"
+      },
+      "workspace_mode": false,
+      "source": "reference",
+      "error_type": null,
+      "failure_category": null
+    },
+    {
+      "id": "quantum_phase_register_roundtrip",
+      "domain": "quantum",
+      "category": "interface_contract",
+      "name": "Phase register round-trip utility",
+      "passed": true,
+      "details": [
+        "phase register round trips correctly"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/phase_register_roundtrip/candidate.py",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/phase_register_roundtrip/candidate.py"
+      },
+      "workspace_mode": false,
+      "source": "reference",
+      "error_type": null,
+      "failure_category": null
+    },
+    {
+      "id": "quantum_qaoa_maxcut",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "name": "QAOA MaxCut cost function and classical simulation",
+      "passed": true,
+      "details": [
+        "QAOA MaxCut functions correct for all test cases"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/qaoa_maxcut/candidate.py",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/qaoa_maxcut/candidate.py"
+      },
+      "workspace_mode": false,
+      "source": "reference",
+      "error_type": null,
+      "failure_category": null
+    },
+    {
+      "id": "quantum_qaoa_maxcut_5cycle",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "name": "QAOA Max-Cut on a 5-vertex undirected cycle graph",
+      "passed": true,
+      "details": [
+        "QAOA Max-Cut on 5-cycle correct: binary=01101, cut=4 (optimum 4)"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/runs/qaoa-maxcut-5cycle-20260709/glm5.2/candidates/quantum_qaoa_maxcut_5cycle.py",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/runs/qaoa-maxcut-5cycle-20260709/glm5.2/candidates/quantum_qaoa_maxcut_5cycle.py"
+      },
+      "workspace_mode": false,
+      "source": "override",
+      "error_type": null,
+      "failure_category": null
+    },
+    {
+      "id": "quantum_qft_phase_pattern",
+      "domain": "quantum",
+      "category": "algorithm_reasoning",
+      "name": "QFT phase pattern",
+      "passed": true,
+      "details": [
+        "QFT basis-state phase pattern matches exact formula"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/qft_phase_pattern/candidate.py",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/qft_phase_pattern/candidate.py"
+      },
+      "workspace_mode": false,
+      "source": "reference",
+      "error_type": null,
+      "failure_category": null
+    },
+    {
+      "id": "quantum_qiskit_qft_entangled",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "name": "Qiskit QFT on a 3-qubit entangled GHZ state",
+      "passed": false,
+      "details": [
+        "expected 8 non-zero amplitudes after QFT on GHZ, got 7"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/qiskit_qft_entangled/candidate.py",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/qiskit_qft_entangled/candidate.py"
+      },
+      "workspace_mode": false,
+      "source": "reference",
+      "error_type": null,
+      "failure_category": "assertion"
+    },
+    {
+      "id": "quantum_qiskit_stabilizer_5qubit_code",
+      "domain": "quantum",
+      "category": "quantum_error_correction",
+      "name": "Qiskit [[5,1,3]] five-qubit stabilizer code table",
+      "passed": true,
+      "details": [
+        "[[5,1,3]] stabilizers, symplectic matrix, and 15-distinct-syndrome property correct"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/qiskit_stabilizer_5qubit_code/candidate.py",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/qiskit_stabilizer_5qubit_code/candidate.py"
+      },
+      "workspace_mode": false,
+      "source": "reference",
+      "error_type": null,
+      "failure_category": null
+    },
+    {
+      "id": "quantum_channel_depolarizing",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "name": "Depolarizing quantum channel simulation",
+      "passed": true,
+      "details": [
+        "Quantum channel simulations correct for all test cases"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/quantum_channel_depolarizing/candidate.py",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/quantum_channel_depolarizing/candidate.py"
+      },
+      "workspace_mode": false,
+      "source": "reference",
+      "error_type": null,
+      "failure_category": null
+    },
+    {
+      "id": "quantum_error_correction_shor_9qubit",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "name": "Shor 9-qubit error correction code simulation",
+      "passed": true,
+      "details": [
+        "Shor 9-qubit error correction code correct for all test cases"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/quantum_error_correction_shor_9qubit/candidate.py",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/quantum_error_correction_shor_9qubit/candidate.py"
+      },
+      "workspace_mode": false,
+      "source": "reference",
+      "error_type": null,
+      "failure_category": null
+    },
+    {
+      "id": "quantum_stabilizer_tableau_update_repair",
+      "domain": "quantum",
+      "category": "debug_repair",
+      "name": "Stabilizer tableau single-qubit update repair",
+      "passed": true,
+      "details": [
+        "Stabilizer tableau repair preserves sign and axis updates across H/S/SDG sequences"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/stabilizer_tableau_update_repair/candidate.py",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/stabilizer_tableau_update_repair/candidate.py"
+      },
+      "workspace_mode": false,
+      "source": "reference",
+      "error_type": null,
+      "failure_category": null
+    },
+    {
+      "id": "quantum_superdense_coding",
+      "domain": "quantum",
+      "category": "reasoning",
+      "name": "Superdense coding encode/decode",
+      "passed": true,
+      "details": [
+        "all message mappings round-trip correctly"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/superdense_coding/candidate.py",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/superdense_coding/candidate.py"
+      },
+      "workspace_mode": false,
+      "source": "reference",
+      "error_type": null,
+      "failure_category": null
+    },
+    {
+      "id": "quantum_superdense_identity_lookup",
+      "domain": "quantum",
+      "category": "reasoning",
+      "name": "Superdense identity lookup",
+      "passed": true,
+      "details": [
+        "superdense identity lookup preserves the I opcode and canonical XZ routing"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/superdense_identity_lookup/candidate.py",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/superdense_identity_lookup/candidate.py"
+      },
+      "workspace_mode": false,
+      "source": "reference",
+      "error_type": null,
+      "failure_category": null
+    },
+    {
+      "id": "quantum_superdense_pauli_router",
+      "domain": "quantum",
+      "category": "reasoning",
+      "name": "Superdense Pauli router",
+      "passed": true,
+      "details": [
+        "superdense Pauli router preserves canonical XZ mapping"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/superdense_pauli_router/candidate.py",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/superdense_pauli_router/candidate.py"
+      },
+      "workspace_mode": false,
+      "source": "reference",
+      "error_type": null,
+      "failure_category": null
+    },
+    {
+      "id": "quantum_teleportation_corrections",
+      "domain": "quantum",
+      "category": "protocol_logic",
+      "name": "Teleportation correction mapping",
+      "passed": true,
+      "details": [
+        "Teleportation correction lookup matches standard X/Z rule"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/teleportation_corrections/candidate.py",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/teleportation_corrections/candidate.py"
+      },
+      "workspace_mode": false,
+      "source": "reference",
+      "error_type": null,
+      "failure_category": null
+    },
+    {
+      "id": "quantum_trotterized_hamiltonian_evolution",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "name": "Trotterized Hamiltonian time evolution",
+      "passed": true,
+      "details": [
+        "Trotterized Hamiltonian evolution correct for all test cases"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/trotterized_hamiltonian_evolution/candidate.py",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/trotterized_hamiltonian_evolution/candidate.py"
+      },
+      "workspace_mode": false,
+      "source": "reference",
+      "error_type": null,
+      "failure_category": null
+    },
+    {
+      "id": "quantum_vqe_energy_minimization",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "name": "VQE energy expectation from parameterized ansatz",
+      "passed": true,
+      "details": [
+        "VQE energy minimization correct for all test cases"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/vqe_energy_minimization/candidate.py",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/vqe_energy_minimization/candidate.py"
+      },
+      "workspace_mode": false,
+      "source": "reference",
+      "error_type": null,
+      "failure_category": null
+    },
+    {
+      "id": "software_async_task_timeout_retry",
+      "domain": "software",
+      "category": "concurrency",
+      "name": "Async task runner with per-task timeout and exponential-backoff retry",
+      "passed": true,
+      "details": [
+        "async timeout + retry + exponential backoff + gather all correct"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/tasks/software/async_task_timeout_retry/candidate.py",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/tasks/software/async_task_timeout_retry/candidate.py"
+      },
+      "workspace_mode": false,
+      "source": "reference",
+      "error_type": null,
+      "failure_category": null
+    },
+    {
+      "id": "software_config_merge",
+      "domain": "software",
+      "category": "data_transforms",
+      "name": "Configuration merge semantics",
+      "passed": true,
+      "details": [
+        "Recursive config merge preserves semantics and input immutability"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/tasks/software/config_merge/candidate.py",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/tasks/software/config_merge/candidate.py"
+      },
+      "workspace_mode": false,
+      "source": "reference",
+      "error_type": null,
+      "failure_category": null
+    },
+    {
+      "id": "software_docstring_contract",
+      "domain": "software",
+      "category": "api_quality",
+      "name": "Docstring contract preservation",
+      "passed": true,
+      "details": [
+        "Behavior and documented contract both preserved"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/tasks/software/docstring_contract/candidate.py",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/tasks/software/docstring_contract/candidate.py"
+      },
+      "workspace_mode": false,
+      "source": "reference",
+      "error_type": null,
+      "failure_category": null
+    },
+    {
+      "id": "software_duplicate_logic_refactor",
+      "domain": "software",
+      "category": "refactor",
+      "name": "Duplicate logic refactor",
+      "passed": true,
+      "details": [
+        "shared normalization helper is used consistently"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/tasks/software/duplicate_logic_refactor/candidate.py",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/tasks/software/duplicate_logic_refactor/candidate.py"
+      },
+      "workspace_mode": false,
+      "source": "reference",
+      "error_type": null,
+      "failure_category": null
+    },
+    {
+      "id": "software_json_schema_validator",
+      "domain": "software",
+      "category": "data_validation",
+      "name": "Minimal JSON Schema validator supporting type, properties, required, items",
+      "passed": true,
+      "details": [
+        "JSON Schema validator handles type/required/properties/items/bounds/enum/additionalProperties"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/tasks/software/json_schema_validator/candidate.py",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/tasks/software/json_schema_validator/candidate.py"
+      },
+      "workspace_mode": false,
+      "source": "reference",
+      "error_type": null,
+      "failure_category": null
+    },
+    {
+      "id": "software_log_parser_aggregator",
+      "domain": "software",
+      "category": "data_processing",
+      "name": "Log parser with level-count aggregation and time-window grouping",
+      "passed": false,
+      "details": [
+        "import failed: unsupported operand type(s) for |: 'type' and 'NoneType'"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/tasks/software/log_parser_aggregator/candidate.py",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/tasks/software/log_parser_aggregator/candidate.py"
+      },
+      "workspace_mode": false,
+      "source": "reference",
+      "error_type": null,
+      "failure_category": "assertion"
+    },
+    {
+      "id": "software_multifile_patch_conflict_repair",
+      "domain": "software",
+      "category": "multifile_repair",
+      "name": "Multifile patch conflict repair",
+      "passed": true,
+      "details": [
+        "Multifile patch repair preserves engine semantics and reporting contract across modules"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/tasks/software/multifile_patch_conflict_repair/candidate.py",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/tasks/software/multifile_patch_conflict_repair/candidate.py"
+      },
+      "workspace_mode": false,
+      "source": "reference",
+      "error_type": null,
+      "failure_category": null
+    },
+    {
+      "id": "software_off_by_one_bugfix",
+      "domain": "software",
+      "category": "bugfix",
+      "name": "Off-by-one bug fix",
+      "passed": true,
+      "details": [
+        "range sum behaves inclusively"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/tasks/software/off_by_one_bugfix/candidate.py",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/tasks/software/off_by_one_bugfix/candidate.py"
+      },
+      "workspace_mode": false,
+      "source": "reference",
+      "error_type": null,
+      "failure_category": null
+    },
+    {
+      "id": "software_parser_regression_tests",
+      "domain": "software",
+      "category": "test_writing",
+      "name": "Parser regression tests",
+      "passed": true,
+      "details": [
+        "regression cases cover parser edge cases"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/tasks/software/parser_regression_tests/candidate.py",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/tasks/software/parser_regression_tests/candidate.py"
+      },
+      "workspace_mode": false,
+      "source": "reference",
+      "error_type": null,
+      "failure_category": null
+    },
+    {
+      "id": "software_patch_application_conflict_resolver",
+      "domain": "software",
+      "category": "stateful_logic",
+      "name": "Patch application conflict resolver",
+      "passed": true,
+      "details": [
+        "Patch conflict resolver preserves ordering, duplicate suppression, conflict bookkeeping, and input immutability"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/tasks/software/patch_application_conflict_resolver/candidate.py",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/tasks/software/patch_application_conflict_resolver/candidate.py"
+      },
+      "workspace_mode": false,
+      "source": "reference",
+      "error_type": null,
+      "failure_category": null
+    },
+    {
+      "id": "software_regex_capturing_group_extractor",
+      "domain": "software",
+      "category": "string_parsing",
+      "name": "Regex named-capturing-group extractor for log-like lines",
+      "passed": true,
+      "details": [
+        "regex named-group extraction, int coercion, no-match handling, alternation all correct"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/tasks/software/regex_capturing_group_extractor/candidate.py",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/tasks/software/regex_capturing_group_extractor/candidate.py"
+      },
+      "workspace_mode": false,
+      "source": "reference",
+      "error_type": null,
+      "failure_category": null
+    },
+    {
+      "id": "software_retry_decorator",
+      "domain": "software",
+      "category": "design_pattern",
+      "name": "Configurable retry decorator with exponential backoff",
+      "passed": true,
+      "details": [
+        "Retry decorator handles all cases correctly"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/tasks/software/retry_decorator/candidate.py",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/tasks/software/retry_decorator/candidate.py"
+      },
+      "workspace_mode": false,
+      "source": "reference",
+      "error_type": null,
+      "failure_category": null
+    },
+    {
+      "id": "software_session_event_log",
+      "domain": "software",
+      "category": "stateful_logic",
+      "name": "Session event log state machine",
+      "passed": true,
+      "details": [
+        "Session event log preserves state transitions and error handling"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/tasks/software/session_event_log/candidate.py",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/tasks/software/session_event_log/candidate.py"
+      },
+      "workspace_mode": false,
+      "source": "reference",
+      "error_type": null,
+      "failure_category": null
+    },
+    {
+      "id": "software_session_window_summary",
+      "domain": "software",
+      "category": "stateful_logic",
+      "name": "Session window summary with ordered history",
+      "passed": true,
+      "details": [
+        "Session window summary preserves ordering, state transitions, and validation"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/tasks/software/session_window_summary/candidate.py",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/tasks/software/session_window_summary/candidate.py"
+      },
+      "workspace_mode": false,
+      "source": "reference",
+      "error_type": null,
+      "failure_category": null
+    },
+    {
+      "id": "software_sql_join_resolver",
+      "domain": "software",
+      "category": "data_processing",
+      "name": "Tiny SQL SELECT-FROM-JOIN resolver over in-memory tables",
+      "passed": false,
+      "details": [
+        "import failed: unsupported operand type(s) for |: 'type' and 'NoneType'"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/tasks/software/sql_join_resolver/candidate.py",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/tasks/software/sql_join_resolver/candidate.py"
+      },
+      "workspace_mode": false,
+      "source": "reference",
+      "error_type": null,
+      "failure_category": "assertion"
+    },
+    {
+      "id": "software_tree_serialization",
+      "domain": "software",
+      "category": "data_structures",
+      "name": "N-ary tree serialization and deserialization",
+      "passed": true,
+      "details": [
+        "Tree serialization handles all cases correctly"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/tasks/software/tree_serialization/candidate.py",
+      "candidate_paths": {
+        "candidate.py": "/Users/daxu/software/quantum-gpt/evals/tasks/software/tree_serialization/candidate.py"
+      },
+      "workspace_mode": false,
+      "source": "reference",
+      "error_type": null,
+      "failure_category": null
+    },
+    {
+      "id": "software_workspace_patch_bundle_repair",
+      "domain": "software",
+      "category": "workspace_repair",
+      "name": "Workspace patch bundle repair",
+      "passed": true,
+      "details": [
+        "Workspace patch bundle repair preserves engine semantics and reporting contract across module boundaries"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/tasks/software/workspace_patch_bundle_repair/pkg/patch_engine.py",
+      "candidate_paths": {
+        "pkg/patch_engine.py": "/Users/daxu/software/quantum-gpt/evals/tasks/software/workspace_patch_bundle_repair/pkg/patch_engine.py"
+      },
+      "workspace_mode": true,
+      "source": "reference",
+      "error_type": null,
+      "failure_category": null
+    },
+    {
+      "id": "software_workspace_runner_smoke",
+      "domain": "software",
+      "category": "workspace_smoke",
+      "name": "Workspace runner smoke",
+      "passed": true,
+      "details": [
+        "workspace-mode task passed"
+      ],
+      "candidate_path": "/Users/daxu/software/quantum-gpt/evals/tasks/software/workspace_runner_smoke/pkg/logic.py",
+      "candidate_paths": {
+        "pkg/logic.py": "/Users/daxu/software/quantum-gpt/evals/tasks/software/workspace_runner_smoke/pkg/logic.py"
+      },
+      "workspace_mode": true,
+      "source": "reference",
+      "error_type": null,
+      "failure_category": null
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+Write a complete, runnable Python program using Qiskit 2.x that:
+1. Builds a 3-qubit circuit A that applies a single Toffoli gate (qc.ccx(0,1,2))
+   to the basis state |110> (apply X to qubits 0 and 1 first).
+2. Builds a 3-qubit circuit B that implements the Toffoli gate via the
+   standard decomposition:
+     - CX(1, 2); Tdg(2); CX(0, 2); T(2); CX(1, 2); Tdg(2); CX(0, 2); T(1); T(2); CX(0, 1); T(0); Tdg(1); CX(0, 1)
+   applied to the same basis state |110>.
+3. Uses qiskit.quantum_info.Statevector to compute the final statevector of
+   both circuits. Computes the fidelity |<psi_A | psi_B>|^2.
+4. In `def main()`, prints:
+     fidelity = <value rounded to 3 decimals>
+     match: True   (if fidelity >= 0.999 else False)
+   Expected: fidelity = 1.000 and match: True.
+Call main() under `if __name__ == "__main__":`.

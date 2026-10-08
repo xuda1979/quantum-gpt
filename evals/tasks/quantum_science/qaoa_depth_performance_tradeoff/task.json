@@ -1,0 +1,11 @@
+{
+  "id": "quantum_science_qaoa_depth_performance_tradeoff",
+  "name": "Compare the performance of QAOA at shallow depth (p=1, p=2) ...",
+  "domain": "quantum_science",
+  "category": "comparison",
+  "level": "L6",
+  "field": "qaoa",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py",
+  "question": "Compare the performance of QAOA at shallow depth (p=1, p=2) versus deeper QAOA (large p) on MaxCut. What does the quantum advantage landscape look like, and what do concentration results tell us about the quality of approximate solutions at fixed p as the graph size grows?"
+}

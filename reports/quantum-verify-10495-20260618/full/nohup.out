@@ -1,0 +1,53 @@
+[17:53:19] loaded 10495 question records from quantum_finetune_verified.jsonl
+[17:53:19] 8991 unique codes to execute (workers=8, timeout=300s)
+[17:54:04] progress 200/8991 unique  fails=0  4.5/s  eta=1957s
+[17:54:38] progress 400/8991 unique  fails=0  5.1/s  eta=1683s
+[17:55:19] progress 600/8991 unique  fails=0  5.0/s  eta=1680s
+[17:55:57] progress 800/8991 unique  fails=0  5.1/s  eta=1620s
+[17:56:33] progress 1000/8991 unique  fails=0  5.2/s  eta=1549s
+[17:57:29] progress 1200/8991 unique  fails=0  4.8/s  eta=1624s
+[17:58:22] progress 1400/8991 unique  fails=0  4.6/s  eta=1640s
+[17:59:01] progress 1600/8991 unique  fails=0  4.7/s  eta=1580s
+[17:59:48] progress 1800/8991 unique  fails=0  4.6/s  eta=1552s
+[18:00:31] progress 2000/8991 unique  fails=0  4.6/s  eta=1510s
+[18:01:05] progress 2200/8991 unique  fails=0  4.7/s  eta=1437s
+[18:01:45] progress 2400/8991 unique  fails=0  4.7/s  eta=1388s
+[18:02:34] progress 2600/8991 unique  fails=0  4.7/s  eta=1364s
+[18:03:14] progress 2800/8991 unique  fails=0  4.7/s  eta=1316s
+[18:04:08] progress 3000/8991 unique  fails=0  4.6/s  eta=1296s
+[18:04:47] progress 3200/8991 unique  fails=0  4.7/s  eta=1244s
+concurrent.futures.process._RemoteTraceback: 
+"""
+Traceback (most recent call last):
+  File "/Users/daxu/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/concurrent/futures/process.py", line 261, in _process_worker
+    r = call_item.fn(*call_item.args, **call_item.kwargs)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/daxu/quantum_dataset/gen/run_verify_all_questions.py", line 37, in run_one
+    with tempfile.NamedTemporaryFile("w", suffix=".py", delete=False) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/daxu/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/tempfile.py", line 580, in NamedTemporaryFile
+    file = _io.open(dir, mode, buffering=buffering,
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/daxu/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/tempfile.py", line 577, in opener
+    fd, name = _mkstemp_inner(dir, prefix, suffix, flags, output_type)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/daxu/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/tempfile.py", line 257, in _mkstemp_inner
+    fd = _os.open(file, flags, 0o600)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+OSError: [Errno 28] No space left on device: '/var/folders/py/d8v62mnd40vg77h4cls6n0t80000gn/T/tmpnfk4rya9.py'
+"""
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/daxu/quantum_dataset/gen/run_verify_all_questions.py", line 210, in <module>
+    main()
+  File "/Users/daxu/quantum_dataset/gen/run_verify_all_questions.py", line 115, in main
+    h, ok, rc, dt, out, err = fut.result()
+                              ^^^^^^^^^^^^
+  File "/Users/daxu/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/concurrent/futures/_base.py", line 449, in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+  File "/Users/daxu/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/concurrent/futures/_base.py", line 401, in __get_result
+    raise self._exception
+OSError: [Errno 28] No space left on device: '/var/folders/py/d8v62mnd40vg77h4cls6n0t80000gn/T/tmpnfk4rya9.py'

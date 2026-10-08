@@ -1,0 +1,14 @@
+{
+  "scorecard": "/Users/daxu/software/quantum-gpt/evals/runs/omnicoder-quantum-generalization-holdout-base-omnicoder9b-20260410/scorecard.json",
+  "overall_total": 26,
+  "overall_passes": 25,
+  "overall_failures": 1,
+  "overall_pass_rate": 0.9615384615384616,
+  "override_total": 4,
+  "override_passes": 3,
+  "override_failures": 1,
+  "override_pass_rate": 0.75,
+  "failed_task_ids": [
+    "quantum_gate_alias_normalization"
+  ]
+}

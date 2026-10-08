@@ -1,0 +1,9 @@
+{
+  "id": "quantum_vqe_heisenberg_energy",
+  "name": "PennyLane VQE ground-state energy of the 2-qubit Heisenberg chain",
+  "domain": "quantum",
+  "category": "algorithm_implementation",
+  "framework": "pennylane",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

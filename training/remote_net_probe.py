@@ -3,7 +3,7 @@ import json
 import socket
 import sys
 import urllib.request
-from urllib.error import URLError, HTTPError
+from urllib.error import HTTPError, URLError
 
 TARGETS = [
     "https://huggingface.co",

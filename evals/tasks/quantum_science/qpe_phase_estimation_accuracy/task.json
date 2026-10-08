@@ -1,0 +1,11 @@
+{
+  "id": "quantum_science_qpe_phase_estimation_accuracy",
+  "name": "Derive the relationship between the number of evaluation qub...",
+  "domain": "quantum_science",
+  "category": "derivation",
+  "level": "L2",
+  "field": "qpe",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py",
+  "question": "Derive the relationship between the number of evaluation qubits t in Quantum Phase Estimation and the precision of the estimated phase. Show that to estimate the phase to n bits of precision with failure probability at most epsilon, we need t = n + ceil(log2(2 + 1/(2*epsilon))) qubits."
+}

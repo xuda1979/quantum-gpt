@@ -1,0 +1,9 @@
+Write a complete, runnable Python program using Qiskit 2.x that:
+1. Prepares a 4-qubit GHZ state: H on qubit 0, then CNOT(0,1), CNOT(1,2), CNOT(2,3).
+2. Measures all 4 qubits with StatevectorSampler (>= 4000 shots).
+3. In `def main()`, computes and prints:
+     P(0000) = <value rounded to 3 decimals>
+     P(1111) = <value rounded to 3 decimals>
+     P(GHZ) = <sum P(0000)+P(1111) rounded to 3 decimals>
+   Expected: P(GHZ) >= 0.99 (close to 1.000).
+Call main() under `if __name__ == "__main__":`.

@@ -1,0 +1,42 @@
+{
+  "timestamp_utc": "2026-04-08T10:24:48.892073+00:00",
+  "python": "3.9.6",
+  "platform": "macOS-26.3-arm64-arm-64bit",
+  "model_id": "google/gemma-4-26B-A4B-it",
+  "hf_endpoint": "https://hf-mirror.com",
+  "status": "ok",
+  "resolved_id": "google/gemma-4-26B-A4B-it",
+  "private": false,
+  "disabled": false,
+  "gated": false,
+  "downloads": 659815,
+  "likes": 504,
+  "pipeline_tag": "image-text-to-text",
+  "library_name": "transformers",
+  "tags_sample": [
+    "transformers",
+    "safetensors",
+    "gemma4",
+    "image-text-to-text",
+    "conversational",
+    "license:apache-2.0",
+    "eval-results",
+    "endpoints_compatible",
+    "region:us"
+  ],
+  "file_count": 11,
+  "config_model_type": "gemma4",
+  "config_architectures": [
+    "Gemma4ForConditionalGeneration"
+  ],
+  "family_evidence": {
+    "expected_family_substring": "gemma",
+    "matched": true,
+    "hits": [
+      "google/gemma-4-26B-A4B-it",
+      "gemma4",
+      "gemma4",
+      "Gemma4ForConditionalGeneration"
+    ]
+  }
+}

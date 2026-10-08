@@ -2,4 +2,4 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-exec "$ROOT_DIR/scripts/huanxin_shell.sh" ai1 "$@"
+exec bash "$ROOT_DIR/scripts/huanxin_shell.sh" ai1 "$@"

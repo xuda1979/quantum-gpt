@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0102",
+  "name": "Here is a quantum coding exercise. Implement imaginary-time evolution classicall",
+  "task_prompt": "Here is a quantum coding exercise. Implement imaginary-time evolution classically (via scipy expm of -tau*H) to find the ground state of the 5-qubit transverse Ising model (J=1.46, h=1.03), and verify by overlapping the result with a Qiskit-exact eigenvector. The code must be a complete standalone script that can be executed directly and produces output."
+}

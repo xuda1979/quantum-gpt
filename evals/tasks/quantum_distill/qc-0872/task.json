@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0872",
+  "name": "Solve this quantum programming problem. Solve a 0/1 knapsack (values [8, 5, 9, 7",
+  "task_prompt": "Solve this quantum programming problem. Solve a 0/1 knapsack (values [8, 5, 9, 7], weights [6, 4, 2, 4], capacity 10) by building a penalized QUBO in dimod (slack-variable encoding for the capacity constraint) and sampling with SimulatedAnnealingSampler. Compare to brute force. Provide a complete, self-contained program that runs as-is and prints its results."
+}

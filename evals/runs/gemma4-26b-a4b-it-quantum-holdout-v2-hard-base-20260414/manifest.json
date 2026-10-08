@@ -1,0 +1,91 @@
+{
+  "prompt_version": "v2",
+  "prompt_style": "repair_focused",
+  "created_at_utc": "2026-04-14T00:00:00+00:00",
+  "system_prompt": "You are solving a single evaluation task as a careful repair engineer. Produce only the final Python candidate file. Preserve simplicity, avoid unnecessary abstractions, and do not emit markdown or explanation text.",
+  "notes": "Hard quantum generalization holdout v2: 10 tasks including Grover, density matrices, error correction, Hamiltonian simulation, quantum channels, and entanglement witnesses.",
+  "include_reference_candidate": false,
+  "token_budget_preset": "quantum_heavy",
+  "tasks": [
+    {
+      "id": "quantum_gate_alias_normalization",
+      "name": "Gate alias normalization repair",
+      "domain": "quantum",
+      "category": "api_normalization",
+      "prompt_file": "prompts/quantum_gate_alias_normalization.txt",
+      "candidate_file": "candidates/quantum_gate_alias_normalization.py"
+    },
+    {
+      "id": "quantum_phase_estimation_circuit",
+      "name": "Quantum phase estimation unitary eigenvalue extraction",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "prompt_file": "prompts/quantum_phase_estimation_circuit.txt",
+      "candidate_file": "candidates/quantum_phase_estimation_circuit.py"
+    },
+    {
+      "id": "quantum_qaoa_maxcut",
+      "name": "QAOA MaxCut cost function and classical simulation",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "prompt_file": "prompts/quantum_qaoa_maxcut.txt",
+      "candidate_file": "candidates/quantum_qaoa_maxcut.py"
+    },
+    {
+      "id": "quantum_superdense_coding",
+      "name": "Superdense coding encode/decode",
+      "domain": "quantum",
+      "category": "reasoning",
+      "prompt_file": "prompts/quantum_superdense_coding.txt",
+      "candidate_file": "candidates/quantum_superdense_coding.py"
+    },
+    {
+      "id": "quantum_grover_oracle_diffusion",
+      "name": "Grover oracle and diffusion operator simulation",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "prompt_file": "prompts/quantum_grover_oracle_diffusion.txt",
+      "candidate_file": "candidates/quantum_grover_oracle_diffusion.py"
+    },
+    {
+      "id": "quantum_density_matrix_partial_trace",
+      "name": "Density matrix construction and partial trace",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "prompt_file": "prompts/quantum_density_matrix_partial_trace.txt",
+      "candidate_file": "candidates/quantum_density_matrix_partial_trace.py"
+    },
+    {
+      "id": "quantum_error_correction_shor_9qubit",
+      "name": "Shor 9-qubit error correction code simulation",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "prompt_file": "prompts/quantum_error_correction_shor_9qubit.txt",
+      "candidate_file": "candidates/quantum_error_correction_shor_9qubit.py"
+    },
+    {
+      "id": "quantum_trotterized_hamiltonian_evolution",
+      "name": "Trotterized Hamiltonian time evolution",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "prompt_file": "prompts/quantum_trotterized_hamiltonian_evolution.txt",
+      "candidate_file": "candidates/quantum_trotterized_hamiltonian_evolution.py"
+    },
+    {
+      "id": "quantum_channel_depolarizing",
+      "name": "Depolarizing quantum channel simulation",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "prompt_file": "prompts/quantum_channel_depolarizing.txt",
+      "candidate_file": "candidates/quantum_channel_depolarizing.py"
+    },
+    {
+      "id": "quantum_ghz_state_witness",
+      "name": "GHZ state preparation and entanglement witness",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "prompt_file": "prompts/quantum_ghz_state_witness.txt",
+      "candidate_file": "candidates/quantum_ghz_state_witness.py"
+    }
+  ]
+}

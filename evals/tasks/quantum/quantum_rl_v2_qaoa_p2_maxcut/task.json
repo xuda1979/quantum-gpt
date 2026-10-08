@@ -1,0 +1,9 @@
+{
+  "id": "quantum_rl_v2_qaoa_p2_maxcut",
+  "name": "QAOA p=2 MaxCut 4-vertex graph expected-cut landscape",
+  "domain": "quantum",
+  "category": "algorithm_implementation",
+  "task_prompt": "Implement QAOA of depth p=2 from elementary Qiskit gates for MaxCut on 4 vertices with edges [(0, 1), (0, 2), (0, 3), (1, 2), (2, 3)]. Compute the exact expected cut from Statevector probabilities, optimize parameters with deterministic multi-start scipy, enumerate the classical optimum by brute force, print the approximation ratio, and sample the optimized circuit. Assert all probabilities sum to one and every reported bitstring cut is computed by the same declared bit-order function; do not assert QAOA must reach the exact optimum. Provide only complete executable Python code. Do not use remote services. Seed random generators, print the requested quantities, and include robust self-tests rather than relying on visual inspection.",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

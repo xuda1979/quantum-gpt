@@ -1,0 +1,17 @@
+{
+  "source": "outputs/reeval_38_094427Z_step_000026_adapter.json",
+  "pulled_sha16": "41c194de3a86947b",
+  "n_records": 36,
+  "base_pass": "1/18",
+  "adapter_pass": "3/18",
+  "adapter_wins": [
+    "quantum_superdense_coding",
+    "quantum_phase_register_roundtrip"
+  ],
+  "losses": 0,
+  "box_side_candidate_sha_check": "PASS (adapter != base on all 18, verified ASI3 sha256sum)",
+  "verdict": "BEATS-BASE",
+  "superseded": true,
+  "stale_reason": "pre-sha-pin verdict superseded by C-0040 2026-09-16: banked before the scorer embeds holdout_sha256/scorer_shas pins; scorer changed after bank; non-canonical, fail-closed",
+  "superseded_utc": "2026-09-16T15:57:49Z"
+}

@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0343",
+  "name": "Solve this quantum programming problem. Implement QAOA (p=2) from scratch in Qis",
+  "task_prompt": "Solve this quantum programming problem. Implement QAOA (p=2) from scratch in Qiskit to solve MaxCut on the graph with edges [(0, 1), (0, 4), (2, 3), (3, 4)]. Build the cost and mixer layers manually, optimize with scipy, and print the best cut found. Write the full runnable code (all imports included); executing it should print the results."
+}

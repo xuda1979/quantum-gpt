@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0909",
+  "name": "Implement a Grover's algorithm in isQ for a 3-qubit search problem with a single",
+  "task_prompt": "Implement a Grover's algorithm in isQ for a 3-qubit search problem with a single marked state |111>. The program should define an oracle that flips the phase of the marked state, apply the Grover diffusion operator, perform the correct number of iterations, and measure the qubits. Provide the complete isQ source code and include a comment explaining the number of iterations used."
+}

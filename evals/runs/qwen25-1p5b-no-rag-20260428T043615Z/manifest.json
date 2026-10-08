@@ -1,0 +1,25 @@
+{
+  "label": "no-rag",
+  "created_at_utc": "2026-04-28T04:36:15.759711+00:00",
+  "system_prompt": "You are solving a single quantum-computing evaluation task. Produce only the full contents of the requested Python candidate file. Do not include markdown fences, explanations, or commentary.",
+  "tasks": [
+    {
+      "id": "quantum_grover_oracle_diffusion",
+      "name": "Grover oracle and diffusion operator simulation",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "prompt_file": "prompts/quantum_grover_oracle_diffusion.txt",
+      "candidate_file": "candidates/quantum_grover_oracle_diffusion.py"
+    },
+    {
+      "id": "quantum_density_matrix_partial_trace",
+      "name": "Density matrix construction and partial trace",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "prompt_file": "prompts/quantum_density_matrix_partial_trace.txt",
+      "candidate_file": "candidates/quantum_density_matrix_partial_trace.py"
+    }
+  ],
+  "model": "Qwen2.5-1.5B-Instruct",
+  "rag_enabled": false
+}

@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0512",
+  "name": "Solve this quantum programming problem. Implement VQE in PennyLane with gradient",
+  "task_prompt": "Solve this quantum programming problem. Implement VQE in PennyLane with gradient descent for the H2 Hamiltonian (2-qubit Pauli form). Use a simple entangling ansatz, train for 150 steps with step size 0.2, and compare to exact diagonalization. Write the full runnable code (all imports included); executing it should print the results."
+}

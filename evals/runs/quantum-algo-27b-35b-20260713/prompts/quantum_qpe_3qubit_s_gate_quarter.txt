@@ -1,0 +1,25 @@
+Write a complete, runnable Python program using numpy, qiskit, and fractions that:
+1. Implements Quantum Phase Estimation with n_count=3 counting qubits and 1
+   target qubit. The target unitary is the S gate (phase gate), which applies
+   exp(i*pi/2) = i to |1>. The eigenstate |1> has eigenvalue exp(2*pi*i*1/4),
+   so the phase to estimate is 1/4.
+2. Builds the circuit:
+   - Prepare the target in |1>.
+   - Apply H to all 3 counting qubits.
+   - For each counting qubit q, apply controlled-S^(2^q) (i.e. cp(pi/2, q, tgt)
+     repeated 2^q times).
+   - Apply the inverse 3-qubit QFT to the counting register.
+   - Measure the counting register.
+3. Simulate with qiskit.quantum_info.Statevector (remove final measurements
+   first), take the most-probable bitstring.
+4. Convert the measured integer to a phase in [0,1) and recover the fraction
+   with fractions.Fraction(...).limit_denominator(8).
+5. In `def main()`, prints exactly:
+     Counting qubits = 3
+     Top bitstring = <value>
+     Phase estimate = <value rounded to 4 decimals>
+     Fraction = <num>/<den>
+     Exact phase = 0.2500
+     Correct: <True|False>
+   where Correct is True iff the recovered fraction equals 1/4.
+Call main() under `if __name__ == "__main__":`.

@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0101",
+  "name": "Here is a quantum coding exercise. Write a complete Qiskit superdense-coding pro",
+  "task_prompt": "Here is a quantum coding exercise. Write a complete Qiskit superdense-coding program for message '11' and print the decoded counts. Return the entire program in one piece, ready to run without any modification."
+}

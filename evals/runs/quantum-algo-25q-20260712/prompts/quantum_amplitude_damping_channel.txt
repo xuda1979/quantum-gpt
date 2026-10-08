@@ -1,0 +1,16 @@
+Write a complete, runnable Python program using numpy (and optionally qiskit) that:
+1. Defines the Kraus operators for the amplitude damping channel with parameter gamma:
+   K0 = [[1, 0], [0, sqrt(1-gamma)]]
+   K1 = [[0, sqrt(gamma)], [0, 0]]
+2. Defines a function apply_channel(rho, kraus_ops) that computes
+   sum_i K_i rho K_i^dagger.
+3. Applies the channel with gamma = 0.3 to the input state |1><1|.
+4. In `def main()`, prints:
+     gamma = 0.3
+     P(0) = <value rounded to 3 decimals>
+     P(1) = <value rounded to 3 decimals>
+     trace_preserving: <True|False>
+     correct: <True|False>
+   Expected: P(0) = 0.300 (= gamma), P(1) = 0.700 (= 1 - gamma),
+   trace_preserving: True, correct: True.
+Call main() under `if __name__ == "__main__":`.

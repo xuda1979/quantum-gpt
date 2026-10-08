@@ -1,0 +1,8 @@
+{
+  "id": "quantum_partial_trace_bipartite",
+  "title": "Partial trace of a bipartite pure state",
+  "expected_substrings": [
+    "Reduced density matrix:",
+    "Purity = 0.500000"
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "id": "quantum_rl_v2_qml_kernel_ring_r3",
+  "name": "Quantum kernel matrix for 8 points in R3 with ring feature map",
+  "domain": "quantum",
+  "category": "quantum_ml",
+  "task_prompt": "Generate 8 deterministic data points in R^3. Define a 3-qubit feature map with AngleEmbedding followed by one CZ on each unique ring edge [(0, 1), (1, 2), (2, 0)]; do not duplicate the sole edge when d=2. Compute K_ij=|<phi(x_i)|phi(x_j)>|^2 through the adjoint-overlap circuit on default.qubit, construct the full kernel matrix, and assert symmetry, unit diagonal, entries in [0,1], and positive semidefiniteness up to eigenvalue tolerance -1e-10. Cross-check one entry from explicit state vectors. Provide only complete executable Python code. Do not use remote services. Seed random generators, print the requested quantities, and include robust self-tests rather than relying on visual inspection.",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

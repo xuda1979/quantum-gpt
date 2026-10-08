@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3_sampling",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0503",
+  "name": "Quantum computing task: Implement a CHSH experiment in Qiskit and show the Bell ",
+  "task_prompt": "Quantum computing task: Implement a CHSH experiment in Qiskit and show the Bell state achieves S = 2*sqrt(2). Give one complete script that runs end-to-end on its own and prints the outcome."
+}

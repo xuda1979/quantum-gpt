@@ -1,177 +1,60 @@
-# S3 Transfer Skill
-
-Use this skill to transfer files between your **local machine**, **S3 storage**, and the **Huanxin remote server (ai2)** via rclone. S3 acts as the central hub — all transfers route through it.
-
-Treat this file as local reference documentation for Codex. The transfer flow is repo-local and does not depend on OpenClaw runtime state.
-
-## Current Reality Check
-
-- Confirmed working: **local -> S3**, **ai2 -> read/list from S3**, and **ai2 -> S3 writes**.
-- Important nuance: remote writes on ai2 must include `--s3-no-check-bucket`, otherwise `rclone` tries `CreateBucket` on the existing bucket and fails with `AccessDenied`.
-- Practical implication: use the helper scripts in this repo for remote uploads instead of hand-rolled `rclone copy` commands without the S3 flag.
-
-## Default Helper Entry Points
-
-- Local -> S3: `scripts/push_to_s3.sh`
-- S3 -> Local: `scripts/pull_from_s3.sh`
-- S3 -> ai2: `scripts/ai2_sync_from_s3.sh`
-- ai2 -> S3 (code-first workspace snapshot): `scripts/ai2_push_to_s3.sh`
-- ai2 -> S3: `scripts/ai2_push_results_to_s3.sh`
-
-The ai2 sync helpers are dual-mode:
-
-- local invocation from this Mac uses the Huanxin browser shell automatically
-- invocation from inside `/root/root/work/quantum-gpt` on ai2 runs `rclone` directly
-
-Current defaults are intentionally code-first and exclude bulky artifacts like `outputs/`, `models/`, screenshots, logs, and memory files unless you explicitly request them.
-Use `scripts/push_to_s3.sh --all` only when you really want a broad workspace copy.
-
-Each transfer helper should be treated as the default path before falling back to raw `rclone` or browser-shell copy/paste.
-
-## Architecture
-
-```
-┌──────────────┐           ┌──────────────────────┐           ┌──────────────────┐
-│    Local      │           │         S3           │           │  Huanxin ai2     │
-│  (this mac)   │  push ──► │  quantum-qwen25-     │ ◄── pull  │  /root/root/work/│
-│               │ ◄── pull  │  coder-main          │  push ──► │  quantum-gpt     │
-└──────────────┘           └──────────────────────┘           └──────────────────┘
-```
-
-There is **no direct connection** between local and Huanxin. Everything goes through S3.
-
-## Key Paths
-
-| Location | Path |
-|----------|------|
-| **S3 root** | `nm-aihuanxin:jtdlp-3ed7854b946a47b1a49ad754baa76cd3/quantum-qwen25-coder-main` |
-| **Huanxin ai2** | `/root/root/work/quantum-gpt` |
-| **Local (this workspace)** | Project root (current working directory) |
-
-For brevity, the S3 root is referred to as `$S3` below:
-```
-S3=nm-aihuanxin:jtdlp-3ed7854b946a47b1a49ad754baa76cd3/quantum-qwen25-coder-main
-```
-
-## Prerequisites
-
-- **rclone** configured with remote name `nm-aihuanxin` (both locally and on ai2)
-- Huanxin browser automation for running commands on ai2 (see `skills/huanxin-browser/SKILL.md`)
-
-### Verify rclone is working
-
-```bash
-# Local
-rclone lsd nm-aihuanxin:jtdlp-3ed7854b946a47b1a49ad754baa76cd3/
-
-# On ai2
-node browser-automation/huanxin_shell_exec.js ai2 --command "rclone lsd nm-aihuanxin:jtdlp-3ed7854b946a47b1a49ad754baa76cd3/"
-```
-
+---
+name: s3-transfer
+description: Debug repo-specific S3 helper and rclone edge cases. Use huanxin-s3-ops for normal end-to-end Huanxin workflows.
 ---
 
-## Transfer Operations
+# S3 Transfer Debugging
 
-### Local → S3 (Push Code Up)
+Use this file only for repo-specific S3 relay details, helper-script behavior, and `rclone` edge cases.
 
-```bash
-scripts/push_to_s3.sh
-scripts/push_to_s3.sh --dry-run
-scripts/push_to_s3.sh scripts training evals data reports
-scripts/push_to_s3.sh --all
-```
+Do not use this as the default skill for everyday local <-> S3 <-> Huanxin movement. The canonical entrypoint for normal transfer workflows is `skills/huanxin-s3-ops/SKILL.md`.
 
-### S3 → Local (Pull Results Down)
+## Use This Only When
 
-```bash
-# Pull the current code-first workspace snapshot
-scripts/pull_from_s3.sh
-scripts/pull_from_s3.sh --dry-run
+- a repo S3 helper is failing or behaving unexpectedly
+- you need the exact `rclone` nuance behind a helper script
+- you need to debug remote upload edge cases such as bucket-check failures
+- you need to inspect include/exclude behavior for this repo's sync policy
 
-# Pull selected folders
-scripts/pull_from_s3.sh outputs reports
-scripts/pull_from_s3.sh models
-```
+## Default Stance
 
-### S3 → Huanxin ai2 (Pull Code to Server)
+- Prefer the repo helpers over raw `rclone`.
+- Prefer `skills/huanxin-s3-ops/SKILL.md` for normal operations.
+- Treat S3 as the data plane between local disk and Huanxin.
+- Before any remote-side sync or training step, verify/login to the active Huanxin environment described in `TOOLS.md`; do not assume old ai1/ai2 sessions are valid.
+- Use `--dry-run` first for large or risky transfers.
 
-Run these via the Huanxin browser shell:
+## Main Helper Entry Points
 
-```bash
-# Full sync via helper
-scripts/ai2_sync_from_s3.sh
+- `scripts/push_to_s3.sh`
+- `scripts/pull_from_s3.sh`
+- `scripts/ai1_sync_from_s3.sh`
+- `scripts/ai2_sync_from_s3.sh`
+- `scripts/ai1_push_results_to_s3.sh`
+- `scripts/ai2_push_results_to_s3.sh`
 
-# Preview remote sync first
-scripts/ai2_sync_from_s3.sh --dry-run
-```
+## Repo-Specific Nuances
 
-### Huanxin ai2 → S3 (Push Results from Server)
+### Remote Uploads
 
-Status: supported, but keep `--s3-no-check-bucket` on remote write commands.
+- Remote writes may require `--s3-no-check-bucket`.
+- If a raw `rclone copy` from Huanxin fails on bucket checks, switch back to the repo helper.
 
-```bash
-# Push a code-first workspace snapshot back from ai2
-scripts/ai2_push_to_s3.sh
-scripts/ai2_push_to_s3.sh --dry-run
+### Sync Scope
 
-# Default result sync
-scripts/ai2_push_results_to_s3.sh
+- The default helpers are intentionally code-first.
+- Bulky artifacts such as models, outputs, logs, screenshots, and memory files are commonly excluded unless explicitly requested.
 
-# Push selected paths only
-scripts/ai2_push_results_to_s3.sh outputs models
+### Verification
 
-# Preview remote upload first
-scripts/ai2_push_results_to_s3.sh --dry-run outputs models
-```
+- Trust concrete sync markers, log tails, and destination listings over assumptions.
+- If local notes and helper defaults disagree, trust the current helper script implementation.
+- If the endpoint returns HTML, XML parse errors from HTML, or `405 Method Not Allowed` for object writes, treat that as an endpoint/bucket-mapping blocker and stop broad uploads.
 
----
+## Success Standard
 
-## Common Workflows
+A successful debugging step should produce one of:
 
-### Workflow A: Local Edit → Remote Train → Pull Results
-
-1. **Push code to S3:**
-   ```bash
-   rclone copy . nm-aihuanxin:jtdlp-3ed7854b946a47b1a49ad754baa76cd3/quantum-qwen25-coder-main \
-       --exclude ".git/**" --exclude "__pycache__/**" --progress
-   ```
-2. **Pull & train on ai2:**
-   ```bash
-   node browser-automation/huanxin_shell_exec.js ai2 --command \
-       "cd /root/root/work/quantum-gpt && rclone sync nm-aihuanxin:jtdlp-3ed7854b946a47b1a49ad754baa76cd3/quantum-qwen25-coder-main . --progress && python3 train.py"
-   ```
-3. **Push results from ai2 to S3:**
-   ```bash
-   node browser-automation/huanxin_shell_exec.js ai2 --command \
-       "cd /root/root/work/quantum-gpt && rclone copy outputs nm-aihuanxin:jtdlp-3ed7854b946a47b1a49ad754baa76cd3/quantum-qwen25-coder-main/outputs --s3-no-check-bucket --progress"
-   ```
-4. **Pull results locally:**
-   ```bash
-   rclone copy nm-aihuanxin:jtdlp-3ed7854b946a47b1a49ad754baa76cd3/quantum-qwen25-coder-main/outputs ./outputs --progress
-   ```
-
-### Workflow B: Browse What's on S3
-
-```bash
-# List top-level contents
-rclone lsd nm-aihuanxin:jtdlp-3ed7854b946a47b1a49ad754baa76cd3/quantum-qwen25-coder-main/
-
-# List files in a subfolder
-rclone ls nm-aihuanxin:jtdlp-3ed7854b946a47b1a49ad754baa76cd3/quantum-qwen25-coder-main/outputs/
-
-# Check total size
-rclone size nm-aihuanxin:jtdlp-3ed7854b946a47b1a49ad754baa76cd3/quantum-qwen25-coder-main/
-```
-
----
-
-## Useful rclone Flags
-
-| Flag | Purpose |
-|------|---------|
-| `--progress` | Show transfer progress |
-| `--dry-run` | Preview what would transfer (no changes) |
-| `--transfers N` | Parallel transfers (default 4, use 8 for speed) |
-| `--exclude "pattern"` | Skip matching files |
-| `--include "pattern"` | Only include matching files |
-| `--bandwidth 10M` | Limit bandwidth |
+- a passing helper invocation
+- a dry-run showing the expected file set
+- a concrete diagnosis naming the exact helper or `rclone` flag causing the issue

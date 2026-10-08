@@ -1,0 +1,11 @@
+Write a complete, runnable Python program using Qiskit 2.x that:
+1. Implements the Deutsch-Jozsa algorithm with n=3 input qubits plus 1 auxiliary.
+2. The oracle encodes the CONSTANT function f(x)=1 for all x (i.e., always flip the auxiliary).
+3. Initializes the auxiliary in |-> = (|0>-|1>)/sqrt(2), applies H^{⊗n} to the input register,
+   applies the oracle, then applies H^{⊗n} again to the input register.
+4. Measures the input register with StatevectorSampler (>= 2000 shots).
+5. In `def main()`, prints:
+     Measurement: <3-bit string>
+     Function is: <constant|balanced>
+   Expected: Measurement = 000 and Function is: constant (a constant function always yields 000).
+Call main() under `if __name__ == "__main__":`.

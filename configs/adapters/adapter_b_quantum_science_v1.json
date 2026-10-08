@@ -1,0 +1,44 @@
+{
+  "name": "adapter_b_quantum_science_v1",
+  "description": "Quantum-science Q&A adapter (non-coding): general quantum research questions with citation grounding. Separate serving route from Adapter A.",
+  "base_model": "Qwen/Qwen3.6-27B",
+  "base_model_alt": "Qwen/Qwen3.6-35B-A3B",
+  "method": "sft_then_rl",
+  "precision": "bf16",
+
+  "stage_1_sft": {
+    "name": "qwen36_adapter_b_science_sft_v1",
+    "data": "data/generated/rl_science_distill_sft/train_chatml.jsonl",
+    "objective": "quantum-science Q&A with citation grounding",
+    "sequence_length": 8192,
+    "lora": {
+      "rank": 64,
+      "alpha": 128,
+      "target_modules": ["q_proj", "k_proj", "v_proj", "o_proj"],
+      "dropout": 0.05
+    },
+    "learning_rate": 0.0001,
+    "epochs": 2
+  },
+
+  "stage_2_rl": {
+    "name": "qwen36_adapter_b_science_rl_v1",
+    "base_checkpoint": "qwen36_adapter_b_science_sft_v1",
+    "config": "docs/rl-science-distill-rd-plan-2026-07-09.md",
+    "algorithm": "grpo",
+    "reward_source": "citation_grounding + teacher_confidence (GLM5.2 science teacher)",
+    "guardrails": {
+      "max_fabricated_claim_rate": 0.20,
+      "min_citation_grounding_mean": 0.40,
+      "min_teacher_confidence": 0.30
+    }
+  },
+
+  "success_metrics": {
+    "science_qa_pass_at_1": {"baseline": "tbd", "target": ">=+0.10 over base"},
+    "coding_regression": {"target": "<=0.03"},
+    "hallucination_rate": {"target": "<= baseline - 0.05"}
+  },
+
+  "serving_route": "quantum-science (non-code intent classification at router)"
+}

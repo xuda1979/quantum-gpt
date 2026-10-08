@@ -1,0 +1,11 @@
+{
+  "id": "quantum_science_hamiltonian_simulation_qdrift_bound",
+  "name": "Derive the error bound for the qDRIFT randomized Hamiltonian...",
+  "domain": "quantum_science",
+  "category": "derivation",
+  "level": "L2",
+  "field": "hamiltonian_simulation",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py",
+  "question": "Derive the error bound for the qDRIFT randomized Hamiltonian simulation algorithm (Campbell 2019). Show that randomized compilation achieves O(t^2 / n) error in expectation for n applications, and explain the advantage over deterministic Trotterization in the L1-norm regime."
+}

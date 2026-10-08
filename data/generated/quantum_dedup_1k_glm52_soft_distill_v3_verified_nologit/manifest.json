@@ -1,0 +1,10 @@
+{
+  "dataset": "quantum_dedup_1k_glm52_soft_distill_v3_verified_nologit",
+  "description": "Verified-PASS-only subset. 937 rows, 900 train / 37 eval. No teacher_logits.",
+  "total_verified": 937,
+  "train_rows": 900,
+  "eval_rows": 37,
+  "shuffle_seed": 42,
+  "format": "chat-sft-v1",
+  "no_teacher_logits": true
+}

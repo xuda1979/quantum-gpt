@@ -1,0 +1,39 @@
+{
+  "label": "no-rag",
+  "generated_at_utc": "2026-04-28T02:18:43.989948+00:00",
+  "model_path": "/Users/daxu/.openclaw/workspace-quantum-rnd/models/Qwen2.5-1.5B-Instruct",
+  "device": "mps",
+  "max_new_tokens": 256,
+  "temperature": 0.0,
+  "total_wall_seconds": 248.3,
+  "tasks": [
+    {
+      "task_id": "quantum_density_matrix_partial_trace",
+      "prompt_tokens": 1683,
+      "new_tokens": 256,
+      "wall_seconds": 26.67,
+      "output_chars": 1109
+    },
+    {
+      "task_id": "quantum_qaoa_maxcut",
+      "prompt_tokens": 899,
+      "new_tokens": 256,
+      "wall_seconds": 28.54,
+      "output_chars": 1048
+    },
+    {
+      "task_id": "quantum_channel_depolarizing",
+      "prompt_tokens": 1674,
+      "new_tokens": 256,
+      "wall_seconds": 164.62,
+      "output_chars": 1104
+    },
+    {
+      "task_id": "quantum_vqe_energy_minimization",
+      "prompt_tokens": 1008,
+      "new_tokens": 256,
+      "wall_seconds": 27.13,
+      "output_chars": 627
+    }
+  ]
+}

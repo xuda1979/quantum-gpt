@@ -11,18 +11,21 @@
  *   node huanxin_login.js --timeout 300  # Wait up to 300s for login (default: 600s)
  */
 
-const { chromium } = require('playwright');
 const path = require('path');
 const fs = require('fs');
-const { getBaseProfileDir } = require('./huanxin_profile');
+const { getRequestedProfileDir } = require('./huanxin_profile');
+const { launchPersistentContext } = require('./huanxin_browser_launch');
 
-const HUANXIN_URL =
-  'https://aihuanxin.cn/kunlun/kl-web?poolId=1&projectId=3ed7854b946a47b1a49ad754baa76cd3#/train-dev';
+const DEFAULT_HUANXIN_URL =
+  process.env.HUANXIN_TRAIN_DEV_URL ||
+  'https://aihuanxin.cn/kunlun/kl-web?poolId=6&projectId=21b4208dde424e96b159362ef49c9c96#/train-dev/environment/dl-9a5a098accce31c28cf4c6ca23391341?name=AI';
 
 function parseArgs(argv) {
-  const args = { timeout: 600 };
+  const args = { timeout: 600, url: DEFAULT_HUANXIN_URL, holdOpen: false };
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === '--timeout') args.timeout = Number(argv[++i]);
+    if (argv[i] === '--url') args.url = argv[++i];
+    if (argv[i] === '--hold-open') args.holdOpen = true;
   }
   return args;
 }
@@ -51,24 +54,29 @@ function isLoggedIn(url, title, bodyText) {
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
-  const profileDir = getBaseProfileDir();
+  const profileDir = getRequestedProfileDir();
   fs.mkdirSync(profileDir, { recursive: true });
 
   console.log(`[login] Opening headed browser with base profile: ${profileDir}`);
-  console.log(`[login] Navigating to: ${HUANXIN_URL}`);
+  console.log(`[login] Navigating to: ${args.url}`);
   console.log(`[login] Please log in manually (QR code or password).`);
   console.log(`[login] Will auto-detect login success or timeout after ${args.timeout}s.`);
   console.log(`[login] Press Ctrl+C at any time to save & exit.\n`);
 
-  const context = await chromium.launchPersistentContext(profileDir, {
-    headless: false,
-    slowMo: 50,
-    viewport: { width: 1440, height: 900 },
-  });
+  process.env.HUANXIN_HEADLESS = '0';
+  const launch = await launchPersistentContext(profileDir);
+  const context = launch.context;
+  _context = context;
 
   const page = context.pages()[0] || await context.newPage();
   page.setDefaultTimeout(30000);
-  await page.goto(HUANXIN_URL, { waitUntil: 'domcontentloaded' });
+  await page.goto(args.url, { waitUntil: 'domcontentloaded' });
+
+  if (args.holdOpen) {
+    console.log('[login] Hold-open mode enabled. Complete login manually, then press Ctrl+C here to save and exit.');
+    process.stdin.resume();
+    return;
+  }
 
   // Poll for login success
   const deadline = Date.now() + args.timeout * 1000;
@@ -102,6 +110,7 @@ async function main() {
 
   // Graceful close — Chromium flushes cookies/storage on close
   await context.close();
+  _context = null;
 
   console.log(`[login] Profile saved to: ${profileDir}`);
   console.log(`[login] Run the probe to verify: node huanxin_probe.js`);
@@ -111,6 +120,14 @@ async function main() {
 let _context;
 process.on('SIGINT', async () => {
   console.log(`\n[login] Ctrl+C received. Saving profile and exiting...`);
+  if (_context) {
+    try {
+      await _context.close();
+    } catch {
+      // ignore close errors during shutdown
+    }
+    _context = null;
+  }
   process.exit(0);
 });
 

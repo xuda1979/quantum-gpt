@@ -1,0 +1,12 @@
+{
+  "quantum_gate_alias_normalization": "candidates/quantum_gate_alias_normalization.py",
+  "quantum_phase_estimation_circuit": "candidates/quantum_phase_estimation_circuit.py",
+  "quantum_qaoa_maxcut": "candidates/quantum_qaoa_maxcut.py",
+  "quantum_superdense_coding": "candidates/quantum_superdense_coding.py",
+  "quantum_grover_oracle_diffusion": "candidates/quantum_grover_oracle_diffusion.py",
+  "quantum_density_matrix_partial_trace": "candidates/quantum_density_matrix_partial_trace.py",
+  "quantum_error_correction_shor_9qubit": "candidates/quantum_error_correction_shor_9qubit.py",
+  "quantum_trotterized_hamiltonian_evolution": "candidates/quantum_trotterized_hamiltonian_evolution.py",
+  "quantum_channel_depolarizing": "candidates/quantum_channel_depolarizing.py",
+  "quantum_ghz_state_witness": "candidates/quantum_ghz_state_witness.py"
+}

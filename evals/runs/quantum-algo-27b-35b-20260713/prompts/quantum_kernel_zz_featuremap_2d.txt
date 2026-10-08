@@ -1,0 +1,29 @@
+Write a complete, runnable Python program using numpy and qiskit that:
+1. Defines a small 2D binary classification problem: 4 training points where
+   points inside the unit circle are class +1 and outside are class -1.
+   Use:
+     X_train = [[0.3, 0.4], [-0.5, 0.2], [1.2, 0.1], [-0.3, -1.1]]
+     y_train = [+1, +1, -1, -1]
+     X_test  = [[0.1, 0.1], [1.5, 1.5]]
+     y_test  = [+1, -1]
+2. Implements a quantum kernel K(x_i, x_j) = |<phi(x_i)|phi(x_j)>|^2 using
+   qiskit.circuit.library.ZZFeatureMap with feature_dimension=2 and reps=2.
+   Compute each statevector with qiskit.quantum_info.Statevector.
+3. Computes the 4x4 training kernel matrix K_train and the 2x4 test-vs-train
+   kernel matrix K_test. Verify the diagonal of K_train is all 1.0 (since
+   <phi(x)|phi(x)> = 1).
+4. Solves a simple least-squares kernel SVM: (K_train + lambda*I) alpha = y
+   with lambda = 0.1.
+5. Predicts the test labels as sign(sum_j alpha_j y_j K_test[i, j]).
+6. In `def main()`, prints exactly:
+     Training points = 4
+     Test points = 2
+     Feature dim = 2
+     Kernel matrix shape = (4, 4)
+     Kernel diagonal = [1.0, 1.0, 1.0, 1.0]
+     Test predictions = [1, -1]
+     Test accuracy = 1.0000
+     Correct: True
+   (Kernel diagonal must be all 1.0; Test predictions must be [1, -1];
+   Correct is True iff test accuracy equals 1.0.)
+Call main() under `if __name__ == "__main__":`.

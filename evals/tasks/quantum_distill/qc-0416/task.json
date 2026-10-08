@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0416",
+  "name": "Write a manual QFT circuit for 3 qubits in Qiskit and check its unitary equals t",
+  "task_prompt": "Write a manual QFT circuit for 3 qubits in Qiskit and check its unitary equals the DFT matrix up to numerical precision. Write the full runnable code (all imports included); executing it should print the results."
+}

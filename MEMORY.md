@@ -2,6 +2,76 @@
 
 ## Stable Decisions
 
+- Training execution policy clarified `2026-07-10`:
+  - **All training runs must be submitted as training jobs (e.g. ASI1/ASI2/ASI3 launch scripts via the Huanxin job-submission flow), never run directly on the environment's own NPU.** The local/box NPU is not to be used for training anymore.
+  - This applies to RL+distill orchestrator runs, LoRA SFT, GRPO, and any other training. Eval/inference may still use local resources where appropriate.
+  - Rationale: keeps the shared NPU box free for serving/eval and gives each training run a clean, queued, observable lifecycle.
+  - Practical effect: the Phase 5 ablation sweep (per-artifact scoring plan) and the science-distill iter-1 runs must all go through the launcher job-submission path, not a foreground `bash` on the NPU host.
+
+- DR-GRPO trainer integration completed `2026-07-09`:
+  - `training/grpo_trainer.py` now wires in BOTH DR terms when the
+    `doubly_robust_quantum_grpo` plugin is enabled: (1) the DPO pair
+    loss via `compute_dr_pair_loss()` and (2) the PPO-side variance
+    correction `psi * E[(r-1)*A]` via `compute_dr_variance_correction()`.
+  - Previously only term (1) was wired; term (2) was defined in
+    `dr_pair_loss.py` but never called. This was a real paper-vs-impl
+    gap — "doubly robust" needs both terms.
+  - Both terms are no-ops when the plugin is absent or hyperparams are
+    zero, so base GRPO is unchanged. Step records now carry
+    `dr_variance_correction_value` and `dr_psi` fields.
+  - Tests: `tests/test_doubly_robust_quantum_grpo.py` (20 tests) all
+    pass; 30 pass across DR + GRPO metrics suites.
+- Huanxin webshell daemon transport caveat `2026-07-09`:
+  - `scripts/ai_shell.sh` reports "Using daemon transport" but shell
+    stdout is intermittently NOT captured back through the
+    browser-automation transport. When this happens, remote state
+    (DR-GRPO run status, eval JSONs, training logs) cannot be
+    refreshed locally. Needs transport debug or an SSH fallback.
+- Local eval gap-analysis toolchain works `2026-07-09`:
+  - `python3 -m evals.subsystem.dataset_gap recommend --eval <scorecard.json>
+    --model adapter` produces concrete "add 3-5 examples for <task>"
+    recommendations on the local 25-task scorecards.
+  - The 44-task / 495-task holdout eval JSONs live on remote and the
+    one pulled copy (`evals/runs/iter2-pull/eval-27b-...json`) is
+    CORRUPTED (truncated to 2179 bytes by an incomplete S3 download).
+    Re-pull needed before full-holdout gap analysis.
+
+- Codex GLM5.2 routing clarified on `2026-07-07`:
+  - when invoking Codex with `--model glm5.2` or `-m glm5.2`, use the Huanxin GLM5.2 URL and API key in the Claude setting, not yunwu
+  - the local wrapper `/Users/daxu/homebrew/bin/codex` should force profile `yunwu-claude`, start/use the `127.0.0.1:18105` Huanxin GLM5.2 proxy, override `model_providers.yunwu_claude.base_url` to that proxy, and use `HUANXIN_GLM52_API_KEY`
+  - generated Codex configs should put `glm5.2` in the Claude provider/profile slot with Huanxin GLM5.2 URL/key; do not represent `glm5.2` as a normal yunwu model alias
+
+- Two-stage training direction clarified on `2026-06-30`:
+  - current phase is model code ability: quantum code generation, general software engineering, RAG-assisted API correctness, executable tests, SFT/trajectory cloning, then GRPO/RLVR on code verifiers
+  - later phase is quantum-computing scientific capability: select 1000 important/classic papers, generate progressive paper-grounded QA/code/research-direction data, distill with SFT, then run mixed distillation + RL while preserving code replay
+  - durable roadmap: `docs/two-stage-training-roadmap-2026-06-30.md`
+
+- INER S3 routing changed on `2026-05-15`:
+  - treat `https://iner.aihuanxin.cn` bucket `jtdlp-21b4208dde424e96b159362ef49c9c96` as the only active S3 relay for this workspace
+  - default project root is `iner:jtdlp-21b4208dde424e96b159362ef49c9c96/software/quantum-gpt`
+  - direct bucket-specific `rclone copyto` / `lsf` operations are now verified working
+  - root-level `rclone lsd iner:` may still fail because the endpoint root serves HTML instead of S3 XML, so future probes should target the explicit bucket path
+- Local release path added on `2026-04-30`:
+  - the user-facing CPU-only local version should use a quantized Qwen3.6 GGUF model served through `llama.cpp` with `--n-gpu-layers 0`
+  - full local testing on a 16 GB Mac proved `Qwen3.6-27B-Q4_K_M.gguf` can load CPU-only but is functionally too slow even for tiny generation
+  - default local model is now the practical CPU target: `unsloth/Qwen3.6-35B-A3B-GGUF` / `Qwen3.6-35B-A3B-UD-IQ2_XXS.gguf`
+  - optional higher-quality 27B/35B quantizations remain available through installer flags, but they should not be the no-GPU/NPU default
+  - one-command install path is `scripts/install_qwen36_rag_local.sh`; smoke mode avoids the huge model download but still validates doc fetch and RAG index build
+- Model policy changed on `2026-04-27`:
+  - use `Qwen/Qwen3.6-27B` as the base model for the next round of fine-tuning
+  - all new SFT and reinforcement-learning runs should default to local/remote path `models/Qwen3.6-27B`
+  - keep Qwen2.5 and OmniCoder references as historical baselines or explicit comparison lanes, not as default training bases
+- Huanxin training target changed on `2026-04-26`:
+  - do not use the old `ai2` environment for new training runs
+  - all new training must target the Huanxin `AI` train-dev environment:
+    `https://aihuanxin.cn/kunlun/kl-web?poolId=6&projectId=21b4208dde424e96b159362ef49c9c96#/train-dev/environment/dl-9a5a098accce31c28cf4c6ca23391341?name=AI`
+  - before any Huanxin shell, sync, or training action, verify/login to that exact `AI` environment
+  - if auth is stale, repair or login first; do not assume an old ai2 daemon/session is valid
+  - `TOOLS.md`, `AGENTS.md`, `PROJECT.md`, Huanxin skills, and the generic Huanxin browser/shell helpers were updated to prefer `AI`
+- Huanxin auth authorization clarified on `2026-06-01`:
+  - the user authorizes Codex to perform Huanxin auth/login and session repair for this workspace through the repo Huanxin skill workflow when needed for Huanxin work
+  - do not store secrets or auth material: no passwords, SMS codes, cookies, bearer tokens, credential-bearing callback URLs, browser profiles, or private auth state in memory, docs, logs, final answers, or skill bodies
+  - preserve the existing manual-mode and automation-disabled-by-default protections; authorization to log in is not authorization to disrupt a manually used Huanxin webshell
 - Huanxin environment policy changed on `2026-04-04`:
   - both `ai1` and `ai2` are valid R&D targets for this workspace
   - `ai2` remains the default path, but `ai1` may be used when it provides better capacity or parallelism
@@ -31,6 +101,10 @@
   - metric: pass@1 on 10 tasks, single generation, no manual repair
   - confirmed result: `9/10` passed (`90%`)
   - remaining known miss: `software_parser_regression_tests` due generated `SyntaxError`
+- ai2 workspace path rule:
+  - the only valid work folder for this project on ai2 is `/root/root/work/quantum-gpt`
+  - default all ai2 shell commands, sync targets, provider launches, eval runs, and training paths to that directory
+  - do not drift to other similar-looking paths such as `/root/work/...`
 - Quantum-gate evaluation changed again on `2026-03-30`:
   - the hard OmniCoder continuation adapter looked flat at `6/12` only under `--max-new-tokens 192`
   - the dominant blocker was inference truncation on the harder quantum tasks, not SFT quality alone
@@ -70,7 +144,62 @@
     - `reports/omnicoder_quantum_generalization_holdout_v1_integrity.json`
     - `reports/omnicoder_generalization_holdout_v1_integrity.json`
   - both reports pass the `>=500 eval rows` requirement and confirm zero train/eval overlap at the `example_id`, `task_id`, and `prompt_family` levels
+  - protocol fairness for the current strict quantum headline is now explicit: the Qwen clean baseline and the OmniCoder 8-NPU adapter run use the same 4 override tasks, `prompt_version=v2`, `prompt_style=repair_focused`, `include_reference_candidate=false`, and manifest-driven `token_budget_preset: "quantum_heavy"`
+  - as of `2026-04-10`, the missing OmniCoder 9B base result on that same strict protocol is no longer a vague TODO; a fresh ai2 base-eval attempt proved the remaining blocker is model restoration plus Huanxin transport stability
+  - later on `2026-04-10`, the blocker moved forward again: direct ai2 daemon probes confirmed `models/OmniCoder-9B` is now restored on ai2 with `model.safetensors`, `config.json`, and about `18G` of payload
+  - the fresh base strict-holdout rerun still failed, but now for a more precise reason: ai2 is evaluating with `/usr/bin/python3` and `transformers==4.44.0`, which is too old to recognize `qwen3_5`; the next needed step is a Qwen3.5-capable runtime upgrade on ai2, not another snapshot restore
+  - do not describe the current `0/4 -> 2/4` report headline as a full same-model base-vs-adapter comparison yet; it is a protocol-matched clean-baseline-vs-adapter result, with the same-model OmniCoder base line still blocked on ai2 runtime compatibility
   - ai2 browser-shell transport was fixed on `2026-03-31`; the old diagnosis of “generic browser unreliability” is now too weak
   - the real launcher fix is in `browser-automation/huanxin_browser_launch.js`: use the full Chrome-for-Testing binary and support Darwin fallback away from the crashing Playwright headless-shell path
   - `browser-automation/huanxin_shell_exec.js` now reports `login_required` explicitly and retries `Shell终端` activation through transient Huanxin spinner overlays
   - a real end-to-end ai2 shell command now succeeds again through `./scripts/ai2_shell.sh`
+- Gemma local runtime gating changed on `2026-04-09`:
+  - the canonical local interpreter probe is now `python3 scripts/resolve_python_interpreter.py --min-version 3.10`
+  - `scripts/run_autonomous_rd_cycle.py` now records a concrete `gemma_local_python_gate` with candidate interpreter evidence and an install command when no suitable interpreter exists
+  - the current local machine still only exposes `/usr/bin/python3` at `3.9.6`; no `python3.10+` was found in the standard Homebrew prefixes
+  - Homebrew itself is present at `/Users/daxu/homebrew/bin/brew`, so the next local runtime step is concretely `brew install python@3.11` before retrying Gemma smoke
+- Gemma local runtime gating changed again on `2026-04-10`:
+  - the repo-local offline bootstrap path now works: `.local-python/cpython-3.11.15/bin/python3.11` is a verified CPython 3.11.15 + OpenSSL 3.6.1 interpreter built from cached local artifacts
+  - `scripts/run_autonomous_rd_cycle.py` now exposes a separate `gemma_runtime_bootstrap` stage before `gemma_smoke`, so the controller distinguishes runtime install failures from backend preflight failures
+  - the fresh `reports/autonomous_rd_cycle_gemma4-26b-a4b-it_2026-04-10_state.json` state shows `local_eval_gate` and `holdout_integrity` passed, `gemma_local_python_gate` passed, and the current blocker moved forward to `gemma_runtime_bootstrap`
+  - a second 2026-04-10 experiment narrowed this further: the stable wheel stack from `training/requirements-huanxin-cpu.txt` installs successfully on the py311 environment, but `transformers==4.57.1` still fails Gemma at `runtime_compat`
+  - the current precise Gemma blocker is therefore no longer “missing Python >=3.10” or “generic py311 wheel bootstrap”; it is obtaining a newer-than-4.57.1 Transformers source/runtime that actually recognizes `gemma4`, and that source-fetch path is still failing on the local machine/network path
+
+## 2026-07-13 — Three new post-training R&D lines scaffolded
+
+- **Three new post-training R&D lines** scaffolded in loop iteration 14:35
+  (all post-training only, no architecture change to 27B/35B):
+  - **N6 (format-constrained DPO)**: `scripts/prepare_format_dpo_pairs.py`
+    reformats SFT assistant turns into canonical form
+    (`def main()` + `if __name__` guard + fenced python) and synthesizes
+    3 negative types (prose-only, no-main, no-guard). Smoke: 228 DPO
+    pairs from 90 SFT rows. Config: `configs/dpo/qwen36_formatter_dpo_v1.json`.
+  - **N1 (universal-failure DPO)**: `scripts/prepare_universal_failure_dpo.py`
+    intersects the 3 recommendation JSONs in
+    `evals/subsystem/recommendations/` to find tasks failing on ALL
+    evaluated models (7 found), pairs each task's reference candidate
+    (machine-verified to pass `tests.py`) as chosen vs. a synthetic
+    failure-mode roll-out as rejected. Config:
+    `configs/dpo/qwen36_universal_failure_dpo_v1.json`.
+  - **N2 (quantum-critic LoRA)**: `scripts/prepare_critic_sft.py` builds
+    SFT data for a critic-LoRA with I/O contract
+    `{task_spec, candidate_code, rubric} -> JSON {pass, scores, reasoning}`.
+    58 positive rows (reference candidates) + 8 negative (from recs).
+    Config: `configs/sft/qwen36_critic_lora_v1.json`. This removes the
+    GLM5.2 teacher bottleneck for future RL.
+
+- **Reusable pattern learned**: the most defensible DPO pairs are those
+  where the chosen side is *machine-verified to pass* (by a task's own
+  `tests.py`) and the rejected side is *constructed to fail* on a
+  documented axis. This makes the DPO signal corruption-proof — the
+  model cannot learn to prefer a wrong answer because no wrong answer
+  is ever on the chosen side.
+
+- **Test discipline**: every new scaffold script ships with a unit test
+  that runs the script end-to-end on real repo data and asserts the
+  output schema. 16 new tests, 0 regressions on the 77 pre-existing
+  focused-suite tests.
+
+- **`docs/STATE.md` drill-down table** now lists all 3 new R&D lines.
+  Future loops should check this table before proposing new lines to
+  avoid duplication.

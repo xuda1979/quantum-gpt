@@ -1,0 +1,29 @@
+[
+  {
+    "id": "qiskit_qaoa_optimization_algorithms_import_error",
+    "category": "sdk_api",
+    "coding_problem": true,
+    "judge_type": "source_and_terms",
+    "query": "Fix ImportError: cannot import name QAOA from qiskit_optimization.algorithms. What current Qiskit imports should be used with MinimumEigenOptimizer?",
+    "expected_source_substrings": [
+      "docs/quantum_libraries/qiskit_ecosystem_current_api.md",
+      "docs/quantum_libraries/qaoa_maxcut.md"
+    ],
+    "expected_terms": [
+      "qiskit 2.4.2",
+      "qiskit_algorithms.minimum_eigensolvers",
+      "qiskit_optimization.minimum_eigensolvers",
+      "qiskit_optimization.algorithms",
+      "MinimumEigenOptimizer",
+      "maximize"
+    ],
+    "minimum_term_hits": 3,
+    "answer_requirements": [
+      "from qiskit_algorithms.minimum_eigensolvers import QAOA",
+      "from qiskit_optimization.minimum_eigensolvers import QAOA",
+      "from qiskit_optimization.algorithms import MinimumEigenOptimizer",
+      "maximize"
+    ],
+    "judge": "Pass if the answer retrieves one expected source and explains that QAOA is not imported from qiskit_optimization.algorithms."
+  }
+]

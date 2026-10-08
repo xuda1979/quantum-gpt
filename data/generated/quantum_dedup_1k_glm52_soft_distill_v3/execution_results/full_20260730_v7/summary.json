@@ -1,0 +1,9 @@
+{
+  "total": 1000,
+  "statuses": {
+    "pass": 1000
+  },
+  "elapsed_seconds": 1114.7,
+  "input": "/Users/daxu/software/quantum-gpt/data/generated/quantum_dedup_1k_glm52_soft_distill_v3/questions_and_code.jsonl",
+  "run_dir": "/Users/daxu/software/quantum-gpt/data/generated/quantum_dedup_1k_glm52_soft_distill_v3/execution_results/full_20260730_v7"
+}

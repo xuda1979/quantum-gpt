@@ -1,0 +1,134 @@
+{
+  "benchmark": "evals/benchmarks/quantum_rag_retrieval_v1.json",
+  "index": "artifacts/quantum-rag/authoritative-index.pkl.gz",
+  "top_k": 5,
+  "alpha": 0.55,
+  "query_expansion_enabled": true,
+  "max_chunks_per_source": 1,
+  "excluded_source_substrings": [
+    "evals/benchmarks/quantum_rag_retrieval_v1.json",
+    "reports/quantum_rag_retrieval_"
+  ],
+  "metrics": {
+    "hit@5": 0.6666666666666666,
+    "mrr": 0.33888888888888885,
+    "total_examples": 6,
+    "hit_count": 4
+  },
+  "examples": [
+    {
+      "id": "rag_eval_holdout_local_rule",
+      "query": "How should this repo evaluate strict quantum holdout tasks before remote training?",
+      "expected_source_substrings": [
+        "PROJECT.md",
+        "research/quantum_rag_low_compute.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 0.2,
+      "first_hit_rank": 5,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/evals/benchmarks/quantum_generalization_holdout_v1.txt",
+        "/Users/daxu/software/quantum-gpt/evals/benchmarks/quantum_grpo_training_v2_disjoint.txt",
+        "/Users/daxu/software/quantum-gpt/evals/benchmarks/quantum_generalization_holdout_v2_hard.txt",
+        "/Users/daxu/software/quantum-gpt/evals/benchmarks/quantum_strict_repair_support_v1.txt",
+        "/Users/daxu/software/quantum-gpt/PROJECT.md"
+      ]
+    },
+    {
+      "id": "rag_qiskit_task_contract",
+      "query": "Which repo task covers VQE energy expectation from a parameterized ansatz?",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/vqe_energy_minimization/task.json",
+        "evals/tasks/quantum/vqe_energy_minimization/candidate.py"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 0.3333333333333333,
+      "first_hit_rank": 3,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/vqe_energy_minimization/tests.py",
+        "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/error_detection_bit_flip/task.json",
+        "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/vqe_energy_minimization/candidate.py",
+        "/Users/daxu/software/quantum-gpt/evals/benchmarks/quantum_grpo_training_v2_disjoint.txt",
+        "/Users/daxu/software/quantum-gpt/PROJECT.md"
+      ]
+    },
+    {
+      "id": "rag_qft_task_contract",
+      "query": "Where is the QFT phase pattern task defined in this repo?",
+      "expected_source_substrings": [
+        "evals/tasks/quantum/qft_phase_pattern/task.json",
+        "evals/tasks/quantum/qft_phase_pattern/candidate.py"
+      ],
+      "top_k": 5,
+      "hit_at_k": false,
+      "reciprocal_rank": 0.0,
+      "first_hit_rank": null,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/qft_phase_pattern/tests.py",
+        "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/phase_estimation_circuit/candidate.py",
+        "/Users/daxu/software/quantum-gpt/evals/benchmarks/quantum_grpo_training_v1.txt",
+        "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/phase_measurement_register/tests.py",
+        "/Users/daxu/software/quantum-gpt/PROJECT.md"
+      ]
+    },
+    {
+      "id": "rag_huanxin_sync_rule",
+      "query": "How does this repo say code should be moved to Huanxin before training?",
+      "expected_source_substrings": [
+        "PROJECT.md",
+        "AGENTS.md",
+        "TOOLS.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/AGENTS.md",
+        "/Users/daxu/software/quantum-gpt/HEARTBEAT.md",
+        "/Users/daxu/software/quantum-gpt/PROJECT.md",
+        "/Users/daxu/software/quantum-gpt/TOOLS.md",
+        "/Users/daxu/software/quantum-gpt/evals/benchmarks/quantum_generalization_holdout_v1.txt"
+      ]
+    },
+    {
+      "id": "rag_grpo_quantum_benchmark_file",
+      "query": "What benchmark file should GRPO use for quantum training tasks in this repo?",
+      "expected_source_substrings": [
+        "HEARTBEAT.md",
+        "evals/benchmarks/quantum_grpo_training_v1.txt"
+      ],
+      "top_k": 5,
+      "hit_at_k": true,
+      "reciprocal_rank": 0.5,
+      "first_hit_rank": 2,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/evals/benchmarks/quantum_grpo_training_v2_disjoint.txt",
+        "/Users/daxu/software/quantum-gpt/evals/benchmarks/quantum_grpo_training_v1.txt",
+        "/Users/daxu/software/quantum-gpt/evals/benchmarks/quantum_generalization_holdout_v1.txt",
+        "/Users/daxu/software/quantum-gpt/evals/benchmarks/quantum_grpo_training_v3_hard_disjoint.txt",
+        "/Users/daxu/software/quantum-gpt/evals/benchmarks/quantum_grpo_training_v5_failure_shape_disjoint.txt"
+      ]
+    },
+    {
+      "id": "rag_rag_usage_doc",
+      "query": "What does the current low-compute quantum RAG implementation support and what are its gaps?",
+      "expected_source_substrings": [
+        "research/quantum_rag_low_compute.md"
+      ],
+      "top_k": 5,
+      "hit_at_k": false,
+      "reciprocal_rank": 0.0,
+      "first_hit_rank": null,
+      "retrieved_sources": [
+        "/Users/daxu/software/quantum-gpt/HEARTBEAT.md",
+        "/Users/daxu/software/quantum-gpt/evals/tasks/quantum/error_detection_bit_flip/task.json",
+        "/Users/daxu/software/quantum-gpt/PROJECT.md",
+        "/Users/daxu/software/quantum-gpt/AGENTS.md",
+        "/Users/daxu/software/quantum-gpt/evals/benchmarks/quantum_strict_repair_support_v1.txt"
+      ]
+    }
+  ]
+}

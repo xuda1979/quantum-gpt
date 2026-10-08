@@ -1,0 +1,8 @@
+Write a complete, runnable Python program using Qiskit that:
+1. Implements Grover's algorithm for 2 qubits with the marked state |11>.
+2. Uses exactly 1 Grover iteration (optimal for N=4).
+3. In `def main()`, uses StatevectorSampler with 1000 shots and prints the most-measured bitstring and its probability.
+Output exactly:
+  Most likely: <bitstring>
+  Probability: <value rounded to 3 decimals>
+Call main() under `if __name__ == "__main__":`.

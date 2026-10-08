@@ -1,0 +1,41 @@
+# Qwen3.6 35B A3B agentic GRPO on Huanxin yx-QITE
+
+Use yx-QITE for the current work. Do not silently fall back to AI, ASI1, ASI2, or ai2.
+
+Local validation:
+  bash -n scripts/submit_huanxin_preflight_task.sh scripts/probe_huanxin_task_status.sh scripts/launch_huanxin_agentic_grpo.sh scripts/launch_qwen36_35b_a3b_agentic_grpo_ai3.sh
+  node -c browser-automation/huanxin_submit_task_run.js browser-automation/huanxin_task_status_probe.js
+  python3 -m pytest tests/test_submit_huanxin_preflight_task.py tests/test_huanxin_submit_task_route.py tests/test_huanxin_agentic_launcher.py tests/test_agent_trajectory_rollout.py tests/test_agentic_grpo_trainer.py tests/test_validate_agentic_grpo_run_artifacts.py
+
+Environment discovery:
+  HUANXIN_HEADLESS=1 node browser-automation/huanxin_open_env.js yx-QITE
+
+Current discovery result:
+  The first open-env attempt timed out waiting for a visible train-dev table row containing yx-QITE. This means the generic list lookup did not find the environment row yet; it is not proof that yx-QITE is unusable.
+
+Task-based yx-QITE fill-only preflight:
+  bash scripts/submit_huanxin_preflight_task.sh \
+    --env yx-QITE \
+    --task-name yx-qite-preflight \
+    --artifact-stem huanxin-submit-task-run-yx-qite-preflight-fillonly \
+    --wait-ms 12000
+
+Task-based yx-QITE submitted preflight, only after fill-only succeeds:
+  bash scripts/submit_huanxin_preflight_task.sh \
+    --env yx-QITE \
+    --submit \
+    --task-name yx-qite-preflight-0523 \
+    --artifact-stem huanxin-submit-task-run-yx-qite-preflight-submit-20260523 \
+    --wait-ms 12000
+
+Task status/log probe:
+  bash scripts/probe_huanxin_task_status.sh \
+    --task-name yx-qite-preflight-0523 \
+    --artifact-stem huanxin-task-status-yx-qite-preflight-20260523 \
+    --open-pod-log
+
+Blocked training command shape:
+  scripts/launch_huanxin_agentic_grpo.sh --env yx-QITE --remote-root /root/work/quantum-gpt --model-name /root/work/filestorage/Qwen3.6-35B-A3B-W8A8 --benchmark-file evals/benchmarks/agentic_coding_trajectory_training_v1.txt --dry-run --group-size 8 --grpo-steps 64 --max-turns 30 --max-new-tokens 32768 --max-seq-length 32768 --visible-devices 0,1,2,3,4,5,6,7 --nproc-per-node 8
+
+Training gate:
+  Do not launch SFT, DPO, or GRPO until a yx-QITE preflight reports the remote root, model path, trainer, benchmark file, torch, torch_npu, transformers, peft, and accelerate as present.

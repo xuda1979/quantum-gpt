@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0789",
+  "name": "Quantum computing task: Write a Qiskit program that prepares an arbitrary state ",
+  "task_prompt": "Quantum computing task: Write a Qiskit program that prepares an arbitrary state with amplitudes proportional to [0.79, 0.95, 0.97, 0.16, 0.69, 0.45, 0.21, 0.92] using StatePreparation, then verifies the prepared statevector matches the normalized target. Return the entire program in one piece, ready to run without any modification."
+}

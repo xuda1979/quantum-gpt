@@ -1,0 +1,8 @@
+{
+  "id": "quantum_superdense_coding_11",
+  "title": "Superdense coding sends 2 bits '11' via 1 qubit",
+  "expected_substrings": [
+    "Decoded bits: 11",
+    "Probability: 1.000"
+  ]
+}

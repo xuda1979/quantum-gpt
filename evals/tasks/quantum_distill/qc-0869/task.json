@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0869",
+  "name": "Quantum computing task: Write a runnable Qiskit Deutsch-Jozsa program with a bal",
+  "task_prompt": "Quantum computing task: Write a runnable Qiskit Deutsch-Jozsa program with a balanced oracle (x_1 (the bit x[1])) on 2 qubits. Write the full runnable code (all imports included); executing it should print the results."
+}

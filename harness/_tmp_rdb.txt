@@ -1,0 +1,115 @@
+def _reconcile_dep_blockers():
+    """Self-heal dep livelock: ready cards blocked on TERMINAL (bounced/dead)
+    deps. Environmental bounces re-arm the blocker (strikes reset -- they were
+    never the card's fault); genuinely dead blockers trigger a planner mint to
+    re-decompose. Runs every tick before the planner top-up check.
+
+    C-9095: also heals BLOCKED cards whose named blockers are all done --
+    status "blocked" was a write-only trap (the blocked_by field had zero
+    readers anywhere), so C-9010 rotted behind done C-9026. Superseded
+    blockers do NOT release (C-0060 doctrine: superseded edges are stale
+    and need owner re-pointing, and _deps_satisfied would strand the
+    released card as undispatchable-ready). Silent blocks (no named
+    blocker) and missing blocker ids fail closed. A live owner's park
+    (claimed_by pid alive) is never stomped.
+
+    C-9056/v7 self-heal: a bounced NON-environmental or dead dep can
+    never reach done -- the old code only re-listed it in
+    dead_dep_escalated every tick (55+ events measured) while the
+    dependent stayed undispatchable forever: the exact precondition of
+    the v7 live guard, re-baselined by hand v1..v7. The stale edge is
+    now DROPPED (audited dep_edge_dropped) so the dependent becomes
+    dispatchable; the blocker card itself stays as the historical
+    record, and the C-9114 gate judges idleness on the honest claimable
+    count afterwards."""
+    queue = load_queue(STATE)
+    changed = False
+    dead_blockers = []
+    _dead_dep_orphans = set()  # card ids unblocked by dead-dep edge drop
+    for c in queue["cards"]:
+        if c["status"] != "ready":
+            continue
+        for dep_id in list(c["deps"]):
+            dep = find_card(queue, dep_id)
+            if dep is None:
+                # Dead dep: card no longer exists in the queue. Drop the
+                # stale edge so the ready card is never permanently blocked.
+                c["deps"] = [d for d in c["deps"] if d != dep_id]
+                changed = True
+                event(
+                    STATE,
+                    "dep_edge_dropped",
+                    {"blocker": dep_id, "unblocks": c["id"], "reason": "dep_not_in_queue"},
+                )
+                continue
+            if dep["status"] not in ("bounced", "dead"):
+                continue
+            if dep["status"] == "bounced" and _bounce_was_environmental(dep):
+                dep["status"] = "ready"
+                dep["bounce_count"] = 0
+                dep["claimed_by"] = None
+                dep["claimed_utc"] = None
+                dep["deadline_utc"] = None
+                changed = True
+                event(STATE, "dep_blocker_requeued", {"blocker": dep["id"], "unblocks": c["id"]})
+            else:
+                # C-9056/v7 self-heal: never-done dep -- drop the stale
+                # edge (audited) instead of re-escalating it every tick.
+                if dep_id in c["deps"]:
+                    c["deps"] = [d for d in c["deps"] if d != dep_id]
+                    changed = True
+                    _dead_dep_orphans.add(c["id"])
+                    event(STATE, "dep_edge_dropped", {"blocker": dep_id, "unblocks": c["id"]})
+                if dep_id not in dead_blockers:
+                    dead_blockers.append(dep_id)
+    # C-9095 dep-guard: a card parked in status "blocked" behind named
+    # blockers must re-evaluate when those blockers resolve. Release only
+    # on ALL-DONE; anything else (open, superseded, missing) fails closed.
+    for c in queue["cards"]:
+        if c["status"] != "blocked":
+            continue
+        holder = c.get("claimed_by")
+        if holder and pid_alive(holder):
+            continue  # a live owner's active park
+        names = list(c.get("deps") or [])
+        bb = c.get("blocked_by")
+        if isinstance(bb, str) and bb.strip():
+            names.append(bb.strip())
+        elif isinstance(bb, list):
+            names.extend(x for x in bb if isinstance(x, str) and x.strip())
+        if not names:
+            continue  # silent block: an owner must state the reason
+        blockers = [find_card(queue, n) for n in names]
+        if any(b is None or b["status"] != "done" for b in blockers):
+            continue
+        c["status"] = "ready"
+        c["blocked_by"] = None
+        c["claimed_by"] = None
+        c["claimed_utc"] = None
+        c["deadline_utc"] = None
+        c["requeued_utc"] = now_iso()
+        changed = True
+        event(
+            STATE,
+            "dep_released",
+            dict(card=c["id"], blockers=[b["id"] for b in blockers]),
+        )
+    if changed:
+        save_queue(STATE, queue)
+    if dead_blockers:
+        # C-9114: escalation mints ONLY when the board holds no INDEPENDENTLY
+        # claimable ready work. A terminally dead blocker with healthy ready
+        # cards elsewhere minted a planner card every tick (C-9111 minted on
+        # 2026-09-18T05:50Z with 25 ready + 6 running on blocker C-9029).
+        # C-9114: the reconciler only drops dep edges and tracks dead
+        # blockers. Minting is the tick top-up gate (planner_topup_needed),
+        # NOT the reconciler job -- a dead blocker with no dependents and
+        # zero claimable work is genuinely idle, and planner_topup_needed
+        # will fire on the next tick.
+        n_claimable = claimable_ready_count(queue)
+        event(
+            STATE,
+            "dead_dep_escalated",
+            dict(blockers=dead_blockers, claimable_ready=n_claimable, minted=False),
+        )
+    return changed, dead_blockers

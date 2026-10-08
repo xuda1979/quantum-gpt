@@ -1,0 +1,86 @@
+Task ID: quantum_gate_alias_casefold_barrier
+Task name: Gate alias casefold barrier
+Domain: quantum
+Category: api_normalization
+
+Write the simplest Python file that satisfies the supplied tests and return only that file.
+
+Reference candidate style example (for format guidance, not for blind copying):
+--- BEGIN REFERENCE CANDIDATE ---
+from typing import Iterable
+
+
+_ALIASES = {
+    "h": "H",
+    "hadamard": "H",
+    "cx": "CX",
+    "cnot": "CX",
+    "controlledx": "CX",
+    "x": "X",
+    "paulix": "X",
+    "z": "Z",
+    "pauliz": "Z",
+}
+
+
+def _normalize_alias(raw_gate: str) -> str:
+    return "".join(str(raw_gate).strip().lower().replace("-", "").replace("_", "").split())
+
+
+def normalize_gate_sequence(gates: Iterable[str]) -> list[str]:
+    canonical: list[str] = []
+    for gate in gates:
+        alias = _normalize_alias(gate)
+        if alias == "measure":
+            raise ValueError("measurement is not a gate alias")
+        resolved = _ALIASES.get(alias)
+        if resolved is None:
+            raise ValueError(f"unknown gate alias: {gate!r}")
+        canonical.append(resolved)
+    return canonical
+
+--- END REFERENCE CANDIDATE ---
+
+Tests the candidate must satisfy:
+--- BEGIN TESTS ---
+import importlib.util
+
+
+def _load(candidate_path: str):
+    spec = importlib.util.spec_from_file_location("candidate", candidate_path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
+def run_tests(candidate_path: str) -> dict:
+    module = _load(candidate_path)
+    failures = []
+
+    cases = [
+        (["H", "cx", "x"], ["H", "CX", "X"]),
+        ([" hadamard ", "CNOT", "Pauli_X"], ["H", "CX", "X"]),
+        (["x", "z", "controlled-x"], ["X", "Z", "CX"]),
+    ]
+    for raw, expected in cases:
+        actual = module.normalize_gate_sequence(raw)
+        if actual != expected:
+            failures.append(f"normalize_gate_sequence({raw!r}) -> {actual!r}, expected {expected!r}")
+
+    for bad in (["swap"], ["H", "measure"], ["H", "T"]):
+        try:
+            module.normalize_gate_sequence(bad)
+        except ValueError:
+            continue
+        except Exception as exc:
+            failures.append(f"normalize_gate_sequence({bad!r}) raised {type(exc).__name__}, expected ValueError")
+        else:
+            failures.append(f"normalize_gate_sequence({bad!r}) did not raise ValueError")
+
+    return {
+        "passed": not failures,
+        "details": failures or ["gate alias casefold barrier normalizes x/X and rejects invalid aliases"],
+    }
+
+--- END TESTS ---

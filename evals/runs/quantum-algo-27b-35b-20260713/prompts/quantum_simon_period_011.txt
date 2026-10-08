@@ -1,0 +1,23 @@
+Write a complete, runnable Python program using numpy and qiskit that:
+1. Implements Simon's oracle for a 2-to-1 function f: {0,1}^3 -> {0,1}^3 with
+   hidden period s = "011" (i.e. f(x) = f(y) iff x XOR y = s).
+   The oracle acts on 6 qubits (3 input + 3 output). Use the standard textbook
+   construction: copy x to the output register, then for the highest index k
+   where s_k = 1, condition on x_k to XOR the lower s_i=1 bits into the output,
+   and flip the k-th output bit conditioned on x_k.
+2. Builds the full Simon circuit: H^n on the input register, apply the oracle,
+   then H^n on the input register again, then measure the input register.
+3. Simulate with qiskit.quantum_info.Statevector (remove final measurements).
+   Collect every bitstring y with non-zero probability. Each such y satisfies
+   y . s = 0 (mod 2).
+4. Solve the resulting linear system over GF(2) using Gaussian elimination to
+   recover s. Return the non-trivial solution (not all-zeros).
+5. In `def main()`, prints exactly:
+     n = 3
+     Hidden period s = 011
+     Distinct samples = <value>
+     Recovered s = <value>
+     Non-trivial: True
+     Correct: <True|False>
+   where Correct is True iff the recovered string equals "011".
+Call main() under `if __name__ == "__main__":`.

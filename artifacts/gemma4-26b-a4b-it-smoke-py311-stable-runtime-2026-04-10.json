@@ -1,0 +1,46 @@
+The argument `trust_remote_code` is to be used with Auto classes. It has no effect here and is ignored.
+{
+  "python": "3.11.15",
+  "platform": "macOS-26.3-arm64-arm-64bit",
+  "machine": "arm64",
+  "target_model": "models/gemma-4-26B-A4B-it",
+  "load_model_requested": false,
+  "modules": {
+    "torch": "2.11.0",
+    "transformers": "4.57.1",
+    "accelerate": "1.4.0",
+    "datasets": "3.3.2",
+    "peft": "0.14.0"
+  },
+  "dataset": {
+    "path": "data/seed/splits-auto-seed/train.jsonl",
+    "rows": 18,
+    "sample_ids": [
+      "quantum_circuit_depth_opt_001"
+    ],
+    "sample_domains": [
+      "quantum"
+    ],
+    "sample_message_counts": [
+      3
+    ],
+    "role_histogram": {
+      "system": 18,
+      "user": 18,
+      "assistant": 18
+    }
+  },
+  "torch_cuda_available": false,
+  "config_model_type": "gemma4",
+  "config_architectures": [
+    "Gemma4ForConditionalGeneration"
+  ],
+  "runtime_autoconfig_ok": false,
+  "checkpoint_transformers_version": "5.5.0.dev0",
+  "runtime_autoconfig_error_type": "ValueError",
+  "runtime_autoconfig_error": "The checkpoint you are trying to load has model type `gemma4` but Transformers does not recognize this architecture. This could be because of an issue with the checkpoint, or because your version of Transformers is out of date.\n\nYou can update Transformers with the command `pip install --upgrade transformers`. If this does not work, and the checkpoint is very new, then there may not be a release version that supports this model yet. In this case, you can get the most up-to-date code by installing Transformers from source with the command `pip install git+https://github.com/huggingface/transformers.git`",
+  "stage": "runtime_compat",
+  "status": "error",
+  "error_type": "ValueError",
+  "error": "Transformers runtime is too old for 'models/gemma-4-26B-A4B-it' (model_type='gemma4', architectures=['Gemma4ForConditionalGeneration']). Upgrade the bootstrap stack to a model-family-capable Transformers build before using this checkpoint. Checkpoint metadata advertises transformers_version=5.5.0.dev0. Gemma 4 instruction checkpoints also advertise an any-to-any conditional-generation architecture, so the current text-only AutoModelForCausalLM path may still need a processor-aware conditional-generation backend after the runtime upgrade. Underlying error: The checkpoint you are trying to load has model type `gemma4` but Transformers does not recognize this architecture. This could be because of an issue with the checkpoint, or because your version of Transformers is out of date.\n\nYou can update Transformers with the command `pip install --upgrade transformers`. If this does not work, and the checkpoint is very new, then there may not be a release version that supports this model yet. In this case, you can get the most up-to-date code by installing Transformers from source with the command `pip install git+https://github.com/huggingface/transformers.git`."
+}

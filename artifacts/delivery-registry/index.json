@@ -1,0 +1,484 @@
+{
+  "generated_at_utc": "2026-04-11T06:20:08.872677+00:00",
+  "workspace_root": "/Users/daxu/software/quantum-gpt",
+  "summary": {
+    "model_run_count": 4,
+    "delivery_manifest_count": 1,
+    "handoff_count": 1,
+    "paper_count": 13,
+    "issue_count": 3
+  },
+  "model_registry": {
+    "index": {
+      "path": "artifacts/model-registry/index.json",
+      "exists": true,
+      "bytes": 3982,
+      "modified_at_utc": "2026-04-11T06:18:43.475908+00:00"
+    },
+    "archive_version": "model-run-index-v2",
+    "run_count": 4,
+    "runs": [
+      {
+        "label": "codefirst-semantic-mix75-true20-e2",
+        "base_model": "models/Qwen2.5-1.5B-Instruct",
+        "training_method": "LoRA SFT",
+        "archive": {
+          "path": "artifacts/model-registry/codefirst-semantic-mix75-8npu-true20-e2-20260326T2118CST.json",
+          "exists": true,
+          "bytes": 45989,
+          "modified_at_utc": "2026-03-27T07:22:29.848536+00:00"
+        },
+        "output_dir": {
+          "path": "outputs/codefirst-semantic-mix75-8npu-true20-e2-20260326T2118CST",
+          "exists": true,
+          "bytes": 128,
+          "modified_at_utc": "2026-03-26T13:23:10.448107+00:00"
+        }
+      },
+      {
+        "label": "omnicoder9b-semantic-v4-2npu-true20",
+        "base_model": "models/OmniCoder-9B",
+        "training_method": "LoRA SFT",
+        "archive": {
+          "path": "artifacts/model-registry/interface-prefix-omnicoder9b-semantic-v4-2npu-true20-20260329T2219CST.json",
+          "exists": true,
+          "bytes": 15207,
+          "modified_at_utc": "2026-04-11T06:18:43.471392+00:00"
+        },
+        "output_dir": {
+          "path": "outputs/interface-prefix-omnicoder9b-semantic-v4-2npu-true20-20260329T2219CST",
+          "exists": true,
+          "bytes": 160,
+          "modified_at_utc": "2026-03-29T14:52:10.622908+00:00"
+        }
+      },
+      {
+        "label": "semantic-v4-true20-e2-best",
+        "base_model": "models/Qwen2.5-1.5B-Instruct",
+        "training_method": "LoRA SFT",
+        "archive": {
+          "path": "artifacts/model-registry/interface-prefix-semantic-v4-8npu-true20-e2-20260326T1627CST.json",
+          "exists": true,
+          "bytes": 44100,
+          "modified_at_utc": "2026-03-27T07:22:29.848421+00:00"
+        },
+        "output_dir": {
+          "path": "outputs/interface-prefix-semantic-v4-8npu-true20-e2-20260326T1627CST",
+          "exists": true,
+          "bytes": 160,
+          "modified_at_utc": "2026-03-26T09:19:36.406074+00:00"
+        }
+      },
+      {
+        "label": "omnicoder9b-quantum-generalization-sft-8npu-fastiter-20260409",
+        "base_model": "models/OmniCoder-9B",
+        "training_method": "LoRA SFT",
+        "archive": {
+          "path": "artifacts/model-registry/omnicoder9b-quantum-generalization-sft-8npu-fastiter-20260409T1451CST.json",
+          "exists": true,
+          "bytes": 30616,
+          "modified_at_utc": "2026-04-11T06:18:43.475314+00:00"
+        },
+        "output_dir": {
+          "path": "outputs/omnicoder9b-quantum-generalization-sft-8npu-fastiter-20260409T1451CST",
+          "exists": true,
+          "bytes": 160,
+          "modified_at_utc": "2026-04-09T10:08:15.817254+00:00"
+        }
+      }
+    ]
+  },
+  "deliveries": {
+    "root": {
+      "path": "artifacts/deliveries",
+      "exists": true,
+      "bytes": 128,
+      "modified_at_utc": "2026-04-07T01:58:47.860305+00:00"
+    },
+    "delivery_manifest_count": 1,
+    "handoff_count": 1,
+    "delivery_manifests": [
+      {
+        "manifest": {
+          "path": "artifacts/deliveries/omnicoder9b_first_working_adapter_20260330.json",
+          "exists": true,
+          "bytes": 737,
+          "modified_at_utc": "2026-03-30T01:54:33.496951+00:00"
+        },
+        "artifact": {
+          "path": "artifacts/deliveries/omnicoder9b_first_working_adapter_20260330.tar.gz",
+          "exists": false
+        },
+        "adapter_dir": {
+          "path": "outputs/interface-prefix-omnicoder9b-semantic-v4-2npu-true20-20260329T2219CST/adapter",
+          "exists": true,
+          "bytes": 256,
+          "modified_at_utc": "2026-04-07T01:58:48.628733+00:00"
+        },
+        "adapter_weights": {
+          "path": "outputs/interface-prefix-omnicoder9b-semantic-v4-2npu-true20-20260329T2219CST/adapter/adapter_model.safetensors",
+          "exists": false
+        },
+        "metrics_file": {
+          "path": "outputs/interface-prefix-omnicoder9b-semantic-v4-2npu-true20-20260329T2219CST/metrics.json",
+          "exists": true,
+          "bytes": 3836,
+          "modified_at_utc": "2026-03-29T14:22:26.513427+00:00"
+        },
+        "report_file": {
+          "path": "reports/omnicoder9b_semantic_v4_2npu_20260329.md",
+          "exists": true,
+          "bytes": 1597,
+          "modified_at_utc": "2026-04-01T04:59:17.209094+00:00"
+        },
+        "base_model": {
+          "path": "models/OmniCoder-9B",
+          "exists": true,
+          "bytes": 416,
+          "modified_at_utc": "2026-04-07T01:58:32.772999+00:00"
+        },
+        "verified_run": {
+          "world_size": 2,
+          "train_examples": 160,
+          "eval_examples": 32,
+          "completed_steps": 20,
+          "final_eval_loss": 0.3727272283285856,
+          "final_eval_perplexity": 1.4516883063761739
+        }
+      }
+    ],
+    "handoffs": [
+      {
+        "manifest": {
+          "path": "artifacts/deliveries/omnicoder9b-qual-eval-handoff_20260330T021144Z/handoff_manifest.json",
+          "exists": true,
+          "bytes": 3629,
+          "modified_at_utc": "2026-03-30T02:11:44.560795+00:00"
+        },
+        "base_model": {
+          "path": "models/OmniCoder-9B",
+          "exists": true,
+          "bytes": 416,
+          "modified_at_utc": "2026-04-07T01:58:32.772999+00:00"
+        },
+        "adapter_dir": {
+          "path": "outputs/interface-prefix-omnicoder9b-semantic-v4-2npu-true20-20260329T2219CST/adapter",
+          "exists": true,
+          "bytes": 256,
+          "modified_at_utc": "2026-04-07T01:58:48.628733+00:00"
+        },
+        "adapter_weights": {
+          "path": "outputs/interface-prefix-omnicoder9b-semantic-v4-2npu-true20-20260329T2219CST/adapter/adapter_model.safetensors",
+          "exists": false
+        },
+        "eval_slice": {
+          "path": "reports/base_vs_adapter_eval_slice_interface_prefix.json",
+          "exists": true,
+          "bytes": 13364,
+          "modified_at_utc": "2026-03-22T01:49:40.050465+00:00"
+        },
+        "script_inputs": [
+          {
+            "path": "scripts/run_base_vs_adapter_eval.py",
+            "exists": true,
+            "bytes": 8768,
+            "modified_at_utc": "2026-04-09T12:18:53.824449+00:00"
+          },
+          {
+            "path": "scripts/summarize_base_vs_adapter_report.py",
+            "exists": true,
+            "bytes": 8078,
+            "modified_at_utc": "2026-03-26T14:28:28.655818+00:00"
+          },
+          {
+            "path": "training/qwen_sft_peft.py",
+            "exists": true,
+            "bytes": 34602,
+            "modified_at_utc": "2026-04-08T10:24:43.725939+00:00"
+          }
+        ],
+        "blocked_command": "/Users/daxu/homebrew/bin/rclone copy scripts/run_base_vs_adapter_eval.py \"nm-aihuanxin:jtdlp-3ed7854b946a47b1a49ad754baa76cd3/quantum-qwen25-coder-main/scripts\" --s3-no-check-bucket --progress"
+      }
+    ]
+  },
+  "papers": {
+    "index": {
+      "path": "research/papers/index.json",
+      "exists": true,
+      "bytes": 2376,
+      "modified_at_utc": "2026-04-08T08:18:36.506707+00:00"
+    },
+    "paper_count": 13,
+    "papers": [
+      {
+        "paper_id": "pluginized_research_methods",
+        "title": "Pluginized Research Methods for Quantum Coding LLM Iteration",
+        "type": "architecture",
+        "has_plugin": false,
+        "directory": {
+          "path": "research/papers/pluginized_research_methods",
+          "exists": true,
+          "bytes": 128,
+          "modified_at_utc": "2026-03-31T11:33:14.006381+00:00"
+        },
+        "paper_md": {
+          "path": "research/papers/pluginized_research_methods/paper.md",
+          "exists": true,
+          "bytes": 932,
+          "modified_at_utc": "2026-03-31T11:33:14.006354+00:00"
+        }
+      },
+      {
+        "paper_id": "timeboxed_eight_npu_sft",
+        "title": "Timeboxed 8-NPU SFT Scaling Plan",
+        "type": "run-plan",
+        "has_plugin": false,
+        "directory": {
+          "path": "research/papers/timeboxed_eight_npu_sft",
+          "exists": true,
+          "bytes": 128,
+          "modified_at_utc": "2026-03-31T11:33:14.006563+00:00"
+        },
+        "paper_md": {
+          "path": "research/papers/timeboxed_eight_npu_sft/paper.md",
+          "exists": true,
+          "bytes": 1449,
+          "modified_at_utc": "2026-04-08T04:46:38.835439+00:00"
+        }
+      },
+      {
+        "paper_id": "timeboxed_eight_npu_grpo",
+        "title": "Timeboxed 8-NPU GRPO Scaling Plan",
+        "type": "run-plan",
+        "has_plugin": false,
+        "directory": {
+          "path": "research/papers/timeboxed_eight_npu_grpo",
+          "exists": true,
+          "bytes": 128,
+          "modified_at_utc": "2026-03-31T11:33:14.006739+00:00"
+        },
+        "paper_md": {
+          "path": "research/papers/timeboxed_eight_npu_grpo/paper.md",
+          "exists": true,
+          "bytes": 1282,
+          "modified_at_utc": "2026-03-31T11:50:40.851037+00:00"
+        }
+      },
+      {
+        "paper_id": "verifier_guided_repair_curriculum",
+        "title": "Verifier-Guided Near-Miss Repair Curriculum for Quantum Code Generalization",
+        "type": "method",
+        "has_plugin": true,
+        "directory": {
+          "path": "research/papers/verifier_guided_repair_curriculum",
+          "exists": true,
+          "bytes": 128,
+          "modified_at_utc": "2026-03-31T11:33:14.006942+00:00"
+        },
+        "paper_md": {
+          "path": "research/papers/verifier_guided_repair_curriculum/paper.md",
+          "exists": true,
+          "bytes": 705,
+          "modified_at_utc": "2026-03-31T11:33:14.006904+00:00"
+        }
+      },
+      {
+        "paper_id": "clause_aware_verifier_reward",
+        "title": "Clause-Aware Verifier Reward for Code RL",
+        "type": "method",
+        "has_plugin": true,
+        "directory": {
+          "path": "research/papers/clause_aware_verifier_reward",
+          "exists": true,
+          "bytes": 128,
+          "modified_at_utc": "2026-03-31T11:33:14.007150+00:00"
+        },
+        "paper_md": {
+          "path": "research/papers/clause_aware_verifier_reward/paper.md",
+          "exists": true,
+          "bytes": 694,
+          "modified_at_utc": "2026-03-31T11:33:14.007124+00:00"
+        }
+      },
+      {
+        "paper_id": "ast_anchor_interface_grounding",
+        "title": "AST-Anchor Reranking for Interface-Grounded Code Synthesis",
+        "type": "method",
+        "has_plugin": true,
+        "directory": {
+          "path": "research/papers/ast_anchor_interface_grounding",
+          "exists": true,
+          "bytes": 128,
+          "modified_at_utc": "2026-03-31T11:33:14.007323+00:00"
+        },
+        "paper_md": {
+          "path": "research/papers/ast_anchor_interface_grounding/paper.md",
+          "exists": true,
+          "bytes": 701,
+          "modified_at_utc": "2026-03-31T11:33:14.007299+00:00"
+        }
+      },
+      {
+        "paper_id": "self_consistency_verifier_routing",
+        "title": "Self-Consistency Verifier Routing for Code SFT and GRPO",
+        "type": "method",
+        "has_plugin": true,
+        "directory": {
+          "path": "research/papers/self_consistency_verifier_routing",
+          "exists": true,
+          "bytes": 128,
+          "modified_at_utc": "2026-03-31T11:44:36.508723+00:00"
+        },
+        "paper_md": {
+          "path": "research/papers/self_consistency_verifier_routing/paper.md",
+          "exists": true,
+          "bytes": 1172,
+          "modified_at_utc": "2026-03-31T11:44:36.508666+00:00"
+        }
+      },
+      {
+        "paper_id": "uncertainty_triggered_repair_replay",
+        "title": "Uncertainty-Triggered Repair Replay for SFT and GRPO",
+        "type": "method",
+        "has_plugin": true,
+        "directory": {
+          "path": "research/papers/uncertainty_triggered_repair_replay",
+          "exists": true,
+          "bytes": 128,
+          "modified_at_utc": "2026-03-31T11:45:13.975995+00:00"
+        },
+        "paper_md": {
+          "path": "research/papers/uncertainty_triggered_repair_replay/paper.md",
+          "exists": true,
+          "bytes": 821,
+          "modified_at_utc": "2026-03-31T11:45:13.975941+00:00"
+        }
+      },
+      {
+        "paper_id": "behavior_anchor_coverage_reward",
+        "title": "Behavior-Anchor Coverage Reward for Low-Signal Code GRPO",
+        "type": "method",
+        "has_plugin": true,
+        "directory": {
+          "path": "research/papers/behavior_anchor_coverage_reward",
+          "exists": true,
+          "bytes": 128,
+          "modified_at_utc": "2026-04-04T09:25:52.728984+00:00"
+        },
+        "paper_md": {
+          "path": "research/papers/behavior_anchor_coverage_reward/paper.md",
+          "exists": true,
+          "bytes": 2287,
+          "modified_at_utc": "2026-04-04T09:25:52.728936+00:00"
+        }
+      },
+      {
+        "paper_id": "turboquant",
+        "title": "TurboQuant-Style KV Cache Compression for Long-Context Inference",
+        "type": "method",
+        "has_plugin": false,
+        "directory": {
+          "path": "research/papers/turboquant",
+          "exists": true,
+          "bytes": 96,
+          "modified_at_utc": "2026-04-01T03:30:46.790195+00:00"
+        },
+        "paper_md": {
+          "path": "research/papers/turboquant/paper.md",
+          "exists": true,
+          "bytes": 1800,
+          "modified_at_utc": "2026-04-01T03:30:46.790257+00:00"
+        }
+      },
+      {
+        "paper_id": "gemma4_text_path_enablement",
+        "title": "Gemma 4 Text-Path Enablement for Quantum R&D",
+        "type": "model-enablement",
+        "has_plugin": false,
+        "directory": {
+          "path": "research/papers/gemma4_text_path_enablement",
+          "exists": true,
+          "bytes": 128,
+          "modified_at_utc": "2026-04-06T16:27:38.975008+00:00"
+        },
+        "paper_md": {
+          "path": "research/papers/gemma4_text_path_enablement/paper.md",
+          "exists": true,
+          "bytes": 9820,
+          "modified_at_utc": "2026-04-08T06:26:43.944994+00:00"
+        }
+      },
+      {
+        "paper_id": "gemma4_26b_a4b_weekend_demo",
+        "title": "Gemma 4 26B-A4B MoE Weekend Demo Report",
+        "type": "system",
+        "has_plugin": false,
+        "directory": {
+          "path": "research/papers/gemma4_26b_a4b_weekend_demo",
+          "exists": true,
+          "bytes": 128,
+          "modified_at_utc": "2026-04-08T08:18:36.506464+00:00"
+        },
+        "paper_md": {
+          "path": "research/papers/gemma4_26b_a4b_weekend_demo/paper.md",
+          "exists": true,
+          "bytes": 18684,
+          "modified_at_utc": "2026-04-08T12:39:00.482763+00:00"
+        }
+      },
+      {
+        "paper_id": "autonomous_rd_cycle_system",
+        "title": "Autonomous R&D Cycle System",
+        "type": "system",
+        "has_plugin": false,
+        "directory": {
+          "path": "research/papers/autonomous_rd_cycle_system",
+          "exists": true,
+          "bytes": 128,
+          "modified_at_utc": "2026-04-07T09:08:33.248291+00:00"
+        },
+        "paper_md": {
+          "path": "research/papers/autonomous_rd_cycle_system/paper.md",
+          "exists": true,
+          "bytes": 5990,
+          "modified_at_utc": "2026-04-08T05:00:36.572319+00:00"
+        }
+      }
+    ]
+  },
+  "canonical_report": {
+    "tex": {
+      "path": "research/RESEARCH-REPORT.tex",
+      "exists": true,
+      "bytes": 136597,
+      "modified_at_utc": "2026-04-11T05:39:14.557754+00:00"
+    },
+    "pdf": {
+      "path": "research/build/RESEARCH-REPORT.pdf",
+      "exists": true,
+      "bytes": 490447,
+      "modified_at_utc": "2026-04-10T12:55:08.215405+00:00"
+    }
+  },
+  "issues": [
+    {
+      "scope": "deliveries",
+      "identifier": "omnicoder9b_first_working_adapter_20260330",
+      "problem": "missing-adapter-weights",
+      "target": "outputs/interface-prefix-omnicoder9b-semantic-v4-2npu-true20-20260329T2219CST/adapter/adapter_model.safetensors"
+    },
+    {
+      "scope": "deliveries",
+      "identifier": "omnicoder9b_first_working_adapter_20260330",
+      "problem": "missing-delivery-artifact",
+      "target": "artifacts/deliveries/omnicoder9b_first_working_adapter_20260330.tar.gz"
+    },
+    {
+      "scope": "deliveries",
+      "identifier": "omnicoder9b-qual-eval-handoff_20260330T021144Z",
+      "problem": "missing-handoff-adapter-weights",
+      "target": "outputs/interface-prefix-omnicoder9b-semantic-v4-2npu-true20-20260329T2219CST/adapter/adapter_model.safetensors"
+    }
+  ],
+  "ok": false
+}

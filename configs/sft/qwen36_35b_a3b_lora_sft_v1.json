@@ -1,0 +1,53 @@
+{
+  "name": "qwen36_35b_a3b_lora_sft_v1",
+  "base_model": "Qwen/Qwen3.6-35B-A3B",
+  "method": "lora",
+  "precision": "bf16",
+  "sequence_length_schedule": [8192, 16384, 32768],
+  "lora": {
+    "rank": 64,
+    "alpha": 128,
+    "target_modules": [
+      "q_proj",
+      "k_proj",
+      "v_proj",
+      "o_proj",
+      "up_proj",
+      "gate_proj",
+      "down_proj"
+    ],
+    "router_policy": "freeze"
+  },
+  "optimization": {
+    "learning_rate": 0.0001,
+    "warmup_ratio": 0.03,
+    "epochs": 1,
+    "gradient_checkpointing": true,
+    "packing": true,
+    "regularization": "small KL/reference replay when framework support is available"
+  },
+  "dataset_mix": {
+    "tool_trajectories": 0.25,
+    "bug_fix_with_tests": 0.25,
+    "code_generation_refactor": 0.15,
+    "test_writing": 0.1,
+    "code_review_security": 0.1,
+    "build_ci_debug_logs": 0.1,
+    "general_reasoning_math": 0.05
+  },
+  "trajectory_contract": [
+    "understand issue",
+    "inspect relevant files",
+    "diagnose root cause",
+    "make minimal patch",
+    "run focused tests",
+    "retry from failure logs",
+    "summarize changed files and validation"
+  ],
+  "stop_conditions": [
+    "private holdout regression",
+    "tool-use format drift",
+    "test-discipline regression",
+    "router load-balance collapse if router is ever unfrozen"
+  ]
+}

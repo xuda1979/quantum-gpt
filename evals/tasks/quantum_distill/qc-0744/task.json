@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0744",
+  "name": "Solve this quantum programming problem. Write a Qiskit program testing the 3-qub",
+  "task_prompt": "Solve this quantum programming problem. Write a Qiskit program testing the 3-qubit Mermin inequality on a GHZ state: estimate <XXX>, <XYY>, <YXY>, <YYX> with StatevectorEstimator and show M = <XXX> - <XYY> - <YXY> - <YYX> reaches 4 (classical bound 2). Provide a complete, self-contained program that runs as-is and prints its results."
+}

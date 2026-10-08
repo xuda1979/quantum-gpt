@@ -1,0 +1,68 @@
+{
+  "kind": "override_summary",
+  "scorecard": "/Users/daxu/software/quantum-gpt/evals/runs/qwen25-quantum-generalization-holdout-ai1-ft-rerun-20260412T1627CST/scorecard.json",
+  "full_total": 26,
+  "full_passes": 22,
+  "full_failures": 4,
+  "full_pass_rate": 0.8461538461538461,
+  "reference_total": 22,
+  "reference_passes": 22,
+  "reference_failures": 0,
+  "reference_pass_rate": 1.0,
+  "override_total": 4,
+  "override_passes": 0,
+  "override_failures": 4,
+  "override_pass_rate": 0.0,
+  "domains": {
+    "quantum": 4
+  },
+  "categories": {
+    "algorithm_implementation": 2,
+    "api_normalization": 1,
+    "reasoning": 1
+  },
+  "failed_task_ids": [
+    "quantum_gate_alias_normalization",
+    "quantum_phase_estimation_circuit",
+    "quantum_qaoa_maxcut",
+    "quantum_superdense_coding"
+  ],
+  "failed_tasks": [
+    {
+      "id": "quantum_gate_alias_normalization",
+      "name": "Gate alias normalization repair",
+      "domain": "quantum",
+      "category": "api_normalization",
+      "error_type": null,
+      "first_detail": "normalize_gate_sequence(['H', 'cx', 'x']) -> ['H', 'Cx', 'X'], expected ['H', 'CX', 'X']",
+      "candidate_path": "/root/root/work/quantum-gpt/evals/runs/qwen25-quantum-generalization-holdout-ai1-ft-rerun-20260412T1627CST/candidates/quantum_gate_alias_normalization.py"
+    },
+    {
+      "id": "quantum_phase_estimation_circuit",
+      "name": "Quantum phase estimation unitary eigenvalue extraction",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "error_type": "AttributeError",
+      "first_detail": "runner_exception: AttributeError: module 'candidate' has no attribute 'phase_estimation'",
+      "candidate_path": "/root/root/work/quantum-gpt/evals/runs/qwen25-quantum-generalization-holdout-ai1-ft-rerun-20260412T1627CST/candidates/quantum_phase_estimation_circuit.py"
+    },
+    {
+      "id": "quantum_qaoa_maxcut",
+      "name": "QAOA MaxCut cost function and classical simulation",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "error_type": "AttributeError",
+      "first_detail": "runner_exception: AttributeError: module 'candidate' has no attribute 'maxcut_cost'",
+      "candidate_path": "/root/root/work/quantum-gpt/evals/runs/qwen25-quantum-generalization-holdout-ai1-ft-rerun-20260412T1627CST/candidates/quantum_qaoa_maxcut.py"
+    },
+    {
+      "id": "quantum_superdense_coding",
+      "name": "Superdense coding encode/decode",
+      "domain": "quantum",
+      "category": "reasoning",
+      "error_type": "AttributeError",
+      "first_detail": "runner_exception: AttributeError: module 'candidate' has no attribute 'encode_message'",
+      "candidate_path": "/root/root/work/quantum-gpt/evals/runs/qwen25-quantum-generalization-holdout-ai1-ft-rerun-20260412T1627CST/candidates/quantum_superdense_coding.py"
+    }
+  ]
+}

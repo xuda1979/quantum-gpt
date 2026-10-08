@@ -1,0 +1,319 @@
+{
+  "status": "blocked",
+  "current_stage": "gemma_runtime_bootstrap",
+  "last_completed_stage": "remote_launcher_gate",
+  "next_action": "PYTHON_BIN=\"$(python3 scripts/resolve_python_interpreter.py --min-version 3.10 --print-path)\" && \"$PYTHON_BIN\" -m pip install -r training/requirements-gemma4-runtime.txt",
+  "stop_reason": "Gemma runtime bootstrap failed on the resolved local Python path.",
+  "ready_for_remote_finetune": false,
+  "stages": [
+    {
+      "stage": "local_eval_gate",
+      "status": "passed",
+      "blocking": false,
+      "command": "python3 evals/runner/run_eval.py",
+      "result": {
+        "ok": true,
+        "exit_code": 0,
+        "stdout_preview": "[PASS] quantum_bell_pair_construction - Bell pair construction (reference)\n    candidate: /Users/daxu/software/quantum-gpt/evals/tasks/quantum/bell_pair_construction/candidate.py\n    - state=[0.7071067811865476, 0.0, 0.0, 0.7071067811865476"
+      },
+      "reason": "Local eval gate passed in this iteration."
+    },
+    {
+      "stage": "holdout_integrity",
+      "status": "passed",
+      "blocking": false,
+      "command": "python3 scripts/verify_holdout_dataset.py --train-file data/generated/omnicoder-quantum-generalization-holdout-v1/train.jsonl --eval-file data/generated/omnicoder-quantum-generalization-holdout-v1/eval.jsonl --manifest data/generated/omnicoder-quantum-generalization-holdout-v1/manifest.json --min-eval-count 500 --require-task-disjoint --require-prompt-family-disjoint",
+      "result": {
+        "ok": true,
+        "exit_code": 0,
+        "stdout_preview": "{\n  \"train_file\": \"/Users/daxu/software/quantum-gpt/data/generated/omnicoder-quantum-generalization-holdout-v1/train.jsonl\",\n  \"eval_file\": \"/Users/daxu/software/quantum-gpt/data/generated/omnicoder-quantum-generalization-holdout-v1/eval.js"
+      },
+      "reason": "Holdout integrity was verified for this iteration."
+    },
+    {
+      "stage": "gemma_audit",
+      "status": "passed",
+      "blocking": false,
+      "command": "python3 training/audit_model_source.py --model-id google/gemma-4-26B-A4B-it --expected-family-substring gemma",
+      "reason": "Gemma source audit is satisfied by a cached verified local artifact for this target.",
+      "evidence": {
+        "audit_artifact": "artifacts/model-source-audit-gemma4-26b-a4b-it.json",
+        "timestamp_utc": "2026-04-08T10:24:48.892073+00:00",
+        "model_id": "google/gemma-4-26B-A4B-it",
+        "config_model_type": "gemma4",
+        "config_architectures": [
+          "Gemma4ForConditionalGeneration"
+        ],
+        "pipeline_tag": "image-text-to-text"
+      }
+    },
+    {
+      "stage": "gemma_snapshot_verify",
+      "status": "passed",
+      "blocking": false,
+      "command": "python3 training/verify_qwen_snapshot.py models/gemma-4-26B-A4B-it --expected-substring gemma-4-26B-A4B-it --expected-family-substring gemma",
+      "reason": "Local Gemma snapshot verification is satisfied by a cached successful handoff artifact for this target.",
+      "evidence": {
+        "handoff_manifest": "artifacts/gemma4-26b-a4b-it-local-snapshot-handoff.json",
+        "model_id": "google/gemma-4-26B-A4B-it",
+        "snapshot_dir": "/Users/daxu/software/quantum-gpt/models/gemma-4-26B-A4B-it",
+        "present_weight_files": [
+          "model-00001-of-00002.safetensors",
+          "model-00002-of-00002.safetensors",
+          "model.safetensors.index.json"
+        ],
+        "indexed_weight_shards": [
+          "model-00001-of-00002.safetensors",
+          "model-00002-of-00002.safetensors"
+        ],
+        "config_model_type": "gemma4",
+        "config_architectures": [
+          "Gemma4ForConditionalGeneration"
+        ],
+        "requires_processor_artifacts": true
+      }
+    },
+    {
+      "stage": "gemma_local_python_gate",
+      "command": "python3 scripts/resolve_python_interpreter.py --min-version 3.10",
+      "evidence": {
+        "status": "ok",
+        "minimum_version": "3.10",
+        "selected_path": "/Users/daxu/software/quantum-gpt/.local-python/cpython-3.11.15/bin/python3.11",
+        "selected_version": "3.11.15",
+        "brew_binary": "/Users/daxu/homebrew/bin/brew",
+        "install_command": null,
+        "candidates": [
+          {
+            "path": "/Users/daxu/software/quantum-gpt/.local-python/cpython-3.11.15/bin/python3.11",
+            "source": "workspace_local",
+            "exists": true,
+            "version": "3.11.15",
+            "meets_minimum": true
+          },
+          {
+            "path": "/Users/daxu/software/quantum-gpt/.local-python/cpython-3.11.15/bin/python3",
+            "source": "workspace_local",
+            "exists": true,
+            "version": "3.11.15",
+            "meets_minimum": true
+          },
+          {
+            "path": "/usr/bin/python3",
+            "source": "path_lookup",
+            "exists": true,
+            "version": "3.9.6",
+            "meets_minimum": false
+          },
+          {
+            "path": "/Users/daxu/homebrew/bin/python3.13",
+            "source": "prefix:/Users/daxu/homebrew/bin",
+            "exists": false,
+            "version": null,
+            "meets_minimum": false
+          },
+          {
+            "path": "/Users/daxu/homebrew/bin/python3.12",
+            "source": "prefix:/Users/daxu/homebrew/bin",
+            "exists": false,
+            "version": null,
+            "meets_minimum": false
+          },
+          {
+            "path": "/Users/daxu/homebrew/bin/python3.11",
+            "source": "prefix:/Users/daxu/homebrew/bin",
+            "exists": false,
+            "version": null,
+            "meets_minimum": false
+          },
+          {
+            "path": "/Users/daxu/homebrew/bin/python3.10",
+            "source": "prefix:/Users/daxu/homebrew/bin",
+            "exists": false,
+            "version": null,
+            "meets_minimum": false
+          },
+          {
+            "path": "/Users/daxu/homebrew/bin/python3",
+            "source": "prefix:/Users/daxu/homebrew/bin",
+            "exists": false,
+            "version": null,
+            "meets_minimum": false
+          },
+          {
+            "path": "/opt/homebrew/bin/python3.13",
+            "source": "prefix:/opt/homebrew/bin",
+            "exists": false,
+            "version": null,
+            "meets_minimum": false
+          },
+          {
+            "path": "/opt/homebrew/bin/python3.12",
+            "source": "prefix:/opt/homebrew/bin",
+            "exists": false,
+            "version": null,
+            "meets_minimum": false
+          },
+          {
+            "path": "/opt/homebrew/bin/python3.11",
+            "source": "prefix:/opt/homebrew/bin",
+            "exists": false,
+            "version": null,
+            "meets_minimum": false
+          },
+          {
+            "path": "/opt/homebrew/bin/python3.10",
+            "source": "prefix:/opt/homebrew/bin",
+            "exists": false,
+            "version": null,
+            "meets_minimum": false
+          },
+          {
+            "path": "/opt/homebrew/bin/python3",
+            "source": "prefix:/opt/homebrew/bin",
+            "exists": false,
+            "version": null,
+            "meets_minimum": false
+          },
+          {
+            "path": "/usr/local/bin/python3.13",
+            "source": "prefix:/usr/local/bin",
+            "exists": false,
+            "version": null,
+            "meets_minimum": false
+          },
+          {
+            "path": "/usr/local/bin/python3.12",
+            "source": "prefix:/usr/local/bin",
+            "exists": false,
+            "version": null,
+            "meets_minimum": false
+          },
+          {
+            "path": "/usr/local/bin/python3.11",
+            "source": "prefix:/usr/local/bin",
+            "exists": false,
+            "version": null,
+            "meets_minimum": false
+          },
+          {
+            "path": "/usr/local/bin/python3.10",
+            "source": "prefix:/usr/local/bin",
+            "exists": false,
+            "version": null,
+            "meets_minimum": false
+          },
+          {
+            "path": "/usr/local/bin/python3",
+            "source": "prefix:/usr/local/bin",
+            "exists": false,
+            "version": null,
+            "meets_minimum": false
+          }
+        ]
+      },
+      "status": "passed",
+      "blocking": false,
+      "reason": "A local Python interpreter meeting the Gemma runtime floor is available."
+    },
+    {
+      "stage": "gemma_runtime_bootstrap",
+      "status": "blocked",
+      "blocking": true,
+      "command": "PYTHON_BIN=\"$(python3 scripts/resolve_python_interpreter.py --min-version 3.10 --print-path)\" && \"$PYTHON_BIN\" -m pip install -r training/requirements-gemma4-runtime.txt",
+      "next_action": "PYTHON_BIN=\"$(python3 scripts/resolve_python_interpreter.py --min-version 3.10 --print-path)\" && \"$PYTHON_BIN\" -m pip install -r training/requirements-gemma4-runtime.txt",
+      "reason": "Gemma runtime bootstrap failed on the resolved local Python path.",
+      "result": {
+        "ok": false,
+        "exit_code": 1,
+        "stdout_preview": "Collecting git+https://github.com/huggingface/transformers.git (from -r training/requirements-gemma4-runtime.txt (line 17))\n  Cloning https://github.com/huggingface/transformers.git to /private/var/folders/py/d8v62mnd40vg77h4cls6n0t80000gn/",
+        "stderr_preview": "Running command git clone --filter=blob:none --quiet https://github.com/huggingface/transformers.git /private/var/folders/py/d8v62mnd40vg77h4cls6n0t80000gn/T/pip-req-build-8s20_yzo\nERROR: Cannot install -r training/requirements-gemma4-runti"
+      }
+    },
+    {
+      "stage": "gemma_smoke",
+      "status": "pending",
+      "blocking": true,
+      "command": "PYTHON_BIN=\"$(python3 scripts/resolve_python_interpreter.py --min-version 3.10 --print-path)\" && \"$PYTHON_BIN\" training/huanxin_cpu_smoke.py --model-name models/gemma-4-26B-A4B-it --dataset data/seed/splits-auto-seed/train.jsonl --max-samples 1",
+      "next_action": "PYTHON_BIN=\"$(python3 scripts/resolve_python_interpreter.py --min-version 3.10 --print-path)\" && \"$PYTHON_BIN\" training/huanxin_cpu_smoke.py --model-name models/gemma-4-26B-A4B-it --dataset data/seed/splits-auto-seed/train.jsonl --max-samples 1",
+      "reason": "Gemma trainer/backend preflight has not yet passed on the local stack."
+    },
+    {
+      "stage": "paper_router_warmup",
+      "status": "pending",
+      "blocking": true,
+      "command": "PYTORCH_NPU_ALLOC_CONF=max_split_size_mb:256 \\\nTOKENIZERS_PARALLELISM=false \\\nASCEND_RT_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 \\\ntorchrun --nproc_per_node=8 training/qwen_sft_peft.py \\\n  --model-name models/gemma-4-26B-A4B-it \\\n  --train-file data/generated/quantum-paper-router-warmup-v1/messages/quantum_paper_router_warmup_messages_train.jsonl \\\n  --eval-file data/generated/quantum-paper-router-warmup-v1/messages/quantum_paper_router_warmup_messages_valid.jsonl \\\n  --output-dir outputs/gemma4-26b-a4b-it-quantum-paper-router-warmup-fastiter \\\n  --device npu \\\n  --max-length 1024 \\\n  --per-device-batch-size 1 \\\n  --gradient-accumulation-steps 2 \\\n  --learning-rate 1e-4 \\\n  --num-epochs 1 \\\n  --max-steps 8 \\\n  --eval-steps 8 \\\n  --log-steps 1 \\\n  --train-on-completions-only \\\n  --target-module-regex '(?:^|\\.)(?:router|gate)(?:$|\\.)' \\\n  --trainable-param-regex 'lora_'",
+      "next_action": "PYTORCH_NPU_ALLOC_CONF=max_split_size_mb:256 \\\nTOKENIZERS_PARALLELISM=false \\\nASCEND_RT_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 \\\ntorchrun --nproc_per_node=8 training/qwen_sft_peft.py \\\n  --model-name models/gemma-4-26B-A4B-it \\\n  --train-file data/generated/quantum-paper-router-warmup-v1/messages/quantum_paper_router_warmup_messages_train.jsonl \\\n  --eval-file data/generated/quantum-paper-router-warmup-v1/messages/quantum_paper_router_warmup_messages_valid.jsonl \\\n  --output-dir outputs/gemma4-26b-a4b-it-quantum-paper-router-warmup-fastiter \\\n  --device npu \\\n  --max-length 1024 \\\n  --per-device-batch-size 1 \\\n  --gradient-accumulation-steps 2 \\\n  --learning-rate 1e-4 \\\n  --num-epochs 1 \\\n  --max-steps 8 \\\n  --eval-steps 8 \\\n  --log-steps 1 \\\n  --train-on-completions-only \\\n  --target-module-regex '(?:^|\\.)(?:router|gate)(?:$|\\.)' \\\n  --trainable-param-regex 'lora_'",
+      "reason": "The paper-router warmup command and dataset are ready; after local Gemma runtime preflight clears, S3 code/model sync can launch this exact ai2 router adaptation step.",
+      "evidence": {
+        "command_sheet": "artifacts/gemma4-26b-a4b-paper-router-command-sheet.txt",
+        "plan_command": "python3 scripts/render_timeboxed_scaleup_commands.py --target gemma4-26b-a4b-it --output artifacts/gemma4-26b-a4b-it-paper-router-command-sheet.txt",
+        "paper_dataset_command": "python3 scripts/build_paper_sft_dataset.py \\\n  paper \\\n  --output-dir data/generated/quantum-paper-router-warmup-v1 \\\n  --dataset-name quantum_paper_router_warmup",
+        "paper_router_warmup_command": "PYTORCH_NPU_ALLOC_CONF=max_split_size_mb:256 \\\nTOKENIZERS_PARALLELISM=false \\\nASCEND_RT_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 \\\ntorchrun --nproc_per_node=8 training/qwen_sft_peft.py \\\n  --model-name models/gemma-4-26B-A4B-it \\\n  --train-file data/generated/quantum-paper-router-warmup-v1/messages/quantum_paper_router_warmup_messages_train.jsonl \\\n  --eval-file data/generated/quantum-paper-router-warmup-v1/messages/quantum_paper_router_warmup_messages_valid.jsonl \\\n  --output-dir outputs/gemma4-26b-a4b-it-quantum-paper-router-warmup-fastiter \\\n  --device npu \\\n  --max-length 1024 \\\n  --per-device-batch-size 1 \\\n  --gradient-accumulation-steps 2 \\\n  --learning-rate 1e-4 \\\n  --num-epochs 1 \\\n  --max-steps 8 \\\n  --eval-steps 8 \\\n  --log-steps 1 \\\n  --train-on-completions-only \\\n  --target-module-regex '(?:^|\\.)(?:router|gate)(?:$|\\.)' \\\n  --trainable-param-regex 'lora_'",
+        "paper_dataset_dir": "data/generated/quantum-paper-router-warmup-v1",
+        "paper_train_file": "data/generated/quantum-paper-router-warmup-v1/messages/quantum_paper_router_warmup_messages_train.jsonl",
+        "paper_eval_file": "data/generated/quantum-paper-router-warmup-v1/messages/quantum_paper_router_warmup_messages_valid.jsonl",
+        "paper_train_rows": 42,
+        "paper_eval_rows": 5,
+        "paper_dataset_ready": true,
+        "resolved_config": {
+          "bootstrap_requirements": "training/requirements-gemma4-runtime.txt",
+          "model_name": "models/gemma-4-26B-A4B-it",
+          "train_file": "data/generated/omnicoder-quantum-generalization-holdout-v1/train.jsonl",
+          "eval_file": "data/generated/omnicoder-quantum-generalization-holdout-v1/eval.jsonl",
+          "benchmark_file": "evals/benchmarks/quantum_generalization_holdout_v1.txt",
+          "paper_inputs": "paper",
+          "paper_output_dir": "data/generated/quantum-paper-router-warmup-v1",
+          "paper_dataset_name": "quantum_paper_router_warmup",
+          "paper_train_file": "data/generated/quantum-paper-router-warmup-v1/messages/quantum_paper_router_warmup_messages_train.jsonl",
+          "paper_eval_file": "data/generated/quantum-paper-router-warmup-v1/messages/quantum_paper_router_warmup_messages_valid.jsonl",
+          "paper_router_output_dir": "outputs/gemma4-26b-a4b-it-quantum-paper-router-warmup-fastiter",
+          "paper_router_target_module_regex": "(?:^|\\.)(?:router|gate)(?:$|\\.)",
+          "paper_router_trainable_param_regex": "lora_",
+          "paper_router_freeze_param_regex": null,
+          "sft_adapter_init": null,
+          "grpo_adapter_init": "outputs/gemma4-26b-a4b-it-quantum-generalization-sft-8npu-true40/adapter",
+          "sft_output_dir": "outputs/gemma4-26b-a4b-it-quantum-generalization-sft-8npu-true40-fastiter",
+          "grpo_output_dir": "outputs/gemma4-26b-a4b-it-quantum-generalization-grpo-8npu-true8-fastiter",
+          "iteration_profile": "fast",
+          "profile_headline": "under 45 minutes per run, fast-iteration prioritized, all 8 NPUs when available",
+          "paper_router_max_steps": "8",
+          "paper_router_eval_steps": "8",
+          "paper_router_log_steps": "1",
+          "sft_max_steps": "12",
+          "sft_eval_steps": "6",
+          "sft_log_steps": "1",
+          "grpo_group_size": "2",
+          "grpo_steps": "2",
+          "grpo_max_new_tokens": "96",
+          "grpo_max_seq_length": "1536",
+          "grpo_temperature": "0.4",
+          "grpo_log_steps": "1"
+        }
+      },
+      "prerequisites": [
+        "scripts/push_to_s3.sh scripts training evals research data",
+        "scripts/ai2_sync_from_s3.sh",
+        "scripts/ai2_sync_model_from_s3.sh gemma-4-26B-A4B-it"
+      ]
+    },
+    {
+      "stage": "remote_launcher_gate",
+      "status": "passed",
+      "blocking": false,
+      "command": "scripts/queue_ai2_timeboxed_pipeline.sh --target gemma4-26b-a4b-it --iteration-profile fast --visible-devices 6,7 --nproc-per-node 2 --required-idle-npus 2 --stage-only",
+      "reason": "Remote launcher is target-aware for Gemma and now exits early with a concrete preflight blocker instead of pretending launch readiness.",
+      "evidence": {
+        "launcher_path": "scripts/queue_ai2_timeboxed_pipeline.sh",
+        "gemma_guard_present": true
+      }
+    }
+  ],
+  "fallback_ready": true,
+  "fallback_target": {
+    "target_id": "omnicoder9b",
+    "model_id": "Tesslate/OmniCoder-9B"
+  },
+  "fallback_next_action": "scripts/queue_ai2_timeboxed_pipeline.sh --target omnicoder9b --iteration-profile fast --visible-devices 6,7 --nproc-per-node 2 --required-idle-npus 2 --stage-only",
+  "fallback_reason": "google/gemma-4-26B-A4B-it remains blocked at gemma_runtime_bootstrap, but the verified Tesslate/OmniCoder-9B lane can keep ai2 iteration moving in parallel."
+}

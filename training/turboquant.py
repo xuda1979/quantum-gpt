@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Any
 
 import torch
 import torch.nn.functional as F
@@ -20,7 +20,7 @@ def _normalize_dtype(value: Any) -> torch.dtype:
     return torch.float16
 
 
-def _resolve_group_size(config: "TurboQuantConfig") -> int:
+def _resolve_group_size(config: TurboQuantConfig) -> int:
     return max(1, int(config.group_size or config.q_group_size or 64))
 
 
@@ -67,7 +67,9 @@ def _rotation_signs(width: int, seed: int, device: torch.device) -> torch.Tensor
     generator.manual_seed(int(seed))
     signs = torch.randint(0, 2, (width,), generator=generator, dtype=torch.int8)
     signs = signs.to(device=device)
-    return torch.where(signs == 0, -torch.ones_like(signs), torch.ones_like(signs)).to(torch.float32)
+    return torch.where(signs == 0, -torch.ones_like(signs), torch.ones_like(signs)).to(
+        torch.float32
+    )
 
 
 def _canonical_rotation(mode: str) -> str:
@@ -96,7 +98,9 @@ def _apply_rotation(
     if target != width:
         rotated = F.pad(rotated, (0, target - width))
     if canonical == "random_hadamard":
-        rotated = rotated * _rotation_signs(target, seed=seed, device=rotated.device).to(rotated.dtype)
+        rotated = rotated * _rotation_signs(target, seed=seed, device=rotated.device).to(
+            rotated.dtype
+        )
     return _hadamard_last_dim(rotated), target
 
 
@@ -111,7 +115,9 @@ def _inverse_rotation(
         return tensor
     restored = _hadamard_last_dim(tensor)
     if canonical == "random_hadamard":
-        restored = restored * _rotation_signs(restored.shape[-1], seed=seed, device=restored.device).to(restored.dtype)
+        restored = restored * _rotation_signs(
+            restored.shape[-1], seed=seed, device=restored.device
+        ).to(restored.dtype)
     return restored
 
 
@@ -132,8 +138,8 @@ def _quantize_symmetric(groups: torch.Tensor, nbits: int) -> tuple[torch.Tensor,
 class _QuantizedSlice:
     primary: torch.Tensor
     primary_scale: torch.Tensor
-    secondary: Optional[torch.Tensor]
-    secondary_scale: Optional[torch.Tensor]
+    secondary: torch.Tensor | None
+    secondary_scale: torch.Tensor | None
     original_shape: tuple[int, ...]
     axis: int
     pad_last_dim: int
@@ -156,11 +162,15 @@ class _QuantizedSlice:
         tensor = tensor.movedim(-1, self.axis)
         return tensor.to(self.restore_dtype)
 
-    def index_select(self, indices: torch.Tensor) -> "_QuantizedSlice":
+    def index_select(self, indices: torch.Tensor) -> _QuantizedSlice:
         device_indices = indices.to(self.primary.device)
-        secondary = None if self.secondary is None else self.secondary.index_select(0, device_indices)
+        secondary = (
+            None if self.secondary is None else self.secondary.index_select(0, device_indices)
+        )
         secondary_scale = (
-            None if self.secondary_scale is None else self.secondary_scale.index_select(0, device_indices)
+            None
+            if self.secondary_scale is None
+            else self.secondary_scale.index_select(0, device_indices)
         )
         return _QuantizedSlice(
             primary=self.primary.index_select(0, device_indices),
@@ -179,10 +189,14 @@ class _QuantizedSlice:
             restore_dtype=self.restore_dtype,
         )
 
-    def repeat_interleave(self, repeats: int) -> "_QuantizedSlice":
-        secondary = None if self.secondary is None else self.secondary.repeat_interleave(repeats, dim=0)
+    def repeat_interleave(self, repeats: int) -> _QuantizedSlice:
+        secondary = (
+            None if self.secondary is None else self.secondary.repeat_interleave(repeats, dim=0)
+        )
         secondary_scale = (
-            None if self.secondary_scale is None else self.secondary_scale.repeat_interleave(repeats, dim=0)
+            None
+            if self.secondary_scale is None
+            else self.secondary_scale.repeat_interleave(repeats, dim=0)
         )
         return _QuantizedSlice(
             primary=self.primary.repeat_interleave(repeats, dim=0),
@@ -243,7 +257,9 @@ def turboquant_quantize(
 ) -> TurboQuantTensor:
     helper = TurboQuantCache(config=config)
     axis_hint = config.axis_key if stream == "key" else config.axis_value
-    packed = helper._quantize_tensor(tensor, axis_hint=axis_hint, seed_offset=layer_idx + (0 if stream == "key" else 10_000))
+    packed = helper._quantize_tensor(
+        tensor, axis_hint=axis_hint, seed_offset=layer_idx + (0 if stream == "key" else 10_000)
+    )
     if packed is None:
         raise ValueError("Cannot quantize an empty tensor.")
     return packed
@@ -258,8 +274,8 @@ class TurboQuantCache(DynamicCache):
 
     def __init__(
         self,
-        config: Optional[TurboQuantConfig] = None,
-        cache_config: Optional[TurboQuantConfig] = None,
+        config: TurboQuantConfig | None = None,
+        cache_config: TurboQuantConfig | None = None,
         model: Any = None,
         device: Any = None,
         compute_dtype: Any = None,
@@ -273,7 +289,11 @@ class TurboQuantCache(DynamicCache):
             self.config.compute_dtype = _normalize_dtype(compute_dtype)
         if device is not None:
             self.config.device = str(device)
-        if model is not None and getattr(model, "dtype", None) is not None and compute_dtype is None:
+        if (
+            model is not None
+            and getattr(model, "dtype", None) is not None
+            and compute_dtype is None
+        ):
             self.config.compute_dtype = _normalize_dtype(model.dtype)
         self._quantized_key_cache: list[_QuantizedSlice | None] = []
         self._quantized_value_cache: list[_QuantizedSlice | None] = []
@@ -298,7 +318,9 @@ class TurboQuantCache(DynamicCache):
             return None
         axis = _resolve_axis(axis_hint, tensor.ndim)
         work = tensor.movedim(axis, -1).to(self.config.compute_dtype)
-        work, rotated_last_dim = _apply_rotation(work, mode=self.config.rotation, seed=self.config.seed + seed_offset)
+        work, rotated_last_dim = _apply_rotation(
+            work, mode=self.config.rotation, seed=self.config.seed + seed_offset
+        )
         original_shape = tuple(tensor.movedim(axis, -1).shape)
         group_size = _resolve_group_size(self.config)
         pad_last_dim = rotated_last_dim - original_shape[-1]
@@ -348,7 +370,7 @@ class TurboQuantCache(DynamicCache):
         self,
         quantized: _QuantizedSlice | None,
         residual: Any,
-        current: Optional[torch.Tensor] = None,
+        current: torch.Tensor | None = None,
     ) -> torch.Tensor:
         pieces: list[torch.Tensor] = []
         if quantized is not None:
@@ -377,7 +399,9 @@ class TurboQuantCache(DynamicCache):
             self._compose_full(self._quantized_value_cache[layer_idx], self.value_cache[layer_idx]),
         )
 
-    def _set_layer_from_full(self, layer_idx: int, key_states: torch.Tensor, value_states: torch.Tensor) -> None:
+    def _set_layer_from_full(
+        self, layer_idx: int, key_states: torch.Tensor, value_states: torch.Tensor
+    ) -> None:
         self._ensure_layer(layer_idx)
         key_prefix, key_residual = self._split_prefix_and_residual(key_states)
         value_prefix, value_residual = self._split_prefix_and_residual(value_states)
@@ -400,36 +424,51 @@ class TurboQuantCache(DynamicCache):
         key_states: torch.Tensor,
         value_states: torch.Tensor,
         layer_idx: int,
-        cache_kwargs: Optional[dict[str, Any]] = None,
+        cache_kwargs: dict[str, Any] | None = None,
     ) -> tuple[torch.Tensor, torch.Tensor]:
         del cache_kwargs
         if layer_idx == 0:
             self._seen_tokens += key_states.shape[-2]
         self._ensure_layer(layer_idx)
-        full_keys = self._compose_full(self._quantized_key_cache[layer_idx], self.key_cache[layer_idx], key_states)
-        full_values = self._compose_full(self._quantized_value_cache[layer_idx], self.value_cache[layer_idx], value_states)
+        full_keys = self._compose_full(
+            self._quantized_key_cache[layer_idx], self.key_cache[layer_idx], key_states
+        )
+        full_values = self._compose_full(
+            self._quantized_value_cache[layer_idx], self.value_cache[layer_idx], value_states
+        )
         self._set_layer_from_full(layer_idx, full_keys, full_values)
         return full_keys, full_values
 
-    def get_seq_length(self, layer_idx: Optional[int] = 0) -> int:
+    def get_seq_length(self, layer_idx: int | None = 0) -> int:
         target_layer = 0 if layer_idx is None else int(layer_idx)
         if target_layer < 0 or target_layer >= len(self._layer_lengths):
             return 0
         return int(self._layer_lengths[target_layer])
 
-    def get_max_cache_shape(self) -> Optional[int]:
+    def get_max_cache_shape(self) -> int | None:
         return None
 
     def reorder_cache(self, beam_idx: torch.LongTensor) -> None:
         for layer_idx in range(len(self.key_cache)):
-            if isinstance(self.key_cache[layer_idx], torch.Tensor) and self.key_cache[layer_idx].numel() > 0:
+            if (
+                isinstance(self.key_cache[layer_idx], torch.Tensor)
+                and self.key_cache[layer_idx].numel() > 0
+            ):
                 device_indices = beam_idx.to(self.key_cache[layer_idx].device)
-                self.key_cache[layer_idx] = self.key_cache[layer_idx].index_select(0, device_indices)
-                self.value_cache[layer_idx] = self.value_cache[layer_idx].index_select(0, device_indices)
+                self.key_cache[layer_idx] = self.key_cache[layer_idx].index_select(
+                    0, device_indices
+                )
+                self.value_cache[layer_idx] = self.value_cache[layer_idx].index_select(
+                    0, device_indices
+                )
             if self._quantized_key_cache[layer_idx] is not None:
-                self._quantized_key_cache[layer_idx] = self._quantized_key_cache[layer_idx].index_select(beam_idx)
+                self._quantized_key_cache[layer_idx] = self._quantized_key_cache[
+                    layer_idx
+                ].index_select(beam_idx)
             if self._quantized_value_cache[layer_idx] is not None:
-                self._quantized_value_cache[layer_idx] = self._quantized_value_cache[layer_idx].index_select(beam_idx)
+                self._quantized_value_cache[layer_idx] = self._quantized_value_cache[
+                    layer_idx
+                ].index_select(beam_idx)
 
     def crop(self, max_length: int) -> None:
         current_length = self.get_seq_length()
@@ -443,30 +482,56 @@ class TurboQuantCache(DynamicCache):
             if self._layer_lengths[layer_idx] == 0:
                 continue
             full_keys, full_values = self._materialize_layer(layer_idx)
-            self._set_layer_from_full(layer_idx, full_keys[..., :max_length, :], full_values[..., :max_length, :])
+            self._set_layer_from_full(
+                layer_idx, full_keys[..., :max_length, :], full_values[..., :max_length, :]
+            )
 
     def batch_repeat_interleave(self, repeats: int) -> None:
         for layer_idx in range(len(self.key_cache)):
-            if isinstance(self.key_cache[layer_idx], torch.Tensor) and self.key_cache[layer_idx].numel() > 0:
-                self.key_cache[layer_idx] = self.key_cache[layer_idx].repeat_interleave(repeats, dim=0)
-                self.value_cache[layer_idx] = self.value_cache[layer_idx].repeat_interleave(repeats, dim=0)
+            if (
+                isinstance(self.key_cache[layer_idx], torch.Tensor)
+                and self.key_cache[layer_idx].numel() > 0
+            ):
+                self.key_cache[layer_idx] = self.key_cache[layer_idx].repeat_interleave(
+                    repeats, dim=0
+                )
+                self.value_cache[layer_idx] = self.value_cache[layer_idx].repeat_interleave(
+                    repeats, dim=0
+                )
             if self._quantized_key_cache[layer_idx] is not None:
-                self._quantized_key_cache[layer_idx] = self._quantized_key_cache[layer_idx].repeat_interleave(repeats)
+                self._quantized_key_cache[layer_idx] = self._quantized_key_cache[
+                    layer_idx
+                ].repeat_interleave(repeats)
             if self._quantized_value_cache[layer_idx] is not None:
-                self._quantized_value_cache[layer_idx] = self._quantized_value_cache[layer_idx].repeat_interleave(repeats)
+                self._quantized_value_cache[layer_idx] = self._quantized_value_cache[
+                    layer_idx
+                ].repeat_interleave(repeats)
 
     def batch_select_indices(self, indices: torch.Tensor) -> None:
         for layer_idx in range(len(self.key_cache)):
-            if isinstance(self.key_cache[layer_idx], torch.Tensor) and self.key_cache[layer_idx].numel() > 0:
+            if (
+                isinstance(self.key_cache[layer_idx], torch.Tensor)
+                and self.key_cache[layer_idx].numel() > 0
+            ):
                 device_indices = indices.to(self.key_cache[layer_idx].device)
-                self.key_cache[layer_idx] = self.key_cache[layer_idx].index_select(0, device_indices)
-                self.value_cache[layer_idx] = self.value_cache[layer_idx].index_select(0, device_indices)
+                self.key_cache[layer_idx] = self.key_cache[layer_idx].index_select(
+                    0, device_indices
+                )
+                self.value_cache[layer_idx] = self.value_cache[layer_idx].index_select(
+                    0, device_indices
+                )
             if self._quantized_key_cache[layer_idx] is not None:
-                self._quantized_key_cache[layer_idx] = self._quantized_key_cache[layer_idx].index_select(indices)
+                self._quantized_key_cache[layer_idx] = self._quantized_key_cache[
+                    layer_idx
+                ].index_select(indices)
             if self._quantized_value_cache[layer_idx] is not None:
-                self._quantized_value_cache[layer_idx] = self._quantized_value_cache[layer_idx].index_select(indices)
+                self._quantized_value_cache[layer_idx] = self._quantized_value_cache[
+                    layer_idx
+                ].index_select(indices)
 
-    def batch_split(self, full_batch_size: int, split_size: int, num_hidden_layers: int = None) -> list["TurboQuantCache"]:
+    def batch_split(
+        self, full_batch_size: int, split_size: int, num_hidden_layers: int = None
+    ) -> list[TurboQuantCache]:
         del full_batch_size, num_hidden_layers
         if len(self.key_cache) == 0:
             return []
@@ -496,9 +561,9 @@ class TurboQuantCache(DynamicCache):
     @classmethod
     def from_batch_splits(
         cls,
-        splits: list["TurboQuantCache"],
+        splits: list[TurboQuantCache],
         num_hidden_layers: int = None,
-    ) -> "TurboQuantCache":
+    ) -> TurboQuantCache:
         del num_hidden_layers
         if not splits:
             return cls()
@@ -532,16 +597,16 @@ def build_turboquant_config(**kwargs: Any) -> TurboQuantConfig:
 
 
 def build_turboquant_cache(
-    config: Optional[TurboQuantConfig] = None,
-    cache_config: Optional[TurboQuantConfig] = None,
+    config: TurboQuantConfig | None = None,
+    cache_config: TurboQuantConfig | None = None,
     **kwargs: Any,
 ) -> TurboQuantCache:
     return TurboQuantCache(config=config, cache_config=cache_config, **kwargs)
 
 
 def create_turboquant_cache(
-    config: Optional[TurboQuantConfig] = None,
-    cache_config: Optional[TurboQuantConfig] = None,
+    config: TurboQuantConfig | None = None,
+    cache_config: TurboQuantConfig | None = None,
     **kwargs: Any,
 ) -> TurboQuantCache:
     return build_turboquant_cache(config=config, cache_config=cache_config, **kwargs)

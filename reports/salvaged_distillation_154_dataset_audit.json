@@ -1,0 +1,11 @@
+{
+  "input_jsonl": "data/generated/quantum_distillation_teacher_responses_asi2_v1_high_quality_sft_203_salvaged_v1/all_chatml.jsonl",
+  "invalid_examples": [],
+  "invalid_rows": 0,
+  "min_valid_rows": 154,
+  "ok": true,
+  "reason_counts": {},
+  "rows": 154,
+  "valid_output": "data/generated/quantum_distillation_teacher_responses_asi2_v1_high_quality_sft_203_salvaged_valid_v1/all_chatml.jsonl",
+  "valid_rows": 154
+}

@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3_sampling",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0420",
+  "name": "Write a self-contained Qiskit Grover search for the 5-qubit marked bitstring '11",
+  "task_prompt": "Write a self-contained Qiskit Grover search for the 5-qubit marked bitstring '11010', including the diffusion operator, and report the probability of measuring it. Return the entire program in one piece, ready to run without any modification."
+}

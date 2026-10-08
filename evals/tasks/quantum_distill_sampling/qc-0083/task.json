@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3_sampling",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0083",
+  "name": "You are given the following quantum programming task. Write a Q# operation that ",
+  "task_prompt": "You are given the following quantum programming task. Write a Q# operation that prepares an 4-qubit GHZ state using ApplyToEach and returns the measurement results as an array, with a Python driver printing the distribution over 1000 shots. Provide a complete, self-contained program that runs as-is and prints its results."
+}

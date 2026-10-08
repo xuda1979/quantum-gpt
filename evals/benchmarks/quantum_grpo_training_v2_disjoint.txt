@@ -1,0 +1,16 @@
+# GRPO training task set for post-SFT strict-recovery iteration.
+# Contains only train-side quantum tasks from the v2 strict holdout corpus.
+# Do NOT use the strict unseen benchmark tasks here.
+quantum_bell_pair_construction
+quantum_circuit_depth_optimization
+quantum_circuit_phase_repair
+quantum_error_detection_bit_flip
+quantum_gate_alias_registry_cleanup
+quantum_maxcut_partition_ranker
+quantum_measurement_bug_repair
+quantum_pauli_message_codec
+quantum_phase_register_roundtrip
+quantum_qft_phase_pattern
+quantum_stabilizer_tableau_update_repair
+quantum_teleportation_corrections
+quantum_vqe_energy_minimization

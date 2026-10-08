@@ -1,0 +1,9 @@
+{
+  "id": "quantum_rl_v2_w_state_entropy",
+  "name": "Three-qubit W state entropy via StatePreparation",
+  "domain": "quantum",
+  "category": "algorithm_implementation",
+  "task_prompt": "Prepare the exact 3-qubit W state in Qiskit using StatePreparation applied to a normalized amplitude vector. Verify with Statevector fidelity that the result equals the target up to global phase; also compute the reduced density matrix of qubit 0 and its von Neumann entropy. Assert normalization and that all basis states whose Hamming weight is not one have zero probability. Return only one complete Python script with no Markdown fences. It must run locally without network access, use fixed seeds whenever randomness is involved, print concise results, and assert every required invariant.",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

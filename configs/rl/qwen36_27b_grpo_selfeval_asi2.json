@@ -1,0 +1,88 @@
+{
+  "name": "qwen36_27b_grpo_selfeval_asi2",
+  "environment": "ASI2",
+  "remote_root": "/root/work/software/quantum-gpt",
+  "model_name": "/root/work/filestorage/Qwen3.6-27B",
+  "benchmark_file": "evals/benchmarks/quantum_grpo_training_v1.txt",
+  "algorithm": "grpo",
+  "phase": "rl_selfeval_v1",
+  "description": "GRPO training for Qwen3.6-27B on ASI2 with self-evaluation using the model itself. Tasks target quantum coding: correctness, runnability, efficiency. Adapters auto-saved to NAS every 2 hours.",
+  "training": {
+    "group_size": 8,
+    "grpo_steps": 500,
+    "lr": 1e-05,
+    "kl_coeff": 0.05,
+    "temperature": 0.8,
+    "adaptive_temp_step": 0.15,
+    "adaptive_temp_max": 2.0,
+    "top_p": 0.95,
+    "max_new_tokens": 1024,
+    "max_seq_length": 2048,
+    "reward_pass_weight": 0.45,
+    "reward_syntax_weight": 0.05,
+    "reward_interface_weight": 0.1,
+    "reward_verifier_weight": 0.1,
+    "reward_brevity_weight": 0.0,
+    "reward_import_hygiene_weight": 0.05,
+    "reward_self_eval_weight": 0.25,
+    "curriculum_ema_decay": 0.9,
+    "curriculum_min_weight": 0.05,
+    "min_reward_std": 0.05,
+    "reward_detail_budget_cap": 1024,
+    "lora_rank": 16,
+    "lora_alpha": 32,
+    "target_modules": [
+      "q_proj",
+      "v_proj",
+      "o_proj",
+      "gate_proj",
+      "up_proj",
+      "down_proj"
+    ],
+    "freeze_param_regex": [
+      ".*\\.(mlp\\.gate|router)\\..*"
+    ],
+    "checkpoint_interval_seconds": 7200,
+    "domain_filter": [
+      "quantum"
+    ],
+    "self_evaluation": {
+      "enabled": true,
+      "model_self_judge": true,
+      "score_range": [
+        0,
+        10
+      ],
+      "judge_criteria": [
+        "correctness (does the algorithm produce the right quantum state / result)",
+        "runnability (does the code execute without errors)",
+        "efficiency (is the circuit depth / gate count / resource usage reasonable)",
+        "code_quality (is it well-structured, readable, uses proper quantum patterns)"
+      ],
+      "judge_temperature": 0.3,
+      "judge_max_tokens": 512
+    },
+    "checkpoint_sync": {
+      "nas_root": "/root/work/filestorage/grpo_checkpoints/qwen36_27b_selfeval",
+      "interval_seconds": 7200,
+      "retain_latest": 5
+    },
+    "adaptive_difficulty": {
+      "enabled": true,
+      "description": "Questions should be at the boundary of current model/adapter capabilities. The curriculum EMA decay of 0.9 ensures task weights adjust based on reward signal - tasks with low mean reward get more sampling weight (difficult tasks), while tasks with saturated high reward get less (too easy). Temperature escalation via adaptive_temp handles cases where even easy tasks get stuck.",
+      "curriculum_uncertainty_bonus": 0.35,
+      "min_reward_std_threshold": 0.05
+    }
+  },
+  "preflight_gates": [
+    "local tests pass",
+    "ASI2 login verified",
+    "ASI2 task-submission preflight passes",
+    "remote root exists",
+    "repo code synced to remote root",
+    "model path exists on ASI2",
+    "torch, torch_npu, transformers, peft, and accelerate import or the run is blocked",
+    "benchmark file exists on ASI2",
+    "NAS checkpoint root writable"
+  ]
+}

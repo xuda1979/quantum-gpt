@@ -1,0 +1,747 @@
+# 下一步研发工作路线图
+
+日期：2026-06-08
+作者：研发负责人
+仓库：[quantum-gpt](../)
+状态：草案 v3
+
+> v3 变更（2026-06-08）：
+> 1. §2（智能体调用 RAG）新增 **§2.4 智能体编程后训练方法论**：把"轨迹格式化 / 数据清洗 / SL vs RL / 教师蒸馏"完整工艺整理为中文；所有 RL 子步骤明确标注"暂缓，详见 §10"；并给出与本任务的执行映射表（§2.4.5）。
+> 2. 任务 1、3、4、5 全部补充"子任务清单（可领取）"小节，按编号 + 产出物 + 工时 + 依赖列出。任务 4 拆为 P0 / P1 / P2 三阶段独立小表（共 17 条子任务）。
+> 3. §2 子任务清单（10 条）独立列出于 §2.4.6。
+>
+> v2 变更（2026-06-08，保留）：
+> 1. 在原任务 1 与原任务 2 之间新增任务"智能体调用 RAG"，编号 2，后续顺延。
+> 2. **暂时不做强化学习**。原"agentic GRPO"任务（v1 §3）降级为"暂缓"，agentic 能力的开发改为 SFT-only 路径。所有 GRPO/RLVR/RL 相关章节已从主路线图剥离至附录 §10。
+
+---
+
+## 0. 前置说明
+
+### 0.1 算力现实
+
+本路线图必须严格遵守"算力非常有限"这一前置条件。当前可用算力：
+
+- 本地：CPU-only 开发机（Mac，无 GPU/NPU），仅用于数据准备、评测、Adapter 合并、单元测试。
+- Huanxin `AI` 训练环境：8×Ascend 910B NPU（参见 [PROJECT.md](../PROJECT.md)、[HEARTBEAT.md](../HEARTBEAT.md)）。
+- 内蒙古超节点：用户已申请，等待落地；按 8 NPU 等效或更大规模预估，作为镜像目标。
+- 不允许长时间独占 8 NPU（>2h）的实验是当前的硬约束（参见 [research/papers/timeboxed_eight_npu_sft/paper.md](../research/papers/timeboxed_eight_npu_sft/paper.md)）。
+
+因此本路线图的每一项任务都必须满足：
+1. 单次实验时长 ≤ 2 小时（8 NPU），或可用 LoRA 在 ≤ 2 NPU 上完成。
+2. 优先使用已有 100 题高质量数据集，而非大规模合成。
+3. 算子/架构改造类工作以"原型 + 离线验证"为主，主仓库训练只跑最终验证。
+4. **暂不开启 GRPO/RLVR/PPO/DPO 等 RL 训练**。所有需要 reward model、verifier reward 反传、group rollout 的训练全部归为"暂缓"。
+
+### 0.2 路径修正
+
+用户提到的 `patents/6*` 路径在当前仓库中不存在。仓库内 KV 缓存压缩工作的真实位置是：
+
+- 论文式说明：[research/papers/turboquant/paper.md](../research/papers/turboquant/paper.md)
+- 已实现代码：[training/turboquant.py](../training/turboquant.py)（547 行，[TurboQuantCache](../training/turboquant.py#L256) 已可用）
+
+本文档第 5 节展示该方向当前成果。
+
+---
+
+## 1. 任务一：100 题高质量数据微调 Qwen 3.6 35B-A3B（`AI` 环境）
+
+### 1.1 为什么要做
+
+#### 1.1.1 科学依据
+
+小样本高质量微调能取得显著效果，是过去两年被反复验证的结论：
+
+1. **LIMA: Less Is More for Alignment**（Zhou et al., Meta AI, NeurIPS 2023, arXiv:2305.11206）
+   - 论文核心结论："A model's knowledge and capabilities are learnt almost entirely during pretraining, while alignment teaches it which subdistribution of formats should be used when interacting with users."
+   - 使用 **1000 条**精心策划的提示和回复对 LLaMA-65B 做 SFT，在人类偏好评估中与 RLHF 训练的 DaVinci003 相当或更优。
+2. **InstructGPT / Training language models to follow instructions with human feedback**（Ouyang et al., OpenAI, NeurIPS 2022, arXiv:2203.02155）
+   - 仅用 13K SFT 演示样本就让 1.3B InstructGPT 在人类评估上优于 175B GPT-3。
+3. **Alpaca: A Strong, Replicable Instruction-Following Model**（Taori et al., Stanford, 2023）
+   - 52K 自指令样本 + LLaMA-7B，单卡数小时复现 text-davinci-003 风格。
+4. **LoRA: Low-Rank Adaptation of Large Language Models**（Hu et al., Microsoft, ICLR 2022, arXiv:2106.09685）
+   - 证明 LoRA rank=8~64 即可达到全参数微调 99% 的效果，可训练参数减少 10000×。
+5. **QLoRA: Efficient Finetuning of Quantized LLMs**（Dettmers et al., NeurIPS 2023, arXiv:2305.14314）
+   - 4-bit 量化 + LoRA 在单 48GB GPU 上微调 65B 模型，验证了低算力可行性。
+
+#### 1.1.2 业务依据
+
+仓库内 [data/generated/quantum_100_questions_only_v1.jsonl](../data/generated/quantum_100_questions_only_v1.jsonl) 已有 100 条高质量量子编程问题（5 种 task_type，已分类好 difficulty/framework/category），是直接可用的种子数据。配套的 203 条蒸馏教师回复在 [data/generated/quantum_distillation_teacher_responses_asi2_v1_high_quality_chatml.jsonl](../data/generated/quantum_distillation_teacher_responses_asi2_v1_high_quality_chatml.jsonl)，已经过结构化验证（参见 [memory/2026-06-04.md](../memory/2026-06-04.md) "ASI2 Native Chinese Distillation Dataset Validation"）。
+
+### 1.2 怎么做
+
+#### 1.2.1 数据准备
+
+```bash
+# 本地 CPU 验证集成
+python3 -m pytest tests/test_qwen36_rag_user_questions_v2.py -q
+# 把 100 题与 203 教师回复对齐为 ChatML 训练样本
+python3 scripts/align_questions_to_teacher_responses.py \
+  --questions data/generated/quantum_100_questions_only_v1.jsonl \
+  --responses data/generated/quantum_distillation_teacher_responses_asi2_v1_high_quality_chatml.jsonl \
+  --output data/generated/qwen36_36b_sft_100_v1/train_chatml.jsonl
+```
+
+注：如果对齐脚本不存在，需要先实现（约 100 行）。
+
+#### 1.2.2 训练配置
+
+- 基础模型：`Qwen/Qwen3.6-35B-A3B`，远端路径 `/root/work/filestorage/Qwen3.6-35B-A3B`
+- LoRA：rank=64，alpha=128，dropout=0.0，target_modules=`q_proj,k_proj,v_proj,o_proj,gate_proj,up_proj,down_proj`（参见 [memory/2026-06-04.md](../memory/2026-06-04.md)）
+- 最小可训练参数：≥200M（防止 silent fallback 到 ~0.1B）
+- 训练复用现有 [training/qwen_sft_peft.py](../training/qwen_sft_peft.py)，**纯 SFT，不接 RL**
+
+#### 1.2.3 算力预算
+
+- 算力：8 NPU × 1.5h（time-boxed）
+- 数据规模：100~200 高质量样本 × 3 epoch = 300~600 个优化步
+- 单步耗时：约 8~12s @ max_length=512
+- 总耗时估算：3000~7200s（50min~2h），符合 2h time-box 约束
+
+#### 1.2.4 启动命令
+
+新建 `scripts/launch_qwen36_35b_a3b_sft100_ai.sh`，关键参数：
+
+```
+--max-steps 600 --num-epochs 3 \
+--per-device-batch-size 1 --gradient-accumulation-steps 2 \
+--max-length 512 --eval-steps 50 \
+--lora-r 64 --lora-alpha 128 --train-layernorm \
+--min-trainable-parameters 200000000
+```
+
+#### 1.2.5 评测
+
+- 训练前后跑 [evals/runner/run_eval.py](../evals/runner/run_eval.py)
+- 量子专项：[evals/benchmarks/quantum_generalization_holdout_v1.txt](../evals/benchmarks/quantum_generalization_holdout_v1.txt)（必须从训练集中排除）
+- 提交评测：pass@1，single generation，无人工 repair
+
+#### 1.2.6 子任务清单（可领取）
+
+| 编号 | 子任务 | 产出物 | 工时（人天）| 依赖 |
+|---|---|---|---|---|
+| T1-01 | 实现 `scripts/align_questions_to_teacher_responses.py` 把 100 题与 203 教师回复对齐为 ChatML | `data/generated/qwen36_36b_sft_100_v1/train_chatml.jsonl` | 0.5 | 无 |
+| T1-02 | 写对齐脚本单测 `tests/test_align_questions_to_teacher_responses.py` | 单测绿 | 0.5 | T1-01 |
+| T1-03 | 编写 `scripts/launch_qwen36_35b_a3b_sft100_ai.sh`，参考 [scripts/launch_qwen36_35b_a3b_direct_rlvr_grpo_asi1.sh](../scripts/launch_qwen36_35b_a3b_direct_rlvr_grpo_asi1.sh) 模式（去掉 RL 相关参数）| 可一键远端启动的脚本 | 0.5 | T1-01 |
+| T1-04 | 本地 `bash -n` + `python3 -m py_compile` 跑 [training/qwen_sft_peft.py](../training/qwen_sft_peft.py) 静态检查 | preflight 通过 | 0.2 | T1-03 |
+| T1-05 | 数据 → S3：`scripts/push_to_s3.sh data/generated/qwen36_36b_sft_100_v1/` | 远端可见数据 | 0.2 | T1-01 |
+| T1-06 | 远端启动 1.5h SFT，记录 loss 曲线和 trainable parameter 实际值 | `outputs/qwen36-35b-a3b-sft100-ai-YYYYMMDD/` + `metrics.json` | 0.3（人工监控） | T1-03, T1-05 |
+| T1-07 | 训练前 baseline 评测（同模型未微调）做对照 | `reports/qwen36_35b_a3b_baseline_quantum_holdout_v1.json` | 0.5 | T1-04 |
+| T1-08 | 训练后评测，量子 holdout pass@1 | `reports/qwen36_35b_a3b_sft100_quantum_holdout_v1.json` | 0.5 | T1-06 |
+| T1-09 | 归档：`scripts/archive_model_run.py outputs/qwen36-35b-a3b-sft100-ai-YYYYMMDD --label sft100-ai-v1` | `artifacts/model-registry/sft100-ai-v1.json` | 0.2 | T1-08 |
+
+### 1.3 参考文献（汇总）
+
+- Zhou et al., LIMA: Less Is More for Alignment, NeurIPS 2023. arXiv:2305.11206
+- Ouyang et al., Training language models to follow instructions with human feedback, NeurIPS 2022. arXiv:2203.02155
+- Hu et al., LoRA: Low-Rank Adaptation of Large Language Models, ICLR 2022. arXiv:2106.09685
+- Dettmers et al., QLoRA, NeurIPS 2023. arXiv:2305.14314
+
+---
+
+## 2. 任务二：智能体调用 RAG（Agentic Tool-Use over RAG）
+
+> **新增任务**（v2 变更）。位于任务一与"内蒙古镜像微调"之间，目的是在不引入强化学习的前提下，先把 RAG 这一最稳健的外部知识接入路径，做成智能体可直接调用的工具。
+
+### 2.1 为什么要做
+
+#### 2.1.1 科学依据
+
+1. **Retrieval-Augmented Generation (RAG)**
+   - **Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks**（Lewis et al., Facebook AI, NeurIPS 2020, arXiv:2005.11401）—— 原始 RAG 框架，证明检索 + 生成在知识密集任务上显著优于纯生成。
+   - **Atlas: Few-shot Learning with Retrieval Augmented Language Models**（Izacard et al., Meta AI, JMLR 2023, arXiv:2208.03299）—— 少样本场景下 RAG 比 10× 参数量的纯参数模型还好，**直接对应本仓库"低算力 + 100 题"的设定**。
+   - **REALM: Retrieval-Augmented Language Model Pre-Training**（Guu et al., Google, ICML 2020, arXiv:2002.08909）。
+2. **智能体作为 RAG 调度器（Tool-Use 视角）**
+   - **Self-RAG: Learning to Retrieve, Generate, and Critique through Self-Reflection**（Asai et al., U-Washington, ICLR 2024, arXiv:2310.11511）—— 模型主动决定"何时检索 / 检索什么 / 检索多少"，比固定 RAG 准确率高 10~20%。
+   - **ToolLLM: Facilitating Large Language Models to Master 16000+ Real-world APIs**（Qin et al., Tsinghua, ICLR 2024, arXiv:2307.16789）—— 工具调用作为 LLM 第一类能力的工程化范式。
+   - **Toolformer: Language Models Can Teach Themselves to Use Tools**（Schick et al., Meta AI, NeurIPS 2023, arXiv:2302.04761）—— 自监督 tool-use 数据合成，**不需要 RL**。
+3. **Agentic RAG / Adaptive RAG**
+   - **Adaptive-RAG: Learning to Adapt Retrieval-Augmented Large Language Models through Question Complexity**（Jeong et al., NAACL 2024, arXiv:2403.14403）—— 按题目复杂度动态选择 no-retrieve / single-hop / multi-hop RAG。
+
+> 这些都是 SFT / supervised distillation 范式，**不依赖 RL**，与本次"暂不做强化学习"的约束完全一致。
+
+#### 2.1.2 业务依据
+
+仓库内 RAG 链路已经端到端打通：
+
+- 检索：[quantum_rag/retrieval.py](../quantum_rag/retrieval.py)（BM25 + TF-IDF + SVD hybrid）
+- 索引构建：[scripts/build_quantum_rag.py](../scripts/build_quantum_rag.py)
+- 答案缓存：[quantum_rag/cache.py](../quantum_rag/cache.py)
+- 评测：[scripts/eval_quantum_rag.py](../scripts/eval_quantum_rag.py)
+- 实测：158 题用户问题集上 hit@5 = 1.000，MRR = 0.9791（参见 [README.md](../README.md#L116) "本地实测提升"）
+
+**目前缺口**：模型还不会"主动判断什么时候应该调用 RAG"。当前 RAG 是固定前置注入，不是智能体决策的 tool call。
+
+### 2.2 怎么做
+
+#### 2.2.1 设计要点：把 RAG 包装成可被智能体显式调用的 tool
+
+新增工具，对齐 [training/agent_trajectory_rollout.py](../training/agent_trajectory_rollout.py#L11) 的 JSON tool 协议：
+
+```json
+{"tool": "search_docs", "query": "...", "framework": "qiskit", "top_k": 5}
+{"tool": "read_doc",    "doc_id": "..."}
+```
+
+- `search_docs` 路由到 [quantum_rag/retrieval.py](../quantum_rag/retrieval.py)
+- `read_doc` 返回完整 chunk
+- 模型先用 `search_docs` 探索，再用 `read_doc` 精读，最后用 `final_answer` 给出代码或答案
+
+#### 2.2.2 训练数据合成（**纯监督，无 RL**）
+
+用 yunwu/gpt-5.4 作为教师模型，按 Toolformer/Self-RAG 范式合成"模型何时调 RAG、调什么 query"的演示轨迹：
+
+```bash
+python3 scripts/generate_rag_agent_trajectories.py \
+  --questions data/generated/quantum_100_questions_only_v1.jsonl \
+  --teacher gpt-5.4 \
+  --tools search_docs,read_doc,final_answer \
+  --rag-index artifacts/quantum-rag/qwen36-quantum-docs-index.pkl.gz \
+  --max-turns 6 \
+  --output data/generated/rag_agent_trajectories_v1.jsonl
+```
+
+每条样本是一个 ChatML 多轮对话：question → tool call → tool observation → ... → final_answer。
+
+#### 2.2.3 数据质量门控
+
+- 自动过滤：`final_answer` 在 `expected_terms`（来自 [evals/benchmarks/qwen36_27b_user_rag_questions_v2.json](../evals/benchmarks/qwen36_27b_user_rag_questions_v2.json)）上的命中率 ≥ 0.8。
+- 自动过滤：tool call JSON 必须可解析、`search_docs` 命中 hit@5。
+- 留 ~80 条高质量 RAG-tool 演示，作为 SFT 数据。
+
+#### 2.2.4 训练
+
+复用任务一的 LoRA SFT 配方，**继承任务一的 adapter** 继续训练（warm start），训练数据：
+- 50% 任务一的 100 题（保留通用量子编程能力）
+- 50% 新合成的 RAG agent trajectories（80 条左右）
+
+这是连续学习领域常见的回放（replay）策略，参考 **Experience Replay for Continual Learning**（Rolnick et al., NeurIPS 2019, arXiv:1811.11682）。
+
+#### 2.2.5 算力预算
+
+- 数据合成：本地 + yunwu API，约 ~50$，无 NPU 占用
+- LoRA SFT：8 NPU × 1h（小数据 + warm start，1 epoch 即可收敛）
+- 离线 RAG-agent 评测：本地 CPU 即可
+
+#### 2.2.6 评测
+
+- 在 [evals/benchmarks/qwen36_27b_user_rag_questions_v2.json](../evals/benchmarks/qwen36_27b_user_rag_questions_v2.json) 158 题上：
+  - 指标 A：**Tool-Use Recall** = 模型主动发起 `search_docs` 的题目比例
+  - 指标 B：**RAG Pass@1** = 工具调用完整结束后 `final_answer` 通过 `expected_terms` 检查的比例
+- baseline 是任务一 adapter（无 tool-use 训练），目标是 B 指标提升 ≥ 15 个百分点。
+
+### 2.3 参考文献
+
+- Lewis et al., Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks, NeurIPS 2020. arXiv:2005.11401
+- Izacard et al., Atlas, JMLR 2023. arXiv:2208.03299
+- Guu et al., REALM, ICML 2020. arXiv:2002.08909
+- Asai et al., Self-RAG, ICLR 2024. arXiv:2310.11511
+- Qin et al., ToolLLM, ICLR 2024. arXiv:2307.16789
+- Schick et al., Toolformer, NeurIPS 2023. arXiv:2302.04761
+- Jeong et al., Adaptive-RAG, NAACL 2024. arXiv:2403.14403
+- Rolnick et al., Experience Replay for Continual Learning, NeurIPS 2019. arXiv:1811.11682
+
+### 2.4 智能体编程后训练方法论：轨迹处理 / SL vs RL / 蒸馏
+
+> 本节是用户提供综述材料的中文整理，作为任务二（智能体调用 RAG）以及未来任务三、四的方法论基础。**本阶段所有涉及强化学习的子步骤一律暂缓**，详见 §10；只执行其中的 SL / 蒸馏 / 拒绝采样部分。
+
+把 LLM 后训练为自主编程智能体（autonomous coding agent）远远不只是"预测下一段代码"。一个智能体模型必须学会与环境交互（bash 终端、代码编辑器、Python 解释器）、对中间输出做推理、调试错误、并在长时程上规划。下面分四节给出完整工艺。
+
+#### 2.4.1 如何使用编程轨迹做后训练
+
+一条**智能体轨迹（agentic trajectory）** 是模型与环境交互解决任务的序列化记录，通常遵循 **ReAct（Reasoning + Acting）** 循环：
+
+```
+[System Prompt] → [Thought] → [Action (Tool Call)] → [Observation (Environment Output)] → ... → [Success]
+```
+
+把轨迹用于训练基础模型时，必须做到：
+
+- **多轮对话格式化**：把原始环境日志转成标准聊天格式（如 ChatML）。环境输出（编译器栈追踪、`stdout` 等）格式化为 `user` 或 `tool` 消息；智能体的推理和工具调用格式化为 `assistant` 消息。
+- **严格的动作空间**：用具体的 XML 标签或 JSON schema 定义动作触发方式，例如 `<execute_bash> npm run test </execute_bash>`。本仓库已采用 JSON 协议（见 [training/agent_trajectory_rollout.py](../training/agent_trajectory_rollout.py#L11)）。
+- **Loss masking（关键）**：训练时**只在 assistant 的 token 上计算交叉熵 loss**，必须 mask 掉 user prompt 与环境 observation。模型不应被惩罚于未能精确预测 Python traceback 的字符串；它只需要学会**如何对 traceback 做反应**。
+  - 本仓库 [training/qwen_sft_peft.py](../training/qwen_sft_peft.py) 已支持基于 chat-template 的 label offset，需在合成轨迹数据时严格按此规范。
+
+#### 2.4.2 如何清洗轨迹数据
+
+沙箱交互产出的原始轨迹是"脏"的。把不过滤的轨迹直接喂模型会教出坏习惯：幻觉工具、口吃（stutter）、错误时崩溃。必须按下列启发式清洗：
+
+1. **可验证结果过滤（拒绝采样 / Rejection Sampling）**：丢弃最终任务失败的轨迹，只保留可验证成功的（所有单测通过、linter 零错误）。
+2. **Observation 截断**：`npm install` 或巨型 Java 栈追踪会撑爆上下文。按规则截断（保留头 100 行 + 尾 100 行 —— `Traceback` 关键信息通常在尾部）。
+3. **死循环切除（Loop Excision）**：智能体经常陷入循环（连续 5 次跑同一个错的 git 命令）。把这些冗余循环剪掉，让轨迹更高效。
+4. **保留"成功的失败"（错误恢复）**：**不要**清洗到看起来一次就解决了 bug 的样子。如果智能体写了 bug 代码、看到错误日志、读 log、改 patch 并最终成功 —— **保留这段序列**。这才是教模型"如何调试"的关键，否则模型在部署时遇到第一个错误就僵住。
+5. **格式归一化**：原始轨迹里如果有缺括号的 JSON 工具调用，环境解析器宽容地接受了，**在训练数据里必须修复**，让模型学到完美语法。
+
+#### 2.4.3 该用强化学习还是监督学习？
+
+正确答案是**两者都用，按固定两阶段顺序**。只用一种会严重限制模型的自主能力。
+
+##### 阶段 1：监督微调（SFT / Behavioral Cloning）—— 本阶段执行
+
+- **作用**：在清洗过的成功轨迹上做标准 SFT，教会模型"智能体语法"（工具调用如何排版、何时等待环境、思维过程如何组织）。
+- **局限**："Exposure bias"（曝光偏差）：模型训练时只看到成功的黄金路径，部署时一旦走偏一步进入陌生状态，就不会恢复，连锁失败。
+- **本仓库执行路径**：本任务（§2）的所有数据合成、清洗、loss masking 全部归此阶段，**立即执行**。
+
+##### 阶段 2：强化学习（RL）—— 本阶段**暂缓，详见 §10**
+
+> 以下内容为完整性收录，**本季度不实施**。
+
+- **作用**：编程任务有**可验证奖励**（代码通过测试 or 不通过），RL 非常合适。它逼模型探索环境、从自己独特的错误里学习、为最终结果做优化，从而弥补 SFT 的曝光偏差。
+- **Online RL**：PPO 或 **GRPO**（Group Relative Policy Optimization，DeepSeek 推广）—— 把 SFT 模型放进沙箱实时跑、生成动作、执行。通过测试 +1、语法错或超时 -1。
+- **Offline RL / DPO**：**Direct Preference Optimization** —— 对同一任务生成多条轨迹，把高效解决问题的当作 chosen、失败或超时的当作 rejected，训练模型偏好高效路径。
+- **重启触发**：见 §10.3，需算力翻倍 + SFT 链路饱和 + 需要"探索 + 验证"型目标。
+
+#### 2.4.4 能否从更强的模型蒸馏智能体能力？怎么做？
+
+可以，且这是当前业界标准做法。从 SOTA 教师（如 Claude 4.X 或 GPT-5.x）蒸馏到开放权重学生（如 Qwen-3.6 35B-A3B）。下面是 **Agentic Distillation** + **Rejection Sampling Fine-Tuning（RSFT）** 蓝图：
+
+1. **部署教师沙箱**：搭隔离环境（terminal + 文件编辑器），把教师模型接进沙箱，喂数千道可验证编程题（SWE-bench、HumanEval、本仓库 [evals/benchmarks/](../evals/benchmarks/)）。
+2. **高温拒绝采样**：不要让教师只解一次。用 T=0.7 让教师对同一题尝试 5~10 次。评估所有轨迹、拒绝失败、保留**最高效的那一条成功轨迹**。
+3. **Rationale 蒸馏（思维链）**：优秀模型的内心独白质量很高。提示教师**先写详细的 `<thinking>` 块**再调工具。蒸馏的不是教师的最终代码，是它的**调试直觉**。
+4. **学生 SFT**：在清洗、验证、带思路的教师轨迹上训学生模型（按 §2.4.1 与 §2.4.2 规范）。
+5. **RLAIF / DAgger** —— **本阶段暂缓，详见 §10**：
+   - **Step-Level Correction**：学生在沙箱跑任务，卡住或犯关键错时暂停，把当前 state 给教师问"下一步正确动作是什么"，再把这条**纠正轨迹**塞回学生的 SFT 数据。
+   - **Trajectory Scoring**：学生为 RL 跑 rollout 时，让教师对学生中间步骤打 1~5 星，作为稠密 reward 信号通过 PPO 训练学生。
+
+#### 2.4.5 本任务对方法论的执行映射
+
+| 方法论步骤 | 本任务（§2）落地 | 本阶段执行？|
+|---|---|---|
+| 2.4.1 多轮 ChatML 格式化 | 教师生成的 RAG-agent 轨迹直接按 ChatML 输出 | ✅ |
+| 2.4.1 严格动作空间 | JSON：`search_docs` / `read_doc` / `final_answer` | ✅ |
+| 2.4.1 Loss masking | 复用 [training/qwen_sft_peft.py](../training/qwen_sft_peft.py) 的 chat-template label offset | ✅ |
+| 2.4.2 拒绝采样过滤 | `final_answer` 在 `expected_terms` 上命中率 ≥ 0.8 才保留 | ✅ |
+| 2.4.2 Observation 截断 | `search_docs` 结果每条 chunk ≤ 512 token，最多 5 条 | ✅ |
+| 2.4.2 死循环切除 | 连续 3 次相同 `search_docs` query 视为循环，立刻丢弃整条轨迹 | ✅ |
+| 2.4.2 保留错误恢复 | 教师故意先生成一次错误检索查询，再换 query 成功 —— 保留这段序列 | ✅ |
+| 2.4.2 格式归一化 | tool call JSON 必须 `json.loads` 成功 | ✅ |
+| 2.4.3 SFT 阶段 1 | 本任务正文 §2.2 | ✅ |
+| 2.4.3 RL 阶段 2（GRPO/PPO/DPO）| —— | **暂缓 §10** |
+| 2.4.4 蒸馏 1-4（教师采样 + 学生 SFT）| 教师 = yunwu/gpt-5.4 | ✅ |
+| 2.4.4 蒸馏 5（RLAIF / DAgger） | —— | **暂缓 §10** |
+
+#### 2.4.6 子任务清单（可领取）
+
+| 编号 | 子任务 | 产出物 | 工时（人天）| 依赖 |
+|---|---|---|---|---|
+| T2-01 | 在 [training/agent_trajectory_rollout.py](../training/agent_trajectory_rollout.py) 加 `search_docs` / `read_doc` 两个工具的 dispatch | 通过本地单测 | 0.5 | 无 |
+| T2-02 | 实现 `scripts/generate_rag_agent_trajectories.py`，按 §2.4.1 规范输出 ChatML 多轮轨迹 | 可运行的合成脚本 | 1.0 | T2-01 |
+| T2-03 | 实现 `scripts/clean_agent_trajectories.py`，覆盖 §2.4.2 的 5 项启发式（拒绝采样 / 截断 / 切环 / 保留 recovery / 格式归一） | `data/generated/rag_agent_trajectories_v1_clean.jsonl`（~80 条）| 1.0 | T2-02 |
+| T2-04 | 单测 `tests/test_clean_agent_trajectories.py`：覆盖每条启发式（含一个 recovery 用例必须保留）| pytest 绿 | 0.5 | T2-03 |
+| T2-05 | 实现 SFT 数据混入：50% 任务一 100 题 + 50% 80 条 RAG agent 轨迹（Experience Replay）| `data/generated/qwen36_36b_sft_rag_v1/train_chatml.jsonl` | 0.3 | T2-03, T1-01 |
+| T2-06 | 编写 `scripts/launch_qwen36_35b_a3b_sft_rag_ai.sh`，从任务一 adapter warm-start | 启动脚本 | 0.5 | T1-09 |
+| T2-07 | 远端 1h SFT，监控 trainable parameter 和 loss 曲线 | `outputs/qwen36-35b-a3b-sft-rag-ai-YYYYMMDD/` | 0.3 | T2-06 |
+| T2-08 | 在 [evals/benchmarks/qwen36_27b_user_rag_questions_v2.json](../evals/benchmarks/qwen36_27b_user_rag_questions_v2.json) 上做 Tool-Use Recall + RAG Pass@1 两指标评测 | `reports/qwen36_35b_a3b_sft_rag_v1_eval.json` | 0.5 | T2-07 |
+| T2-09 | 与任务一 adapter 做 A/B 对比，记录 ≥ 15 pp 是否达成 | `reports/qwen36_35b_a3b_sft_rag_v1_vs_sft100.md` | 0.3 | T2-08, T1-08 |
+| T2-10 | 归档 + 写 1-page 复盘 | `artifacts/model-registry/sft-rag-v1.json` + `research/sft-rag-v1-postmortem.md` | 0.3 | T2-09 |
+
+### 2.5 方法论补充参考文献
+
+- Yao et al., ReAct: Synergizing Reasoning and Acting in Language Models, ICLR 2023. arXiv:2210.03629
+- Anthropic, Building agentic systems with Claude, 公开博文（见 [training/agent_trajectory_rollout.py](../training/agent_trajectory_rollout.py#L2-L25) 引用）
+- Jimenez et al., SWE-bench, ICLR 2024. arXiv:2310.06770
+- Yang et al., SWE-agent, NeurIPS 2024. arXiv:2405.15793
+- Shao et al., DeepSeekMath（GRPO 原始论文，**仅作为 §10 重启时的参考**）, 2024. arXiv:2402.03300
+- Rafailov et al., Direct Preference Optimization（DPO，**§10**）, NeurIPS 2023. arXiv:2305.18290
+- Ross et al., DAgger（**§10**）, AISTATS 2011. arXiv:1011.0686
+- Bai et al., Constitutional AI: Harmlessness from AI Feedback（RLAIF 思路，**§10**）, 2022. arXiv:2212.08073
+
+---
+
+## 3. 任务三：内蒙古超节点上的镜像微调
+
+### 3.1 为什么要做
+
+#### 3.1.1 工程依据
+
+- **平台多样性 / 异地容灾**：当前所有训练集中在 Huanxin `AI`（参见 [HEARTBEAT.md](../HEARTBEAT.md)），单点故障风险高。2026-06-04 实测显示 ASI1 出现 `getShellVisitUrl code=170022` 等 webshell 降级问题（[memory/2026-06-04.md](../memory/2026-06-04.md)）。
+- **可复现性是科研基础**：同一 LoRA 配方在两个异构硬件平台上可复现，是发表性结果的必要条件，参考 ML reproducibility checklist（Pineau et al., NeurIPS Reproducibility Program 2019）。
+- **超节点定位**：内蒙古超节点算力规模通常 > 8 NPU 单机，可作为后续 long-context 训练（32K/64K）和 32-step 以上 SFT 的承载方。
+
+#### 3.1.2 科学依据
+
+- **Reproducibility in Machine Learning: From Theory to Practice**（Pineau et al., NeurIPS 2019, arXiv:2003.12206）—— 跨硬件复现是 ML 工业级研究的最低要求。
+- **MLPerf Training Benchmark**（Mattson et al., MLSys 2020, arXiv:1910.01500）—— 主流 benchmark 默认在多平台对比，证明跨平台测试是标准范式。
+
+### 3.2 怎么做
+
+#### 3.2.1 复用现有 S3 中转
+
+仓库已有完整的 S3 中转脚本（参见 [PROJECT.md](../PROJECT.md)）：
+
+```bash
+./scripts/upload_quantum_gpt_to_iner_s3.sh    # 本地→S3
+./scripts/ai_sync_from_s3.sh                  # S3→AI
+./scripts/ai_push_results_to_s3.sh            # AI→S3
+./scripts/pull_from_s3.sh                     # S3→本地
+```
+
+为超节点新增 `scripts/neimeng_sync_from_s3.sh` 和 `scripts/neimeng_push_results_to_s3.sh`，参数与 `ai_*.sh` 一致，只换 SSH host。
+
+#### 3.2.2 启动脚本
+
+复制 `scripts/launch_qwen36_35b_a3b_sft100_ai.sh` 为 `scripts/launch_qwen36_35b_a3b_sft100_neimeng.sh`，**完全相同的超参数**，仅环境变量不同（model path 与远端工作目录）。同步对齐任务一与任务二的 LoRA 配方。
+
+#### 3.2.3 算力预算
+
+- 算力：与任务一、二相同，单次 8 NPU × 1.5h
+- 此任务额外成本仅为 S3 同步带宽（~20GB 模型 + ~10MB 数据）和一次远端启动调试，预估 0.5h 人工
+
+#### 3.2.4 对比验证
+
+跨平台一致性指标：
+- 训练 loss 曲线相关系数 ≥ 0.95
+- 训练后 pass@1 差异 ≤ 2%（量子专项）
+- 数值差异允许范围参考 PyTorch 跨硬件 RTOL/ATOL 标准（CPU vs CUDA 默认 rtol=1e-5）
+
+#### 3.2.5 子任务清单（可领取）
+
+| 编号 | 子任务 | 产出物 | 工时（人天）| 依赖 |
+|---|---|---|---|---|
+| T3-01 | 与内蒙古超节点对接：拿到 SSH host、远端工作目录路径、可用的 NPU 数量、CANN/Python 版本 | `research/neimeng-env-survey.md`（含 preflight 探针输出）| 0.5（人工沟通）| 远端账号 |
+| T3-02 | 实现 `scripts/neimeng_sync_from_s3.sh`、`scripts/neimeng_push_results_to_s3.sh`，与 `ai_*.sh` 同接口 | 两个可一键 sync 的脚本 + dry-run 通过 | 0.5 | T3-01 |
+| T3-03 | 实现 `scripts/neimeng_shell.sh "<cmd>"` 远端 shell 入口（参考 [scripts/ai_shell.sh](../scripts/ai_shell.sh) 抽象）| 远端 `pwd && whoami` 探针通过 | 0.5 | T3-01 |
+| T3-04 | 复制并改造启动脚本：`scripts/launch_qwen36_35b_a3b_sft100_neimeng.sh`（去 RL 参数）| 与 T1-03 hash-equivalent 的脚本（仅环境变量不同）| 0.3 | T1-03, T3-03 |
+| T3-05 | 在超节点上跑 [training/qwen35_runtime_overlay_probe.py](../training/qwen35_runtime_overlay_probe.py) 风格的依赖 preflight | preflight 报告确认 transformers、peft、torch_npu 齐全 | 0.5 | T3-04 |
+| T3-06 | S3 → 超节点同步任务一/二的 adapter、模型快照、训练数据 | 远端 `ls` 验证 | 0.3 | T3-04, T1-09 |
+| T3-07 | 远端跑 8 NPU × 1.5h SFT，**与任务一完全相同的随机种子与数据顺序** | `outputs/qwen36-35b-a3b-sft100-neimeng-YYYYMMDD/` | 0.3（人工监控） | T3-05, T3-06 |
+| T3-08 | 跨平台 loss 曲线相关系数计算 + pass@1 差异对比，写 1-page 复现报告 | `reports/cross_platform_sft100_reproducibility_v1.md` | 0.5 | T3-07, T1-08 |
+| T3-09 | 归档 + 把超节点端 run 写入 `artifacts/model-registry/` | `artifacts/model-registry/sft100-neimeng-v1.json` | 0.2 | T3-08 |
+
+### 3.3 参考文献
+
+- Pineau et al., Improving Reproducibility in Machine Learning Research, NeurIPS 2019. arXiv:2003.12206
+- Mattson et al., MLPerf Training Benchmark, MLSys 2020. arXiv:1910.01500
+
+---
+
+## 4. 任务四：NPU 原生算子 —— Qwen 3.6 改造为混合脉冲-状态模型
+
+### 4.1 为什么要做
+
+#### 4.1.1 科学依据：混合架构的崛起
+
+**纯 Transformer 不再是唯一最优选择**，2024 起一系列论文证明 hybrid（attention + state-space + spiking）是下一代架构方向：
+
+1. **状态空间模型（State Space Model, SSM）**
+   - **Mamba: Linear-Time Sequence Modeling with Selective State Spaces**（Gu & Dao, Princeton & CMU, COLM 2024, arXiv:2312.00752）—— 选择性 SSM，序列长度上线性复杂度。
+   - **Jamba: A Hybrid Transformer-Mamba Language Model**（AI21 Labs, 2024, arXiv:2403.19887）—— 工业级 hybrid，52B 总参 / 12B 激活，256K context。
+   - **Zamba: A Compact 7B SSM Hybrid Model**（Glorioso et al., 2024, arXiv:2405.16712）—— 小模型 hybrid 也能打。
+2. **脉冲神经网络（Spiking Neural Network, SNN）应用于 LLM**
+   - **SpikeGPT: Generative Pre-trained Language Model with Spiking Neural Networks**（Zhu et al., UCSC, TMLR 2024, arXiv:2302.13939）—— 首个 SNN 大语言模型。
+   - **SpikingBERT**（Bal & Sengupta, AAAI 2024）—— 脉冲 BERT，能耗降低 ~50%。
+   - **SpikeLLM**（Xing et al., 2024, arXiv:2407.04752）—— 7B 规模脉冲 LLM 可行性证明。
+3. **能效优势的硬件背景**
+   - SNN 的事件驱动天然适合 NPU/DSA 类硬件（Ascend NPU 含脉冲发放优化路径）。
+   - **Loihi 2** 和 SpikingJelly（Fang et al., Science Advances 2023, arXiv:2310.16060）证明 SNN 在专用芯片上能耗比可达 GPU 的 100x。
+
+#### 4.1.2 "举一反三"的理论依据
+
+混合脉冲-状态架构提升泛化的机制：
+
+- **稀疏激活的归纳偏置**：脉冲发放天然类似 dropout / mixture-of-experts 的 sparse routing，提供更强 OOD 泛化（Lou et al., Sparse Networks from Scratch, ICML 2020）。
+- **状态空间的时间归纳偏置**：SSM 显式编码时间动力学，对结构化推理任务（如电路化简、定理证明）有架构层先验。
+- 已有量子计算关联：脉冲编码 + 量子态演化在数学结构上高度相似（Friston et al., Free Energy Principle, Nature Reviews Neuroscience 2010）。
+
+### 4.2 怎么做
+
+#### 4.2.1 算子分阶段路线（强烈受算力限制）
+
+**警告：完整改造 Qwen 3.6 架构是 6~12 人月工作，超出当前算力与人力**。本路线图先做最小可验证原型：
+
+**P0（CPU 原型，2 周）**
+- 用 PyTorch 在 CPU 实现 Mamba-style selective SSM 单层。
+- 用 SpikingJelly 实现 LIF（Leaky Integrate-and-Fire）spike layer。
+- 在 [tests/](../tests/) 写单测，确保数值正确性。
+- 不接触 Qwen 3.6 主模型。
+
+**P1（NPU 原生算子原型，1 个月）**
+- 实现 1 个 Ascend NPU 原生算子（CANN AscendC 语言）：选择性 SSM 的 selective_scan 内核。
+- 参考 Mamba 官方 CUDA 内核（[github.com/state-spaces/mamba](https://github.com/state-spaces/mamba)）做语义对齐。
+- 基准目标：单算子在 Ascend 910B 上达到 PyTorch 等价实现 5x 加速。
+- 算力开销：仅算子 microbenchmark，~1 NPU × 4h。
+
+**P2（局部层替换，2 个月，待 P1 验证后启动）**
+- 替换 Qwen 3.6 最后 2 层 Transformer block 为 Mamba+SNN 混合 block。
+- 冻结其余参数，只训新增层（参数量 ~5% 的模型）。
+- LoRA 在 attention 部分继续应用。
+- 训练数据：任务一 + 任务二的产出（**SFT-only**，不引入 RL）。
+
+#### 4.2.2 算力预算
+
+- P0：CPU only，无 NPU 开销
+- P1：1 NPU × 4h（算子 microbench）
+- P2：8 NPU × 2h（局部层 SFT）
+- **P2 之前不消耗主训练算力**
+
+#### 4.2.3 风险控制
+
+- 此任务**失败概率高**，因为 NPU 原生算子开发周期长。设置 P1 完成日为强制评审节点，未达成立刻降级为"使用 PyTorch fallback 路径"。
+- P0/P1 失败时，仍可把 Mamba/SNN 层用 PyTorch 在 NPU 跑通，只是没有 5x 加速。
+
+#### 4.2.4 子任务清单（可领取）
+
+**P0 阶段（CPU 原型，2 周）**
+
+| 编号 | 子任务 | 产出物 | 工时（人天）| 依赖 |
+|---|---|---|---|---|
+| T4-P0-01 | 调研 selective SSM 数学公式与 Mamba 官方 CUDA 内核语义，整理为 1-page 设计文档 | `research/selective_ssm_design_note.md` | 1.0 | 无 |
+| T4-P0-02 | PyTorch 实现 `quantum_arch/mamba_block.py`：selective_scan + RMSNorm + 残差连接 | 单元可调用模块 + forward/backward 数值正确 | 2.0 | T4-P0-01 |
+| T4-P0-03 | 用 `pip install spikingjelly` 实现 `quantum_arch/lif_spike.py`：LIF + surrogate gradient | 单元可调用模块 | 1.5 | 无 |
+| T4-P0-04 | 实现 `quantum_arch/hybrid_block.py`：mamba_block ∥ lif_spike 并联 + 门控融合 | 完整 hybrid block | 1.0 | T4-P0-02, T4-P0-03 |
+| T4-P0-05 | 单测 `tests/test_mamba_block.py`、`tests/test_lif_spike.py`、`tests/test_hybrid_block.py`：与参考实现/数学定义对齐 | 三套单测全绿，覆盖 ≥ 80% | 1.5 | T4-P0-04 |
+| T4-P0-06 | CPU 上跑 mini-benchmark：序列长度 256 / 1024 / 4096，比较 hybrid 与纯 attention 的内存与时间 | `reports/hybrid_block_cpu_microbench.json` | 1.0 | T4-P0-05 |
+| T4-P0-07 | 写 P0 阶段评审材料：是否值得投入 P1 | `research/p0_to_p1_review.md` | 0.5 | T4-P0-06 |
+
+**P1 阶段（NPU 原生算子，1 个月，待 P0 评审通过后启动）**
+
+| 编号 | 子任务 | 产出物 | 工时（人天）| 依赖 |
+|---|---|---|---|---|
+| T4-P1-01 | 学习 CANN AscendC 算子开发文档，写 hello-world 算子跑通 | 1 个 CANN 算子 demo | 3.0 | P0 评审通过 |
+| T4-P1-02 | 用 AscendC 实现 `selective_scan` 内核 | CANN 算子源码 | 5.0 | T4-P1-01 |
+| T4-P1-03 | 算子单测 + 与 PyTorch 等价实现做数值对齐（rtol=1e-3）| 单测绿 | 2.0 | T4-P1-02 |
+| T4-P1-04 | 单 NPU × 4h microbenchmark：vs PyTorch 等价实现的速度比 | `reports/selective_scan_ascend_microbench.json` | 0.5（人工监控） | T4-P1-03 |
+| T4-P1-05 | P1 评审：是否达到 5x 加速；不达成则降级 | `research/p1_to_p2_review.md` | 0.5 | T4-P1-04 |
+
+**P2 阶段（局部层替换 SFT，2 个月）—— 待 P1 评审通过后启动**
+
+| 编号 | 子任务 | 产出物 | 工时（人天）| 依赖 |
+|---|---|---|---|---|
+| T4-P2-01 | 修改 Qwen 3.6 35B-A3B 模型最后 2 层为 hybrid block（其余冻结）| `training/hybrid_qwen36_model.py` | 3.0 | P1 评审通过 |
+| T4-P2-02 | LoRA + 新增 hybrid block 联合训练入口 | `scripts/launch_qwen36_hybrid_sft_ai.sh` | 2.0 | T4-P2-01 |
+| T4-P2-03 | 在 `AI` 上跑 8 NPU × 2h SFT（数据继承任务一+任务二）| `outputs/qwen36-hybrid-sft-ai-YYYYMMDD/` | 0.3（监控） | T4-P2-02 |
+| T4-P2-04 | 与纯 Transformer baseline 做泛化对比（量子 holdout + RAG benchmark）| `reports/hybrid_vs_baseline_v1.md` | 1.0 | T4-P2-03 |
+| T4-P2-05 | 写论文式 wrap-up | `research/papers/hybrid_spiking_state_qwen/paper.md` | 3.0 | T4-P2-04 |
+
+### 4.3 参考文献
+
+- Gu & Dao, Mamba: Linear-Time Sequence Modeling with Selective State Spaces, COLM 2024. arXiv:2312.00752
+- AI21 Labs, Jamba: A Hybrid Transformer-Mamba Language Model, 2024. arXiv:2403.19887
+- Glorioso et al., Zamba, 2024. arXiv:2405.16712
+- Zhu et al., SpikeGPT, TMLR 2024. arXiv:2302.13939
+- Xing et al., SpikeLLM, 2024. arXiv:2407.04752
+- Fang et al., SpikingJelly, Science Advances 2023. arXiv:2310.16060
+- Lou et al., Sparse Networks from Scratch, ICML 2020
+
+---
+
+## 5. 任务五：深度网络压缩 KV 缓存（已有成果展示 + 下一步）
+
+### 5.1 为什么要做
+
+#### 5.1.1 KV 缓存是长上下文推理的主要显存瓶颈
+
+| 模型 | 上下文 | 单 batch KV 缓存 |
+|---|---|---|
+| Qwen 3.6 35B | 32K | ~18 GB |
+| Qwen 3.6 35B | 128K | ~72 GB |
+| Qwen 3.6 35B | 262K | ~147 GB |
+
+128K 以上 KV 缓存就会撑爆单 NPU（910B 64GB HBM），必须压缩。
+
+#### 5.1.2 科学依据
+
+1. **KV 缓存量化**
+   - **KIVI: A Tuning-Free Asymmetric 2bit Quantization for KV Cache**（Liu et al., ICML 2024, arXiv:2402.02750）—— 2-bit KV 量化几乎无质量损失。
+   - **KVQuant: Towards 10 Million Context Length LLM Inference with KV Cache Quantization**（Hooper et al., NeurIPS 2024, arXiv:2401.18079）—— per-channel + per-token 混合量化，1000 万 token 上下文可行。
+2. **KV 缓存淘汰/选择**
+   - **H2O: Heavy-Hitter Oracle**（Zhang et al., NeurIPS 2023, arXiv:2306.14048）—— 基于注意力分数的动态淘汰。
+   - **StreamingLLM**（Xiao et al., ICLR 2024, arXiv:2309.17453）—— attention sink 现象 + 窗口缓存。
+3. **旋转 + 量化**
+   - **QuaRot: Outlier-Free 4-Bit Inference in Rotated LLMs**（Ashkboos et al., NeurIPS 2024, arXiv:2404.00456）—— Hadamard 旋转抑制 outlier，4-bit 几乎无损。
+   - **TurboQuant**（指代仓库已实现的 hadamard rotation + residual + symmetric quant 组合方案，参见 [research/papers/turboquant/paper.md](../research/papers/turboquant/paper.md)）。
+
+### 5.2 已有成果（本仓库的进展）
+
+仓库的 KV 缓存压缩工作已经实现：
+
+#### 5.2.1 代码资产
+
+**[training/turboquant.py](../training/turboquant.py)**，共 547 行，已实现：
+
+| 组件 | 位置 | 说明 |
+|---|---|---|
+| `TurboQuantConfig` | [L208-L234](../training/turboquant.py#L208) | 完整配置类，包含 nbits、group_size、rotation、residual_length |
+| Hadamard 旋转 | [L45-L62](../training/turboquant.py#L45) | 纯 PyTorch 实现 `_hadamard_last_dim`，可微 |
+| 随机 Hadamard | [L65-L70](../training/turboquant.py#L65) | 随机符号变换，抑制 outlier |
+| 对称量化 | [L118-L128](../training/turboquant.py#L118) | 支持 1/2/4/8-bit |
+| 双层残差量化 | [L131-L205](../training/turboquant.py#L131) | primary + secondary，残差进一步压缩 |
+| `TurboQuantCache` | [L256-L527](../training/turboquant.py#L256) | 继承 HF `DynamicCache`，**可直接替换 HF 模型默认缓存** |
+| 长 prefix + 短 residual 分裂 | [L335-L345](../training/turboquant.py#L335) | 只量化历史，最近 N token 保 FP16 |
+| beam search 兼容 | [L423-L432](../training/turboquant.py#L423) | `reorder_cache` 支持 beam 重排 |
+| batch split / repeat / select | [L448-L494](../training/turboquant.py#L448) | 完整支持 vLLM 风格 batch 操作 |
+
+#### 5.2.2 集成路径
+
+参见 [research/papers/turboquant/paper.md](../research/papers/turboquant/paper.md)，目标集成点：
+- [scripts/serve_openai_chat_adapter.py](../scripts/serve_openai_chat_adapter.py)（推理服务）
+- [scripts/run_hf_pass1_eval.py](../scripts/run_hf_pass1_eval.py)（评测）
+
+#### 5.2.3 设计要点（已落地）
+
+- **4-bit primary + 1-bit secondary 残差**：默认配置（[L211-L212](../training/turboquant.py#L211)），KV 缓存压缩比约 6~7x。
+- **Hadamard 旋转**：抑制 outlier，配合 group-wise 量化，质量损失 < 1%。
+- **residual_length=128**：最近 128 token 不量化，保护 last-step 精度。
+- **HF cache_utils.DynamicCache 兼容**：可在不改 transformers 代码的情况下作为 drop-in 替换。
+
+### 5.3 下一步要做
+
+#### 5.3.1 质量验证（当前缺口）
+
+[research/papers/turboquant/paper.md](../research/papers/turboquant/paper.md) 明确指出"It is not yet claimed to be an exact, paper-fidelity reimplementation"。需要：
+
+```bash
+# 在量子评测套件上测量质量 delta
+python3 scripts/run_hf_pass1_eval.py \
+  --model models/Qwen3.6-35B-A3B \
+  --benchmark evals/benchmarks/quantum_generalization_holdout_v1.txt \
+  --cache-backend turboquant \
+  --cache-nbits 4 --cache-residual-length 128
+```
+
+期望成果：pass@1 差异 ≤ 2%，KV 缓存显存降低 ≥ 5x。
+
+#### 5.3.2 NPU 算子加速（与任务四联动）
+
+把 `_hadamard_last_dim` 和 `_quantize_symmetric` 写为 Ascend 原生算子，预期再获得 2~3x 速度提升。
+
+#### 5.3.3 算力预算
+
+- 质量验证：1 NPU × 2h（多组配置扫描）
+- 算子加速：参见任务四 P1，共享算子开发成本
+
+#### 5.3.4 子任务清单（可领取）
+
+**验证子阶段（本周完成）**
+
+| 编号 | 子任务 | 产出物 | 工时（人天）| 依赖 |
+|---|---|---|---|---|
+| T5-01 | 在 [scripts/run_hf_pass1_eval.py](../scripts/run_hf_pass1_eval.py) 加 `--cache-backend turboquant` 选项，可在不改 transformers 的前提下注入 [training/turboquant.py](../training/turboquant.py) 的 `TurboQuantCache` | patch 完成的脚本 | 0.5 | 无 |
+| T5-02 | 加单测 `tests/test_turboquant_cache_drop_in.py`：CPU 上 small dummy model 跑一遍前向，验证 `TurboQuantCache` 不破坏 generate 结果 | 单测绿 | 0.5 | T5-01 |
+| T5-03 | 准备配置网格：`nbits ∈ {2,4,8} × secondary_nbits ∈ {0,1} × residual_length ∈ {64,128,256}`，共 18 组 | `configs/turboquant_grid.yaml` | 0.3 | T5-01 |
+| T5-04 | 在 `AI` 上跑 1 NPU × 2h 配置扫描，对每组配置在 [quantum_generalization_holdout_v1.txt](../evals/benchmarks/quantum_generalization_holdout_v1.txt) 上测 pass@1 + 显存峰值 | `reports/turboquant_quantum_holdout_grid.json` | 0.3 | T5-03 |
+| T5-05 | 选最佳配置（pass@1 差异 ≤ 2% 中显存最低的）作为默认配置，写入 [training/turboquant.py](../training/turboquant.py) `TurboQuantConfig` defaults | 默认配置已落库 | 0.3 | T5-04 |
+| T5-06 | 用最佳配置在 [scripts/serve_openai_chat_adapter.py](../scripts/serve_openai_chat_adapter.py) 上做端到端推理服务 smoke：单题 + 32K 长上下文各一次 | `reports/turboquant_serve_smoke.json` | 0.5 | T5-05 |
+| T5-07 | 把 [research/papers/turboquant/paper.md](../research/papers/turboquant/paper.md) 的"不是 paper-fidelity 复现"声明更新为带实测数据的成果声明 | 论文更新 | 0.5 | T5-04, T5-06 |
+
+**算子加速子阶段（任务四 P1 联动）**
+
+| 编号 | 子任务 | 产出物 | 工时（人天）| 依赖 |
+|---|---|---|---|---|
+| T5-08 | 把 [training/turboquant.py](../training/turboquant.py#L45) 的 `_hadamard_last_dim` 重写为 Ascend C 算子 | CANN 算子源码 | 3.0 | T4-P1-01 |
+| T5-09 | 把 [training/turboquant.py](../training/turboquant.py#L118) 的 `_quantize_symmetric` 重写为 Ascend C 算子 | CANN 算子源码 | 2.0 | T4-P1-01 |
+| T5-10 | 算子单测 + microbench：与 PyTorch 实现数值对齐 + 速度比 | `reports/turboquant_ascend_op_microbench.json` | 1.0 | T5-08, T5-09 |
+| T5-11 | 端到端推理 + 算子注入后的整体速度比，写入论文最终版 | `reports/turboquant_full_e2e.md` | 0.5 | T5-10, T5-06 |
+
+### 5.4 参考文献
+
+- Liu et al., KIVI, ICML 2024. arXiv:2402.02750
+- Hooper et al., KVQuant, NeurIPS 2024. arXiv:2401.18079
+- Zhang et al., H2O: Heavy-Hitter Oracle, NeurIPS 2023. arXiv:2306.14048
+- Xiao et al., StreamingLLM, ICLR 2024. arXiv:2309.17453
+- Ashkboos et al., QuaRot, NeurIPS 2024. arXiv:2404.00456
+
+---
+
+## 6. 汇总表
+
+下表对所有任务做横向对比。打分采用 1-5 标度，5 为最优 / 最高。
+
+| # | 任务 | 价值 | 可行性 | 创新性 | 工作量（人周） | 算力需求 | 风险 | 优先级 | 关键文献 |
+|---|---|---|---|---|---|---|---|---|---|
+| 1 | 100 题高质量 SFT 微调 Qwen 3.6 35B（`AI`）| 4 | 5 | 2 | 1 | 8 NPU × 1.5h | 低 | **P0 立即** | LIMA (2305.11206), LoRA (2106.09685) |
+| 2 | 智能体调用 RAG（SFT-only tool-use）| 5 | 4 | 4 | 2 | 8 NPU × 1h + ~50$ API | 低（RAG 链路已通）| **P0 立即** | Self-RAG (2310.11511), Toolformer (2302.04761), Atlas (2208.03299) |
+| 3 | 内蒙古超节点镜像微调 | 3 | 4 | 2 | 1.5 | 8 NPU × 1.5h + S3 带宽 | 中（远端环境就绪依赖）| **P0 立即** | MLPerf (1910.01500), Pineau (2003.12206) |
+| 4 | NPU 原生算子 + 脉冲-状态混合架构改造 | 5 | 2 | 5 | 8~12 | P0: 0 / P1: 1 NPU × 4h / P2: 8 NPU × 2h | **高**（NPU 算子开发周期长）| **P2 下季度** | Mamba (2312.00752), Jamba (2403.19887), SpikeGPT (2302.13939) |
+| 5 | KV 缓存深度压缩（成果展示 + 验证）| 4 | 5 | 4 | 2 | 1 NPU × 2h | 低（代码已实现，缺验证）| **P0 立即（验证）/ P1（算子加速）** | KIVI (2402.02750), KVQuant (2401.18079), QuaRot (2404.00456) |
+| — | （**暂缓**）强化学习路线，含 agentic GRPO / RLVR / DPO 等 | — | — | — | — | — | — | **暂缓**，参见 §10 | — |
+
+### 6.1 优先级排序解释
+
+- **本周（P0）**：任务 1、2、3、5（验证部分）。四者总算力预算 ≤ 8 NPU × 5h，符合 time-box，可立即启动并产出可汇报结果。
+- **本月（P1）**：任务 5 的 NPU 算子加速。
+- **下季度（P2）**：任务 4 完整改造。先完成 P0/P1 原型，并取得 NPU 算子可行性证据后再推进。
+- **暂缓**：所有 RL 路线（任务 6）。
+
+### 6.2 算力总预算（90 天）
+
+| 资源 | 总量 |
+|---|---|
+| `AI` 8 NPU 时间 | ~10.5 小时 |
+| 内蒙古超节点 8 NPU 时间 | ~1.5 小时（任务 3）+ 后续承接 |
+| 单 NPU 时间（算子 microbench / KV 验证） | ~6 小时 |
+| CPU + API | 持续 |
+
+完全满足"算力非常有限"的前置约束。
+
+---
+
+## 7. 决策建议
+
+请负责人就以下三点拍板：
+
+1. **任务一、任务二的训练数据是否锁定**为 100 题 + 203 教师回复 + 80 条新合成 RAG-agent 轨迹，还是要先做一次数据扩充。
+2. **内蒙古超节点的对接窗口**何时打开，决定任务三启动时间。
+3. **任务四是否启动 P0 CPU 原型**。即使最终不上 NPU 算子，CPU 原型本身可以发表为方法学论文。
+
+---
+
+## 8. 附录：复用资产清单
+
+| 用途 | 路径 |
+|---|---|
+| 100 高质量量子题 | [data/generated/quantum_100_questions_only_v1.jsonl](../data/generated/quantum_100_questions_only_v1.jsonl) |
+| 203 教师高质量蒸馏 ChatML | [data/generated/quantum_distillation_teacher_responses_asi2_v1_high_quality_chatml.jsonl](../data/generated/quantum_distillation_teacher_responses_asi2_v1_high_quality_chatml.jsonl) |
+| SFT LoRA 训练器 | [training/qwen_sft_peft.py](../training/qwen_sft_peft.py) |
+| Agent trajectory rollout（含 tool 协议）| [training/agent_trajectory_rollout.py](../training/agent_trajectory_rollout.py) |
+| RAG 检索 / 索引 / 缓存 | [quantum_rag/](../quantum_rag/), [scripts/build_quantum_rag.py](../scripts/build_quantum_rag.py) |
+| RAG 评测 | [scripts/eval_quantum_rag.py](../scripts/eval_quantum_rag.py) |
+| RAG benchmark（158 题）| [evals/benchmarks/qwen36_27b_user_rag_questions_v2.json](../evals/benchmarks/qwen36_27b_user_rag_questions_v2.json) |
+| TurboQuant KV 缓存压缩 | [training/turboquant.py](../training/turboquant.py) |
+| 评测 harness | [evals/runner/run_eval.py](../evals/runner/run_eval.py) |
+| 量子 strict holdout benchmark | [evals/benchmarks/quantum_generalization_holdout_v1.txt](../evals/benchmarks/quantum_generalization_holdout_v1.txt) |
+| S3 中转脚本 | [scripts/push_to_s3.sh](../scripts/push_to_s3.sh), [scripts/ai_sync_from_s3.sh](../scripts/ai_sync_from_s3.sh) |
+| `AI` 环境 shell 入口 | [scripts/ai_shell.sh](../scripts/ai_shell.sh) |
+
+---
+
+## 9. v2/v3 变更摘要（相对 v1）
+
+| 变更点 | v1 | v2 | v3 |
+|---|---|---|---|
+| 任务编号 1 | 100 题 SFT（`AI`）| 不变 | 加 §1.2.6 子任务清单（9 条）|
+| **任务编号 2** | 内蒙古超节点镜像 | **新增"智能体调用 RAG"**（SFT-only tool-use） | 加 §2.4 智能体后训练方法论（中文）+ §2.4.6 子任务清单（10 条）|
+| 任务编号 3 | 智能体轨迹 + GRPO | **改为内蒙古超节点镜像**（原 v1 §2 顺延） | 加 §3.2.5 子任务清单（9 条）|
+| 任务编号 4 | NPU 原生算子 + 混合架构 | 不变（P2 路径继承任务 1/2 产出，**不再依赖 RL**） | 加 §4.2.4 P0/P1/P2 三阶段子任务清单（17 条）|
+| 任务编号 5 | KV 缓存深度压缩 | 不变 | 加 §5.3.4 验证 + 算子加速子任务清单（11 条）|
+| RL 路线（GRPO / RLVR / DPO） | 任务 3 主路径 | **暂缓，移入 §10**，需求出现再启动 | 在 §2.4 方法论中以"完整性收录但暂缓"形式整合 |
+
+---
+
+## 10. 附录：暂缓的强化学习路线
+
+> 用户决策（2026-06-08）：本阶段不开启强化学习训练。此节仅作记录，待算力充裕、SFT 链路稳定且 reward 信号清晰后再评估重启。
+
+### 10.1 暂缓的具体内容
+
+- agentic GRPO：复用 [training/agentic_grpo_trainer.py](../training/agentic_grpo_trainer.py) 的轨迹级 GRPO（参见 [memory/2026-06-04.md](../memory/2026-06-04.md)）
+- RLVR / DPO：参见 [training/qwen35b_benchmark_rlvr_grpo.py](../training/qwen35b_benchmark_rlvr_grpo.py) 和 [training/qwen35b_verifier_lora_grpo.py](../training/qwen35b_verifier_lora_grpo.py)
+- self-judge reward：[memory/2026-06-05.md](../memory/2026-06-05.md) 中 v4/v5 的 self-judge 奖励路线
+
+### 10.2 暂缓理由
+
+1. 算力非常有限，RL 训练（group rollout × steps）远比 SFT 耗资源。一次 8-step GRPO smoke 已逼近 2h time-box（[research/papers/timeboxed_eight_npu_grpo/paper.md](../research/papers/timeboxed_eight_npu_grpo/paper.md)）。
+2. 在 SFT 路线尚未饱和的前提下提前上 RL，边际收益不明确，违反"先吃透小样本 SFT"的项目方针（参见 [PROJECT.md](../PROJECT.md)、LIMA 论据）。
+3. RL 引入 verifier reward、reward hacking、reward shaping 等不稳定因素，会拖累整体迭代节奏。
+
+### 10.3 重启触发条件
+
+任一条件满足且经评审通过后，可考虑重启 RL：
+
+1. 任务 1 + 任务 2 + 任务 3 全部完成，模型在 RAG-tool 评测 B 指标达到瓶颈（连续两次 SFT 收益 < 1 pp）。
+2. 算力配额至少翻倍（持续可调用 16 NPU）。
+3. 出现明确需要"探索 + 验证"形式的目标（例如长链 reasoning），单靠 SFT 难以注入。
+
+### 10.4 暂缓期资产保留
+
+不动 [training/agentic_grpo_trainer.py](../training/agentic_grpo_trainer.py)、[training/grpo_trainer.py](../training/grpo_trainer.py) 等已有代码，单测保持绿，确保未来无缝重启。

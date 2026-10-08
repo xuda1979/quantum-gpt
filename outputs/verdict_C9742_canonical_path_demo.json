@@ -1,0 +1,202 @@
+{
+  "pass_adapter": "18/18",
+  "pass_base": "0/18",
+  "beats_base": true,
+  "scorer_version": "holdout-freeze-b40ca7f2b16e",
+  "beats_base_rule": "pass-count",
+  "holdout_sha256": "b40ca7f2b16e19809059c7dde60414e6e88631d0613e36425002c376f03ea7f1",
+  "scorer_shas": {
+    "evals/runner/single_candidate_eval.py": "ba05e8aa26fce617b6db9dc91eb675abc51217b96c32d6d411a5e1ccc6a5da3b",
+    "scripts/run_asi2_base_adapter_rubric_eval.py": "4e12361582b4782069db4009eac02f900a8f0241663c2b06241ff34fe695e177",
+    "evals/runner/candidate_sanitize.py": "bbf4bc53a55f8a0983c4e3f3633b9eb1c0ab424ffd233df84875e5a063a962c2",
+    "harness/beats_base.py": "fd6c7851ae01e067d090ea8c18444d00c7c9f7f1798705233ca38e909b60ba20"
+  },
+  "composite_adapter": 1.0,
+  "composite_base": 0.0,
+  "meets_goal": true,
+  "model_identity": {
+    "status": "PASS",
+    "base_model": "Qwen/Qwen3.8-27B",
+    "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "checkpoint_id": "ckpt-leg1",
+    "pin_ref": "/var/folders/py/d8v62mnd40vg77h4cls6n0t80000gn/T/c9742_probe_9d08jg82/leg1_pin.json",
+    "violation": null
+  },
+  "model_admissible": true,
+  "model_identity_violation": null,
+  "goal_done": "YES",
+  "goal_target": "18/18",
+  "reproducibility": {
+    "seed": {
+      "leg1": "leg-seed-20260921",
+      "leg2": "leg-seed-20260921"
+    },
+    "seed_match": true,
+    "same_seed": true
+  },
+  "adapter_applied_marker": true,
+  "adapter_probe_differs_marker": true,
+  "adapter_applied": true,
+  "adapter_probe_differs": true,
+  "fail_closed_markers": {
+    "adapter_applied": {
+      "source": "envelope",
+      "value": true,
+      "leg1": true,
+      "leg2": true
+    },
+    "adapter_probe_differs": {
+      "source": "envelope",
+      "value": true,
+      "leg1": true,
+      "leg2": true
+    }
+  },
+  "independent_second_leg": true,
+  "independence_bar": "harness/state/leg2_independence_bar.md",
+  "candidates_differ_from_base": {
+    "leg1": {
+      "status": "UNKNOWN",
+      "reason": "candidates_differ_artifact_absent",
+      "n_checked": null,
+      "base_source_sha": null,
+      "ref": null
+    },
+    "leg2": {
+      "status": "UNKNOWN",
+      "reason": "candidates_differ_artifact_absent",
+      "n_checked": null,
+      "base_source_sha": null,
+      "ref": null
+    }
+  },
+  "candidates_vs_base_gate": {
+    "leg1": {
+      "status": "PASS",
+      "n_checked": 18,
+      "n_byte_match": 0,
+      "limit": 9,
+      "max_fraction": 0.5,
+      "matching_task_ids": []
+    },
+    "leg2": {
+      "status": "PASS",
+      "n_checked": 18,
+      "n_byte_match": 0,
+      "limit": 9,
+      "max_fraction": 0.5,
+      "matching_task_ids": []
+    }
+  },
+  "leg1": {
+    "ref": "/var/folders/py/d8v62mnd40vg77h4cls6n0t80000gn/T/c9742_probe_9d08jg82/leg1.json",
+    "runner_mechanism": "parallel-3-slice",
+    "max_new_tokens": 384,
+    "box": "ASI2",
+    "independence": {
+      "leg_process_id": "legpid-leg1",
+      "candidate_cache_id": "candcache-leg1",
+      "window_id": "win-leg1",
+      "transport": "transport-leg1"
+    },
+    "markers": {
+      "adapter_applied": true,
+      "adapter_probe_differs": true
+    }
+  },
+  "leg2": {
+    "ref": "/var/folders/py/d8v62mnd40vg77h4cls6n0t80000gn/T/c9742_probe_9d08jg82/leg2.json",
+    "runner_mechanism": "sequential-single-slice",
+    "max_new_tokens": 384,
+    "box": "ASI2",
+    "independence": {
+      "leg_process_id": "legpid-leg2",
+      "candidate_cache_id": "candcache-leg2",
+      "window_id": "win-leg2",
+      "transport": "transport-leg2"
+    },
+    "markers": {
+      "adapter_applied": true,
+      "adapter_probe_differs": true
+    }
+  },
+  "per_task": {
+    "quantum_gate_alias_normalization": {
+      "adapter_pass": true,
+      "base_pass": false
+    },
+    "quantum_phase_estimation_circuit": {
+      "adapter_pass": true,
+      "base_pass": false
+    },
+    "quantum_qaoa_maxcut": {
+      "adapter_pass": true,
+      "base_pass": false
+    },
+    "quantum_superdense_coding": {
+      "adapter_pass": true,
+      "base_pass": false
+    },
+    "quantum_grover_oracle_diffusion": {
+      "adapter_pass": true,
+      "base_pass": false
+    },
+    "quantum_density_matrix_partial_trace": {
+      "adapter_pass": true,
+      "base_pass": false
+    },
+    "quantum_error_correction_shor_9qubit": {
+      "adapter_pass": true,
+      "base_pass": false
+    },
+    "quantum_trotterized_hamiltonian_evolution": {
+      "adapter_pass": true,
+      "base_pass": false
+    },
+    "quantum_channel_depolarizing": {
+      "adapter_pass": true,
+      "base_pass": false
+    },
+    "quantum_ghz_state_witness": {
+      "adapter_pass": true,
+      "base_pass": false
+    },
+    "quantum_pennylane_vqe_h2": {
+      "adapter_pass": true,
+      "base_pass": false
+    },
+    "quantum_cirq_qaoa_line": {
+      "adapter_pass": true,
+      "base_pass": false
+    },
+    "quantum_braket_bell_state": {
+      "adapter_pass": true,
+      "base_pass": false
+    },
+    "quantum_qiskit_qft_entangled": {
+      "adapter_pass": true,
+      "base_pass": false
+    },
+    "quantum_qiskit_stabilizer_5qubit_code": {
+      "adapter_pass": true,
+      "base_pass": false
+    },
+    "quantum_pennylane_qml_iris_classification": {
+      "adapter_pass": true,
+      "base_pass": false
+    },
+    "quantum_phase_register_roundtrip": {
+      "adapter_pass": true,
+      "base_pass": false
+    },
+    "quantum_binary_measurement_decoder": {
+      "adapter_pass": true,
+      "base_pass": false
+    }
+  },
+  "composed_utc": "2026-09-24T01:52:12Z",
+  "card": "C-9742",
+  "_DISCLAIMER": "SYNTHETIC composition-path demonstration only. Composed from deterministic fixture legs, NOT a real adapter measurement. Proves the canonical two-leg fail-closed composition path is READY and ends in goal_done=YES when a real adapter reaches 18/18 + beats_base + model-admissible identity. Best REAL measured pass_adapter today is 3/18 (beats_base=false).",
+  "superseded": true,
+  "superseded_reason": "C-9744: synthetic demo fixture; falsely retired the goal at 2026-09-24T01:53:00Z before the _DISCLAIMER guard existed. Marked superseded as defense-in-depth; goal reopened."
+}

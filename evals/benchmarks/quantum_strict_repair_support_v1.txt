@@ -1,0 +1,6 @@
+# Support tasks added to strengthen strict unseen quantum generalization
+# without leaking the strict evaluation task ids.
+quantum_gate_alias_registry_cleanup
+quantum_phase_register_roundtrip
+quantum_maxcut_partition_ranker
+quantum_pauli_message_codec

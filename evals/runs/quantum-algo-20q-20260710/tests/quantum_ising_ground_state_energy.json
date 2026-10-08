@@ -1,0 +1,7 @@
+{
+  "id": "quantum_ising_ground_state_energy",
+  "title": "Transverse-field Ising ground energy on 2 qubits",
+  "expected_substrings": [
+    "Ground state energy = -1.414214"
+  ]
+}

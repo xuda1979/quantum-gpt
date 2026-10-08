@@ -1,0 +1,30 @@
+{
+  "quantum_density_matrix_partial_trace": [
+    {
+      "rank": 1,
+      "score": 1.9813,
+      "source": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/density_matrix_partial_trace.md"
+    }
+  ],
+  "quantum_qaoa_maxcut": [
+    {
+      "rank": 1,
+      "score": 1.9944,
+      "source": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/qaoa_maxcut.md"
+    }
+  ],
+  "quantum_channel_depolarizing": [
+    {
+      "rank": 1,
+      "score": 1.25,
+      "source": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/depolarizing_channel.md"
+    }
+  ],
+  "quantum_vqe_energy_minimization": [
+    {
+      "rank": 1,
+      "score": 1.8722,
+      "source": "/Users/daxu/software/quantum-gpt/docs/quantum_libraries/vqe_basics.md"
+    }
+  ]
+}

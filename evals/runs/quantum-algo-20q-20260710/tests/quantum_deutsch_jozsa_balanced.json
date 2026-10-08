@@ -1,0 +1,8 @@
+{
+  "id": "quantum_deutsch_jozsa_balanced",
+  "title": "Deutsch-Jozsa on a balanced function",
+  "expected_substrings": [
+    "Measurement: ",
+    "Function is: balanced"
+  ]
+}

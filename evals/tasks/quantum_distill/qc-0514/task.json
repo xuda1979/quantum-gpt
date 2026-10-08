@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0514",
+  "name": "Write a runnable Qiskit Deutsch-Jozsa program with a balanced oracle (x_2 (the b",
+  "task_prompt": "Write a runnable Qiskit Deutsch-Jozsa program with a balanced oracle (x_2 (the bit x[2])) on 4 qubits. Return the entire program in one piece, ready to run without any modification."
+}

@@ -1,0 +1,19 @@
+Write a complete, runnable Python program using numpy and qiskit that:
+1. Builds the 3-qubit Heisenberg Hamiltonian with open boundary conditions
+   and a longitudinal field:
+   H = J*(XXI + IXX + YYI + IYY + ZZI + IZZ) + h*(ZII + IZI + IIZ)
+   with J=1.0, h=0.5.
+2. Prepares the initial state |100> (qubit 0 in |1>, others |0>).
+3. Trotterizes the time evolution exp(-i H t) using N_trotter=4 steps of
+   size dt = 0.1 (total t = 0.4). Use the standard first-order Trotter
+   decomposition:
+     exp(-i H dt) ~ prod_{terms} exp(-i term dt)
+   where each term is a single Pauli-string (XXI, IXX, YYI, etc.).
+4. Computes <X0>(t) and <Z0>(t) from the final statevector.
+5. In `def main()`, prints exactly these lines (values rounded to 4 decimals):
+     Total time = 0.4000
+     <X0>(t) = <value>
+     <Z0>(t) = <value>
+     State norm = 1.0000
+     Trotter steps = 4
+Call main() under `if __name__ == "__main__":`.

@@ -1,0 +1,9 @@
+{
+  "id": "quantum_rl_v5_gapfill_register_phase_roundtrip",
+  "name": "Phase-register roundtrip pair (exact holdout API)",
+  "domain": "quantum",
+  "category": "interface_contract",
+  "task_prompt": "Respond with a single runnable Python file using only numpy and the standard library. Define every required function with the EXACT names given; a missing or misnamed entry point fails immediately. Include assert-based self-tests that fail loudly, print nothing on success, and use no randomness or remote services. Implement a phase-register roundtrip pair: phase_to_register_bits(phase, n_qubits) quantizing a phase in [0, 1) to n_qubits bits (int(phase * 2**n_qubits), most-significant bit first, ValueError outside [0, 1) or for non-positive n_qubits), and register_bits_to_phase(bits) recovering integer/2**n (ValueError on an empty list or any bit not 0 or 1). Assert the 0.375-at-3-qubits roundtrip returns exactly 0.375, register_bits_to_phase([1, 1, 0]) == 0.75, and register_bits_to_phase([1, 2]) raises ValueError.",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

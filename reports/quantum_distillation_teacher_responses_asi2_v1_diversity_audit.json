@@ -1,0 +1,55 @@
+{
+  "chatml_rows": 11,
+  "errors": [
+    "chatml ids do not match accepted generated ids: missing=1 extra=0"
+  ],
+  "eval_rows": 3,
+  "generated_categories": {
+    "algorithm_implementation": 3,
+    "hardware_compilation": 2,
+    "library_api_grounding": 3,
+    "noise_and_mitigation": 2,
+    "quantum_engineering": 2
+  },
+  "generated_frameworks": {
+    "braket": 2,
+    "cirq": 2,
+    "cuda-quantum": 2,
+    "pennylane": 2,
+    "pyzx": 2,
+    "qiskit": 2
+  },
+  "generated_rows": 12,
+  "generated_source_doc_count": 12,
+  "generated_task_types": {
+    "agentic_trajectory": 3,
+    "implementation": 3,
+    "optimization": 3,
+    "repair": 3
+  },
+  "ok": false,
+  "seed_categories": {
+    "algorithm_implementation": 3,
+    "hardware_compilation": 2,
+    "library_api_grounding": 3,
+    "noise_and_mitigation": 2,
+    "quantum_engineering": 2
+  },
+  "seed_frameworks": {
+    "braket": 2,
+    "cirq": 2,
+    "cuda-quantum": 2,
+    "pennylane": 2,
+    "pyzx": 2,
+    "qiskit": 2
+  },
+  "seed_rows": 12,
+  "seed_source_doc_count": 12,
+  "seed_task_types": {
+    "agentic_trajectory": 3,
+    "implementation": 3,
+    "optimization": 3,
+    "repair": 3
+  },
+  "train_rows": 8
+}

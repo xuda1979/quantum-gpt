@@ -28,12 +28,12 @@ S3_MODEL_DIR="$S3_ROOT/models/$MODEL_SUBDIR"
 
 while true; do
   ts="$(date '+%F %T %Z')"
-  if "$RCLONE_BIN" lsf "$S3_MODEL_DIR" | rg -qx 'model.safetensors'; then
-    echo "[$ts] detected model.safetensors for $MODEL_SUBDIR in S3; starting ai2 model sync"
+  if bash scripts/model_snapshot_s3_ready.sh "$MODEL_SUBDIR" >/dev/null 2>&1; then
+    echo "[$ts] detected a complete model snapshot for $MODEL_SUBDIR in S3; starting ai2 model sync"
     bash scripts/ai2_sync_model_from_s3.sh "$MODEL_SUBDIR"
     echo "[$ts] ai2 model sync completed for $MODEL_SUBDIR"
     exit 0
   fi
-  echo "[$ts] waiting for model.safetensors in $S3_MODEL_DIR"
+  echo "[$ts] waiting for a complete model snapshot in $S3_MODEL_DIR"
   sleep "$POLL_SECONDS"
 done

@@ -1,0 +1,21 @@
+# Quantum generalization holdout v3 (multi-framework, hard).
+#
+# Purpose: extend the strict unseen holdout to cover the 5 frameworks that
+# iter-2 diagnosis identified as gaps (Cirq, PennyLane, Braket, plus harder
+# Qiskit tasks and a quantum-ML task). These task ids are HELD OUT of every
+# training split used since iter-1; do NOT add any of them to a training
+# source JSONL.
+#
+# Author: Track C.2 (parallel session B), 2026-07-07.
+# Disjoint from:
+#   quantum_generalization_holdout_v1.txt
+#   quantum_generalization_holdout_v2_hard.txt
+#   quantum_grpo_training_v{1..5}*.txt
+#
+# New multi-framework hard holdout tasks (6):
+quantum_pennylane_vqe_h2
+quantum_cirq_qaoa_line
+quantum_braket_bell_state
+quantum_qiskit_qft_entangled
+quantum_qiskit_stabilizer_5qubit_code
+quantum_pennylane_qml_iris_classification

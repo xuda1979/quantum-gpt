@@ -1,0 +1,92 @@
+{
+  "name": "self_correcting_distill_27b_v1",
+  "student_model": {
+    "base_model": "Qwen/Qwen3.6-27B",
+    "adapter_path": "models/Qwen3.6-27B/self_correcting_distill_27b_v1/adapter_init",
+    "serving": {
+      "api_base": "http://127.0.0.1:8007/v1",
+      "api_key_env": "STUDENT_27B_API_KEY",
+      "model": "qwen36-27b-student",
+      "temperature": 0.3,
+      "max_tokens": 4096,
+      "timeout_seconds": 600
+    }
+  },
+  "teacher_model": {
+    "model": "glm5.2",
+    "api_base_env": "GLM52_API_BASE",
+    "api_key_env": "GLM52_API_KEY",
+    "temperature": 0.0,
+    "max_tokens": 4096,
+    "top_logprobs": 20,
+    "timeout_seconds": 900
+  },
+  "dataset_spec": {
+    "target_question_count": 8000,
+    "question_pool_sources": [
+      "data/seed/quantum_distillation_seed_questions_asi2_v1.jsonl",
+      "data/seed/quantum_rag_seed_questions.jsonl",
+      "data/seed/quantum_llm_plan_seed.jsonl",
+      "evals/tasks/quantum"
+    ],
+    "min_unique_questions": 8000,
+    "domain_balance": {
+      "circuit_construction": 0.18,
+      "algorithm_implementation": 0.22,
+      "library_api_grounding": 0.18,
+      "quantum_engineering": 0.12,
+      "error_correction": 0.08,
+      "noise_and_mitigation": 0.08,
+      "hardware_compilation": 0.07,
+      "multi_framework_port": 0.07
+    },
+    "framework_distribution": {
+      "qiskit": 0.3,
+      "pennylane": 0.16,
+      "cirq": 0.12,
+      "braket": 0.08,
+      "pyquil": 0.05,
+      "qsharp": 0.04,
+      "isq": 0.08,
+      "cuda-quantum": 0.07,
+      "mitiq": 0.05,
+      "pyzx": 0.05
+    },
+    "difficulty_distribution": {
+      "easy": 0.2,
+      "medium": 0.5,
+      "hard": 0.3
+    }
+  },
+  "pipeline": {
+    "student_samples_per_question": 1,
+    "max_teacher_corrections_per_question": 1,
+    "execution_timeout_seconds": 30,
+    "pass_threshold": 1.0,
+    "run_harness_when_available": true,
+    "teacher_judge_when_no_harness": true
+  },
+  "sample_format": {
+    "user_template": "Question:\n{question}\n\nStudent code:\n```python\n{student_code}\n```\n\nDo you think the code is correct?",
+    "assistant_target": "teacher_critique_and_correct_answer",
+    "preserve_teacher_logits": true,
+    "top_logprobs_per_token": 20
+  },
+  "splits": {
+    "train_ratio": 0.9,
+    "eval_ratio": 0.1,
+    "split_method": "stable_sha256_sorted_90_10"
+  },
+  "output_dir": "data/generated/self_correcting_distill_27b_v1",
+  "seed": 20260702,
+  "git_sync": {
+    "enabled": true,
+    "interval": 100,
+    "push": true,
+    "remote": "origin",
+    "branch": "",
+    "add_paths": [],
+    "author_name": "distill-bot",
+    "author_email": "distill-bot@local"
+  }
+}

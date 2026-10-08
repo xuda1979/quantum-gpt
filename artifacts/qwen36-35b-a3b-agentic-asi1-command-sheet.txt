@@ -1,0 +1,94 @@
+# Qwen3.6 35B A3B agentic GRPO on Huanxin ASI1
+
+Use ASI1 for this work. Do not silently fall back to AI, ASI2, or ai2.
+
+Local validation:
+  bash -n scripts/submit_asi1_preflight_task.sh scripts/probe_asi1_task_status.sh scripts/launch_huanxin_agentic_grpo.sh scripts/launch_qwen36_35b_a3b_agentic_grpo_ai3.sh
+  node -c browser-automation/huanxin_submit_task_run.js browser-automation/huanxin_task_status_probe.js
+  python3 -m py_compile training/agentic_grpo_trainer.py training/agent_trajectory_rollout.py scripts/validate_agentic_grpo_run_artifacts.py
+  python3 -m pytest tests/test_submit_asi1_preflight_task.py tests/test_probe_asi1_task_status.py tests/test_huanxin_submit_task_route.py tests/test_huanxin_agentic_launcher.py tests/test_agent_trajectory_rollout.py tests/test_agentic_grpo_trainer.py tests/test_validate_agentic_grpo_run_artifacts.py
+
+Known ASI1 shell blocker:
+  scripts/huanxin_env_shell.sh --env ASI1 "<cmd>"
+
+This shell path currently fails at the platform layer with getShellVisitUrl code=170022 / wss://aihuanxin.cn/kunlun/null. Use task submission for preflight until the shell endpoint is repaired.
+
+Task-based ASI1 preflight:
+  bash scripts/submit_asi1_preflight_task.sh \
+    --submit \
+    --artifact-stem huanxin-submit-task-run-asi1-preflight-newline-YYYYMMDDHHMM \
+    --task-name asi1-preflight-HHMM
+
+Poll status and task logs:
+  bash scripts/probe_asi1_task_status.sh \
+    --task-id <task-id> \
+    --task-name <task-name> \
+    --open-pod-log \
+    --artifact-stem huanxin-task-log-asi1-preflight-newline-YYYYMMDDHHMM
+
+Latest passing ASI1 preflight:
+  task name: asi1-preflight-1742
+  task id: dt-482774d5b4a64105b719d0a5c8f98745
+  status: success
+  runtime: 00:00:02
+  remote root: /root/work/quantum-gpt
+  model path: /root/work/filestorage/Qwen3.6-35B-A3B-W8A8
+  trainer: training/agentic_grpo_trainer.py exists
+  benchmark: evals/benchmarks/agentic_coding_trajectory_training_v1.txt exists
+  Python: 3.11.14
+  dependencies:
+    torch=True
+    torch_npu=True
+    transformers=True
+    peft=False
+    accelerate=False
+
+Current blocker:
+  Install or otherwise provide peft and accelerate in the ASI1 task runtime. Do not launch SFT, DPO, or GRPO until a follow-up ASI1 preflight reports peft=True and accelerate=True.
+
+Fresh operational blocker:
+  /root/work is now completely full on the NAS mount (0 avail). Direct writes back into /root/work/quantum-gpt fail with Errno 122 disk quota exceeded. Use /tmp or the overlay-backed /workspace filesystem for wheel staging, decode, install, and any future remote outputs.
+
+ASI1 wheelhouse repair evidence:
+  asi1-wheel-sync-20260523b failed with bash `;&` syntax while still using a multiline/rclone payload.
+  asi1-wheel-sync-20260523c proved comma-containing inline Python is split in Huanxin codeContents.
+  asi1-wheel-sync-20260523d proved redirection/ampersands are HTML-escaped into bash (`&gt;`, `&amp;`) and cause `;&`.
+  asi1-wheel-sync-20260523e used a payload with no newline, comma, `>`, or `&`; it reached:
+    __ASI1_WHEELHOUSE_SYNC_START__
+    /root/work/quantum-gpt
+    root
+    Python 3.11.14
+  It then stopped before wheel sync/install, likely because the ASI1 task image lacks the freshly added helper files under /root/work/quantum-gpt.
+
+Locally verified safer embedded wheelhouse fallback:
+  scripts/submit_asi1_embedded_wheelhouse_task.sh now stages under /tmp/asi1-wheelhouse and does not depend on rclone, scripts/iner_s3_env.sh, remote tools/wheels, or writes into /root/work/tools/wheels.
+  Generated embedded execution_command scan:
+    newline=False
+    comma=False
+    gt=False
+    amp=False
+  Supporting scripts:
+    scripts/append_text_file.py
+    scripts/decode_base64_file.py
+    scripts/validate_wheelhouse.py
+  Focused validation:
+    python3 -m py_compile scripts/append_text_file.py scripts/decode_base64_file.py scripts/validate_wheelhouse.py
+    python3 -m pytest tests/test_submit_asi1_embedded_wheelhouse_task.py tests/test_submit_asi1_wheelhouse_sync_task.py tests/test_submit_asi1_signed_wheelhouse_task.py
+  Result: 8 passed.
+
+Next ASI1 dependency-repair step:
+  Ensure the small helper scripts above exist in ASI1 /root/work/quantum-gpt, or use a task image/path that includes them, then submit:
+    bash scripts/submit_asi1_embedded_wheelhouse_task.sh \
+      --submit \
+      --task-name asi1-wheel-embed-UNIQUE \
+      --artifact-stem huanxin-submit-task-run-asi1-embedded-wheelhouse-UNIQUE
+  Poll with:
+    bash scripts/probe_asi1_task_status.sh \
+      --task-name asi1-wheel-embed-UNIQUE \
+      --open-pod-log
+
+Dry-run the rendered GRPO launch command after dependency gate passes:
+  scripts/launch_huanxin_agentic_grpo.sh --env ASI1 --remote-root /root/work/quantum-gpt --model-name /root/work/filestorage/Qwen3.6-35B-A3B-W8A8 --benchmark-file evals/benchmarks/agentic_coding_trajectory_training_v1.txt --dry-run --group-size 8 --grpo-steps 64 --max-turns 30 --max-new-tokens 32768 --max-seq-length 32768 --visible-devices 0,1,2,3,4,5,6,7 --nproc-per-node 8
+
+Launch only after all gates pass:
+  scripts/launch_huanxin_agentic_grpo.sh --env ASI1 --remote-root /root/work/quantum-gpt --model-name /root/work/filestorage/Qwen3.6-35B-A3B-W8A8 --benchmark-file evals/benchmarks/agentic_coding_trajectory_training_v1.txt --group-size 8 --grpo-steps 64 --max-turns 30 --max-new-tokens 32768 --max-seq-length 32768 --visible-devices 0,1,2,3,4,5,6,7 --nproc-per-node 8

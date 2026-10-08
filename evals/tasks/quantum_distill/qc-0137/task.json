@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0137",
+  "name": "Here is a quantum coding exercise. Write a runnable Qiskit Deutsch-Jozsa program",
+  "task_prompt": "Here is a quantum coding exercise. Write a runnable Qiskit Deutsch-Jozsa program with a constant oracle (1 for all x) on 2 qubits. Return the entire program in one piece, ready to run without any modification."
+}

@@ -1,0 +1,7 @@
+# Strict unseen quantum generalization benchmark for Gemma 4 curriculum-mix-v1.
+# These tasks are held out of the training split in
+# data/generated/gemma4-quantum-full-v1 (task_disjoint_v1 holdout policy).
+# Use this file for GRPO evaluation on unseen tasks after SFT.
+quantum_maxcut_assignment_enumerator
+quantum_stabilizer_tableau_update_repair
+quantum_superdense_coding

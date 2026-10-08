@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3_sampling",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0625",
+  "name": "Quantum computing task: Write a complete Cirq program that creates a Bell state,",
+  "task_prompt": "Quantum computing task: Write a complete Cirq program that creates a Bell state, samples it 2000 times, and prints the histogram of outcomes. Give one complete script that runs end-to-end on its own and prints the outcome."
+}

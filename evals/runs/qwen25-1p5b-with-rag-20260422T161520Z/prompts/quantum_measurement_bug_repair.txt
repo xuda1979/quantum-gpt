@@ -1,0 +1,146 @@
+Task ID: quantum_measurement_bug_repair
+Task name: Measurement mapping bug repair
+Domain: quantum
+Category: debug_repair
+
+Reference documentation (use these only as background; do not echo them):
+--- BEGIN REFERENCE DOCS ---
+[DOC 1] source=TOOLS.md
+[source: daxu/software/quantum-gpt/TOOLS.md] [daxu/software/quantum-gpt/TOOLS.md]
+
+install_huanxin_safari_keepalive_agent.sh --install`.
+- Check the LaunchAgent with `bash scripts/install_huanxin_safari_keepalive_agent.sh --status`.
+- For one-command diagnosis, use `bash scripts/huanxin_status.sh`.
+- Huanxin shell wrappers now default to daemon mode. This is deliberate: it keeps one warm browser session instead of repeatedly relaunching standalone automation.
+- The daemon shell path now self-heals from the existing Safari `#/train-dev` session if Chromium hits Keycloak login during startup.
+- The stable default is still on-demand daemon startup plus Safari-backed self-heal.
+- Browser-profile repair now runs on an isolated Chromium copy and only syncs back to `browser-automation/profile/` after the exact `#/train-dev` app surface is confirmed, so failed repair attempts should no longer poison the stored base profile.
+- There is an optional ai2 daemon LaunchAgent helper in `scripts/install_huanxin_ai2_daemon_agent.sh`, but it is not the default path. Only opt into it explicitly with `H  ...[truncated]
+
+[DOC 2] source=binary_measurement_decoders.md
+[source: quantum-gpt/docs/quantum_libraries/binary_measurement_decoders.md] [quantum-gpt/docs/quantum libraries/binary measurement decoders.md]
+
+# Binary measurement decoders and Pauli routers
+
+## Bit-flip syndrome decoder
+For the 3-qubit bit-flip code, syndrome bits (s1, s2) come from
+measuring Z0Z1 (s1) and Z1Z2 (s2). Decoder:
+
+```python
+SYNDROMES = {
+    (0, 0): None,  # no error
+    (1, 0): 0,     # X on qubit 0
+    (1, 1): 1,     # X on qubit 1
+    (0, 1): 2,     # X on qubit 2
+}
+```
+
+## Bell measurement decoder
+Bell-basis measurement of two qubits returns a pair of classical bits
+(m1, m2) identifying which Bell state was observed:
+
+```python
+BELL_LABELS = {
+    (0, 0): "Phi+",
+    (0, 1): "Psi+",
+    (1, 0): "Phi-",
+    (1, 1): "Psi-",
+}
+```
+
+## Pauli router (superdense / teleport variants)
+Maps a 2-bit input to a single-qubit Pauli operation on a target qubit:
+
+```python
+PAULI_ROUTER = {
+    (0, 0): "I",
+    (0, 1): "X",
+    (1, 0): "Z",
+    (1, 1): "Y",  # or "ZX" depending on convention
+}
+```
+
+When the convention is "ZX = apply X first then Z", the (1, 1) entry is
+equivalent  ...[truncated]
+
+[DOC 3] source=circuit_repair_recipes.md
+[source: quantum-gpt/docs/quantum_libraries/circuit_repair_recipes.md] [quantum-gpt/docs/quantum libraries/circuit repair recipes.md]
+
+# Circuit repair and depth-optimization recipes
+
+## Common micro-bugs in quantum candidate code
+
+1. **Swapped control/target on CNOT**
+   - Symptom: state vector probabilities mirror across qubits.
+   - Fix: re-read protocol; control comes first in `cx(c, t)`.
+
+2. **Missing H before measurement**
+   - Symptom: superdense / teleportation tests fail because Bell-basis
+     measurement was not performed.
+   - Fix: the standard Bell-basis measurement is `CX(0, 1); H(0); measure`.
+
+3. **Wrong endianness for amplitude lists**
+   - Symptom: amplitudes look right for a relabelled state.
+   - Fix: pin endianness once. For lists of 2^n complex numbers, prefer
+     big-endian (qubit 0 = most significant bit).
+
+4. **Float precision drift**
+   - Symptom: `assertEqual` fails on `1/sqrt(2)` produced by repeated
+     normalisation.
+   - Fix: use `math.isclose` or `np.allclose` with `abs_tol=1e-9`.
+
+5. **Missing alias / not raising on unknown gate**
+   - Symptom: gate  ...[truncated]
+--- END REFERENCE DOCS ---
+
+Write the simplest Python file that satisfies the supplied tests and return only that file.
+
+Reference candidate style example (for format guidance, not for blind copying):
+--- BEGIN REFERENCE CANDIDATE ---
+def measurement_mapping(bitstring: str) -> dict[str, int]:
+    """Map q0/q1 to integer measurement results from a two-bit string.
+
+    Input ordering is q1q0, so the rightmost bit is q0.
+    """
+    if len(bitstring) != 2 or any(ch not in "01" for ch in bitstring):
+        raise ValueError("expected a two-bit measurement string")
+    return {"q0": int(bitstring[1]), "q1": int(bitstring[0])}
+
+--- END REFERENCE CANDIDATE ---
+
+Tests the candidate must satisfy:
+--- BEGIN TESTS ---
+import importlib.util
+
+
+def _load(candidate_path: str):
+    spec = importlib.util.spec_from_file_location("candidate", candidate_path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
+def run_tests(candidate_path: str) -> dict:
+    module = _load(candidate_path)
+    ok = True
+    details = []
+
+    if module.measurement_mapping("10") != {"q0": 0, "q1": 1}:
+        ok = False
+        details.append("mapping for '10' was incorrect")
+
+    if module.measurement_mapping("01") != {"q0": 1, "q1": 0}:
+        ok = False
+        details.append("mapping for '01' was incorrect")
+
+    try:
+        module.measurement_mapping("2")
+        ok = False
+        details.append("invalid input should raise ValueError")
+    except ValueError:
+        details.append("invalid input rejected correctly")
+
+    return {"passed": ok, "details": details or ["measurement mapping passed"]}
+
+--- END TESTS ---

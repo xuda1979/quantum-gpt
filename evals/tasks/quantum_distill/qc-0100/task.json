@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0100",
+  "name": "Write a Python function `phase_register_roundtrip(phi, n)` that performs the ful",
+  "task_prompt": "Write a Python function `phase_register_roundtrip(phi, n)` that performs the full round-trip: encode phi into an n-qubit phase register using `encode_phase_register`, then decode it back using `decode_phase_register`, and return (decoded_phase, absolute_error). Use the provided functions from the documentation. Then, for each n in [4, 8, 12] and for each phi in [0.1, 0.25, 0.333333, 0.9], call your function and print the error in a formatted table. Explain why the error decreases as n increases, and why for phi=0.25 the error is zero for n>=4."
+}

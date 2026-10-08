@@ -1,0 +1,27 @@
+Write a complete, runnable Python program using numpy and qiskit that:
+1. Implements the Draper adder for n=3 qubit registers. The circuit takes two
+   3-qubit registers |a>|b> and produces |a>|a+b mod 8>.
+2. Builds the circuit as follows:
+   - Encode a=3 in register 1 (qubits 0..2): X on qubits 0 and 1.
+   - Encode b=2 in register 2 (qubits 3..5): X on qubit 4.
+   - Apply QFT to register 2.
+   - For each q_a in register 1 and q_b in register 2 with q_b >= q_a, apply
+     a controlled-phase gate cp(2*pi / 2^(q_b - q_a + 1)) with control q_a and
+     target q_b.
+   - Apply inverse QFT to register 2.
+3. Simulate with qiskit.quantum_info.Statevector. Take the most-probable
+   bitstring (should be deterministic).
+4. Decode the bitstring: in qiskit's little-endian ordering, register 1 is the
+   rightmost 3 bits (qubits 0..2) and register 2 is the leftmost 3 bits
+   (qubits 3..5). Parse each as a 3-bit integer.
+5. In `def main()`, prints exactly:
+     a = 3
+     b = 2
+     n = 3
+     Top bitstring = <value>
+     Register 1 (a) = 3
+     Register 2 (a+b) = 5
+     Expected sum = 5
+     Correct: <True|False>
+   where Correct is True iff register 2 equals 5 AND register 1 still equals 3.
+Call main() under `if __name__ == "__main__":`.

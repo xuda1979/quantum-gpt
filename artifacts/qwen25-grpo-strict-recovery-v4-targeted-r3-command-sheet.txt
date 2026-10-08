@@ -1,0 +1,77 @@
+# Qwen2.5 strict recovery v4 targeted r3 command sheet
+# Generated on 2026-04-13 after adding train-only targeted analog tasks.
+#
+# Goal:
+# - Continue from the latest verified ai1 GRPO adapter.
+# - Replace the broader v3 hard benchmark with a tighter v4 targeted set that
+#   more directly matches the 4 remaining strict-holdout failure shapes.
+#
+# Starting point:
+# - adapter init:
+#   outputs/qwen25-grpo-strict-recovery-v3-hard-r2-20260413T1715CST/adapter
+# - new benchmark:
+#   evals/benchmarks/quantum_grpo_training_v4_targeted_disjoint.txt
+#
+# Expected local validation before remote launch:
+# - python3 -m pytest -q tests/test_quantum_grpo_targeted_support_tasks.py tests/test_grpo_training_benchmark_v4.py
+
+## Sync only the new targeted benchmark/tasks to S3
+bash scripts/push_to_s3.sh \
+  evals/tasks/quantum/gate_alias_casefold_barrier \
+  evals/tasks/quantum/phase_measurement_register \
+  evals/tasks/quantum/bitstring_maxcut_landscape \
+  evals/tasks/quantum/superdense_pauli_router \
+  evals/benchmarks/quantum_grpo_training_v4_targeted_disjoint.txt
+
+## Sync S3 to AI1
+bash scripts/ai1_sync_from_s3.sh
+
+## Verify AI1 sees the new benchmark and tasks
+bash scripts/ai1_shell.sh "cd /root/root/work/quantum-gpt && \
+python3 - <<'PY'\nfrom pathlib import Path\npaths = [\n    Path('evals/benchmarks/quantum_grpo_training_v4_targeted_disjoint.txt'),\n    Path('evals/tasks/quantum/gate_alias_casefold_barrier/task.json'),\n    Path('evals/tasks/quantum/phase_measurement_register/task.json'),\n    Path('evals/tasks/quantum/bitstring_maxcut_landscape/task.json'),\n    Path('evals/tasks/quantum/superdense_pauli_router/task.json'),\n]\nfor path in paths:\n    print(f'{path}:', 'OK' if path.exists() else 'MISSING')\nPY"
+
+## Launch targeted GRPO continuation on AI1
+bash scripts/ai1_shell.sh "cd /root/root/work/quantum-gpt && python3 scripts/launch_qwen25_grpo_background.py \
+  --adapter-init outputs/qwen25-grpo-strict-recovery-v3-hard-r2-20260413T1715CST/adapter \
+  --benchmark-file evals/benchmarks/quantum_grpo_training_v4_targeted_disjoint.txt \
+  --output-dir outputs/qwen25-grpo-strict-recovery-v4-targeted-r3-20260413TXXXXCST \
+  --log-path /tmp/qwen25_grpo_v4_targeted_r3.log"
+
+## Monitor targeted GRPO
+bash scripts/ai1_shell.sh "tail -n 60 /tmp/qwen25_grpo_v4_targeted_r3.log"
+bash scripts/ai1_shell.sh "ps aux | grep torchrun | grep qwen25-grpo-strict-recovery-v4-targeted-r3 | grep -v grep || echo FINISHED"
+
+## Evaluate strict holdout after completion
+bash scripts/ai1_shell.sh "cd /root/root/work/quantum-gpt && python3 scripts/run_hf_pass1_eval.py \
+  --run-dir evals/runs/qwen25-grpo-strict-recovery-v4-targeted-r3-eval-20260413TXXXXCST \
+  --base-model models/Qwen2.5-1.5B-Instruct \
+  --adapter outputs/qwen25-grpo-strict-recovery-v4-targeted-r3-20260413TXXXXCST/adapter \
+  --device npu \
+  --token-budget-preset quantum_heavy \
+  --score"
+
+## Pull results back to local
+bash scripts/ai1_push_results_to_s3.sh \
+  outputs/qwen25-grpo-strict-recovery-v4-targeted-r3-20260413TXXXXCST \
+  evals/runs/qwen25-grpo-strict-recovery-v4-targeted-r3-eval-20260413TXXXXCST
+
+## Sync local from S3 and summarize
+bash scripts/pull_from_s3.sh \
+  outputs/qwen25-grpo-strict-recovery-v4-targeted-r3-20260413TXXXXCST \
+  evals/runs/qwen25-grpo-strict-recovery-v4-targeted-r3-eval-20260413TXXXXCST
+
+python3 scripts/summarize_override_scorecard.py \
+  --scorecard evals/runs/qwen25-grpo-strict-recovery-v4-targeted-r3-eval-20260413TXXXXCST/scorecard.json \
+  --output reports/qwen25_grpo_v4_targeted_r3_eval_20260413_override_summary.json
+
+python3 scripts/build_strict_scorecard_comparison.py \
+  --baseline-scorecard evals/runs/qwen25-quantum-generalization-holdout-base-rerun-20260412/scorecard.json \
+  --baseline-label qwen25_base_rerun_20260412 \
+  --candidate-scorecard evals/runs/qwen25-grpo-strict-recovery-v4-targeted-r3-eval-20260413TXXXXCST/scorecard.json \
+  --candidate-label qwen25_grpo_v4_targeted_r3_20260413 \
+  --output reports/qwen25_strict_holdout_base_vs_ai1_grpo_v4_targeted_r3_20260413.json
+
+python3 scripts/assert_no_strict_holdout_regression.py \
+  --comparison reports/qwen25_strict_holdout_base_vs_ai1_grpo_v4_targeted_r3_20260413.json \
+  --min-strict-delta-passes 0 \
+  --output reports/qwen25_grpo_v4_targeted_r3_regression_gate_20260413.json

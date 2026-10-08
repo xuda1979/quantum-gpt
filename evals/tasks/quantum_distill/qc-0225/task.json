@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0225",
+  "name": "Implement a Python function `get_gate_matrix(gate_name: str, params: Optional[Di",
+  "task_prompt": "Implement a Python function `get_gate_matrix(gate_name: str, params: Optional[Dict] = None) -> np.ndarray` that returns the matrix representation of a quantum gate based on the provided reference. The function must support all single-qubit gates (I, X, Y, Z, H, S, Sdg, T, Tdg, Rx, Ry, Rz), two-qubit gates (CX, CY, CZ, SWAP, CH, CRZ), and three-qubit gates (CCX, CSWAP). Use the alias normalization table to canonicalize gate names. For rotation gates, the parameter 't' should be provided in params. For CRZ, the parameter 't' is also required. The function should raise a ValueError for unknown gate names. Additionally, implement a helper function `apply_gate(state: np.ndarray, gate_matrix: np.ndarray, qubits: List[int]) -> np.ndarray` that applies a gate to a multi-qubit state vector (assume qubits are indexed from 0). Provide a simple test that verifies the Hadamard gate on |0> and the CNOT gate on |00>."
+}

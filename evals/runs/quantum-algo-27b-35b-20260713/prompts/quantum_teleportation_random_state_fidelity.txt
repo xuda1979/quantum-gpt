@@ -1,0 +1,21 @@
+Write a complete, runnable Python program using numpy and qiskit that:
+1. Prepares a random 1-qubit pure state |psi> (use a fixed RNG seed for
+   reproducibility).
+2. Builds the standard teleportation circuit on 3 qubits:
+   - Initialize qubit 0 to |psi>.
+   - Create a Bell pair on qubits 1 and 2 (H on qubit 1, CX(1,2)).
+   - Alice performs CX(0,1) then H(0), then measures qubits 0 and 1.
+3. Simulate WITHOUT a backend: evolve the full 3-qubit statevector, then
+   explicitly project qubits 0 and 1 onto each classical outcome (00, 01, 10,
+   11), renormalize, and apply the appropriate X and/or Z correction to qubit 2
+   (X if measurement of qubit 1 is 1; Z if measurement of qubit 0 is 1).
+4. For each outcome, compute the reduced density matrix of qubit 2 and its
+   fidelity with |psi>. Average over outcomes weighted by their probabilities.
+5. In `def main()`, prints exactly:
+     Teleported state: random pure 1-qubit
+     Average fidelity = <value rounded to 4 decimals>
+     Classical limit = 0.6667
+     Beats classical: <True|False>
+     Perfect teleport: <True|False>
+   where Perfect teleport is True iff the average fidelity is within 1e-6 of 1.0.
+Call main() under `if __name__ == "__main__":`.

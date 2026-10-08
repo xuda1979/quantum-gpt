@@ -1,0 +1,10 @@
+{
+  "domain": "quantum",
+  "category": "distill_v3",
+  "candidate_file": "solution.py",
+  "test_file": "tests.py",
+  "allowed_import_roots": [],
+  "id": "qc-0848",
+  "name": "Solve this quantum programming problem. Demonstrate the parameter-shift rule in ",
+  "task_prompt": "Solve this quantum programming problem. Demonstrate the parameter-shift rule in PennyLane: define a QNode <Z> = f(RY(theta)) and verify qml.grad matches the manual shift formula (f(t+pi/2)-f(t-pi/2))/2 at theta=0.305. Write the full runnable code (all imports included); executing it should print the results."
+}

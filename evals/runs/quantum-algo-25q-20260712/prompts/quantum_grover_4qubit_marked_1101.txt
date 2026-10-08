@@ -1,0 +1,14 @@
+Write a complete, runnable Python program using Qiskit 2.x that:
+1. Implements Grover's algorithm on n=4 qubits with the marked state |1101> (MSB-first).
+2. Uses the optimal number of iterations floor(pi/4 * sqrt(N)) for N=16.
+3. Builds the oracle: flip the phase of |1101> (apply X to qubits where the marked bit is 0,
+   then multi-controlled Z via H + MCX + H, then undo X).
+4. Builds the diffuser: H^{⊗n}, X^{⊗n}, multi-controlled Z, X^{⊗n}, H^{⊗n}.
+5. Initializes uniform superposition, applies oracle+diffuser the optimal number of times,
+   measures all qubits with StatevectorSampler (>= 4000 shots).
+6. In `def main()`, prints:
+     Top measurement: <4-bit string>
+     P(marked=1101) = <value rounded to 3 decimals>
+     Iterations: <integer>
+   Expected: Top measurement = 1101, P(marked=1101) >= 0.9, Iterations = 3.
+Call main() under `if __name__ == "__main__":`.

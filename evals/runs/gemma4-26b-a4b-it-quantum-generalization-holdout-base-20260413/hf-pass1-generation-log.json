@@ -1,0 +1,35 @@
+{
+  "generated_at_utc": "2026-04-13T19:38:05Z",
+  "base_model": "models/gemma-4-26B-A4B-it",
+  "adapter": null,
+  "device": "cpu",
+  "max_new_tokens": 512,
+  "temperature": 0.0,
+  "turboquant": null,
+  "tasks": [
+    {
+      "task_id": "quantum_gate_alias_normalization",
+      "candidate_path": "candidates/quantum_gate_alias_normalization.py",
+      "output_chars": 600,
+      "started_at_sec": 2795.349
+    },
+    {
+      "task_id": "quantum_phase_estimation_circuit",
+      "candidate_path": "candidates/quantum_phase_estimation_circuit.py",
+      "output_chars": 1017,
+      "started_at_sec": 7210.718
+    },
+    {
+      "task_id": "quantum_qaoa_maxcut",
+      "candidate_path": "candidates/quantum_qaoa_maxcut.py",
+      "output_chars": 1279,
+      "started_at_sec": 12757.4
+    },
+    {
+      "task_id": "quantum_superdense_coding",
+      "candidate_path": "candidates/quantum_superdense_coding.py",
+      "output_chars": 706,
+      "started_at_sec": 16463.535
+    }
+  ]
+}

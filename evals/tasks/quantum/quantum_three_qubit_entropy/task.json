@@ -1,0 +1,8 @@
+{
+  "id": "quantum_three_qubit_entropy",
+  "name": "Three-qubit partial trace and von Neumann entropy",
+  "domain": "quantum",
+  "category": "algorithm_implementation",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

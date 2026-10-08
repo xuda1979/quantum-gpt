@@ -1,0 +1,19 @@
+Write a complete, runnable Python program using pennylane, numpy, and scipy that:
+1. Defines a 4-qubit PennyLane device with wires=[0,1,2,3] and 1000 shots.
+2. Defines the H2 Hamiltonian (STO-3G, parity mapping, 2 frozen core)
+   using the same Pauli-term coefficients as in problem 2:
+   H = -0.8105 * I + 0.1722 * (Z0 + Z1) - 0.2258 * (Z0Z1 + Z2Z3)
+       + 0.1209 * Z0Z1Z2Z3 + 0.1689 * (Z0Z2 + Z1Z3)
+       + 0.0452 * (Z0Z3 + Z1Z2)
+   Use qml.operation.Tensor or qml.Hamiltonian with the correct wires.
+3. Implements a 2-qubit hardware-efficient ansatz on wires [2, 3]
+   (Ry, Ry, CNOT(2,3), Ry, Ry) with 4 parameters.
+4. Optimizes using scipy.optimize.minimize with method='COBYLA',
+   maxiter=300, tol=1e-5. Use qml.ExpvalCost or the qml.expval interface.
+5. In `def main()`, prints exactly these lines (values rounded to 4 decimals):
+     VQE energy = <value>
+     Optimal params = [<4 values>]
+     Converged: <True|False>
+   where Converged is True iff the VQE energy is within 0.02 of -1.8570
+   (the known H2 ground state at R=0.735).
+Call main() under `if __name__ == "__main__":`.

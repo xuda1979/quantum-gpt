@@ -1,184 +1,154 @@
-# Huanxin Browser Automation
+---
+name: huanxin-browser
+description: Debug low-level Huanxin browser automation failures in this repo. Use only when wrapper-based Huanxin flows fail; otherwise use huanxin-s3-ops.
+---
 
-Use this skill to run commands on the Huanxin cloud platform (https://aihuanxin.cn) from the local machine.
+# Huanxin Browser Debugging
 
-Treat this file as local reference documentation for Codex. No OpenClaw runtime, managed skill install, or gateway session is required for the flow below.
+Use this file only for repo-specific, low-level debugging of the Huanxin browser control plane.
 
-## Your Environment Assignment
+Do not use this as the default skill for everyday Huanxin work. The canonical entrypoint for normal local <-> S3 <-> Huanxin operations is `skills/huanxin-s3-ops/SKILL.md`.
 
-**This agent may use both ai1 and ai2.** Default to ai2 unless ai1 is the better fit for capacity or parallel work.
+## Use This Only When
 
-Remote workdir on Huanxin: `/root/root/work/quantum-gpt`
+- `scripts/huanxin_shell.sh AI` or the active environment wrapper from `TOOLS.md` is failing
+- you need to inspect auth drift, daemon health, browser profile locks, or Safari repair flow
+- you need to debug the raw `browser-automation/` scripts directly
 
-## Default Operating Pattern
+## Default Stance
 
-- Run everything from this repo root.
-- Use `./scripts/huanxin_shell.sh <ai1|ai2> "<cmd>"` as the generic shell entrypoint. It uses standalone browser execution by default unless you opt into daemon mode.
-- Convenience wrappers: `./scripts/ai1_shell.sh "<cmd>"` and `./scripts/ai2_shell.sh "<cmd>"`.
-- If you explicitly want daemon mode, set `HUANXIN_USE_DAEMON=1` before calling the shell wrapper.
-- Use `skills/s3-transfer/SKILL.md` for file and code movement. Prefer S3 relay for transferring files between local and ai1/ai2; use direct shell commands for control-plane work and small inspections.
-- For any multi-step remote change, validate locally first, then use the S3 helper scripts for transfer, then use the shell wrapper for the control-plane command on the chosen environment.
+- Prefer the wrapper scripts first.
+- Prefer `skills/huanxin-s3-ops/SKILL.md` for normal operations.
+- Do not ask the human for the Huanxin URL if it already exists in `TOOLS.md` or the repo helpers.
+- In this workspace, the user has authorized Codex to perform Huanxin auth/login and session repair through the Huanxin skill workflow when needed. Keep auth material ephemeral: never store passwords, SMS codes, cookies, bearer tokens, credential-bearing callback URLs, browser profiles, or private auth state in memory, docs, logs, final answers, or skill bodies.
+- Always verify the active page is logged in to the exact train-dev environment URL from `TOOLS.md` before treating browser automation as ready.
+- Do not kill the daemon or discard the authenticated browser profile unless explicitly instructed.
+- Manual webshell protection overrides normal daemon preservation. If `.huanxin_manual_mode` exists or the human reports refresh/lost input, do not run probes, keepalive, repair, daemon, or shell helpers; use `scripts/huanxin_manual_mode.sh --manual-on` / `--kill-local` and local process inspection only.
+- Browser automation is disabled by default. Only `scripts/huanxin_manual_mode.sh --enable-automation` should create `.huanxin_automation_enabled`, and only after the human explicitly wants Codex to control Huanxin again.
 
-## Persistent Browser Daemon
+## Main Debug Entry Points
 
-The browser daemon launches the browser ONCE and keeps it alive. All subsequent shell commands route through the daemon via HTTP, avoiding the overhead of launching/closing the browser for each command.
+- `bash scripts/huanxin_status.sh`
+- `node browser-automation/huanxin_probe.js`
+- `node browser-automation/huanxin_shell_exec.js AI --command "<cmd>"`
+- `bash scripts/repair_huanxin_browser_profile.sh`
+- `bash scripts/huanxin_safari_keepalive.sh --refresh`
 
-The shell wrappers do not require the daemon by default. Use daemon mode only when you explicitly opt in.
+## Debug Focus Areas
 
-Do not stop the daemon unless the user explicitly tells you to. Preserving the authenticated session matters more than reclaiming a background process.
+### Auth State
 
-Manual control (if needed):
+- Probe only when the wrapper path is failing or auth state is unclear.
+- If the wrapper works, treat that as the authoritative success signal even if a cold probe drifts.
 
-```bash
-# Check if daemon is running
-curl -s http://127.0.0.1:19002/health
+### Daemon State
 
-# Start daemon manually
-HUANXIN_PROFILE_COPY_NAME=quantum-rnd node browser-automation/huanxin_browser_daemon.js ai2
+- The shell wrappers prefer daemon mode. That is the intended steady state.
+- Check daemon readiness before attempting raw browser-script surgery.
+- If daemon `/health` shows `busy=true` with stuck pending requests or stale `.processing.json` IPC files, inspect log/IPC state before enqueuing more shell requests.
+- If shell-open evidence shows `getShellVisitUrl` failure or websocket target `.../kunlun/null`, stop treating it like a normal reconnect bug and classify it as a platform shell-endpoint blocker.
 
-# Stop daemon
-curl -s -X POST http://127.0.0.1:19002/stop
+### Profile Locking
 
-# Or kill by PID
-kill $(cat /tmp/huanxin-daemon-ai2.pid)
+- If the main profile is locked, use a copied profile path when debugging standalone flows.
+- Avoid poisoning the base profile during repair attempts.
+
+### Safari Repair Path
+
+- Use the repo's Safari-backed repair helper if the workspace relies on Safari as the canonical auth source.
+- Prefer repair over inventing new login paths.
+
+## Success Standard
+
+A successful debugging step should produce one of:
+
+- health JSON
+- probe JSON
+- wrapper output proving recovery
+- a concrete diagnosis naming the exact failing helper, profile state, or auth step
+
+## Error 170022 "获取shell终端信息失败" — Platform Shell Terminal Outage
+
+**Root cause:** The Huanxin platform's `getShellVisitUrl` API
+(`/kunlun/web/develop/v1/getShellVisitUrl`) returns `{code:170022}` when the
+platform-side shell terminal service is down. The browser daemon connects
+fine, but no terminal URL is returned, so the WebSocket falls back to
+`wss://aihuanxin.cn/kunlun/null` (404).
+
+**This is NOT a local issue — cannot be fixed from our side.** It is a
+platform-side outage affecting all pods (ASI1/ASI2/ASI3).
+
+**HOWEVER:** Before classifying it as a platform outage, **always try
+starting the environment from the Huanxin UI first.** The environments
+may simply be stopped/stale, and starting them from the UI resolves the
+error. Do NOT assume platform outage without first attempting to start
+the environments.
+
+**Resolution (2026-07-14):** User started ASI1/ASI2/ASI3 from the Huanxin
+UI, and the shell terminal service began working immediately. The error
+was stale/stopped environments, not a platform outage.
+
+## Environment Setup — Fresh Container Package Installation
+
+When a Huanxin container is freshly restarted, the Python packages are
+reset. The following packages must be reinstalled before training can run:
+
+1. **peft** — from `/root/work/filestorage/py_deps/peft` (copy to site-packages)
+   or `/root/work/quantum-gpt/tools/wheels/peft-0.14.0-py3-none-any.whl`
+2. **accelerate** — from `/root/work/filestorage/py_deps/accelerate` (copy to site-packages)
+   or `/root/work/quantum-gpt/tools/wheels/accelerate-1.4.0-py3-none-any.whl`
+3. **transformers 5.6.0** — from
+   `/root/work/software/quantum-gpt/vendor/transformers-560-aarch64-py311/transformers-5.6.0-py3-none-any.whl`
+   (default container has 4.57.1 which lacks qwen3_5 module)
+4. **huggingface_hub 1.22.0** — from
+   `/root/work/software/quantum-gpt/vendor/transformers-560-aarch64-py311/huggingface_hub-1.22.0-py3-none-any.whl`
+5. **NPU modeling patch** — `python3 scripts/patch_qwen3_5_npu_modeling.py`
+
+**Automated setup:** `scripts/setup_asi_training_env.sh` does all of the
+above in one shot. Run it on the NPU box after each container restart.
+
+**After installing packages, save the environment image from the Huanxin UI**
+so the setup persists across restarts.
+
+## NPU Configuration — Single-NPU Boxes
+
+**Each ASI environment has only 1 NPU** (ASI1: NPU ID 2, ASI2: NPU ID 3,
+ASI3: NPU ID 7). Training scripts that hardcode `--nproc_per_node=4` will
+fail with "Invalid device ID" / "open device N failed, runtime result =
+107001".
+
+**Required settings for single-NPU training:**
+- `NPROC=1` (not 4)
+- Do NOT set `ASCEND_RT_VISIBLE_DEVICES` (let torch_npu auto-detect; setting
+  it to the NPU ID like "2" breaks detection because the local index is 0)
+- `MAX_LENGTH=256` or less (27B model OOMs at 512 on a single 60GB NPU)
+- `MASTER_PORT` must be unique across concurrent runs (use 29615+ range)
+
+**Qwen3.6-27B memory:** ~56GB at max_length=256 with LoRA rank 16, gradient
+checkpointing, batch size 1. Fits on a single 60GB NPU but barely.
+
+## Shell Command Output Extraction
+
+The `huanxin_env_shell.sh` wrapper returns a JSON payload with `after.rowText`
+containing the terminal output. To extract just the command output:
+
+```python
+import json, re
+# Parse the JSON, extract after.rowText, filter between __OC_*_START__ and __OC_*_END__ markers
 ```
 
-Daemon ports: ai1 → 19001, ai2 → 19002.
+Or use `/tmp/extract_huanxin_output.py` helper (created 2026-07-14).
 
-## How to Run Commands on ai1 / ai2
+## File Upload to NPU Boxes
 
-**`huanxin_shell_exec.js` is your shell.** There is no SSH. There is no other way to run commands on Huanxin. This script opens the webshell in a headless browser and executes commands for you. Use it like this:
+The NPU boxes have no rclone and no direct internet (pip proxy times out).
+To upload files from local:
 
-```bash
-node browser-automation/huanxin_shell_exec.js ai1 --command "ls -la /root/root/work/quantum-gpt"
-node browser-automation/huanxin_shell_exec.js ai2 --command "ls -la /root/root/work/quantum-gpt"
-node browser-automation/huanxin_shell_exec.js ai2 --command "cd /root/root/work/quantum-gpt && python3 train.py"
-node browser-automation/huanxin_shell_exec.js ai2 --command "nvidia-smi"
-```
-
-The command output is returned in the `output` field of the JSON response (marker-based extraction). The `before`/`after` fields contain raw terminal text for debugging.
-
-**This IS your direct shell access to Huanxin. Just run the command above.**
-
-When working inside this repo, prefer the wrapper:
-
-```bash
-./scripts/huanxin_shell.sh ai2 "cd /root/root/work/quantum-gpt && ls -la"
-```
-
-## Long-Running Jobs (Training, Data Generation)
-
-Training and data generation take minutes to hours. **Do NOT run them in the foreground.** Use this pattern:
-
-```bash
-# 1. Start job with a durable local handle
-./scripts/ai2_job.sh start train-qwen /tmp/train.log "python3 train.py --epochs 10"
-
-# 2. Check status later by job id
-./scripts/ai2_job.sh status train-qwen-20260324T000000Z
-
-# 3. Tail more log lines when needed
-./scripts/ai2_job.sh logs train-qwen-20260324T000000Z 120
-
-# 4. List known jobs for this workspace
-./scripts/ai2_job.sh list
-```
-
-**Key rules for long jobs:**
-- Always redirect stdout+stderr to a log file: `> /tmp/something.log 2>&1`
-- Always use `nohup ... &` to detach from the shell
-- Prefer `./scripts/ai2_job.sh` over raw `nohup` because the plain shell wrapper only returns terminal snapshots, not a durable job handle
-- Do NOT try to run training in the foreground — the tool timeout will kill it
-
-## Prerequisites
-
-- **Node.js** and **Playwright** are already installed in `browser-automation/node_modules/`.
-- The persistent Chromium profile at `browser-automation/profile/` holds authenticated session cookies.
-- No additional installation is needed. Just run the scripts with `node`.
-
-## If Shell Exec Fails (Auth Expired)
-
-Only if `huanxin_shell_exec.js` fails with an auth error, run these recovery steps:
-
-```bash
-# 1. Check auth state
-node browser-automation/huanxin_probe.js
-
-# 2. If login_required, tell the user to run the headed login helper
-#    (requires manual human login — you cannot do this yourself)
-node browser-automation/huanxin_login.js
-```
-
-## Available Scripts
-
-| Script | Purpose |
-|--------|---------|
-| `huanxin_browser_daemon.js <env>` | **Start persistent browser daemon.** Keeps browser alive between commands. Auto-started by shell wrappers. |
-| `huanxin_probe.js` | Check auth state. Outputs JSON with `state` field. |
-| `huanxin_login.js` | Open headed browser for manual login. Saves session to profile. |
-| `huanxin_inspect.js` | Inspect train-dev page for editor/terminal/shell controls. |
-| `huanxin_open_env.js <env>` | Open a named dev environment (e.g. `ai2`). |
-| `huanxin_shell_exec.js <env> --command "<cmd>"` | Execute a shell command. Routes to daemon if running, else standalone. |
-| `huanxin_shell_sync.js` | Sync files to/from an environment shell. |
-| `huanxin_dual_exec.js` | Execute commands on two environments in parallel. |
-| `huanxin_mouse_paste.js` | Click a control by text and paste file content. |
-| `huanxin_profile.js` | Profile directory management (used by other scripts). |
-
-## Profile Handling
-
-The persistent profile is at `browser-automation/profile/`. The browser daemon copies the profile once at startup and reuses it for all commands, avoiding lock contention.
-
-If the daemon is not running and you must use standalone mode, the profile copy is handled automatically (via `HUANXIN_PROFILE_COPY_NAME`).
-
-All scripts now default to **headless mode**. To run headed (for debugging), set `HUANXIN_HEADLESS=0`.
-
-## Operating Pattern
-
-**For everyday work, just use `huanxin_shell_exec.js` directly.** No need to probe, inspect, or open separately.
-
-```bash
-node browser-automation/huanxin_shell_exec.js ai2 --command "<your command here>"
-```
-
-The script handles navigation, environment selection, and shell interaction automatically.
-
-Only run `huanxin_probe.js` if shell_exec fails (to check if auth expired).
-
-## Recommended Control Flow
-
-1. Validate local changes first.
-2. Move files with the S3 transfer helpers instead of browser-shell copy/paste.
-3. Use `./scripts/ai2_shell.sh` for remote commands, inspections, and launch steps.
-4. If a transfer is large or risky, run the helper with `--dry-run` first.
-
-`./scripts/ai2_sync_from_s3.sh` and `./scripts/ai2_push_results_to_s3.sh` are dual-mode helpers:
-
-- when run locally on this Mac, they route through `./scripts/ai2_shell.sh`
-- when run inside `/root/root/work/quantum-gpt` on ai2, they execute `rclone` directly
-
-That means Codex can drive the full loop from the local repo and the same helper scripts still work after you land inside the remote workspace.
-
-## State Values from Probe
-
-| State | Meaning |
-|-------|---------|
-| `login_required` | Session expired. Run `huanxin_login.js` to re-authenticate. |
-| `train_surface_or_project_page` | Authenticated, on the training page. |
-| `authenticated_surface_ready` | Authenticated, editor/terminal detected. |
-| `spa_loading` | Page loading, retry after a few seconds. |
-
-## Safety Rules
-
-- Use ai1 or ai2 intentionally; prefer ai2 by default and use ai1 when it materially improves parallelism or capacity.
-- Do not paste unvalidated code into the remote environment.
-- Do not use browser-shell copy/paste or flattened terminal reads for bulk file transfer when S3 relay is available.
-- Do not delete remote content unless explicitly instructed.
-- Do not assume page structure is stable — inspect first, then act.
-- If no editor/terminal target is detectable, stop and record the blocker.
-
-## Proof Standard
-
-A successful step should produce at least one of:
-- Captured stdout/JSON from the scripts
-- Screenshots in `browser-automation/`
-- A memory note describing what was reached and what was done
+1. **Base64 method:** Encode the file as base64, send via shell command,
+   decode on the NPU box. Works for files up to ~10KB (base64 ~13KB).
+   ```bash
+   B64=$(base64 -i local_file.sh | tr -d '\n')
+   bash scripts/huanxin_env_shell.sh --env ASI1 "echo -n '$B64' | base64 -d > /remote/path/file.sh"
+   ```
+2. **S3 relay:** Upload to S3 locally (rclone), then download on the NPU box.
+   But the NPU box needs rclone installed and S3 credentials configured.
