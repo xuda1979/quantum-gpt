@@ -1,3 +1,6 @@
+# C-0024 canonical sha256 freeze manifest for the 18-task SAPO promotion holdout.
+# Lines: <sha256>  <repo-relative-path>. Regenerate deliberately via fz.compute_manifest.
+
 b40ca7f2b16e19809059c7dde60414e6e88631d0613e36425002c376f03ea7f1  evals/benchmarks/sapo_promotion_holdout_v1_18.txt
 f1cf1e1144aeef96acac9f527b6b3d96ea9c0c938121a48d9f2fc735599d9525  evals/tasks/quantum/gate_alias_normalization/task.json
 fafaf612e4e70afd499e6e9137672638d48fd00842c351cff8ff08e16a961c91  evals/tasks/quantum/gate_alias_normalization/tests.py
@@ -36,6 +39,6 @@ cef961ca651f7d14be1de207da598be883f1b3df1f1aadbec677c7f7ae724d8c  evals/tasks/qu
 976677faa3f3138f9ac53c1435cbb8002ef380dabff6dc74f2f4fc4821620da1  evals/tasks/quantum/binary_measurement_decoder/task.json
 114bd9cf91467960db9b629475aad730929625271b7ea76e453199b3b40b6690  evals/tasks/quantum/binary_measurement_decoder/tests.py
 ba05e8aa26fce617b6db9dc91eb675abc51217b96c32d6d411a5e1ccc6a5da3b  evals/runner/single_candidate_eval.py
-4e12361582b4782069db4009eac02f900a8f0241663c2b06241ff34fe695e177  scripts/run_asi2_base_adapter_rubric_eval.py
+2ad0d56265ca41bd5859d86d8b7f76cc5bfcef44b2461e7f381358f5a158a5da  scripts/run_asi2_base_adapter_rubric_eval.py
 bbf4bc53a55f8a0983c4e3f3633b9eb1c0ab424ffd233df84875e5a063a962c2  evals/runner/candidate_sanitize.py
 fd6c7851ae01e067d090ea8c18444d00c7c9f7f1798705233ca38e909b60ba20  harness/beats_base.py

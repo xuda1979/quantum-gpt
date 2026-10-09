@@ -27,8 +27,8 @@
     "what": "all 18 reference candidates PASS the canonical grader Mac-side; longest (this fixture, 1087 tokens) fits the 1536 floor"
   },
   "runner": "scripts/run_asi2_base_adapter_rubric_eval.py",
-  "runner_mtime": 1789891220.6832337,
-  "runner_sha256": "4e12361582b4782069db4009eac02f900a8f0241663c2b06241ff34fe695e177",
+  "runner_mtime": 1791528472.7933426,
+  "runner_sha256": "2ad0d56265ca41bd5859d86d8b7f76cc5bfcef44b2461e7f381358f5a158a5da",
   "scope_note": "Mac-side PRE-LEG feeder (C-9101 dep-cycle split); C-9038 keeps its live-leg truncation measurement scope; runner bytes edited only via documented re-banks (see rebank notes)",
   "utc": "2026-09-18T12:22:27Z",
   "rebank_note": "C-9038 rebank: runner bytes changed ONLY to add per-task truncation recording (truncated flag) and the scorer fail-closed consumer; budget derivation and proven_pass evidence unchanged, re-proven Mac-side by test_c9112_ceiling_feeder against the new bytes. mtime re-stamped after a content-identical touch by a co-tenant (sha unchanged, mtime +251s); B-223 pins the live bytes.",
@@ -37,5 +37,7 @@
   "rebank3_note": "C-9051 rebank 3: ruff-format hook reshaped the runner during a 2026-09-19 commit attempt (content-equivalent reformat of the default-raise + truncation-evidence bytes); pins re-measured per B-223. No semantic change.",
   "rebank3_utc": "2026-09-18T19:04:07Z",
   "rebank4_note": "C-9198 rebank 4: 13/15 s97 failures were truncation at 1536. Raised ceiling 1536->4096 to accommodate longer quantum solutions. Scripts run_holdout_leg1.py and run_holdout_leg2.py already carry 4096.",
-  "rebank4_utc": "2026-09-20T15:30:00Z"
+  "rebank4_utc": "2026-09-20T15:30:00Z",
+  "rebank5_note": "C-10300 re-bank 5: runner bytes landed to the box-verified scorer (2ad0d562 = C-9858 af5b71dc + C-10212 candidate_path bind) to close C-10243 scorer_sha_mismatch drift. Semantics unchanged (max_new_tokens default stays 4096, truncation+containment preserved); pins re-measured per B-223.",
+  "rebank5_utc": "2026-10-09T06:56:47Z"
 }

@@ -41,6 +41,7 @@ from training.model_backend import (
     ensure_text_backend_preflight,
     load_causal_lm_with_text_backend_preflight,
 )
+from training.prompt_lib import render_user_prompt
 from training.text_preprocessor_backend import load_text_preprocessor_backend
 
 DEFAULT_BENCHMARK = "evals/benchmarks/quantum_grpo_training_v1.txt"
@@ -81,6 +82,28 @@ def parse_args() -> argparse.Namespace:
         help="number of tasks this worker handles; 0 = through the end of the list",
     )
     parser.add_argument("--harness-timeout", type=int, default=300)
+    parser.add_argument(
+        "--leg-budget",
+        type=int,
+        default=0,
+        help=(
+            "C-9836: total wall-clock budget (seconds) for THIS model task loop\n"
+            "(base-gen + harness). 0 = legacy (no cap). When exceeded,\n"
+            "run_model stops generating and emits a fail-closed\n"
+            "leg_budget_exceeded record (graded FAIL) for every remaining\n"
+            "task so the leg completes and writes scores within the outer\n"
+            "timeout instead of being killed mid-base-gen with nothing."
+        ),
+    )
+    parser.add_argument(
+        "--eval-leg-lock",
+        type=str,
+        default=BOX_EVAL_LEG_LOCK,
+        help=(
+            "box-side POSIX flock path that serializes concurrent eval legs "
+            "(default %s); a concurrent second leg exits non-zero LOCKED"
+        ),
+    )
     parser.add_argument(
         "--hide-reference",
         action="store_true",
@@ -195,12 +218,13 @@ def build_prompt(task_dir: Path, meta: dict[str, Any], hide_reference: bool = Fa
         first = f"Task: {meta['description']}"
     else:
         first = f"Task: {meta.get('name', task_dir.name)}"
-    return "\n\n".join(
-        [
-            first,
-            f"Domain: {meta.get('domain', 'unknown')}\nCategory: {meta.get('category', 'unknown')}",
-            "Return only the final Python code.",
-        ]
+    # C-9829: ONE shared render function with the taskgen trainer
+    # (training.prompt_lib.render_user_prompt) so live-eval and train-row
+    # prompts are identity-identical for an equivalent task spec.
+    return render_user_prompt(
+        first,
+        meta.get("domain", "unknown"),
+        meta.get("category", "unknown"),
     )
 
 
@@ -413,10 +437,49 @@ def run_model(
     tasks: list[tuple[Path, dict[str, Any]]],
     args: argparse.Namespace,
 ) -> list[dict[str, Any]]:
-    records = []
+    records: list[dict[str, Any]] = []
+    # C-9836: honor a per-model wall-clock leg budget so a slow base-gen
+    # cannot burn the outer timeout and get SIGKILLed without scores.
+    _budget = int(getattr(args, "leg_budget", 0) or 0)
+    _started = time.monotonic()
     for index, (task_json, meta) in enumerate(tasks, 1):
         task_dir = task_json.parent
         prompt = build_prompt(task_dir, meta)
+        elapsed = time.monotonic() - _started
+        if _budget > 0 and elapsed >= _budget:
+            print(
+                json.dumps(
+                    {
+                        "stage": "leg_budget_exceeded",
+                        "model": model_name,
+                        "elapsed_sec": round(elapsed, 3),
+                        "budget_sec": _budget,
+                        "first_skipped_index": index,
+                    }
+                ),
+                flush=True,
+            )
+            for _j, (_task_json, _meta) in enumerate(tasks, 1):
+                if _j < index:
+                    continue
+                records.append(
+                    {
+                        "model": model_name,
+                        "task_id": _meta["id"],
+                        "name": _meta["name"],
+                        "domain": _meta.get("domain", "unknown"),
+                        "category": _meta.get("category", "unknown"),
+                        "candidate_path": "",
+                        "passed": False,
+                        "details": ["leg_budget_exceeded", "fail_closed_not_generated"],
+                        "scores": static_scores("", False),
+                        "output_chars": 0,
+                        "truncated": None,
+                        "reference_hidden": True,
+                        "prompt_mode": "question-only",
+                    }
+                )
+            break
         print(
             json.dumps(
                 {"stage": "generate", "model": model_name, "index": index, "task": meta["id"]}
@@ -429,9 +492,14 @@ def run_model(
         # to the remaining tasks. Never a skip, never a pass.
         code = ""
         truncated = None  # C-9038: unknown until generation returns
+        # C-10212: bind the record-facing path BEFORE the try. The C-0049
+        # containment except-path fills test_result but the shared record
+        # append reads candidate_path -- bound only inside the try, a
+        # generation failure escaped containment with UnboundLocalError and
+        # killed the whole leg (r9 2026-10-01: 3/3 slices dead, 0/18).
+        candidate_path = args.output.parent / "candidates" / model_name / f"{meta['id']}.py"
         try:
             code, truncated = generate(model, backend, prompt, args.device, args.max_new_tokens)
-            candidate_path = args.output.parent / "candidates" / model_name / f"{meta['id']}.py"
             test_result = run_single_file_test(
                 task_dir, meta, code, candidate_path, args.harness_timeout
             )
@@ -475,6 +543,30 @@ def run_model(
     return records
 
 
+# ---- C-9821: box-side eval-leg serialization -------------------------------
+# AUDIT FINDING (2026-09-24, measured live): 4 concurrent
+# run_asi2_base_adapter_rubric_eval processes on ASI2 (pids 130133/130381/
+# 130940/131233) raced the same NPU pool -> ~10x slower generation -> legs blew
+# their 900s timeouts and died mid-run (26/42 VOID in eval_results.jsonl). The
+# Mac-side lease (harness/state/locks/asi2-eval.lock) is not enforced for
+# box-launched legs (watcher + agent legs started via nohup on the box), so the
+# C-9783 serialization contract is unenforced for the real herd.
+#
+# Fix: the box eval leg takes a POSIX flock (/tmp/asi2_eval_leg.lock) before any
+# model load and holds it for the leg duration; a concurrent second launch sees
+# the flock already held and exits non-zero LOCKED WITHOUT touching the model.
+# flock(2) is held on an open fd for the life of the process, so it is released
+# automatically on exit/crash (no stale-lease takeover race, unlike the pid/ts
+# lease on the Mac side). The helper lives in harness/box_flock.py (a
+# lightweight, torch-free module) so tests acquire the flock fast rather than
+# importing this whole eval module (which pulls in torch+transformers).
+from harness.box_flock import (
+    BOX_EVAL_LEG_LOCK,
+    BOX_EVAL_LEG_LOCKED_EC,
+    acquire_box_leg_flock,
+)
+
+
 def main() -> int:
     args = parse_args()
     # C-0024: fail-closed freeze check BEFORE any eval work. Drift in, or a
@@ -488,6 +580,25 @@ def main() -> int:
         print("[freeze] FAIL-CLOSED: " + str(exc), file=sys.stderr)
         return 2
     started = time.time()
+    # C-9821: serialize box eval legs with a POSIX flock BEFORE any model load.
+    # A concurrent second launch (watcher / agent / stale leg racing the same
+    # NPU pool) finds the flock held, exits non-zero LOCKED, and never touches
+    # the model. flock releases automatically on process exit, so a crashed leg
+    # cannot wedge the box.
+    _leg_lock_fh, _first = acquire_box_leg_flock(args.eval_leg_lock)
+    if not _first:
+        print(
+            json.dumps(
+                {
+                    "stage": "locked",
+                    "lock": str(args.eval_leg_lock),
+                    "msg": "another eval leg already holds the box-side flock; "
+                    "serialized legs only (C-9821)",
+                }
+            ),
+            file=sys.stderr,
+        )
+        return BOX_EVAL_LEG_LOCKED_EC
     args.output.parent.mkdir(parents=True, exist_ok=True)
     task_ids = load_task_ids(args.benchmark)
     selected = task_ids[: args.limit] if args.limit else task_ids
@@ -560,6 +671,14 @@ def main() -> int:
         "duration_sec": round(time.time() - started, 3),
         "score_scale": "0-5; algorithm is executable test pass/fail weighted, grammar is Python syntax, quality/efficiency are static heuristics",
     }
+    # C-9821: release the box-side flock now that the leg compute is done (the
+    # next leg may begin as soon as this one writes its scores). fh.close()
+    # drops the POSIX flock.
+    try:
+        if _leg_lock_fh is not None:
+            _leg_lock_fh.close()
+    except OSError:
+        pass
     tmp = args.output.with_suffix(args.output.suffix + ".tmp")
     tmp.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     tmp.replace(args.output)
