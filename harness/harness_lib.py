@@ -1147,6 +1147,29 @@ def check_gate(gate, result_text):
         ok_markers = ("adapter-applied" in text) and ("adapter-probe-differs" in text)
         if ok_markers and "byte-identical" not in text:
             return True, "adapter-applied + probe-differs markers present"
+        # C-10321 postmortem: base-only probe legs carry NO adapter markers
+        # by design (adapter=None), so the adapter-marker rule above bounced
+        # the base-only card 3x and auto-retired it despite complete verified
+        # work. A base-only leg passes on its own fail-closed evidence:
+        # an explicit base-only leg marker, a MEASURED pass_base fraction,
+        # and sha pin(s) (64-hex full or 8-hex bank-pin form). The
+        # 'byte-identical' taint fails both paths equally.
+        low = text.lower()
+        base_only_marker = bool(
+            re.search(r"leg[_ -]kind\s*=\s*base-only", low)
+            or re.search(r"base-only (?:probe )?leg", low)
+        )
+        measured_pass_base = bool(re.search(r"pass_base\s*[=:]\s*\d+\s*/\s*\d+", low))
+        has_sha = bool(
+            re.search(r"\b[0-9a-f]{64}\b", low) or re.search(r"\b[0-9a-f]{8}\b", low)
+        )
+        if (
+            base_only_marker
+            and measured_pass_base
+            and has_sha
+            and "byte-identical" not in low
+        ):
+            return True, "base-only leg: measured pass_base + sha pins present"
         return False, "eval leg missing fail-closed markers"
     if gate == "sha-verified":
         if re.search(r"[0-9a-f]{64}", text):

@@ -100,6 +100,48 @@ class TestGates(unittest.TestCase):
         ok, _ = H.check_gate("eval-failclosed", "")
         self.assertFalse(ok)
 
+    def test_eval_failclosed_gate_accepts_base_only_probe_leg(self):
+        # C-10321 postmortem: a base-only probe leg has NO adapter markers by
+        # design (adapter=None), so the adapter-marker requirement bounced the
+        # card 3x and auto-retired it despite complete verified work. A base-only
+        # leg must pass on its own evidence: explicit leg_kind, a MEASURED
+        # pass_base fraction, and a 64-hex runner/holdout sha.
+        ok, _ = H.check_gate(
+            "eval-failclosed",
+            "leg_kind=base-only pass_base=4/18 measured on ASI2 "
+            "runner sha256=2ad0d56265ca41bd5859d86d8b7f76cc5bfcef44b2461e7f381358f5a158a5da",
+        )
+        self.assertTrue(ok)
+        # the ACTUAL C-10321 worker RESULT text (8-hex bank pins, prose leg
+        # marker) must pass too — this is the bounce that retired the card
+        ok, _ = H.check_gate(
+            "eval-failclosed",
+            "Base-only probe leg c10321-base-b1 (box-verified ASI2, "
+            "runner 2ad0d562, holdout b40ca7f2) measured pass_base=4/18; "
+            "verdict composes beats_base=true vs adapter leg",
+        )
+        self.assertTrue(ok)
+
+    def test_eval_failclosed_gate_base_only_still_requires_evidence(self):
+        # claiming base-only without a measured pass_base must still fail
+        ok, _ = H.check_gate("eval-failclosed", "leg_kind=base-only leg ran fine")
+        self.assertFalse(ok)
+        # claiming base-only without any sha must still fail
+        ok, _ = H.check_gate("eval-failclosed", "leg_kind=base-only pass_base=4/18")
+        self.assertFalse(ok)
+        # 'base-only' buried in prose without leg_kind marker must still fail
+        ok, _ = H.check_gate(
+            "eval-failclosed", "base-only probe with pass_base=4/18 and some sha"
+        )
+        self.assertFalse(ok)
+        # byte-identical taint fails the base-only path too
+        ok, _ = H.check_gate(
+            "eval-failclosed",
+            "leg_kind=base-only pass_base=4/18 candidates byte-identical to base "
+            "runner sha256=2ad0d56265ca41bd5859d86d8b7f76cc5bfcef44b2461e7f381358f5a158a5da",
+        )
+        self.assertFalse(ok)
+
     def test_unknown_gate_fails_closed(self):
         ok, _ = H.check_gate("made-up-gate", "anything")
         self.assertFalse(ok)
