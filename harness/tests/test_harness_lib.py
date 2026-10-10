@@ -130,9 +130,7 @@ class TestGates(unittest.TestCase):
         ok, _ = H.check_gate("eval-failclosed", "leg_kind=base-only pass_base=4/18")
         self.assertFalse(ok)
         # 'base-only' buried in prose without leg_kind marker must still fail
-        ok, _ = H.check_gate(
-            "eval-failclosed", "base-only probe with pass_base=4/18 and some sha"
-        )
+        ok, _ = H.check_gate("eval-failclosed", "base-only probe with pass_base=4/18 and some sha")
         self.assertFalse(ok)
         # byte-identical taint fails the base-only path too
         ok, _ = H.check_gate(
@@ -199,12 +197,18 @@ def compliant_verdict(**over):
             runner_mechanism="parallel-3-slice",
             box="ASI2",
             markers=dict(adapter_applied=True, adapter_probe_differs=True),
+            # C-9752: ref is a fixture path that does not exist on disk, so
+            # the leg must pin its scores sha for leg_provenance_violation
+            # to accept it (mirrors real composer legs, which embed the
+            # sha256 of each leg's scores file).
+            scores_sha256="b" * 64,
         ),
         leg2=dict(
             ref="outputs/leg2.json",
             runner_mechanism="sequential-single-slice",
             box="ASI2",
             markers=dict(adapter_applied=True, adapter_probe_differs=True),
+            scores_sha256="c" * 64,
         ),
         per_task=per_task,
         candidates_vs_base_gate={

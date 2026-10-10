@@ -58,12 +58,17 @@ def _full_verdict(holdout_sha, scorer_shas):
             "runner_mechanism": "mech-1",
             "adapter_applied_marker": True,
             "adapter_probe_differs_marker": True,
+            # C-9752: legs must pin scores evidence (existing ref or sha).
+            "ref": "outputs/leg1.json",
+            "scores_sha256": "b" * 64,
         },
         "leg2": {
             "box": "box-b",
             "runner_mechanism": "mech-2",
             "adapter_applied_marker": True,
             "adapter_probe_differs_marker": True,
+            "ref": "outputs/leg2.json",
+            "scores_sha256": "c" * 64,
         },
         "per_task": per_task,
         "candidates_vs_base_gate": {
