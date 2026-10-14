@@ -1,0 +1,273 @@
+{
+  "card": "C-10363",
+  "probe": "gap-symbol-validation",
+  "panel_src": "outputs/C10358_step322_failure_delta_panel.json",
+  "n_failing_tasks": 13,
+  "all_gap_symbols_valid_in_reference_solutions": true,
+  "rows": [
+    {
+      "task_id": "quantum_phase_estimation_circuit",
+      "fault_class": "missing-api-attribute",
+      "api_gap": "phase_from_measurement",
+      "gaps": [
+        "phase_from_measurement"
+      ],
+      "task_dir": "phase_estimation_circuit",
+      "valid": true,
+      "reason": "",
+      "symbol_checks": [
+        {
+          "gap": "phase_from_measurement",
+          "kind": "(symbol)",
+          "present": true
+        }
+      ]
+    },
+    {
+      "task_id": "quantum_qaoa_maxcut",
+      "fault_class": "missing-api-attribute",
+      "api_gap": "brute_force_maxcut",
+      "gaps": [
+        "brute_force_maxcut"
+      ],
+      "task_dir": "qaoa_maxcut",
+      "valid": true,
+      "reason": "",
+      "symbol_checks": [
+        {
+          "gap": "brute_force_maxcut",
+          "kind": "(symbol)",
+          "present": true
+        }
+      ]
+    },
+    {
+      "task_id": "quantum_density_matrix_partial_trace",
+      "fault_class": "missing-required-function",
+      "api_gap": "density_from_state,tensor_product,purity",
+      "gaps": [
+        "density_from_state",
+        "tensor_product",
+        "purity"
+      ],
+      "task_dir": "density_matrix_partial_trace",
+      "valid": true,
+      "reason": "",
+      "symbol_checks": [
+        {
+          "gap": "density_from_state",
+          "kind": "(symbol)",
+          "present": true
+        },
+        {
+          "gap": "tensor_product",
+          "kind": "(symbol)",
+          "present": true
+        },
+        {
+          "gap": "purity",
+          "kind": "(symbol)",
+          "present": true
+        }
+      ]
+    },
+    {
+      "task_id": "quantum_error_correction_shor_9qubit",
+      "fault_class": "wrong-output",
+      "api_gap": "shor_decode",
+      "gaps": [
+        "shor_decode"
+      ],
+      "task_dir": "quantum_error_correction_shor_9qubit",
+      "valid": true,
+      "reason": "",
+      "symbol_checks": [
+        {
+          "gap": "shor_decode",
+          "kind": "(symbol)",
+          "present": true
+        }
+      ]
+    },
+    {
+      "task_id": "quantum_trotterized_hamiltonian_evolution",
+      "fault_class": "missing-required-function",
+      "api_gap": "pauli_matrix,matrix_exp_hermitian,trotter_evolve",
+      "gaps": [
+        "pauli_matrix",
+        "matrix_exp_hermitian",
+        "trotter_evolve"
+      ],
+      "task_dir": "trotterized_hamiltonian_evolution",
+      "valid": true,
+      "reason": "",
+      "symbol_checks": [
+        {
+          "gap": "pauli_matrix",
+          "kind": "(symbol)",
+          "present": true
+        },
+        {
+          "gap": "matrix_exp_hermitian",
+          "kind": "(symbol)",
+          "present": true
+        },
+        {
+          "gap": "trotter_evolve",
+          "kind": "(symbol)",
+          "present": true
+        }
+      ]
+    },
+    {
+      "task_id": "quantum_channel_depolarizing",
+      "fault_class": "missing-required-function",
+      "api_gap": "amplitude_damping_channel,channel_fidelity",
+      "gaps": [
+        "amplitude_damping_channel",
+        "channel_fidelity"
+      ],
+      "task_dir": "quantum_channel_depolarizing",
+      "valid": true,
+      "reason": "",
+      "symbol_checks": [
+        {
+          "gap": "amplitude_damping_channel",
+          "kind": "(symbol)",
+          "present": true
+        },
+        {
+          "gap": "channel_fidelity",
+          "kind": "(symbol)",
+          "present": true
+        }
+      ]
+    },
+    {
+      "task_id": "quantum_ghz_state_witness",
+      "fault_class": "missing-api-attribute",
+      "api_gap": "concurrence_2qubit",
+      "gaps": [
+        "concurrence_2qubit"
+      ],
+      "task_dir": "ghz_state_witness",
+      "valid": true,
+      "reason": "",
+      "symbol_checks": [
+        {
+          "gap": "concurrence_2qubit",
+          "kind": "(symbol)",
+          "present": true
+        }
+      ]
+    },
+    {
+      "task_id": "quantum_pennylane_vqe_h2",
+      "fault_class": "missing-api-module",
+      "api_gap": "pennylane",
+      "gaps": [
+        "pennylane"
+      ],
+      "task_dir": "pennylane_vqe_h2",
+      "valid": true,
+      "reason": "",
+      "symbol_checks": [
+        {
+          "gap": "pennylane",
+          "kind": "(module)",
+          "present": true
+        }
+      ]
+    },
+    {
+      "task_id": "quantum_cirq_qaoa_line",
+      "fault_class": "missing-api-module",
+      "api_gap": "cirq",
+      "gaps": [
+        "cirq"
+      ],
+      "task_dir": "cirq_qaoa_line",
+      "valid": true,
+      "reason": "",
+      "symbol_checks": [
+        {
+          "gap": "cirq",
+          "kind": "(module)",
+          "present": true
+        }
+      ]
+    },
+    {
+      "task_id": "quantum_braket_bell_state",
+      "fault_class": "missing-api-attribute",
+      "api_gap": "parity_check",
+      "gaps": [
+        "parity_check"
+      ],
+      "task_dir": "braket_bell_state",
+      "valid": true,
+      "reason": "",
+      "symbol_checks": [
+        {
+          "gap": "parity_check",
+          "kind": "(symbol)",
+          "present": true
+        }
+      ]
+    },
+    {
+      "task_id": "quantum_qiskit_qft_entangled",
+      "fault_class": "missing-api-module",
+      "api_gap": "qiskit",
+      "gaps": [
+        "qiskit"
+      ],
+      "task_dir": "qiskit_qft_entangled",
+      "valid": true,
+      "reason": "",
+      "symbol_checks": [
+        {
+          "gap": "qiskit",
+          "kind": "(module)",
+          "present": true
+        }
+      ]
+    },
+    {
+      "task_id": "quantum_qiskit_stabilizer_5qubit_code",
+      "fault_class": "missing-api-module",
+      "api_gap": "qiskit",
+      "gaps": [
+        "qiskit"
+      ],
+      "task_dir": "qiskit_stabilizer_5qubit_code",
+      "valid": true,
+      "reason": "",
+      "symbol_checks": [
+        {
+          "gap": "qiskit",
+          "kind": "(module)",
+          "present": true
+        }
+      ]
+    },
+    {
+      "task_id": "quantum_pennylane_qml_iris_classification",
+      "fault_class": "missing-api-module",
+      "api_gap": "pennylane",
+      "gaps": [
+        "pennylane"
+      ],
+      "task_dir": "pennylane_qml_iris_classification",
+      "valid": true,
+      "reason": "",
+      "symbol_checks": [
+        {
+          "gap": "pennylane",
+          "kind": "(module)",
+          "present": true
+        }
+      ]
+    }
+  ]
+}

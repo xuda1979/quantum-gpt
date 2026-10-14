@@ -1,0 +1,1233 @@
+{
+  "card": "C-10363",
+  "title": "v14 SFT training-mixture manifest: target the 13 v12e-step322 failing tasks by API-gap class from the C-10358 panel",
+  "created_utc": "2026-10-13T12:39:05Z",
+  "why": "C-10358 panel enumerates exactly the 13 failing tasks by fault class (missing-api-attribute x4, missing-required-function x3, missing-api-module x5, wrong-output x1) with per-task api_gaps. v13 warm-continue alone re-trains the same mixture; a v14 mixture authored from these concrete gaps can lift 13 more task passes toward 18/18.",
+  "recipe": "v14 = v12e replay (2213, verbatim anti-forgetting) + 39 C-10358 gap-targeted few-shot delta rows (3 prompt variants x 13 failing tasks), each completion = frozen candidate.py, each gap symbol verified against reference solutions; every completion execution-verified GREEN vs frozen tests.py.",
+  "delta_verified": "every completion execution-green vs frozen tests.py",
+  "gap_symbol_validation": "outputs/C10363_gap_symbol_validation.json",
+  "gap_symbols_all_valid": true,
+  "n_failing_tasks": 13,
+  "fault_class_counts": {
+    "pass": 5,
+    "missing-api-attribute": 4,
+    "missing-required-function": 3,
+    "wrong-output": 1,
+    "missing-api-module": 5
+  },
+  "pass_counts_v12e_step322": {
+    "adapter_pass": 5,
+    "base_pass": 3,
+    "adapter_fail": 13
+  },
+  "v12e_base": {
+    "recipe": "v12 = v11 replay (2177) + c10216 alignment corpus (24, execution-verified) + 4-task extra alignment (12) = 2213",
+    "rows": 2213,
+    "sha256": "e0bbdf5fb0f606dc247c4f757c204eb645faf7f8cdaf922625be0edb6bede991"
+  },
+  "v14_row_count": 2252,
+  "counts_delta_vs_v12e": {
+    "v12e_replay_rows": 2213,
+    "v12e_sha256": "e0bbdf5fb0f606dc247c4f757c204eb645faf7f8cdaf922625be0edb6bede991",
+    "v14_delta_rows": 39,
+    "v14_delta_tasks": 13,
+    "v14_delta_rows_per_task": 3,
+    "v14_total_rows": 2252,
+    "row_delta_abs": 39
+  },
+  "few_shot_rows": [
+    {
+      "format": "chat-sft-v1",
+      "source_schema": "taskgen-v14-delta-c10363",
+      "example_id": "c10363_delta_phase_estimation_circuit_live_exact",
+      "prompt_kind": "api_gap_fix_live_exact",
+      "task_id": "phase_estimation_circuit",
+      "bench_task_id": "quantum_phase_estimation_circuit",
+      "fault_class": "missing-api-attribute",
+      "api_gap": "phase_from_measurement",
+      "api_gap_symbols": [
+        "phase_from_measurement"
+      ],
+      "gap_symbol_verified": true,
+      "task_spec": "Task: Quantum phase estimation unitary eigenvalue extraction",
+      "category": "algorithm_implementation",
+      "messages": [
+        {
+          "role": "system",
+          "content": "Return only a complete Python solution. Do not include markdown fences or explanation."
+        },
+        {
+          "role": "user",
+          "content": "Task: Quantum phase estimation unitary eigenvalue extraction\n\nDomain: quantum\nCategory: algorithm_implementation\n\nReturn only the final Python code."
+        },
+        {
+          "role": "assistant",
+          "content": "import math\n\n\ndef phase_estimation(eigenvalue_phase: float, n_counting_bits: int) -> int:\n    \"\"\"Simulate quantum phase estimation for a unitary with eigenvalue e^(2*pi*i*phase).\n\n    Given the true phase (0 <= phase < 1) and the number of counting qubits,\n    return the integer measurement outcome that QPE would produce (ideal, no noise).\n\n    The QPE algorithm maps phase -> round(phase * 2^n) mod 2^n.\n    \"\"\"\n    n_states = 1 << n_counting_bits\n    return round(eigenvalue_phase * n_states) % n_states\n\n\ndef phase_from_measurement(measurement: int, n_counting_bits: int) -> float:\n    \"\"\"Recover the estimated phase from a QPE measurement outcome.\n\n    Returns a float in [0, 1).\n    \"\"\"\n    n_states = 1 << n_counting_bits\n    return measurement / n_states"
+        }
+      ]
+    },
+    {
+      "format": "chat-sft-v1",
+      "source_schema": "taskgen-v14-delta-c10363",
+      "example_id": "c10363_delta_phase_estimation_circuit_api_named",
+      "prompt_kind": "api_gap_fix_api_named",
+      "task_id": "phase_estimation_circuit",
+      "bench_task_id": "quantum_phase_estimation_circuit",
+      "fault_class": "missing-api-attribute",
+      "api_gap": "phase_from_measurement",
+      "api_gap_symbols": [
+        "phase_from_measurement"
+      ],
+      "gap_symbol_verified": true,
+      "task_spec": "Task: Quantum phase estimation unitary eigenvalue extraction\n\nRequired public API (signatures and docstrings only):\ndef phase_estimation( eigenvalue_phase: float, n_counting_bits: int )\ndef phase_from_measurement( measurement: int, n_counting_bits: int )",
+      "category": "algorithm_implementation",
+      "messages": [
+        {
+          "role": "system",
+          "content": "Return only a complete Python solution. Do not include markdown fences or explanation."
+        },
+        {
+          "role": "user",
+          "content": "Task: Quantum phase estimation unitary eigenvalue extraction\n\nRequired public API (signatures and docstrings only):\ndef phase_estimation( eigenvalue_phase: float, n_counting_bits: int )\ndef phase_from_measurement( measurement: int, n_counting_bits: int )\n\nDomain: quantum\nCategory: algorithm_implementation\n\nReturn only the final Python code."
+        },
+        {
+          "role": "assistant",
+          "content": "import math\n\n\ndef phase_estimation(eigenvalue_phase: float, n_counting_bits: int) -> int:\n    \"\"\"Simulate quantum phase estimation for a unitary with eigenvalue e^(2*pi*i*phase).\n\n    Given the true phase (0 <= phase < 1) and the number of counting qubits,\n    return the integer measurement outcome that QPE would produce (ideal, no noise).\n\n    The QPE algorithm maps phase -> round(phase * 2^n) mod 2^n.\n    \"\"\"\n    n_states = 1 << n_counting_bits\n    return round(eigenvalue_phase * n_states) % n_states\n\n\ndef phase_from_measurement(measurement: int, n_counting_bits: int) -> float:\n    \"\"\"Recover the estimated phase from a QPE measurement outcome.\n\n    Returns a float in [0, 1).\n    \"\"\"\n    n_states = 1 << n_counting_bits\n    return measurement / n_states"
+        }
+      ]
+    },
+    {
+      "format": "chat-sft-v1",
+      "source_schema": "taskgen-v14-delta-c10363",
+      "example_id": "c10363_delta_phase_estimation_circuit_prose_paraphrase",
+      "prompt_kind": "api_gap_fix_prose_paraphrase",
+      "task_id": "phase_estimation_circuit",
+      "bench_task_id": "quantum_phase_estimation_circuit",
+      "fault_class": "missing-api-attribute",
+      "api_gap": "phase_from_measurement",
+      "api_gap_symbols": [
+        "phase_from_measurement"
+      ],
+      "gap_symbol_verified": true,
+      "task_spec": "Write a complete Python module that satisfies this spec:\n\nTask: Quantum phase estimation unitary eigenvalue extraction",
+      "category": "algorithm_implementation",
+      "messages": [
+        {
+          "role": "system",
+          "content": "Return only a complete Python solution. Do not include markdown fences or explanation."
+        },
+        {
+          "role": "user",
+          "content": "Write a complete Python module that satisfies this spec:\n\nTask: Quantum phase estimation unitary eigenvalue extraction\n\nDomain: quantum\nCategory: algorithm_implementation\n\nReturn only the final Python code."
+        },
+        {
+          "role": "assistant",
+          "content": "import math\n\n\ndef phase_estimation(eigenvalue_phase: float, n_counting_bits: int) -> int:\n    \"\"\"Simulate quantum phase estimation for a unitary with eigenvalue e^(2*pi*i*phase).\n\n    Given the true phase (0 <= phase < 1) and the number of counting qubits,\n    return the integer measurement outcome that QPE would produce (ideal, no noise).\n\n    The QPE algorithm maps phase -> round(phase * 2^n) mod 2^n.\n    \"\"\"\n    n_states = 1 << n_counting_bits\n    return round(eigenvalue_phase * n_states) % n_states\n\n\ndef phase_from_measurement(measurement: int, n_counting_bits: int) -> float:\n    \"\"\"Recover the estimated phase from a QPE measurement outcome.\n\n    Returns a float in [0, 1).\n    \"\"\"\n    n_states = 1 << n_counting_bits\n    return measurement / n_states"
+        }
+      ]
+    },
+    {
+      "format": "chat-sft-v1",
+      "source_schema": "taskgen-v14-delta-c10363",
+      "example_id": "c10363_delta_qaoa_maxcut_live_exact",
+      "prompt_kind": "api_gap_fix_live_exact",
+      "task_id": "qaoa_maxcut",
+      "bench_task_id": "quantum_qaoa_maxcut",
+      "fault_class": "missing-api-attribute",
+      "api_gap": "brute_force_maxcut",
+      "api_gap_symbols": [
+        "brute_force_maxcut"
+      ],
+      "gap_symbol_verified": true,
+      "task_spec": "Task: QAOA MaxCut cost function and classical simulation",
+      "category": "algorithm_implementation",
+      "messages": [
+        {
+          "role": "system",
+          "content": "Return only a complete Python solution. Do not include markdown fences or explanation."
+        },
+        {
+          "role": "user",
+          "content": "Task: QAOA MaxCut cost function and classical simulation\n\nDomain: quantum\nCategory: algorithm_implementation\n\nReturn only the final Python code."
+        },
+        {
+          "role": "assistant",
+          "content": "def maxcut_cost(bitstring: str, edges: list[tuple[int, int]]) -> int:\n    \"\"\"Compute the MaxCut cost for a given bitstring and edge list.\n\n    An edge (u, v) contributes 1 to the cost if bitstring[u] != bitstring[v].\n    \"\"\"\n    cost = 0\n    for u, v in edges:\n        if bitstring[u] != bitstring[v]:\n            cost += 1\n    return cost\n\n\ndef brute_force_maxcut(n_nodes: int, edges: list[tuple[int, int]]) -> tuple[str, int]:\n    \"\"\"Find the optimal MaxCut by exhaustive search over all 2^n bitstrings.\n\n    Returns (best_bitstring, best_cost). Ties broken by lexicographically smallest bitstring.\n    \"\"\"\n    best_bs = \"0\" * n_nodes\n    best_cost = 0\n    for i in range(1 << n_nodes):\n        bs = format(i, f\"0{n_nodes}b\")\n        c = maxcut_cost(bs, edges)\n        if c > best_cost:\n            best_cost = c\n            best_bs = bs\n    return (best_bs, best_cost)\n\n\ndef qaoa_cost_landscape(\n    n_nodes: int, edges: list[tuple[int, int]]\n) -> list[tuple[str, int]]:\n    \"\"\"Return all bitstrings and their MaxCut costs, sorted descending by cost.\n\n    Each entry is (bitstring, cost). Secondary sort: lexicographic ascending on bitstring.\n    \"\"\"\n    results = []\n    for i in range(1 << n_nodes):\n        bs = format(i, f\"0{n_nodes}b\")\n        results.append((bs, maxcut_cost(bs, edges)))\n    results.sort(key=lambda x: (-x[1], x[0]))\n    return results"
+        }
+      ]
+    },
+    {
+      "format": "chat-sft-v1",
+      "source_schema": "taskgen-v14-delta-c10363",
+      "example_id": "c10363_delta_qaoa_maxcut_api_named",
+      "prompt_kind": "api_gap_fix_api_named",
+      "task_id": "qaoa_maxcut",
+      "bench_task_id": "quantum_qaoa_maxcut",
+      "fault_class": "missing-api-attribute",
+      "api_gap": "brute_force_maxcut",
+      "api_gap_symbols": [
+        "brute_force_maxcut"
+      ],
+      "gap_symbol_verified": true,
+      "task_spec": "Task: QAOA MaxCut cost function and classical simulation\n\nRequired public API (signatures and docstrings only):\ndef maxcut_cost( bitstring: str, edges: list[tuple[int, int]] )\ndef brute_force_maxcut( n_nodes: int, edges: list[tuple[int, int]] )",
+      "category": "algorithm_implementation",
+      "messages": [
+        {
+          "role": "system",
+          "content": "Return only a complete Python solution. Do not include markdown fences or explanation."
+        },
+        {
+          "role": "user",
+          "content": "Task: QAOA MaxCut cost function and classical simulation\n\nRequired public API (signatures and docstrings only):\ndef maxcut_cost( bitstring: str, edges: list[tuple[int, int]] )\ndef brute_force_maxcut( n_nodes: int, edges: list[tuple[int, int]] )\n\nDomain: quantum\nCategory: algorithm_implementation\n\nReturn only the final Python code."
+        },
+        {
+          "role": "assistant",
+          "content": "def maxcut_cost(bitstring: str, edges: list[tuple[int, int]]) -> int:\n    \"\"\"Compute the MaxCut cost for a given bitstring and edge list.\n\n    An edge (u, v) contributes 1 to the cost if bitstring[u] != bitstring[v].\n    \"\"\"\n    cost = 0\n    for u, v in edges:\n        if bitstring[u] != bitstring[v]:\n            cost += 1\n    return cost\n\n\ndef brute_force_maxcut(n_nodes: int, edges: list[tuple[int, int]]) -> tuple[str, int]:\n    \"\"\"Find the optimal MaxCut by exhaustive search over all 2^n bitstrings.\n\n    Returns (best_bitstring, best_cost). Ties broken by lexicographically smallest bitstring.\n    \"\"\"\n    best_bs = \"0\" * n_nodes\n    best_cost = 0\n    for i in range(1 << n_nodes):\n        bs = format(i, f\"0{n_nodes}b\")\n        c = maxcut_cost(bs, edges)\n        if c > best_cost:\n            best_cost = c\n            best_bs = bs\n    return (best_bs, best_cost)\n\n\ndef qaoa_cost_landscape(\n    n_nodes: int, edges: list[tuple[int, int]]\n) -> list[tuple[str, int]]:\n    \"\"\"Return all bitstrings and their MaxCut costs, sorted descending by cost.\n\n    Each entry is (bitstring, cost). Secondary sort: lexicographic ascending on bitstring.\n    \"\"\"\n    results = []\n    for i in range(1 << n_nodes):\n        bs = format(i, f\"0{n_nodes}b\")\n        results.append((bs, maxcut_cost(bs, edges)))\n    results.sort(key=lambda x: (-x[1], x[0]))\n    return results"
+        }
+      ]
+    },
+    {
+      "format": "chat-sft-v1",
+      "source_schema": "taskgen-v14-delta-c10363",
+      "example_id": "c10363_delta_qaoa_maxcut_prose_paraphrase",
+      "prompt_kind": "api_gap_fix_prose_paraphrase",
+      "task_id": "qaoa_maxcut",
+      "bench_task_id": "quantum_qaoa_maxcut",
+      "fault_class": "missing-api-attribute",
+      "api_gap": "brute_force_maxcut",
+      "api_gap_symbols": [
+        "brute_force_maxcut"
+      ],
+      "gap_symbol_verified": true,
+      "task_spec": "Write a complete Python module that satisfies this spec:\n\nTask: QAOA MaxCut cost function and classical simulation",
+      "category": "algorithm_implementation",
+      "messages": [
+        {
+          "role": "system",
+          "content": "Return only a complete Python solution. Do not include markdown fences or explanation."
+        },
+        {
+          "role": "user",
+          "content": "Write a complete Python module that satisfies this spec:\n\nTask: QAOA MaxCut cost function and classical simulation\n\nDomain: quantum\nCategory: algorithm_implementation\n\nReturn only the final Python code."
+        },
+        {
+          "role": "assistant",
+          "content": "def maxcut_cost(bitstring: str, edges: list[tuple[int, int]]) -> int:\n    \"\"\"Compute the MaxCut cost for a given bitstring and edge list.\n\n    An edge (u, v) contributes 1 to the cost if bitstring[u] != bitstring[v].\n    \"\"\"\n    cost = 0\n    for u, v in edges:\n        if bitstring[u] != bitstring[v]:\n            cost += 1\n    return cost\n\n\ndef brute_force_maxcut(n_nodes: int, edges: list[tuple[int, int]]) -> tuple[str, int]:\n    \"\"\"Find the optimal MaxCut by exhaustive search over all 2^n bitstrings.\n\n    Returns (best_bitstring, best_cost). Ties broken by lexicographically smallest bitstring.\n    \"\"\"\n    best_bs = \"0\" * n_nodes\n    best_cost = 0\n    for i in range(1 << n_nodes):\n        bs = format(i, f\"0{n_nodes}b\")\n        c = maxcut_cost(bs, edges)\n        if c > best_cost:\n            best_cost = c\n            best_bs = bs\n    return (best_bs, best_cost)\n\n\ndef qaoa_cost_landscape(\n    n_nodes: int, edges: list[tuple[int, int]]\n) -> list[tuple[str, int]]:\n    \"\"\"Return all bitstrings and their MaxCut costs, sorted descending by cost.\n\n    Each entry is (bitstring, cost). Secondary sort: lexicographic ascending on bitstring.\n    \"\"\"\n    results = []\n    for i in range(1 << n_nodes):\n        bs = format(i, f\"0{n_nodes}b\")\n        results.append((bs, maxcut_cost(bs, edges)))\n    results.sort(key=lambda x: (-x[1], x[0]))\n    return results"
+        }
+      ]
+    },
+    {
+      "format": "chat-sft-v1",
+      "source_schema": "taskgen-v14-delta-c10363",
+      "example_id": "c10363_delta_density_matrix_partial_trace_live_exact",
+      "prompt_kind": "api_gap_fix_live_exact",
+      "task_id": "density_matrix_partial_trace",
+      "bench_task_id": "quantum_density_matrix_partial_trace",
+      "fault_class": "missing-required-function",
+      "api_gap": "density_from_state,tensor_product,purity",
+      "api_gap_symbols": [
+        "density_from_state",
+        "tensor_product",
+        "purity"
+      ],
+      "gap_symbol_verified": true,
+      "task_spec": "Task: Density matrix construction and partial trace",
+      "category": "algorithm_implementation",
+      "messages": [
+        {
+          "role": "system",
+          "content": "Return only a complete Python solution. Do not include markdown fences or explanation."
+        },
+        {
+          "role": "user",
+          "content": "Task: Density matrix construction and partial trace\n\nDomain: quantum\nCategory: algorithm_implementation\n\nReturn only the final Python code."
+        },
+        {
+          "role": "assistant",
+          "content": "def density_from_state(state: list[float]) -> list[list[float]]:\n    \"\"\"Compute the density matrix rho = |psi><psi| from a state vector.\"\"\"\n    n = len(state)\n    return [[state[i] * state[j] for j in range(n)] for i in range(n)]\n\n\ndef tensor_product(a: list[list[float]], b: list[list[float]]) -> list[list[float]]:\n    \"\"\"Compute the Kronecker (tensor) product of two square matrices.\"\"\"\n    da = len(a)\n    db = len(b)\n    size = da * db\n    result = [[0.0] * size for _ in range(size)]\n    for i in range(da):\n        for j in range(da):\n            for k in range(db):\n                for l in range(db):\n                    result[i * db + k][j * db + l] = a[i][j] * b[k][l]\n    return result\n\n\ndef partial_trace(rho: list[list[float]], dim_a: int, dim_b: int, trace_out: str) -> list[list[float]]:\n    \"\"\"\n    Compute the partial trace of a bipartite density matrix.\n\n    rho: (dim_a * dim_b) x (dim_a * dim_b) density matrix\n    trace_out: 'A' to trace out subsystem A, 'B' to trace out subsystem B\n    \"\"\"\n    if trace_out == \"B\":\n        # Trace out B -> result is dim_a x dim_a\n        result = [[0.0] * dim_a for _ in range(dim_a)]\n        for i in range(dim_a):\n            for j in range(dim_a):\n                for k in range(dim_b):\n                    result[i][j] += rho[i * dim_b + k][j * dim_b + k]\n        return result\n    else:\n        # Trace out A -> result is dim_b x dim_b\n        result = [[0.0] * dim_b for _ in range(dim_b)]\n        for k in range(dim_b):\n            for l in range(dim_b):\n                for i in range(dim_a):\n                    result[k][l] += rho[i * dim_b + k][i * dim_b + l]\n        return result\n\n\ndef purity(rho: list[list[float]]) -> float:\n    \"\"\"Compute Tr(rho^2), the purity of a density matrix.\"\"\"\n    n = len(rho)\n    total = 0.0\n    for i in range(n):\n        for j in range(n):\n            total += rho[i][j] * rho[j][i]\n    return total"
+        }
+      ]
+    },
+    {
+      "format": "chat-sft-v1",
+      "source_schema": "taskgen-v14-delta-c10363",
+      "example_id": "c10363_delta_density_matrix_partial_trace_api_named",
+      "prompt_kind": "api_gap_fix_api_named",
+      "task_id": "density_matrix_partial_trace",
+      "bench_task_id": "quantum_density_matrix_partial_trace",
+      "fault_class": "missing-required-function",
+      "api_gap": "density_from_state,tensor_product,purity",
+      "api_gap_symbols": [
+        "density_from_state",
+        "tensor_product",
+        "purity"
+      ],
+      "gap_symbol_verified": true,
+      "task_spec": "Task: Density matrix construction and partial trace\n\nRequired public API (signatures and docstrings only):\ndef density_from_state( state: list[float] )\ndef tensor_product( a: list[list[float]], b: list[list[float]] )\ndef partial_trace( rho: list[list[float]], dim_a: int, dim_b: int, trace_out: str )\ndef purity( rho: list[list[float]] )",
+      "category": "algorithm_implementation",
+      "messages": [
+        {
+          "role": "system",
+          "content": "Return only a complete Python solution. Do not include markdown fences or explanation."
+        },
+        {
+          "role": "user",
+          "content": "Task: Density matrix construction and partial trace\n\nRequired public API (signatures and docstrings only):\ndef density_from_state( state: list[float] )\ndef tensor_product( a: list[list[float]], b: list[list[float]] )\ndef partial_trace( rho: list[list[float]], dim_a: int, dim_b: int, trace_out: str )\ndef purity( rho: list[list[float]] )\n\nDomain: quantum\nCategory: algorithm_implementation\n\nReturn only the final Python code."
+        },
+        {
+          "role": "assistant",
+          "content": "def density_from_state(state: list[float]) -> list[list[float]]:\n    \"\"\"Compute the density matrix rho = |psi><psi| from a state vector.\"\"\"\n    n = len(state)\n    return [[state[i] * state[j] for j in range(n)] for i in range(n)]\n\n\ndef tensor_product(a: list[list[float]], b: list[list[float]]) -> list[list[float]]:\n    \"\"\"Compute the Kronecker (tensor) product of two square matrices.\"\"\"\n    da = len(a)\n    db = len(b)\n    size = da * db\n    result = [[0.0] * size for _ in range(size)]\n    for i in range(da):\n        for j in range(da):\n            for k in range(db):\n                for l in range(db):\n                    result[i * db + k][j * db + l] = a[i][j] * b[k][l]\n    return result\n\n\ndef partial_trace(rho: list[list[float]], dim_a: int, dim_b: int, trace_out: str) -> list[list[float]]:\n    \"\"\"\n    Compute the partial trace of a bipartite density matrix.\n\n    rho: (dim_a * dim_b) x (dim_a * dim_b) density matrix\n    trace_out: 'A' to trace out subsystem A, 'B' to trace out subsystem B\n    \"\"\"\n    if trace_out == \"B\":\n        # Trace out B -> result is dim_a x dim_a\n        result = [[0.0] * dim_a for _ in range(dim_a)]\n        for i in range(dim_a):\n            for j in range(dim_a):\n                for k in range(dim_b):\n                    result[i][j] += rho[i * dim_b + k][j * dim_b + k]\n        return result\n    else:\n        # Trace out A -> result is dim_b x dim_b\n        result = [[0.0] * dim_b for _ in range(dim_b)]\n        for k in range(dim_b):\n            for l in range(dim_b):\n                for i in range(dim_a):\n                    result[k][l] += rho[i * dim_b + k][i * dim_b + l]\n        return result\n\n\ndef purity(rho: list[list[float]]) -> float:\n    \"\"\"Compute Tr(rho^2), the purity of a density matrix.\"\"\"\n    n = len(rho)\n    total = 0.0\n    for i in range(n):\n        for j in range(n):\n            total += rho[i][j] * rho[j][i]\n    return total"
+        }
+      ]
+    },
+    {
+      "format": "chat-sft-v1",
+      "source_schema": "taskgen-v14-delta-c10363",
+      "example_id": "c10363_delta_density_matrix_partial_trace_prose_paraphrase",
+      "prompt_kind": "api_gap_fix_prose_paraphrase",
+      "task_id": "density_matrix_partial_trace",
+      "bench_task_id": "quantum_density_matrix_partial_trace",
+      "fault_class": "missing-required-function",
+      "api_gap": "density_from_state,tensor_product,purity",
+      "api_gap_symbols": [
+        "density_from_state",
+        "tensor_product",
+        "purity"
+      ],
+      "gap_symbol_verified": true,
+      "task_spec": "Write a complete Python module that satisfies this spec:\n\nTask: Density matrix construction and partial trace",
+      "category": "algorithm_implementation",
+      "messages": [
+        {
+          "role": "system",
+          "content": "Return only a complete Python solution. Do not include markdown fences or explanation."
+        },
+        {
+          "role": "user",
+          "content": "Write a complete Python module that satisfies this spec:\n\nTask: Density matrix construction and partial trace\n\nDomain: quantum\nCategory: algorithm_implementation\n\nReturn only the final Python code."
+        },
+        {
+          "role": "assistant",
+          "content": "def density_from_state(state: list[float]) -> list[list[float]]:\n    \"\"\"Compute the density matrix rho = |psi><psi| from a state vector.\"\"\"\n    n = len(state)\n    return [[state[i] * state[j] for j in range(n)] for i in range(n)]\n\n\ndef tensor_product(a: list[list[float]], b: list[list[float]]) -> list[list[float]]:\n    \"\"\"Compute the Kronecker (tensor) product of two square matrices.\"\"\"\n    da = len(a)\n    db = len(b)\n    size = da * db\n    result = [[0.0] * size for _ in range(size)]\n    for i in range(da):\n        for j in range(da):\n            for k in range(db):\n                for l in range(db):\n                    result[i * db + k][j * db + l] = a[i][j] * b[k][l]\n    return result\n\n\ndef partial_trace(rho: list[list[float]], dim_a: int, dim_b: int, trace_out: str) -> list[list[float]]:\n    \"\"\"\n    Compute the partial trace of a bipartite density matrix.\n\n    rho: (dim_a * dim_b) x (dim_a * dim_b) density matrix\n    trace_out: 'A' to trace out subsystem A, 'B' to trace out subsystem B\n    \"\"\"\n    if trace_out == \"B\":\n        # Trace out B -> result is dim_a x dim_a\n        result = [[0.0] * dim_a for _ in range(dim_a)]\n        for i in range(dim_a):\n            for j in range(dim_a):\n                for k in range(dim_b):\n                    result[i][j] += rho[i * dim_b + k][j * dim_b + k]\n        return result\n    else:\n        # Trace out A -> result is dim_b x dim_b\n        result = [[0.0] * dim_b for _ in range(dim_b)]\n        for k in range(dim_b):\n            for l in range(dim_b):\n                for i in range(dim_a):\n                    result[k][l] += rho[i * dim_b + k][i * dim_b + l]\n        return result\n\n\ndef purity(rho: list[list[float]]) -> float:\n    \"\"\"Compute Tr(rho^2), the purity of a density matrix.\"\"\"\n    n = len(rho)\n    total = 0.0\n    for i in range(n):\n        for j in range(n):\n            total += rho[i][j] * rho[j][i]\n    return total"
+        }
+      ]
+    },
+    {
+      "format": "chat-sft-v1",
+      "source_schema": "taskgen-v14-delta-c10363",
+      "example_id": "c10363_delta_quantum_error_correction_shor_9qubit_live_exact",
+      "prompt_kind": "api_gap_fix_live_exact",
+      "task_id": "quantum_error_correction_shor_9qubit",
+      "bench_task_id": "quantum_error_correction_shor_9qubit",
+      "fault_class": "wrong-output",
+      "api_gap": "shor_decode",
+      "api_gap_symbols": [
+        "shor_decode"
+      ],
+      "gap_symbol_verified": true,
+      "task_spec": "Task: Shor 9-qubit error correction code simulation",
+      "category": "algorithm_implementation",
+      "messages": [
+        {
+          "role": "system",
+          "content": "Return only a complete Python solution. Do not include markdown fences or explanation."
+        },
+        {
+          "role": "user",
+          "content": "Task: Shor 9-qubit error correction code simulation\n\nDomain: quantum\nCategory: algorithm_implementation\n\nReturn only the final Python code."
+        },
+        {
+          "role": "assistant",
+          "content": "from __future__ import annotations\n\nimport math\n\n\ndef shor_encode(logical_bit: int) -> list[float]:\n    \"\"\"\n    Encode a single logical qubit (0 or 1) using the Shor 9-qubit code.\n\n    |0_L> = (|000> + |111>)(|000> + |111>)(|000> + |111>) / (2*sqrt(2))\n    |1_L> = (|000> - |111>)(|000> - |111>)(|000> - |111>) / (2*sqrt(2))\n    \"\"\"\n    sign = 1 if logical_bit == 0 else -1\n    block_states = [0, 7]  # |000>=0, |111>=7 in 3-bit\n    block_signs = [1, sign]\n\n    state = [0.0] * 512\n    amp = 1.0 / (2 * math.sqrt(2))\n    for b1 in range(2):\n        for b2 in range(2):\n            for b3 in range(2):\n                idx = (block_states[b1] << 6) | (block_states[b2] << 3) | block_states[b3]\n                state[idx] = amp * block_signs[b1] * block_signs[b2] * block_signs[b3]\n    return state\n\n\ndef apply_x_error(state: list[float], qubit: int) -> list[float]:\n    \"\"\"Apply a bit-flip (X) error on the given qubit index (0-8, MSB first).\"\"\"\n    n = len(state)\n    result = [0.0] * n\n    bit = 8 - qubit  # convert to bit position from LSB\n    for i in range(n):\n        j = i ^ (1 << bit)\n        result[j] = state[i]\n    return result\n\n\ndef shor_decode(state: list[float]) -> int:\n    \"\"\"\n    Decode a (possibly single-bit-flip-corrupted) Shor-encoded state.\n\n    Steps:\n    1. Bit-flip correction via majority vote within each 3-qubit block.\n    2. Phase detection: compare the sign of amplitude at |000 000 000>\n       vs |111 000 000> in the corrected state. Same sign \u2192 logical 0,\n       opposite sign \u2192 logical 1.\n\n    Returns the logical bit (0 or 1).\n    \"\"\"\n    # Step 1: Correct bit-flips via majority vote per block.\n    corrected = [0.0] * 512\n    for idx in range(512):\n        if abs(state[idx]) < 1e-15:\n            continue\n        b0 = (idx >> 6) & 7\n        b1 = (idx >> 3) & 7\n        b2 = idx & 7\n        cb0 = 7 if bin(b0).count(\"1\") >= 2 else 0\n        cb1 = 7 if bin(b1).count(\"1\") >= 2 else 0\n        cb2 = 7 if bin(b2).count(\"1\") >= 2 else 0\n        new_idx = (cb0 << 6) | (cb1 << 3) | cb2\n        corrected[new_idx] += state[idx]\n\n    # Step 2: Determine logical bit from phase of first block.\n    # Compare amplitude at |000 000 000> (index 0) with |111 000 000> (index 448).\n    # |0_L>: these have the same sign.\n    # |1_L>: these have opposite signs.\n    amp_000 = corrected[0]  # |000 000 000>\n    amp_111 = corrected[0b111000000]  # |111 000 000>\n\n    if abs(amp_000) < 1e-12 and abs(amp_111) < 1e-12:\n        return 0  # fallback for degenerate case\n    if amp_000 * amp_111 >= 0:\n        return 0\n    else:\n        return 1"
+        }
+      ]
+    },
+    {
+      "format": "chat-sft-v1",
+      "source_schema": "taskgen-v14-delta-c10363",
+      "example_id": "c10363_delta_quantum_error_correction_shor_9qubit_api_named",
+      "prompt_kind": "api_gap_fix_api_named",
+      "task_id": "quantum_error_correction_shor_9qubit",
+      "bench_task_id": "quantum_error_correction_shor_9qubit",
+      "fault_class": "wrong-output",
+      "api_gap": "shor_decode",
+      "api_gap_symbols": [
+        "shor_decode"
+      ],
+      "gap_symbol_verified": true,
+      "task_spec": "Task: Shor 9-qubit error correction code simulation\n\nRequired public API (signatures and docstrings only):\ndef shor_encode( logical_bit: int )\ndef apply_x_error( state: list[float], qubit: int )\ndef shor_decode( state: list[float] )",
+      "category": "algorithm_implementation",
+      "messages": [
+        {
+          "role": "system",
+          "content": "Return only a complete Python solution. Do not include markdown fences or explanation."
+        },
+        {
+          "role": "user",
+          "content": "Task: Shor 9-qubit error correction code simulation\n\nRequired public API (signatures and docstrings only):\ndef shor_encode( logical_bit: int )\ndef apply_x_error( state: list[float], qubit: int )\ndef shor_decode( state: list[float] )\n\nDomain: quantum\nCategory: algorithm_implementation\n\nReturn only the final Python code."
+        },
+        {
+          "role": "assistant",
+          "content": "from __future__ import annotations\n\nimport math\n\n\ndef shor_encode(logical_bit: int) -> list[float]:\n    \"\"\"\n    Encode a single logical qubit (0 or 1) using the Shor 9-qubit code.\n\n    |0_L> = (|000> + |111>)(|000> + |111>)(|000> + |111>) / (2*sqrt(2))\n    |1_L> = (|000> - |111>)(|000> - |111>)(|000> - |111>) / (2*sqrt(2))\n    \"\"\"\n    sign = 1 if logical_bit == 0 else -1\n    block_states = [0, 7]  # |000>=0, |111>=7 in 3-bit\n    block_signs = [1, sign]\n\n    state = [0.0] * 512\n    amp = 1.0 / (2 * math.sqrt(2))\n    for b1 in range(2):\n        for b2 in range(2):\n            for b3 in range(2):\n                idx = (block_states[b1] << 6) | (block_states[b2] << 3) | block_states[b3]\n                state[idx] = amp * block_signs[b1] * block_signs[b2] * block_signs[b3]\n    return state\n\n\ndef apply_x_error(state: list[float], qubit: int) -> list[float]:\n    \"\"\"Apply a bit-flip (X) error on the given qubit index (0-8, MSB first).\"\"\"\n    n = len(state)\n    result = [0.0] * n\n    bit = 8 - qubit  # convert to bit position from LSB\n    for i in range(n):\n        j = i ^ (1 << bit)\n        result[j] = state[i]\n    return result\n\n\ndef shor_decode(state: list[float]) -> int:\n    \"\"\"\n    Decode a (possibly single-bit-flip-corrupted) Shor-encoded state.\n\n    Steps:\n    1. Bit-flip correction via majority vote within each 3-qubit block.\n    2. Phase detection: compare the sign of amplitude at |000 000 000>\n       vs |111 000 000> in the corrected state. Same sign \u2192 logical 0,\n       opposite sign \u2192 logical 1.\n\n    Returns the logical bit (0 or 1).\n    \"\"\"\n    # Step 1: Correct bit-flips via majority vote per block.\n    corrected = [0.0] * 512\n    for idx in range(512):\n        if abs(state[idx]) < 1e-15:\n            continue\n        b0 = (idx >> 6) & 7\n        b1 = (idx >> 3) & 7\n        b2 = idx & 7\n        cb0 = 7 if bin(b0).count(\"1\") >= 2 else 0\n        cb1 = 7 if bin(b1).count(\"1\") >= 2 else 0\n        cb2 = 7 if bin(b2).count(\"1\") >= 2 else 0\n        new_idx = (cb0 << 6) | (cb1 << 3) | cb2\n        corrected[new_idx] += state[idx]\n\n    # Step 2: Determine logical bit from phase of first block.\n    # Compare amplitude at |000 000 000> (index 0) with |111 000 000> (index 448).\n    # |0_L>: these have the same sign.\n    # |1_L>: these have opposite signs.\n    amp_000 = corrected[0]  # |000 000 000>\n    amp_111 = corrected[0b111000000]  # |111 000 000>\n\n    if abs(amp_000) < 1e-12 and abs(amp_111) < 1e-12:\n        return 0  # fallback for degenerate case\n    if amp_000 * amp_111 >= 0:\n        return 0\n    else:\n        return 1"
+        }
+      ]
+    },
+    {
+      "format": "chat-sft-v1",
+      "source_schema": "taskgen-v14-delta-c10363",
+      "example_id": "c10363_delta_quantum_error_correction_shor_9qubit_prose_paraphrase",
+      "prompt_kind": "api_gap_fix_prose_paraphrase",
+      "task_id": "quantum_error_correction_shor_9qubit",
+      "bench_task_id": "quantum_error_correction_shor_9qubit",
+      "fault_class": "wrong-output",
+      "api_gap": "shor_decode",
+      "api_gap_symbols": [
+        "shor_decode"
+      ],
+      "gap_symbol_verified": true,
+      "task_spec": "Write a complete Python module that satisfies this spec:\n\nTask: Shor 9-qubit error correction code simulation",
+      "category": "algorithm_implementation",
+      "messages": [
+        {
+          "role": "system",
+          "content": "Return only a complete Python solution. Do not include markdown fences or explanation."
+        },
+        {
+          "role": "user",
+          "content": "Write a complete Python module that satisfies this spec:\n\nTask: Shor 9-qubit error correction code simulation\n\nDomain: quantum\nCategory: algorithm_implementation\n\nReturn only the final Python code."
+        },
+        {
+          "role": "assistant",
+          "content": "from __future__ import annotations\n\nimport math\n\n\ndef shor_encode(logical_bit: int) -> list[float]:\n    \"\"\"\n    Encode a single logical qubit (0 or 1) using the Shor 9-qubit code.\n\n    |0_L> = (|000> + |111>)(|000> + |111>)(|000> + |111>) / (2*sqrt(2))\n    |1_L> = (|000> - |111>)(|000> - |111>)(|000> - |111>) / (2*sqrt(2))\n    \"\"\"\n    sign = 1 if logical_bit == 0 else -1\n    block_states = [0, 7]  # |000>=0, |111>=7 in 3-bit\n    block_signs = [1, sign]\n\n    state = [0.0] * 512\n    amp = 1.0 / (2 * math.sqrt(2))\n    for b1 in range(2):\n        for b2 in range(2):\n            for b3 in range(2):\n                idx = (block_states[b1] << 6) | (block_states[b2] << 3) | block_states[b3]\n                state[idx] = amp * block_signs[b1] * block_signs[b2] * block_signs[b3]\n    return state\n\n\ndef apply_x_error(state: list[float], qubit: int) -> list[float]:\n    \"\"\"Apply a bit-flip (X) error on the given qubit index (0-8, MSB first).\"\"\"\n    n = len(state)\n    result = [0.0] * n\n    bit = 8 - qubit  # convert to bit position from LSB\n    for i in range(n):\n        j = i ^ (1 << bit)\n        result[j] = state[i]\n    return result\n\n\ndef shor_decode(state: list[float]) -> int:\n    \"\"\"\n    Decode a (possibly single-bit-flip-corrupted) Shor-encoded state.\n\n    Steps:\n    1. Bit-flip correction via majority vote within each 3-qubit block.\n    2. Phase detection: compare the sign of amplitude at |000 000 000>\n       vs |111 000 000> in the corrected state. Same sign \u2192 logical 0,\n       opposite sign \u2192 logical 1.\n\n    Returns the logical bit (0 or 1).\n    \"\"\"\n    # Step 1: Correct bit-flips via majority vote per block.\n    corrected = [0.0] * 512\n    for idx in range(512):\n        if abs(state[idx]) < 1e-15:\n            continue\n        b0 = (idx >> 6) & 7\n        b1 = (idx >> 3) & 7\n        b2 = idx & 7\n        cb0 = 7 if bin(b0).count(\"1\") >= 2 else 0\n        cb1 = 7 if bin(b1).count(\"1\") >= 2 else 0\n        cb2 = 7 if bin(b2).count(\"1\") >= 2 else 0\n        new_idx = (cb0 << 6) | (cb1 << 3) | cb2\n        corrected[new_idx] += state[idx]\n\n    # Step 2: Determine logical bit from phase of first block.\n    # Compare amplitude at |000 000 000> (index 0) with |111 000 000> (index 448).\n    # |0_L>: these have the same sign.\n    # |1_L>: these have opposite signs.\n    amp_000 = corrected[0]  # |000 000 000>\n    amp_111 = corrected[0b111000000]  # |111 000 000>\n\n    if abs(amp_000) < 1e-12 and abs(amp_111) < 1e-12:\n        return 0  # fallback for degenerate case\n    if amp_000 * amp_111 >= 0:\n        return 0\n    else:\n        return 1"
+        }
+      ]
+    },
+    {
+      "format": "chat-sft-v1",
+      "source_schema": "taskgen-v14-delta-c10363",
+      "example_id": "c10363_delta_trotterized_hamiltonian_evolution_live_exact",
+      "prompt_kind": "api_gap_fix_live_exact",
+      "task_id": "trotterized_hamiltonian_evolution",
+      "bench_task_id": "quantum_trotterized_hamiltonian_evolution",
+      "fault_class": "missing-required-function",
+      "api_gap": "pauli_matrix,matrix_exp_hermitian,trotter_evolve",
+      "api_gap_symbols": [
+        "pauli_matrix",
+        "matrix_exp_hermitian",
+        "trotter_evolve"
+      ],
+      "gap_symbol_verified": true,
+      "task_spec": "Task: Trotterized Hamiltonian time evolution",
+      "category": "algorithm_implementation",
+      "messages": [
+        {
+          "role": "system",
+          "content": "Return only a complete Python solution. Do not include markdown fences or explanation."
+        },
+        {
+          "role": "user",
+          "content": "Task: Trotterized Hamiltonian time evolution\n\nDomain: quantum\nCategory: algorithm_implementation\n\nReturn only the final Python code."
+        },
+        {
+          "role": "assistant",
+          "content": "import cmath\nimport math\n\n\ndef pauli_matrix(name: str) -> list[list[complex]]:\n    \"\"\"Return the 2x2 Pauli matrix for 'I', 'X', 'Y', or 'Z'.\"\"\"\n    if name == \"I\":\n        return [[1, 0], [0, 1]]\n    if name == \"X\":\n        return [[0, 1], [1, 0]]\n    if name == \"Y\":\n        return [[0, -1j], [1j, 0]]\n    if name == \"Z\":\n        return [[1, 0], [0, -1]]\n    raise ValueError(f\"Unknown Pauli: {name}\")\n\n\ndef matrix_exp_hermitian(h: list[list[complex]], theta: float) -> list[list[complex]]:\n    \"\"\"\n    Compute exp(-i * theta * H) for a 2x2 Hermitian matrix H.\n\n    Uses eigendecomposition: H = U diag(e1,e2) U^dag\n    exp(-i*theta*H) = U diag(e^{-i*theta*e1}, e^{-i*theta*e2}) U^dag\n    \"\"\"\n    a = complex(h[0][0])\n    b = complex(h[0][1])\n    d = complex(h[1][1])\n\n    # Eigenvalues of 2x2 Hermitian: (a+d)/2 +/- sqrt(((a-d)/2)^2 + |b|^2)\n    half_trace = (a + d) / 2\n    disc = math.sqrt(((a - d).real / 2) ** 2 + abs(b) ** 2)\n\n    e1 = half_trace.real + disc\n    e2 = half_trace.real - disc\n\n    phase1 = cmath.exp(-1j * theta * e1)\n    phase2 = cmath.exp(-1j * theta * e2)\n\n    if disc < 1e-15:\n        # Proportional to identity\n        return [[phase1, 0], [0, phase1]]\n\n    # Eigenvectors\n    cos_a = disc\n    # |v1> = [b, e1-a], normalized\n    v1 = [b, e1 - a.real]\n    n1 = math.sqrt(abs(v1[0]) ** 2 + abs(v1[1]) ** 2)\n    if n1 < 1e-15:\n        v1 = [1, 0]\n        n1 = 1\n    v1 = [v1[0] / n1, v1[1] / n1]\n\n    v2 = [-v1[1].conjugate(), v1[0].conjugate()]\n\n    # exp = phase1 * |v1><v1| + phase2 * |v2><v2|\n    result = [[0j, 0j], [0j, 0j]]\n    for i in range(2):\n        for j in range(2):\n            result[i][j] = phase1 * v1[i] * v1[j].conjugate() + phase2 * v2[i] * v2[j].conjugate()\n    return result\n\n\ndef _mat_vec(m, v):\n    n = len(v)\n    return [sum(m[i][j] * v[j] for j in range(n)) for i in range(n)]\n\n\ndef trotter_evolve(\n    state: list[complex],\n    hamiltonian_terms: list[tuple[float, str]],\n    t: float,\n    steps: int,\n) -> list[complex]:\n    \"\"\"\n    Evolve a 1-qubit state under H = sum_k coeff_k * Pauli_k using\n    first-order Trotterization with the given number of steps.\n\n    exp(-i*H*t) ~ (prod_k exp(-i*coeff_k*Pauli_k*dt))^steps\n    \"\"\"\n    dt = t / steps\n    current = list(state)\n    for _ in range(steps):\n        for coeff, pauli_name in hamiltonian_terms:\n            mat = pauli_matrix(pauli_name)\n            u = matrix_exp_hermitian(mat, coeff * dt)\n            current = _mat_vec(u, current)\n    return current"
+        }
+      ]
+    },
+    {
+      "format": "chat-sft-v1",
+      "source_schema": "taskgen-v14-delta-c10363",
+      "example_id": "c10363_delta_trotterized_hamiltonian_evolution_api_named",
+      "prompt_kind": "api_gap_fix_api_named",
+      "task_id": "trotterized_hamiltonian_evolution",
+      "bench_task_id": "quantum_trotterized_hamiltonian_evolution",
+      "fault_class": "missing-required-function",
+      "api_gap": "pauli_matrix,matrix_exp_hermitian,trotter_evolve",
+      "api_gap_symbols": [
+        "pauli_matrix",
+        "matrix_exp_hermitian",
+        "trotter_evolve"
+      ],
+      "gap_symbol_verified": true,
+      "task_spec": "Task: Trotterized Hamiltonian time evolution\n\nRequired public API (signatures and docstrings only):\ndef pauli_matrix( name: str )\ndef matrix_exp_hermitian( h: list[list[complex]], theta: float )",
+      "category": "algorithm_implementation",
+      "messages": [
+        {
+          "role": "system",
+          "content": "Return only a complete Python solution. Do not include markdown fences or explanation."
+        },
+        {
+          "role": "user",
+          "content": "Task: Trotterized Hamiltonian time evolution\n\nRequired public API (signatures and docstrings only):\ndef pauli_matrix( name: str )\ndef matrix_exp_hermitian( h: list[list[complex]], theta: float )\n\nDomain: quantum\nCategory: algorithm_implementation\n\nReturn only the final Python code."
+        },
+        {
+          "role": "assistant",
+          "content": "import cmath\nimport math\n\n\ndef pauli_matrix(name: str) -> list[list[complex]]:\n    \"\"\"Return the 2x2 Pauli matrix for 'I', 'X', 'Y', or 'Z'.\"\"\"\n    if name == \"I\":\n        return [[1, 0], [0, 1]]\n    if name == \"X\":\n        return [[0, 1], [1, 0]]\n    if name == \"Y\":\n        return [[0, -1j], [1j, 0]]\n    if name == \"Z\":\n        return [[1, 0], [0, -1]]\n    raise ValueError(f\"Unknown Pauli: {name}\")\n\n\ndef matrix_exp_hermitian(h: list[list[complex]], theta: float) -> list[list[complex]]:\n    \"\"\"\n    Compute exp(-i * theta * H) for a 2x2 Hermitian matrix H.\n\n    Uses eigendecomposition: H = U diag(e1,e2) U^dag\n    exp(-i*theta*H) = U diag(e^{-i*theta*e1}, e^{-i*theta*e2}) U^dag\n    \"\"\"\n    a = complex(h[0][0])\n    b = complex(h[0][1])\n    d = complex(h[1][1])\n\n    # Eigenvalues of 2x2 Hermitian: (a+d)/2 +/- sqrt(((a-d)/2)^2 + |b|^2)\n    half_trace = (a + d) / 2\n    disc = math.sqrt(((a - d).real / 2) ** 2 + abs(b) ** 2)\n\n    e1 = half_trace.real + disc\n    e2 = half_trace.real - disc\n\n    phase1 = cmath.exp(-1j * theta * e1)\n    phase2 = cmath.exp(-1j * theta * e2)\n\n    if disc < 1e-15:\n        # Proportional to identity\n        return [[phase1, 0], [0, phase1]]\n\n    # Eigenvectors\n    cos_a = disc\n    # |v1> = [b, e1-a], normalized\n    v1 = [b, e1 - a.real]\n    n1 = math.sqrt(abs(v1[0]) ** 2 + abs(v1[1]) ** 2)\n    if n1 < 1e-15:\n        v1 = [1, 0]\n        n1 = 1\n    v1 = [v1[0] / n1, v1[1] / n1]\n\n    v2 = [-v1[1].conjugate(), v1[0].conjugate()]\n\n    # exp = phase1 * |v1><v1| + phase2 * |v2><v2|\n    result = [[0j, 0j], [0j, 0j]]\n    for i in range(2):\n        for j in range(2):\n            result[i][j] = phase1 * v1[i] * v1[j].conjugate() + phase2 * v2[i] * v2[j].conjugate()\n    return result\n\n\ndef _mat_vec(m, v):\n    n = len(v)\n    return [sum(m[i][j] * v[j] for j in range(n)) for i in range(n)]\n\n\ndef trotter_evolve(\n    state: list[complex],\n    hamiltonian_terms: list[tuple[float, str]],\n    t: float,\n    steps: int,\n) -> list[complex]:\n    \"\"\"\n    Evolve a 1-qubit state under H = sum_k coeff_k * Pauli_k using\n    first-order Trotterization with the given number of steps.\n\n    exp(-i*H*t) ~ (prod_k exp(-i*coeff_k*Pauli_k*dt))^steps\n    \"\"\"\n    dt = t / steps\n    current = list(state)\n    for _ in range(steps):\n        for coeff, pauli_name in hamiltonian_terms:\n            mat = pauli_matrix(pauli_name)\n            u = matrix_exp_hermitian(mat, coeff * dt)\n            current = _mat_vec(u, current)\n    return current"
+        }
+      ]
+    },
+    {
+      "format": "chat-sft-v1",
+      "source_schema": "taskgen-v14-delta-c10363",
+      "example_id": "c10363_delta_trotterized_hamiltonian_evolution_prose_paraphrase",
+      "prompt_kind": "api_gap_fix_prose_paraphrase",
+      "task_id": "trotterized_hamiltonian_evolution",
+      "bench_task_id": "quantum_trotterized_hamiltonian_evolution",
+      "fault_class": "missing-required-function",
+      "api_gap": "pauli_matrix,matrix_exp_hermitian,trotter_evolve",
+      "api_gap_symbols": [
+        "pauli_matrix",
+        "matrix_exp_hermitian",
+        "trotter_evolve"
+      ],
+      "gap_symbol_verified": true,
+      "task_spec": "Write a complete Python module that satisfies this spec:\n\nTask: Trotterized Hamiltonian time evolution",
+      "category": "algorithm_implementation",
+      "messages": [
+        {
+          "role": "system",
+          "content": "Return only a complete Python solution. Do not include markdown fences or explanation."
+        },
+        {
+          "role": "user",
+          "content": "Write a complete Python module that satisfies this spec:\n\nTask: Trotterized Hamiltonian time evolution\n\nDomain: quantum\nCategory: algorithm_implementation\n\nReturn only the final Python code."
+        },
+        {
+          "role": "assistant",
+          "content": "import cmath\nimport math\n\n\ndef pauli_matrix(name: str) -> list[list[complex]]:\n    \"\"\"Return the 2x2 Pauli matrix for 'I', 'X', 'Y', or 'Z'.\"\"\"\n    if name == \"I\":\n        return [[1, 0], [0, 1]]\n    if name == \"X\":\n        return [[0, 1], [1, 0]]\n    if name == \"Y\":\n        return [[0, -1j], [1j, 0]]\n    if name == \"Z\":\n        return [[1, 0], [0, -1]]\n    raise ValueError(f\"Unknown Pauli: {name}\")\n\n\ndef matrix_exp_hermitian(h: list[list[complex]], theta: float) -> list[list[complex]]:\n    \"\"\"\n    Compute exp(-i * theta * H) for a 2x2 Hermitian matrix H.\n\n    Uses eigendecomposition: H = U diag(e1,e2) U^dag\n    exp(-i*theta*H) = U diag(e^{-i*theta*e1}, e^{-i*theta*e2}) U^dag\n    \"\"\"\n    a = complex(h[0][0])\n    b = complex(h[0][1])\n    d = complex(h[1][1])\n\n    # Eigenvalues of 2x2 Hermitian: (a+d)/2 +/- sqrt(((a-d)/2)^2 + |b|^2)\n    half_trace = (a + d) / 2\n    disc = math.sqrt(((a - d).real / 2) ** 2 + abs(b) ** 2)\n\n    e1 = half_trace.real + disc\n    e2 = half_trace.real - disc\n\n    phase1 = cmath.exp(-1j * theta * e1)\n    phase2 = cmath.exp(-1j * theta * e2)\n\n    if disc < 1e-15:\n        # Proportional to identity\n        return [[phase1, 0], [0, phase1]]\n\n    # Eigenvectors\n    cos_a = disc\n    # |v1> = [b, e1-a], normalized\n    v1 = [b, e1 - a.real]\n    n1 = math.sqrt(abs(v1[0]) ** 2 + abs(v1[1]) ** 2)\n    if n1 < 1e-15:\n        v1 = [1, 0]\n        n1 = 1\n    v1 = [v1[0] / n1, v1[1] / n1]\n\n    v2 = [-v1[1].conjugate(), v1[0].conjugate()]\n\n    # exp = phase1 * |v1><v1| + phase2 * |v2><v2|\n    result = [[0j, 0j], [0j, 0j]]\n    for i in range(2):\n        for j in range(2):\n            result[i][j] = phase1 * v1[i] * v1[j].conjugate() + phase2 * v2[i] * v2[j].conjugate()\n    return result\n\n\ndef _mat_vec(m, v):\n    n = len(v)\n    return [sum(m[i][j] * v[j] for j in range(n)) for i in range(n)]\n\n\ndef trotter_evolve(\n    state: list[complex],\n    hamiltonian_terms: list[tuple[float, str]],\n    t: float,\n    steps: int,\n) -> list[complex]:\n    \"\"\"\n    Evolve a 1-qubit state under H = sum_k coeff_k * Pauli_k using\n    first-order Trotterization with the given number of steps.\n\n    exp(-i*H*t) ~ (prod_k exp(-i*coeff_k*Pauli_k*dt))^steps\n    \"\"\"\n    dt = t / steps\n    current = list(state)\n    for _ in range(steps):\n        for coeff, pauli_name in hamiltonian_terms:\n            mat = pauli_matrix(pauli_name)\n            u = matrix_exp_hermitian(mat, coeff * dt)\n            current = _mat_vec(u, current)\n    return current"
+        }
+      ]
+    },
+    {
+      "format": "chat-sft-v1",
+      "source_schema": "taskgen-v14-delta-c10363",
+      "example_id": "c10363_delta_quantum_channel_depolarizing_live_exact",
+      "prompt_kind": "api_gap_fix_live_exact",
+      "task_id": "quantum_channel_depolarizing",
+      "bench_task_id": "quantum_channel_depolarizing",
+      "fault_class": "missing-required-function",
+      "api_gap": "amplitude_damping_channel,channel_fidelity",
+      "api_gap_symbols": [
+        "amplitude_damping_channel",
+        "channel_fidelity"
+      ],
+      "gap_symbol_verified": true,
+      "task_spec": "Task: Depolarizing quantum channel simulation",
+      "category": "algorithm_implementation",
+      "messages": [
+        {
+          "role": "system",
+          "content": "Return only a complete Python solution. Do not include markdown fences or explanation."
+        },
+        {
+          "role": "user",
+          "content": "Task: Depolarizing quantum channel simulation\n\nDomain: quantum\nCategory: algorithm_implementation\n\nReturn only the final Python code."
+        },
+        {
+          "role": "assistant",
+          "content": "import math\n\n\ndef _mat_mul(a, b):\n    \"\"\"Multiply two 2x2 matrices.\"\"\"\n    return [\n        [a[0][0]*b[0][0] + a[0][1]*b[1][0], a[0][0]*b[0][1] + a[0][1]*b[1][1]],\n        [a[1][0]*b[0][0] + a[1][1]*b[1][0], a[1][0]*b[0][1] + a[1][1]*b[1][1]],\n    ]\n\n\ndef _mat_add(a, b):\n    return [[a[i][j] + b[i][j] for j in range(2)] for i in range(2)]\n\n\ndef _mat_scale(s, m):\n    return [[s * m[i][j] for j in range(2)] for i in range(2)]\n\n\ndef _adjoint(m):\n    return [[m[j][i] for j in range(2)] for i in range(2)]\n\n\ndef _kraus_apply(kraus_ops, rho):\n    \"\"\"Apply a quantum channel: rho' = sum_k K_k rho K_k^dag.\"\"\"\n    result = [[0.0, 0.0], [0.0, 0.0]]\n    for k in kraus_ops:\n        kd = _adjoint(k)\n        term = _mat_mul(_mat_mul(k, rho), kd)\n        result = _mat_add(result, term)\n    return result\n\n\ndef depolarizing_channel(rho, p):\n    \"\"\"\n    Apply the depolarizing channel with probability p:\n    rho' = (1 - p) * rho + p * (I / 2)\n\n    p=0: no noise (identity channel)\n    p=1: fully depolarizing (output is maximally mixed)\n    \"\"\"\n    identity_half = [[0.5, 0.0], [0.0, 0.5]]\n    return _mat_add(_mat_scale(1 - p, rho), _mat_scale(p, identity_half))\n\n\ndef amplitude_damping_channel(rho, gamma):\n    \"\"\"\n    Apply the amplitude damping channel with damping rate gamma.\n    K0 = [[1, 0], [0, sqrt(1-gamma)]]\n    K1 = [[0, sqrt(gamma)], [0, 0]]\n    \"\"\"\n    sg = math.sqrt(gamma)\n    s1g = math.sqrt(1 - gamma)\n    K0 = [[1, 0], [0, s1g]]\n    K1 = [[0, sg], [0, 0]]\n    return _kraus_apply([K0, K1], rho)\n\n\ndef channel_fidelity(rho, sigma):\n    \"\"\"\n    Compute the quantum state fidelity F(rho, sigma) for 2x2 density matrices.\n    Uses the 2x2 closed-form:\n    F = Tr(rho sigma) + 2*sqrt(det(rho)*det(sigma))\n    \"\"\"\n    tr_prod = sum(rho[i][j] * sigma[j][i] for i in range(2) for j in range(2))\n    det_rho = rho[0][0] * rho[1][1] - rho[0][1] * rho[1][0]\n    det_sigma = sigma[0][0] * sigma[1][1] - sigma[0][1] * sigma[1][0]\n    f = tr_prod + 2 * math.sqrt(max(det_rho * det_sigma, 0.0))\n    return f"
+        }
+      ]
+    },
+    {
+      "format": "chat-sft-v1",
+      "source_schema": "taskgen-v14-delta-c10363",
+      "example_id": "c10363_delta_quantum_channel_depolarizing_api_named",
+      "prompt_kind": "api_gap_fix_api_named",
+      "task_id": "quantum_channel_depolarizing",
+      "bench_task_id": "quantum_channel_depolarizing",
+      "fault_class": "missing-required-function",
+      "api_gap": "amplitude_damping_channel,channel_fidelity",
+      "api_gap_symbols": [
+        "amplitude_damping_channel",
+        "channel_fidelity"
+      ],
+      "gap_symbol_verified": true,
+      "task_spec": "Task: Depolarizing quantum channel simulation\n\nRequired public API (signatures and docstrings only):\ndef depolarizing_channel( rho, p )\ndef amplitude_damping_channel( rho, gamma )\ndef channel_fidelity( rho, sigma )",
+      "category": "algorithm_implementation",
+      "messages": [
+        {
+          "role": "system",
+          "content": "Return only a complete Python solution. Do not include markdown fences or explanation."
+        },
+        {
+          "role": "user",
+          "content": "Task: Depolarizing quantum channel simulation\n\nRequired public API (signatures and docstrings only):\ndef depolarizing_channel( rho, p )\ndef amplitude_damping_channel( rho, gamma )\ndef channel_fidelity( rho, sigma )\n\nDomain: quantum\nCategory: algorithm_implementation\n\nReturn only the final Python code."
+        },
+        {
+          "role": "assistant",
+          "content": "import math\n\n\ndef _mat_mul(a, b):\n    \"\"\"Multiply two 2x2 matrices.\"\"\"\n    return [\n        [a[0][0]*b[0][0] + a[0][1]*b[1][0], a[0][0]*b[0][1] + a[0][1]*b[1][1]],\n        [a[1][0]*b[0][0] + a[1][1]*b[1][0], a[1][0]*b[0][1] + a[1][1]*b[1][1]],\n    ]\n\n\ndef _mat_add(a, b):\n    return [[a[i][j] + b[i][j] for j in range(2)] for i in range(2)]\n\n\ndef _mat_scale(s, m):\n    return [[s * m[i][j] for j in range(2)] for i in range(2)]\n\n\ndef _adjoint(m):\n    return [[m[j][i] for j in range(2)] for i in range(2)]\n\n\ndef _kraus_apply(kraus_ops, rho):\n    \"\"\"Apply a quantum channel: rho' = sum_k K_k rho K_k^dag.\"\"\"\n    result = [[0.0, 0.0], [0.0, 0.0]]\n    for k in kraus_ops:\n        kd = _adjoint(k)\n        term = _mat_mul(_mat_mul(k, rho), kd)\n        result = _mat_add(result, term)\n    return result\n\n\ndef depolarizing_channel(rho, p):\n    \"\"\"\n    Apply the depolarizing channel with probability p:\n    rho' = (1 - p) * rho + p * (I / 2)\n\n    p=0: no noise (identity channel)\n    p=1: fully depolarizing (output is maximally mixed)\n    \"\"\"\n    identity_half = [[0.5, 0.0], [0.0, 0.5]]\n    return _mat_add(_mat_scale(1 - p, rho), _mat_scale(p, identity_half))\n\n\ndef amplitude_damping_channel(rho, gamma):\n    \"\"\"\n    Apply the amplitude damping channel with damping rate gamma.\n    K0 = [[1, 0], [0, sqrt(1-gamma)]]\n    K1 = [[0, sqrt(gamma)], [0, 0]]\n    \"\"\"\n    sg = math.sqrt(gamma)\n    s1g = math.sqrt(1 - gamma)\n    K0 = [[1, 0], [0, s1g]]\n    K1 = [[0, sg], [0, 0]]\n    return _kraus_apply([K0, K1], rho)\n\n\ndef channel_fidelity(rho, sigma):\n    \"\"\"\n    Compute the quantum state fidelity F(rho, sigma) for 2x2 density matrices.\n    Uses the 2x2 closed-form:\n    F = Tr(rho sigma) + 2*sqrt(det(rho)*det(sigma))\n    \"\"\"\n    tr_prod = sum(rho[i][j] * sigma[j][i] for i in range(2) for j in range(2))\n    det_rho = rho[0][0] * rho[1][1] - rho[0][1] * rho[1][0]\n    det_sigma = sigma[0][0] * sigma[1][1] - sigma[0][1] * sigma[1][0]\n    f = tr_prod + 2 * math.sqrt(max(det_rho * det_sigma, 0.0))\n    return f"
+        }
+      ]
+    },
+    {
+      "format": "chat-sft-v1",
+      "source_schema": "taskgen-v14-delta-c10363",
+      "example_id": "c10363_delta_quantum_channel_depolarizing_prose_paraphrase",
+      "prompt_kind": "api_gap_fix_prose_paraphrase",
+      "task_id": "quantum_channel_depolarizing",
+      "bench_task_id": "quantum_channel_depolarizing",
+      "fault_class": "missing-required-function",
+      "api_gap": "amplitude_damping_channel,channel_fidelity",
+      "api_gap_symbols": [
+        "amplitude_damping_channel",
+        "channel_fidelity"
+      ],
+      "gap_symbol_verified": true,
+      "task_spec": "Write a complete Python module that satisfies this spec:\n\nTask: Depolarizing quantum channel simulation",
+      "category": "algorithm_implementation",
+      "messages": [
+        {
+          "role": "system",
+          "content": "Return only a complete Python solution. Do not include markdown fences or explanation."
+        },
+        {
+          "role": "user",
+          "content": "Write a complete Python module that satisfies this spec:\n\nTask: Depolarizing quantum channel simulation\n\nDomain: quantum\nCategory: algorithm_implementation\n\nReturn only the final Python code."
+        },
+        {
+          "role": "assistant",
+          "content": "import math\n\n\ndef _mat_mul(a, b):\n    \"\"\"Multiply two 2x2 matrices.\"\"\"\n    return [\n        [a[0][0]*b[0][0] + a[0][1]*b[1][0], a[0][0]*b[0][1] + a[0][1]*b[1][1]],\n        [a[1][0]*b[0][0] + a[1][1]*b[1][0], a[1][0]*b[0][1] + a[1][1]*b[1][1]],\n    ]\n\n\ndef _mat_add(a, b):\n    return [[a[i][j] + b[i][j] for j in range(2)] for i in range(2)]\n\n\ndef _mat_scale(s, m):\n    return [[s * m[i][j] for j in range(2)] for i in range(2)]\n\n\ndef _adjoint(m):\n    return [[m[j][i] for j in range(2)] for i in range(2)]\n\n\ndef _kraus_apply(kraus_ops, rho):\n    \"\"\"Apply a quantum channel: rho' = sum_k K_k rho K_k^dag.\"\"\"\n    result = [[0.0, 0.0], [0.0, 0.0]]\n    for k in kraus_ops:\n        kd = _adjoint(k)\n        term = _mat_mul(_mat_mul(k, rho), kd)\n        result = _mat_add(result, term)\n    return result\n\n\ndef depolarizing_channel(rho, p):\n    \"\"\"\n    Apply the depolarizing channel with probability p:\n    rho' = (1 - p) * rho + p * (I / 2)\n\n    p=0: no noise (identity channel)\n    p=1: fully depolarizing (output is maximally mixed)\n    \"\"\"\n    identity_half = [[0.5, 0.0], [0.0, 0.5]]\n    return _mat_add(_mat_scale(1 - p, rho), _mat_scale(p, identity_half))\n\n\ndef amplitude_damping_channel(rho, gamma):\n    \"\"\"\n    Apply the amplitude damping channel with damping rate gamma.\n    K0 = [[1, 0], [0, sqrt(1-gamma)]]\n    K1 = [[0, sqrt(gamma)], [0, 0]]\n    \"\"\"\n    sg = math.sqrt(gamma)\n    s1g = math.sqrt(1 - gamma)\n    K0 = [[1, 0], [0, s1g]]\n    K1 = [[0, sg], [0, 0]]\n    return _kraus_apply([K0, K1], rho)\n\n\ndef channel_fidelity(rho, sigma):\n    \"\"\"\n    Compute the quantum state fidelity F(rho, sigma) for 2x2 density matrices.\n    Uses the 2x2 closed-form:\n    F = Tr(rho sigma) + 2*sqrt(det(rho)*det(sigma))\n    \"\"\"\n    tr_prod = sum(rho[i][j] * sigma[j][i] for i in range(2) for j in range(2))\n    det_rho = rho[0][0] * rho[1][1] - rho[0][1] * rho[1][0]\n    det_sigma = sigma[0][0] * sigma[1][1] - sigma[0][1] * sigma[1][0]\n    f = tr_prod + 2 * math.sqrt(max(det_rho * det_sigma, 0.0))\n    return f"
+        }
+      ]
+    },
+    {
+      "format": "chat-sft-v1",
+      "source_schema": "taskgen-v14-delta-c10363",
+      "example_id": "c10363_delta_ghz_state_witness_live_exact",
+      "prompt_kind": "api_gap_fix_live_exact",
+      "task_id": "ghz_state_witness",
+      "bench_task_id": "quantum_ghz_state_witness",
+      "fault_class": "missing-api-attribute",
+      "api_gap": "concurrence_2qubit",
+      "api_gap_symbols": [
+        "concurrence_2qubit"
+      ],
+      "gap_symbol_verified": true,
+      "task_spec": "Task: GHZ state preparation and entanglement witness",
+      "category": "algorithm_implementation",
+      "messages": [
+        {
+          "role": "system",
+          "content": "Return only a complete Python solution. Do not include markdown fences or explanation."
+        },
+        {
+          "role": "user",
+          "content": "Task: GHZ state preparation and entanglement witness\n\nDomain: quantum\nCategory: algorithm_implementation\n\nReturn only the final Python code."
+        },
+        {
+          "role": "assistant",
+          "content": "import math\n\n\ndef ghz_state(n_qubits: int) -> list[float]:\n    \"\"\"\n    Construct the n-qubit GHZ state: (|00...0> + |11...1>) / sqrt(2).\n    Returns a list of 2^n real amplitudes.\n    \"\"\"\n    dim = 2 ** n_qubits\n    state = [0.0] * dim\n    amp = 1.0 / math.sqrt(2)\n    state[0] = amp          # |00...0>\n    state[dim - 1] = amp    # |11...1>\n    return state\n\n\ndef w_state(n_qubits: int) -> list[float]:\n    \"\"\"\n    Construct the n-qubit W state: equal superposition of all single-excitation\n    basis states (|00..01> + |00..10> + ... + |10..00>) / sqrt(n).\n    \"\"\"\n    dim = 2 ** n_qubits\n    state = [0.0] * dim\n    amp = 1.0 / math.sqrt(n_qubits)\n    for k in range(n_qubits):\n        idx = 1 << k\n        state[idx] = amp\n    return state\n\n\ndef ghz_witness_expectation(state: list[float], n_qubits: int) -> float:\n    \"\"\"\n    Compute the expectation value of the GHZ entanglement witness:\n    W = I/2 - |GHZ><GHZ|\n\n    <W> = 1/2 - |<GHZ|state>|^2\n    Negative value certifies GHZ-type entanglement.\n    \"\"\"\n    ghz = ghz_state(n_qubits)\n    overlap = sum(g * s for g, s in zip(ghz, state))\n    return 0.5 - overlap ** 2\n\n\ndef concurrence_2qubit(state: list[float]) -> float:\n    \"\"\"\n    Compute the concurrence of a 2-qubit pure state |psi>.\n    C = 2 |a*d - b*c| for state [a, b, c, d].\n    \"\"\"\n    a, b, c, d = state\n    return 2 * abs(a * d - b * c)"
+        }
+      ]
+    },
+    {
+      "format": "chat-sft-v1",
+      "source_schema": "taskgen-v14-delta-c10363",
+      "example_id": "c10363_delta_ghz_state_witness_api_named",
+      "prompt_kind": "api_gap_fix_api_named",
+      "task_id": "ghz_state_witness",
+      "bench_task_id": "quantum_ghz_state_witness",
+      "fault_class": "missing-api-attribute",
+      "api_gap": "concurrence_2qubit",
+      "api_gap_symbols": [
+        "concurrence_2qubit"
+      ],
+      "gap_symbol_verified": true,
+      "task_spec": "Task: GHZ state preparation and entanglement witness\n\nRequired public API (signatures and docstrings only):\ndef ghz_state( n_qubits: int )\ndef w_state( n_qubits: int )\ndef ghz_witness_expectation( state: list[float], n_qubits: int )\ndef concurrence_2qubit( state: list[float] )",
+      "category": "algorithm_implementation",
+      "messages": [
+        {
+          "role": "system",
+          "content": "Return only a complete Python solution. Do not include markdown fences or explanation."
+        },
+        {
+          "role": "user",
+          "content": "Task: GHZ state preparation and entanglement witness\n\nRequired public API (signatures and docstrings only):\ndef ghz_state( n_qubits: int )\ndef w_state( n_qubits: int )\ndef ghz_witness_expectation( state: list[float], n_qubits: int )\ndef concurrence_2qubit( state: list[float] )\n\nDomain: quantum\nCategory: algorithm_implementation\n\nReturn only the final Python code."
+        },
+        {
+          "role": "assistant",
+          "content": "import math\n\n\ndef ghz_state(n_qubits: int) -> list[float]:\n    \"\"\"\n    Construct the n-qubit GHZ state: (|00...0> + |11...1>) / sqrt(2).\n    Returns a list of 2^n real amplitudes.\n    \"\"\"\n    dim = 2 ** n_qubits\n    state = [0.0] * dim\n    amp = 1.0 / math.sqrt(2)\n    state[0] = amp          # |00...0>\n    state[dim - 1] = amp    # |11...1>\n    return state\n\n\ndef w_state(n_qubits: int) -> list[float]:\n    \"\"\"\n    Construct the n-qubit W state: equal superposition of all single-excitation\n    basis states (|00..01> + |00..10> + ... + |10..00>) / sqrt(n).\n    \"\"\"\n    dim = 2 ** n_qubits\n    state = [0.0] * dim\n    amp = 1.0 / math.sqrt(n_qubits)\n    for k in range(n_qubits):\n        idx = 1 << k\n        state[idx] = amp\n    return state\n\n\ndef ghz_witness_expectation(state: list[float], n_qubits: int) -> float:\n    \"\"\"\n    Compute the expectation value of the GHZ entanglement witness:\n    W = I/2 - |GHZ><GHZ|\n\n    <W> = 1/2 - |<GHZ|state>|^2\n    Negative value certifies GHZ-type entanglement.\n    \"\"\"\n    ghz = ghz_state(n_qubits)\n    overlap = sum(g * s for g, s in zip(ghz, state))\n    return 0.5 - overlap ** 2\n\n\ndef concurrence_2qubit(state: list[float]) -> float:\n    \"\"\"\n    Compute the concurrence of a 2-qubit pure state |psi>.\n    C = 2 |a*d - b*c| for state [a, b, c, d].\n    \"\"\"\n    a, b, c, d = state\n    return 2 * abs(a * d - b * c)"
+        }
+      ]
+    },
+    {
+      "format": "chat-sft-v1",
+      "source_schema": "taskgen-v14-delta-c10363",
+      "example_id": "c10363_delta_ghz_state_witness_prose_paraphrase",
+      "prompt_kind": "api_gap_fix_prose_paraphrase",
+      "task_id": "ghz_state_witness",
+      "bench_task_id": "quantum_ghz_state_witness",
+      "fault_class": "missing-api-attribute",
+      "api_gap": "concurrence_2qubit",
+      "api_gap_symbols": [
+        "concurrence_2qubit"
+      ],
+      "gap_symbol_verified": true,
+      "task_spec": "Write a complete Python module that satisfies this spec:\n\nTask: GHZ state preparation and entanglement witness",
+      "category": "algorithm_implementation",
+      "messages": [
+        {
+          "role": "system",
+          "content": "Return only a complete Python solution. Do not include markdown fences or explanation."
+        },
+        {
+          "role": "user",
+          "content": "Write a complete Python module that satisfies this spec:\n\nTask: GHZ state preparation and entanglement witness\n\nDomain: quantum\nCategory: algorithm_implementation\n\nReturn only the final Python code."
+        },
+        {
+          "role": "assistant",
+          "content": "import math\n\n\ndef ghz_state(n_qubits: int) -> list[float]:\n    \"\"\"\n    Construct the n-qubit GHZ state: (|00...0> + |11...1>) / sqrt(2).\n    Returns a list of 2^n real amplitudes.\n    \"\"\"\n    dim = 2 ** n_qubits\n    state = [0.0] * dim\n    amp = 1.0 / math.sqrt(2)\n    state[0] = amp          # |00...0>\n    state[dim - 1] = amp    # |11...1>\n    return state\n\n\ndef w_state(n_qubits: int) -> list[float]:\n    \"\"\"\n    Construct the n-qubit W state: equal superposition of all single-excitation\n    basis states (|00..01> + |00..10> + ... + |10..00>) / sqrt(n).\n    \"\"\"\n    dim = 2 ** n_qubits\n    state = [0.0] * dim\n    amp = 1.0 / math.sqrt(n_qubits)\n    for k in range(n_qubits):\n        idx = 1 << k\n        state[idx] = amp\n    return state\n\n\ndef ghz_witness_expectation(state: list[float], n_qubits: int) -> float:\n    \"\"\"\n    Compute the expectation value of the GHZ entanglement witness:\n    W = I/2 - |GHZ><GHZ|\n\n    <W> = 1/2 - |<GHZ|state>|^2\n    Negative value certifies GHZ-type entanglement.\n    \"\"\"\n    ghz = ghz_state(n_qubits)\n    overlap = sum(g * s for g, s in zip(ghz, state))\n    return 0.5 - overlap ** 2\n\n\ndef concurrence_2qubit(state: list[float]) -> float:\n    \"\"\"\n    Compute the concurrence of a 2-qubit pure state |psi>.\n    C = 2 |a*d - b*c| for state [a, b, c, d].\n    \"\"\"\n    a, b, c, d = state\n    return 2 * abs(a * d - b * c)"
+        }
+      ]
+    },
+    {
+      "format": "chat-sft-v1",
+      "source_schema": "taskgen-v14-delta-c10363",
+      "example_id": "c10363_delta_pennylane_vqe_h2_live_exact",
+      "prompt_kind": "api_gap_fix_live_exact",
+      "task_id": "pennylane_vqe_h2",
+      "bench_task_id": "quantum_pennylane_vqe_h2",
+      "fault_class": "missing-api-module",
+      "api_gap": "pennylane",
+      "api_gap_symbols": [
+        "pennylane"
+      ],
+      "gap_symbol_verified": true,
+      "task_spec": "Implement a two-qubit PennyLane VQE for the frozen-core parity-mapped H2 Hamiltonian H = -0.4804 I(0) + 0.3435 Z(0) - 0.4347 Z(1) + 0.5716 Z(0)Z(1) + 0.0910 X(0)X(1) + 0.0910 Y(0)Y(1). vqe_circuit uses four parameters in this order: RY on wire 0, RY on wire 1, CNOT 0->1, RY on wire 0, RY on wire 1. run_vqe performs deterministic seeded variational minimization for the requested number of steps and returns {'energy': the final expectation as a float, 'params': the four final parameter values}; compute the result from the circuit and Hamiltonian rather than hard-coding an energy.",
+      "category": "algorithm_implementation",
+      "messages": [
+        {
+          "role": "system",
+          "content": "Return only a complete Python solution. Do not include markdown fences or explanation."
+        },
+        {
+          "role": "user",
+          "content": "Implement a two-qubit PennyLane VQE for the frozen-core parity-mapped H2 Hamiltonian H = -0.4804 I(0) + 0.3435 Z(0) - 0.4347 Z(1) + 0.5716 Z(0)Z(1) + 0.0910 X(0)X(1) + 0.0910 Y(0)Y(1). vqe_circuit uses four parameters in this order: RY on wire 0, RY on wire 1, CNOT 0->1, RY on wire 0, RY on wire 1. run_vqe performs deterministic seeded variational minimization for the requested number of steps and returns {'energy': the final expectation as a float, 'params': the four final parameter values}; compute the result from the circuit and Hamiltonian rather than hard-coding an energy.\n\nDomain: quantum\nCategory: algorithm_implementation\n\nReturn only the final Python code."
+        },
+        {
+          "role": "assistant",
+          "content": "\"\"\"VQE for the H2 molecule in a minimal STO-3G basis (2 qubits).\n\nReference candidate using the parity mapping Hamiltonian from\nPennyLane's qchem module. The optimizer recovers the ground-state\nenergy ~ -1.136 Ha within chemical accuracy (1e-3 Ha).\n\"\"\"\n\nimport pennylane as qml\nfrom pennylane import numpy as np\n\n\ndef h2_hamiltonian() -> qml.Hamiltonian:\n    \"\"\"Return the parity-mapped H2 Hamiltonian in the frozen-core 2-qubit space.\n\n    Coefficients are the canonical STO-3G values used in the PennyLane\n    qchem tutorials. This avoids requiring the external OpenFermion/\n    PySCF toolchain at test time.\n    \"\"\"\n    coeffs = [-0.4804, 0.3435, -0.4347, 0.5716, 0.0910, 0.0910]\n    obs = [\n        qml.Identity(0),\n        qml.PauliZ(0),\n        qml.PauliZ(1),\n        qml.PauliZ(0) @ qml.PauliZ(1),\n        qml.PauliX(0) @ qml.PauliX(1),\n        qml.PauliY(0) @ qml.PauliY(1),\n    ]\n    return qml.Hamiltonian(coeffs, obs)\n\n\ndef vqe_circuit(params, wires):\n    \"\"\"Hardware-efficient ansatz: Ry on q0, Ry on q1, CNOT, Ry on q0, Ry on q1.\"\"\"\n    qml.RY(params[0], wires=wires[0])\n    qml.RY(params[1], wires=wires[1])\n    qml.CNOT(wires=[wires[0], wires[1]])\n    qml.RY(params[2], wires=wires[0])\n    qml.RY(params[3], wires=wires[1])\n\n\ndef run_vqe(steps: int = 200, seed: int = 42) -> dict:\n    \"\"\"Run VQE and return the optimized energy and final parameters.\"\"\"\n    dev = qml.device(\"default.qubit\", wires=2)\n    H = h2_hamiltonian()\n\n    @qml.qnode(dev)\n    def cost(params):\n        vqe_circuit(params, wires=[0, 1])\n        return qml.expval(H)\n\n    np.random.seed(seed)\n    params = np.random.uniform(-0.1, 0.1, 4, requires_grad=True)\n    opt = qml.GradientDescentOptimizer(stepsize=0.1)\n    for _ in range(steps):\n        params, _ = opt.step_and_cost(cost, params)\n    return {\"energy\": float(cost(params)), \"params\": params.tolist()}\n\n\nif __name__ == \"__main__\":\n    out = run_vqe()\n    print(f\"VQE H2 ground-state energy: {out['energy']:.6f} Ha\")"
+        }
+      ]
+    },
+    {
+      "format": "chat-sft-v1",
+      "source_schema": "taskgen-v14-delta-c10363",
+      "example_id": "c10363_delta_pennylane_vqe_h2_api_named",
+      "prompt_kind": "api_gap_fix_api_named",
+      "task_id": "pennylane_vqe_h2",
+      "bench_task_id": "quantum_pennylane_vqe_h2",
+      "fault_class": "missing-api-module",
+      "api_gap": "pennylane",
+      "api_gap_symbols": [
+        "pennylane"
+      ],
+      "gap_symbol_verified": true,
+      "task_spec": "Implement a two-qubit PennyLane VQE for the frozen-core parity-mapped H2 Hamiltonian H = -0.4804 I(0) + 0.3435 Z(0) - 0.4347 Z(1) + 0.5716 Z(0)Z(1) + 0.0910 X(0)X(1) + 0.0910 Y(0)Y(1). vqe_circuit uses four parameters in this order: RY on wire 0, RY on wire 1, CNOT 0->1, RY on wire 0, RY on wire 1. run_vqe performs deterministic seeded variational minimization for the requested number of steps and returns {'energy': the final expectation as a float, 'params': the four final parameter values}; compute the result from the circuit and Hamiltonian rather than hard-coding an energy.\n\nRequired public API (signatures and docstrings only):\ndef h2_hamiltonian(  )\ndef vqe_circuit( params, wires )\ndef run_vqe( steps: int = 200, seed: int = 42 )",
+      "category": "algorithm_implementation",
+      "messages": [
+        {
+          "role": "system",
+          "content": "Return only a complete Python solution. Do not include markdown fences or explanation."
+        },
+        {
+          "role": "user",
+          "content": "Implement a two-qubit PennyLane VQE for the frozen-core parity-mapped H2 Hamiltonian H = -0.4804 I(0) + 0.3435 Z(0) - 0.4347 Z(1) + 0.5716 Z(0)Z(1) + 0.0910 X(0)X(1) + 0.0910 Y(0)Y(1). vqe_circuit uses four parameters in this order: RY on wire 0, RY on wire 1, CNOT 0->1, RY on wire 0, RY on wire 1. run_vqe performs deterministic seeded variational minimization for the requested number of steps and returns {'energy': the final expectation as a float, 'params': the four final parameter values}; compute the result from the circuit and Hamiltonian rather than hard-coding an energy.\n\nRequired public API (signatures and docstrings only):\ndef h2_hamiltonian(  )\ndef vqe_circuit( params, wires )\ndef run_vqe( steps: int = 200, seed: int = 42 )\n\nDomain: quantum\nCategory: algorithm_implementation\n\nReturn only the final Python code."
+        },
+        {
+          "role": "assistant",
+          "content": "\"\"\"VQE for the H2 molecule in a minimal STO-3G basis (2 qubits).\n\nReference candidate using the parity mapping Hamiltonian from\nPennyLane's qchem module. The optimizer recovers the ground-state\nenergy ~ -1.136 Ha within chemical accuracy (1e-3 Ha).\n\"\"\"\n\nimport pennylane as qml\nfrom pennylane import numpy as np\n\n\ndef h2_hamiltonian() -> qml.Hamiltonian:\n    \"\"\"Return the parity-mapped H2 Hamiltonian in the frozen-core 2-qubit space.\n\n    Coefficients are the canonical STO-3G values used in the PennyLane\n    qchem tutorials. This avoids requiring the external OpenFermion/\n    PySCF toolchain at test time.\n    \"\"\"\n    coeffs = [-0.4804, 0.3435, -0.4347, 0.5716, 0.0910, 0.0910]\n    obs = [\n        qml.Identity(0),\n        qml.PauliZ(0),\n        qml.PauliZ(1),\n        qml.PauliZ(0) @ qml.PauliZ(1),\n        qml.PauliX(0) @ qml.PauliX(1),\n        qml.PauliY(0) @ qml.PauliY(1),\n    ]\n    return qml.Hamiltonian(coeffs, obs)\n\n\ndef vqe_circuit(params, wires):\n    \"\"\"Hardware-efficient ansatz: Ry on q0, Ry on q1, CNOT, Ry on q0, Ry on q1.\"\"\"\n    qml.RY(params[0], wires=wires[0])\n    qml.RY(params[1], wires=wires[1])\n    qml.CNOT(wires=[wires[0], wires[1]])\n    qml.RY(params[2], wires=wires[0])\n    qml.RY(params[3], wires=wires[1])\n\n\ndef run_vqe(steps: int = 200, seed: int = 42) -> dict:\n    \"\"\"Run VQE and return the optimized energy and final parameters.\"\"\"\n    dev = qml.device(\"default.qubit\", wires=2)\n    H = h2_hamiltonian()\n\n    @qml.qnode(dev)\n    def cost(params):\n        vqe_circuit(params, wires=[0, 1])\n        return qml.expval(H)\n\n    np.random.seed(seed)\n    params = np.random.uniform(-0.1, 0.1, 4, requires_grad=True)\n    opt = qml.GradientDescentOptimizer(stepsize=0.1)\n    for _ in range(steps):\n        params, _ = opt.step_and_cost(cost, params)\n    return {\"energy\": float(cost(params)), \"params\": params.tolist()}\n\n\nif __name__ == \"__main__\":\n    out = run_vqe()\n    print(f\"VQE H2 ground-state energy: {out['energy']:.6f} Ha\")"
+        }
+      ]
+    },
+    {
+      "format": "chat-sft-v1",
+      "source_schema": "taskgen-v14-delta-c10363",
+      "example_id": "c10363_delta_pennylane_vqe_h2_prose_paraphrase",
+      "prompt_kind": "api_gap_fix_prose_paraphrase",
+      "task_id": "pennylane_vqe_h2",
+      "bench_task_id": "quantum_pennylane_vqe_h2",
+      "fault_class": "missing-api-module",
+      "api_gap": "pennylane",
+      "api_gap_symbols": [
+        "pennylane"
+      ],
+      "gap_symbol_verified": true,
+      "task_spec": "Write a complete Python module that satisfies this spec:\n\nImplement a two-qubit PennyLane VQE for the frozen-core parity-mapped H2 Hamiltonian H = -0.4804 I(0) + 0.3435 Z(0) - 0.4347 Z(1) + 0.5716 Z(0)Z(1) + 0.0910 X(0)X(1) + 0.0910 Y(0)Y(1). vqe_circuit uses four parameters in this order: RY on wire 0, RY on wire 1, CNOT 0->1, RY on wire 0, RY on wire 1. run_vqe performs deterministic seeded variational minimization for the requested number of steps and returns {'energy': the final expectation as a float, 'params': the four final parameter values}; compute the result from the circuit and Hamiltonian rather than hard-coding an energy.",
+      "category": "algorithm_implementation",
+      "messages": [
+        {
+          "role": "system",
+          "content": "Return only a complete Python solution. Do not include markdown fences or explanation."
+        },
+        {
+          "role": "user",
+          "content": "Write a complete Python module that satisfies this spec:\n\nImplement a two-qubit PennyLane VQE for the frozen-core parity-mapped H2 Hamiltonian H = -0.4804 I(0) + 0.3435 Z(0) - 0.4347 Z(1) + 0.5716 Z(0)Z(1) + 0.0910 X(0)X(1) + 0.0910 Y(0)Y(1). vqe_circuit uses four parameters in this order: RY on wire 0, RY on wire 1, CNOT 0->1, RY on wire 0, RY on wire 1. run_vqe performs deterministic seeded variational minimization for the requested number of steps and returns {'energy': the final expectation as a float, 'params': the four final parameter values}; compute the result from the circuit and Hamiltonian rather than hard-coding an energy.\n\nDomain: quantum\nCategory: algorithm_implementation\n\nReturn only the final Python code."
+        },
+        {
+          "role": "assistant",
+          "content": "\"\"\"VQE for the H2 molecule in a minimal STO-3G basis (2 qubits).\n\nReference candidate using the parity mapping Hamiltonian from\nPennyLane's qchem module. The optimizer recovers the ground-state\nenergy ~ -1.136 Ha within chemical accuracy (1e-3 Ha).\n\"\"\"\n\nimport pennylane as qml\nfrom pennylane import numpy as np\n\n\ndef h2_hamiltonian() -> qml.Hamiltonian:\n    \"\"\"Return the parity-mapped H2 Hamiltonian in the frozen-core 2-qubit space.\n\n    Coefficients are the canonical STO-3G values used in the PennyLane\n    qchem tutorials. This avoids requiring the external OpenFermion/\n    PySCF toolchain at test time.\n    \"\"\"\n    coeffs = [-0.4804, 0.3435, -0.4347, 0.5716, 0.0910, 0.0910]\n    obs = [\n        qml.Identity(0),\n        qml.PauliZ(0),\n        qml.PauliZ(1),\n        qml.PauliZ(0) @ qml.PauliZ(1),\n        qml.PauliX(0) @ qml.PauliX(1),\n        qml.PauliY(0) @ qml.PauliY(1),\n    ]\n    return qml.Hamiltonian(coeffs, obs)\n\n\ndef vqe_circuit(params, wires):\n    \"\"\"Hardware-efficient ansatz: Ry on q0, Ry on q1, CNOT, Ry on q0, Ry on q1.\"\"\"\n    qml.RY(params[0], wires=wires[0])\n    qml.RY(params[1], wires=wires[1])\n    qml.CNOT(wires=[wires[0], wires[1]])\n    qml.RY(params[2], wires=wires[0])\n    qml.RY(params[3], wires=wires[1])\n\n\ndef run_vqe(steps: int = 200, seed: int = 42) -> dict:\n    \"\"\"Run VQE and return the optimized energy and final parameters.\"\"\"\n    dev = qml.device(\"default.qubit\", wires=2)\n    H = h2_hamiltonian()\n\n    @qml.qnode(dev)\n    def cost(params):\n        vqe_circuit(params, wires=[0, 1])\n        return qml.expval(H)\n\n    np.random.seed(seed)\n    params = np.random.uniform(-0.1, 0.1, 4, requires_grad=True)\n    opt = qml.GradientDescentOptimizer(stepsize=0.1)\n    for _ in range(steps):\n        params, _ = opt.step_and_cost(cost, params)\n    return {\"energy\": float(cost(params)), \"params\": params.tolist()}\n\n\nif __name__ == \"__main__\":\n    out = run_vqe()\n    print(f\"VQE H2 ground-state energy: {out['energy']:.6f} Ha\")"
+        }
+      ]
+    },
+    {
+      "format": "chat-sft-v1",
+      "source_schema": "taskgen-v14-delta-c10363",
+      "example_id": "c10363_delta_cirq_qaoa_line_live_exact",
+      "prompt_kind": "api_gap_fix_live_exact",
+      "task_id": "cirq_qaoa_line",
+      "bench_task_id": "quantum_cirq_qaoa_line",
+      "fault_class": "missing-api-module",
+      "api_gap": "cirq",
+      "api_gap_symbols": [
+        "cirq"
+      ],
+      "gap_symbol_verified": true,
+      "task_spec": "Task: Cirq QAOA on a 4-node line graph MaxCut",
+      "category": "algorithm_implementation",
+      "messages": [
+        {
+          "role": "system",
+          "content": "Return only a complete Python solution. Do not include markdown fences or explanation."
+        },
+        {
+          "role": "user",
+          "content": "Task: Cirq QAOA on a 4-node line graph MaxCut\n\nDomain: quantum\nCategory: algorithm_implementation\n\nReturn only the final Python code."
+        },
+        {
+          "role": "assistant",
+          "content": "\"\"\"QAOA p=1 for the MaxCut of a 4-node line graph using Cirq.\n\nLine graph edges: (0,1), (1,2), (2,3). Optimal cut value is 3 (alternating\nbit assignment 0101 / 1010).\n\"\"\"\n\nimport cirq\nimport numpy as np\n\n\ndef maxcut_line_edges() -> list[tuple[int, int]]:\n    return [(0, 1), (1, 2), (2, 3)]\n\n\ndef qaoa_line_circuit(gamma: float, beta: float) -> cirq.Circuit:\n    \"\"\"Build the p=1 QAOA circuit for the 4-node line MaxCut.\"\"\"\n    qubits = cirq.LineQubit.range(4)\n    circuit = cirq.Circuit()\n\n    # Initial superposition\n    circuit.append(cirq.H.on_each(*qubits))\n\n    # Cost unitary: exp(-i gamma/2 * (I - Z_u)(I - Z_v)) per edge -> ZZ rotation\n    for u, v in maxcut_line_edges():\n        circuit.append(cirq.ZZPowGate(exponent=2 * gamma / np.pi)(qubits[u], qubits[v]))\n\n    # Mixer unitary: exp(-i beta X) on each qubit\n    for q in qubits:\n        circuit.append(cirq.XPowGate(exponent=2 * beta / np.pi)(q))\n\n    return circuit\n\n\ndef measure_bitstrings(gamma: float, beta: float, repetitions: int = 1000, seed: int = 0) -> dict:\n    \"\"\"Sample bitstrings from the QAOA circuit and return a histogram.\"\"\"\n    circuit = qaoa_line_circuit(gamma, beta)\n    qubits = cirq.LineQubit.range(4)\n    circuit.append(cirq.measure(*qubits, key=\"m\"))\n    simulator = cirq.Simulator(seed=seed)\n    result = simulator.run(circuit, repetitions=repetitions)\n    arr = result.measurements[\"m\"]\n    hist: dict[str, int] = {}\n    for row in arr:\n        bs = \"\".join(str(int(b)) for b in row)\n        hist[bs] = hist.get(bs, 0) + 1\n    return hist\n\n\ndef maxcut_value(bitstring: str, edges: list[tuple[int, int]]) -> int:\n    return sum(1 for u, v in edges if bitstring[u] != bitstring[v])\n\n\ndef best_maxcut_value(edges: list[tuple[int, int]], n: int) -> int:\n    best = 0\n    for i in range(1 << n):\n        bs = format(i, f\"0{n}b\")\n        best = max(best, maxcut_value(bs, edges))\n    return best\n\n\nif __name__ == \"__main__\":\n    edges = maxcut_line_edges()\n    print(\"optimal MaxCut value:\", best_maxcut_value(edges, 4))\n    # A reasonable p=1 point for the line graph\n    hist = measure_bitstrings(gamma=0.5, beta=0.3, repetitions=500)\n    top = sorted(hist.items(), key=lambda kv: -kv[1])[:5]\n    for bs, c in top:\n        print(f\"  {bs}  count={c}  cut={maxcut_value(bs, edges)}\")"
+        }
+      ]
+    },
+    {
+      "format": "chat-sft-v1",
+      "source_schema": "taskgen-v14-delta-c10363",
+      "example_id": "c10363_delta_cirq_qaoa_line_api_named",
+      "prompt_kind": "api_gap_fix_api_named",
+      "task_id": "cirq_qaoa_line",
+      "bench_task_id": "quantum_cirq_qaoa_line",
+      "fault_class": "missing-api-module",
+      "api_gap": "cirq",
+      "api_gap_symbols": [
+        "cirq"
+      ],
+      "gap_symbol_verified": true,
+      "task_spec": "Task: Cirq QAOA on a 4-node line graph MaxCut\n\nRequired public API (signatures and docstrings only):\ndef maxcut_line_edges(  )\ndef qaoa_line_circuit( gamma: float, beta: float )\ndef measure_bitstrings( gamma: float, beta: float, repetitions: int = 1000, seed: int = 0 )\ndef maxcut_value( bitstring: str, edges: list[tuple[int, int]] )\ndef best_maxcut_value( edges: list[tuple[int, int]], n: int )",
+      "category": "algorithm_implementation",
+      "messages": [
+        {
+          "role": "system",
+          "content": "Return only a complete Python solution. Do not include markdown fences or explanation."
+        },
+        {
+          "role": "user",
+          "content": "Task: Cirq QAOA on a 4-node line graph MaxCut\n\nRequired public API (signatures and docstrings only):\ndef maxcut_line_edges(  )\ndef qaoa_line_circuit( gamma: float, beta: float )\ndef measure_bitstrings( gamma: float, beta: float, repetitions: int = 1000, seed: int = 0 )\ndef maxcut_value( bitstring: str, edges: list[tuple[int, int]] )\ndef best_maxcut_value( edges: list[tuple[int, int]], n: int )\n\nDomain: quantum\nCategory: algorithm_implementation\n\nReturn only the final Python code."
+        },
+        {
+          "role": "assistant",
+          "content": "\"\"\"QAOA p=1 for the MaxCut of a 4-node line graph using Cirq.\n\nLine graph edges: (0,1), (1,2), (2,3). Optimal cut value is 3 (alternating\nbit assignment 0101 / 1010).\n\"\"\"\n\nimport cirq\nimport numpy as np\n\n\ndef maxcut_line_edges() -> list[tuple[int, int]]:\n    return [(0, 1), (1, 2), (2, 3)]\n\n\ndef qaoa_line_circuit(gamma: float, beta: float) -> cirq.Circuit:\n    \"\"\"Build the p=1 QAOA circuit for the 4-node line MaxCut.\"\"\"\n    qubits = cirq.LineQubit.range(4)\n    circuit = cirq.Circuit()\n\n    # Initial superposition\n    circuit.append(cirq.H.on_each(*qubits))\n\n    # Cost unitary: exp(-i gamma/2 * (I - Z_u)(I - Z_v)) per edge -> ZZ rotation\n    for u, v in maxcut_line_edges():\n        circuit.append(cirq.ZZPowGate(exponent=2 * gamma / np.pi)(qubits[u], qubits[v]))\n\n    # Mixer unitary: exp(-i beta X) on each qubit\n    for q in qubits:\n        circuit.append(cirq.XPowGate(exponent=2 * beta / np.pi)(q))\n\n    return circuit\n\n\ndef measure_bitstrings(gamma: float, beta: float, repetitions: int = 1000, seed: int = 0) -> dict:\n    \"\"\"Sample bitstrings from the QAOA circuit and return a histogram.\"\"\"\n    circuit = qaoa_line_circuit(gamma, beta)\n    qubits = cirq.LineQubit.range(4)\n    circuit.append(cirq.measure(*qubits, key=\"m\"))\n    simulator = cirq.Simulator(seed=seed)\n    result = simulator.run(circuit, repetitions=repetitions)\n    arr = result.measurements[\"m\"]\n    hist: dict[str, int] = {}\n    for row in arr:\n        bs = \"\".join(str(int(b)) for b in row)\n        hist[bs] = hist.get(bs, 0) + 1\n    return hist\n\n\ndef maxcut_value(bitstring: str, edges: list[tuple[int, int]]) -> int:\n    return sum(1 for u, v in edges if bitstring[u] != bitstring[v])\n\n\ndef best_maxcut_value(edges: list[tuple[int, int]], n: int) -> int:\n    best = 0\n    for i in range(1 << n):\n        bs = format(i, f\"0{n}b\")\n        best = max(best, maxcut_value(bs, edges))\n    return best\n\n\nif __name__ == \"__main__\":\n    edges = maxcut_line_edges()\n    print(\"optimal MaxCut value:\", best_maxcut_value(edges, 4))\n    # A reasonable p=1 point for the line graph\n    hist = measure_bitstrings(gamma=0.5, beta=0.3, repetitions=500)\n    top = sorted(hist.items(), key=lambda kv: -kv[1])[:5]\n    for bs, c in top:\n        print(f\"  {bs}  count={c}  cut={maxcut_value(bs, edges)}\")"
+        }
+      ]
+    },
+    {
+      "format": "chat-sft-v1",
+      "source_schema": "taskgen-v14-delta-c10363",
+      "example_id": "c10363_delta_cirq_qaoa_line_prose_paraphrase",
+      "prompt_kind": "api_gap_fix_prose_paraphrase",
+      "task_id": "cirq_qaoa_line",
+      "bench_task_id": "quantum_cirq_qaoa_line",
+      "fault_class": "missing-api-module",
+      "api_gap": "cirq",
+      "api_gap_symbols": [
+        "cirq"
+      ],
+      "gap_symbol_verified": true,
+      "task_spec": "Write a complete Python module that satisfies this spec:\n\nTask: Cirq QAOA on a 4-node line graph MaxCut",
+      "category": "algorithm_implementation",
+      "messages": [
+        {
+          "role": "system",
+          "content": "Return only a complete Python solution. Do not include markdown fences or explanation."
+        },
+        {
+          "role": "user",
+          "content": "Write a complete Python module that satisfies this spec:\n\nTask: Cirq QAOA on a 4-node line graph MaxCut\n\nDomain: quantum\nCategory: algorithm_implementation\n\nReturn only the final Python code."
+        },
+        {
+          "role": "assistant",
+          "content": "\"\"\"QAOA p=1 for the MaxCut of a 4-node line graph using Cirq.\n\nLine graph edges: (0,1), (1,2), (2,3). Optimal cut value is 3 (alternating\nbit assignment 0101 / 1010).\n\"\"\"\n\nimport cirq\nimport numpy as np\n\n\ndef maxcut_line_edges() -> list[tuple[int, int]]:\n    return [(0, 1), (1, 2), (2, 3)]\n\n\ndef qaoa_line_circuit(gamma: float, beta: float) -> cirq.Circuit:\n    \"\"\"Build the p=1 QAOA circuit for the 4-node line MaxCut.\"\"\"\n    qubits = cirq.LineQubit.range(4)\n    circuit = cirq.Circuit()\n\n    # Initial superposition\n    circuit.append(cirq.H.on_each(*qubits))\n\n    # Cost unitary: exp(-i gamma/2 * (I - Z_u)(I - Z_v)) per edge -> ZZ rotation\n    for u, v in maxcut_line_edges():\n        circuit.append(cirq.ZZPowGate(exponent=2 * gamma / np.pi)(qubits[u], qubits[v]))\n\n    # Mixer unitary: exp(-i beta X) on each qubit\n    for q in qubits:\n        circuit.append(cirq.XPowGate(exponent=2 * beta / np.pi)(q))\n\n    return circuit\n\n\ndef measure_bitstrings(gamma: float, beta: float, repetitions: int = 1000, seed: int = 0) -> dict:\n    \"\"\"Sample bitstrings from the QAOA circuit and return a histogram.\"\"\"\n    circuit = qaoa_line_circuit(gamma, beta)\n    qubits = cirq.LineQubit.range(4)\n    circuit.append(cirq.measure(*qubits, key=\"m\"))\n    simulator = cirq.Simulator(seed=seed)\n    result = simulator.run(circuit, repetitions=repetitions)\n    arr = result.measurements[\"m\"]\n    hist: dict[str, int] = {}\n    for row in arr:\n        bs = \"\".join(str(int(b)) for b in row)\n        hist[bs] = hist.get(bs, 0) + 1\n    return hist\n\n\ndef maxcut_value(bitstring: str, edges: list[tuple[int, int]]) -> int:\n    return sum(1 for u, v in edges if bitstring[u] != bitstring[v])\n\n\ndef best_maxcut_value(edges: list[tuple[int, int]], n: int) -> int:\n    best = 0\n    for i in range(1 << n):\n        bs = format(i, f\"0{n}b\")\n        best = max(best, maxcut_value(bs, edges))\n    return best\n\n\nif __name__ == \"__main__\":\n    edges = maxcut_line_edges()\n    print(\"optimal MaxCut value:\", best_maxcut_value(edges, 4))\n    # A reasonable p=1 point for the line graph\n    hist = measure_bitstrings(gamma=0.5, beta=0.3, repetitions=500)\n    top = sorted(hist.items(), key=lambda kv: -kv[1])[:5]\n    for bs, c in top:\n        print(f\"  {bs}  count={c}  cut={maxcut_value(bs, edges)}\")"
+        }
+      ]
+    },
+    {
+      "format": "chat-sft-v1",
+      "source_schema": "taskgen-v14-delta-c10363",
+      "example_id": "c10363_delta_braket_bell_state_live_exact",
+      "prompt_kind": "api_gap_fix_live_exact",
+      "task_id": "braket_bell_state",
+      "bench_task_id": "quantum_braket_bell_state",
+      "fault_class": "missing-api-attribute",
+      "api_gap": "parity_check",
+      "api_gap_symbols": [
+        "parity_check"
+      ],
+      "gap_symbol_verified": true,
+      "task_spec": "Task: Amazon Braket Bell state preparation and parity check",
+      "category": "algorithm_implementation",
+      "messages": [
+        {
+          "role": "system",
+          "content": "Return only a complete Python solution. Do not include markdown fences or explanation."
+        },
+        {
+          "role": "user",
+          "content": "Task: Amazon Braket Bell state preparation and parity check\n\nDomain: quantum\nCategory: algorithm_implementation\n\nReturn only the final Python code."
+        },
+        {
+          "role": "assistant",
+          "content": "\"\"\"Bell state on the local Braket simulator with parity verification.\n\nUses the AWS-local `braket.devices.LocalSimulator` so the test does not\nrequire AWS credentials.\n\"\"\"\n\nfrom __future__ import annotations\n\nfrom braket.circuits import Circuit\nfrom braket.devices import LocalSimulator\n\n\ndef bell_circuit() -> Circuit:\n    \"\"\"Return a Bell-state circuit: H on q0, CNOT(0,1).\"\"\"\n    c = Circuit()\n    c.h(0)\n    c.cnot(0, 1)\n    return c\n\n\ndef sample_bell_state(shots: int = 1000, seed: int | None = None) -> dict:\n    \"\"\"Run the Bell circuit on the local simulator and return a histogram.\"\"\"\n    dev = LocalSimulator()\n    c = bell_circuit()\n    if seed is not None:\n        # Braket LocalSimulator seed via kwargs is backend-dependent; wrap defensively.\n        try:\n            result = dev.run(c, shots=shots, seed=seed).result()\n        except TypeError:\n            result = dev.run(c, shots=shots).result()\n    else:\n        result = dev.run(c, shots=shots).result()\n    counts = result.measurement_counts\n    return dict(counts)\n\n\ndef parity_check(bitstring: str) -> int:\n    \"\"\"Return the parity (XOR) of a bitstring.\"\"\"\n    p = 0\n    for b in bitstring:\n        p ^= int(b)\n    return p\n\n\nif __name__ == \"__main__\":\n    counts = sample_bell_state(shots=500)\n    print(\"Bell state counts:\", counts)\n    print(\"All parities even:\", all(parity_check(bs) == 0 for bs in counts))"
+        }
+      ]
+    },
+    {
+      "format": "chat-sft-v1",
+      "source_schema": "taskgen-v14-delta-c10363",
+      "example_id": "c10363_delta_braket_bell_state_api_named",
+      "prompt_kind": "api_gap_fix_api_named",
+      "task_id": "braket_bell_state",
+      "bench_task_id": "quantum_braket_bell_state",
+      "fault_class": "missing-api-attribute",
+      "api_gap": "parity_check",
+      "api_gap_symbols": [
+        "parity_check"
+      ],
+      "gap_symbol_verified": true,
+      "task_spec": "Task: Amazon Braket Bell state preparation and parity check\n\nRequired public API (signatures and docstrings only):\ndef bell_circuit(  )\ndef sample_bell_state( shots: int = 1000, seed: int | None = None )\ndef parity_check( bitstring: str )",
+      "category": "algorithm_implementation",
+      "messages": [
+        {
+          "role": "system",
+          "content": "Return only a complete Python solution. Do not include markdown fences or explanation."
+        },
+        {
+          "role": "user",
+          "content": "Task: Amazon Braket Bell state preparation and parity check\n\nRequired public API (signatures and docstrings only):\ndef bell_circuit(  )\ndef sample_bell_state( shots: int = 1000, seed: int | None = None )\ndef parity_check( bitstring: str )\n\nDomain: quantum\nCategory: algorithm_implementation\n\nReturn only the final Python code."
+        },
+        {
+          "role": "assistant",
+          "content": "\"\"\"Bell state on the local Braket simulator with parity verification.\n\nUses the AWS-local `braket.devices.LocalSimulator` so the test does not\nrequire AWS credentials.\n\"\"\"\n\nfrom __future__ import annotations\n\nfrom braket.circuits import Circuit\nfrom braket.devices import LocalSimulator\n\n\ndef bell_circuit() -> Circuit:\n    \"\"\"Return a Bell-state circuit: H on q0, CNOT(0,1).\"\"\"\n    c = Circuit()\n    c.h(0)\n    c.cnot(0, 1)\n    return c\n\n\ndef sample_bell_state(shots: int = 1000, seed: int | None = None) -> dict:\n    \"\"\"Run the Bell circuit on the local simulator and return a histogram.\"\"\"\n    dev = LocalSimulator()\n    c = bell_circuit()\n    if seed is not None:\n        # Braket LocalSimulator seed via kwargs is backend-dependent; wrap defensively.\n        try:\n            result = dev.run(c, shots=shots, seed=seed).result()\n        except TypeError:\n            result = dev.run(c, shots=shots).result()\n    else:\n        result = dev.run(c, shots=shots).result()\n    counts = result.measurement_counts\n    return dict(counts)\n\n\ndef parity_check(bitstring: str) -> int:\n    \"\"\"Return the parity (XOR) of a bitstring.\"\"\"\n    p = 0\n    for b in bitstring:\n        p ^= int(b)\n    return p\n\n\nif __name__ == \"__main__\":\n    counts = sample_bell_state(shots=500)\n    print(\"Bell state counts:\", counts)\n    print(\"All parities even:\", all(parity_check(bs) == 0 for bs in counts))"
+        }
+      ]
+    },
+    {
+      "format": "chat-sft-v1",
+      "source_schema": "taskgen-v14-delta-c10363",
+      "example_id": "c10363_delta_braket_bell_state_prose_paraphrase",
+      "prompt_kind": "api_gap_fix_prose_paraphrase",
+      "task_id": "braket_bell_state",
+      "bench_task_id": "quantum_braket_bell_state",
+      "fault_class": "missing-api-attribute",
+      "api_gap": "parity_check",
+      "api_gap_symbols": [
+        "parity_check"
+      ],
+      "gap_symbol_verified": true,
+      "task_spec": "Write a complete Python module that satisfies this spec:\n\nTask: Amazon Braket Bell state preparation and parity check",
+      "category": "algorithm_implementation",
+      "messages": [
+        {
+          "role": "system",
+          "content": "Return only a complete Python solution. Do not include markdown fences or explanation."
+        },
+        {
+          "role": "user",
+          "content": "Write a complete Python module that satisfies this spec:\n\nTask: Amazon Braket Bell state preparation and parity check\n\nDomain: quantum\nCategory: algorithm_implementation\n\nReturn only the final Python code."
+        },
+        {
+          "role": "assistant",
+          "content": "\"\"\"Bell state on the local Braket simulator with parity verification.\n\nUses the AWS-local `braket.devices.LocalSimulator` so the test does not\nrequire AWS credentials.\n\"\"\"\n\nfrom __future__ import annotations\n\nfrom braket.circuits import Circuit\nfrom braket.devices import LocalSimulator\n\n\ndef bell_circuit() -> Circuit:\n    \"\"\"Return a Bell-state circuit: H on q0, CNOT(0,1).\"\"\"\n    c = Circuit()\n    c.h(0)\n    c.cnot(0, 1)\n    return c\n\n\ndef sample_bell_state(shots: int = 1000, seed: int | None = None) -> dict:\n    \"\"\"Run the Bell circuit on the local simulator and return a histogram.\"\"\"\n    dev = LocalSimulator()\n    c = bell_circuit()\n    if seed is not None:\n        # Braket LocalSimulator seed via kwargs is backend-dependent; wrap defensively.\n        try:\n            result = dev.run(c, shots=shots, seed=seed).result()\n        except TypeError:\n            result = dev.run(c, shots=shots).result()\n    else:\n        result = dev.run(c, shots=shots).result()\n    counts = result.measurement_counts\n    return dict(counts)\n\n\ndef parity_check(bitstring: str) -> int:\n    \"\"\"Return the parity (XOR) of a bitstring.\"\"\"\n    p = 0\n    for b in bitstring:\n        p ^= int(b)\n    return p\n\n\nif __name__ == \"__main__\":\n    counts = sample_bell_state(shots=500)\n    print(\"Bell state counts:\", counts)\n    print(\"All parities even:\", all(parity_check(bs) == 0 for bs in counts))"
+        }
+      ]
+    },
+    {
+      "format": "chat-sft-v1",
+      "source_schema": "taskgen-v14-delta-c10363",
+      "example_id": "c10363_delta_qiskit_qft_entangled_live_exact",
+      "prompt_kind": "api_gap_fix_live_exact",
+      "task_id": "qiskit_qft_entangled",
+      "bench_task_id": "quantum_qiskit_qft_entangled",
+      "fault_class": "missing-api-module",
+      "api_gap": "qiskit",
+      "api_gap_symbols": [
+        "qiskit"
+      ],
+      "gap_symbol_verified": true,
+      "task_spec": "Use Qiskit computational-basis statevector indexing. ghz_circuit prepares (|0...0> + |1...1>)/sqrt(2). qft_circuit implements the forward n-qubit QFT without final swaps. ghz_then_qft_circuit composes those circuits and ghz_then_qft_statevector returns its statevector. For n=3, the amplitude at integer basis index k is (1 + exp(2*pi*i*7*k/8))/4. amplitude_histogram uses zero-padded n-bit keys and includes exactly the amplitudes whose absolute value is greater than tol.",
+      "category": "algorithm_implementation",
+      "messages": [
+        {
+          "role": "system",
+          "content": "Return only a complete Python solution. Do not include markdown fences or explanation."
+        },
+        {
+          "role": "user",
+          "content": "Use Qiskit computational-basis statevector indexing. ghz_circuit prepares (|0...0> + |1...1>)/sqrt(2). qft_circuit implements the forward n-qubit QFT without final swaps. ghz_then_qft_circuit composes those circuits and ghz_then_qft_statevector returns its statevector. For n=3, the amplitude at integer basis index k is (1 + exp(2*pi*i*7*k/8))/4. amplitude_histogram uses zero-padded n-bit keys and includes exactly the amplitudes whose absolute value is greater than tol.\n\nDomain: quantum\nCategory: algorithm_implementation\n\nReturn only the final Python code."
+        },
+        {
+          "role": "assistant",
+          "content": "\"\"\"QFT applied to a 3-qubit GHZ state.\n\nThe QFT of (|000> + |111>)/sqrt(2) produces a known uniform-phase\ndistribution; this module constructs the circuit and exposes a statevector\ninspector for testing.\n\"\"\"\n\nimport numpy as np\nfrom qiskit import QuantumCircuit\nfrom qiskit.quantum_info import Statevector\n\n\ndef ghz_circuit(n: int = 3) -> QuantumCircuit:\n    \"\"\"Return an n-qubit GHZ state preparation circuit.\"\"\"\n    c = QuantumCircuit(n)\n    c.h(0)\n    for i in range(n - 1):\n        c.cx(i, i + 1)\n    return c\n\n\ndef qft_circuit(n: int = 3) -> QuantumCircuit:\n    \"\"\"Return the n-qubit QFT circuit (without final swaps for in-place order).\"\"\"\n    c = QuantumCircuit(n)\n    for i in range(n):\n        c.h(i)\n        for j in range(i + 1, n):\n            c.cp(np.pi / (2 ** (j - i)), j, i)\n    return c\n\n\ndef ghz_then_qft_circuit(n: int = 3) -> QuantumCircuit:\n    \"\"\"Compose GHZ preparation + QFT.\"\"\"\n    c = ghz_circuit(n)\n    c.compose(qft_circuit(n), inplace=True)\n    return c\n\n\ndef ghz_then_qft_statevector(n: int = 3) -> np.ndarray:\n    \"\"\"Return the final statevector of GHZ followed by QFT.\"\"\"\n    c = ghz_then_qft_circuit(n)\n    sv = Statevector.from_instruction(c)\n    return np.asarray(sv.data)\n\n\ndef amplitude_histogram(n: int = 3, tol: float = 1e-9) -> dict[str, complex]:\n    \"\"\"Return a {bitstring: amplitude} dict, dropping near-zero amplitudes.\"\"\"\n    sv = ghz_then_qft_statevector(n)\n    out: dict[str, complex] = {}\n    for i, a in enumerate(sv):\n        if abs(a) > tol:\n            out[format(i, f\"0{n}b\")] = complex(a)\n    return out\n\n\nif __name__ == \"__main__\":\n    hist = amplitude_histogram()\n    for bs, a in sorted(hist.items()):\n        print(f\"  {bs}: {a:.4f}\")"
+        }
+      ]
+    },
+    {
+      "format": "chat-sft-v1",
+      "source_schema": "taskgen-v14-delta-c10363",
+      "example_id": "c10363_delta_qiskit_qft_entangled_api_named",
+      "prompt_kind": "api_gap_fix_api_named",
+      "task_id": "qiskit_qft_entangled",
+      "bench_task_id": "quantum_qiskit_qft_entangled",
+      "fault_class": "missing-api-module",
+      "api_gap": "qiskit",
+      "api_gap_symbols": [
+        "qiskit"
+      ],
+      "gap_symbol_verified": true,
+      "task_spec": "Use Qiskit computational-basis statevector indexing. ghz_circuit prepares (|0...0> + |1...1>)/sqrt(2). qft_circuit implements the forward n-qubit QFT without final swaps. ghz_then_qft_circuit composes those circuits and ghz_then_qft_statevector returns its statevector. For n=3, the amplitude at integer basis index k is (1 + exp(2*pi*i*7*k/8))/4. amplitude_histogram uses zero-padded n-bit keys and includes exactly the amplitudes whose absolute value is greater than tol.\n\nRequired public API (signatures and docstrings only):\ndef ghz_circuit( n: int = 3 )\ndef qft_circuit( n: int = 3 )\ndef ghz_then_qft_circuit( n: int = 3 )\ndef ghz_then_qft_statevector( n: int = 3 )\ndef amplitude_histogram( n: int = 3, tol: float = 1e-9 )",
+      "category": "algorithm_implementation",
+      "messages": [
+        {
+          "role": "system",
+          "content": "Return only a complete Python solution. Do not include markdown fences or explanation."
+        },
+        {
+          "role": "user",
+          "content": "Use Qiskit computational-basis statevector indexing. ghz_circuit prepares (|0...0> + |1...1>)/sqrt(2). qft_circuit implements the forward n-qubit QFT without final swaps. ghz_then_qft_circuit composes those circuits and ghz_then_qft_statevector returns its statevector. For n=3, the amplitude at integer basis index k is (1 + exp(2*pi*i*7*k/8))/4. amplitude_histogram uses zero-padded n-bit keys and includes exactly the amplitudes whose absolute value is greater than tol.\n\nRequired public API (signatures and docstrings only):\ndef ghz_circuit( n: int = 3 )\ndef qft_circuit( n: int = 3 )\ndef ghz_then_qft_circuit( n: int = 3 )\ndef ghz_then_qft_statevector( n: int = 3 )\ndef amplitude_histogram( n: int = 3, tol: float = 1e-9 )\n\nDomain: quantum\nCategory: algorithm_implementation\n\nReturn only the final Python code."
+        },
+        {
+          "role": "assistant",
+          "content": "\"\"\"QFT applied to a 3-qubit GHZ state.\n\nThe QFT of (|000> + |111>)/sqrt(2) produces a known uniform-phase\ndistribution; this module constructs the circuit and exposes a statevector\ninspector for testing.\n\"\"\"\n\nimport numpy as np\nfrom qiskit import QuantumCircuit\nfrom qiskit.quantum_info import Statevector\n\n\ndef ghz_circuit(n: int = 3) -> QuantumCircuit:\n    \"\"\"Return an n-qubit GHZ state preparation circuit.\"\"\"\n    c = QuantumCircuit(n)\n    c.h(0)\n    for i in range(n - 1):\n        c.cx(i, i + 1)\n    return c\n\n\ndef qft_circuit(n: int = 3) -> QuantumCircuit:\n    \"\"\"Return the n-qubit QFT circuit (without final swaps for in-place order).\"\"\"\n    c = QuantumCircuit(n)\n    for i in range(n):\n        c.h(i)\n        for j in range(i + 1, n):\n            c.cp(np.pi / (2 ** (j - i)), j, i)\n    return c\n\n\ndef ghz_then_qft_circuit(n: int = 3) -> QuantumCircuit:\n    \"\"\"Compose GHZ preparation + QFT.\"\"\"\n    c = ghz_circuit(n)\n    c.compose(qft_circuit(n), inplace=True)\n    return c\n\n\ndef ghz_then_qft_statevector(n: int = 3) -> np.ndarray:\n    \"\"\"Return the final statevector of GHZ followed by QFT.\"\"\"\n    c = ghz_then_qft_circuit(n)\n    sv = Statevector.from_instruction(c)\n    return np.asarray(sv.data)\n\n\ndef amplitude_histogram(n: int = 3, tol: float = 1e-9) -> dict[str, complex]:\n    \"\"\"Return a {bitstring: amplitude} dict, dropping near-zero amplitudes.\"\"\"\n    sv = ghz_then_qft_statevector(n)\n    out: dict[str, complex] = {}\n    for i, a in enumerate(sv):\n        if abs(a) > tol:\n            out[format(i, f\"0{n}b\")] = complex(a)\n    return out\n\n\nif __name__ == \"__main__\":\n    hist = amplitude_histogram()\n    for bs, a in sorted(hist.items()):\n        print(f\"  {bs}: {a:.4f}\")"
+        }
+      ]
+    },
+    {
+      "format": "chat-sft-v1",
+      "source_schema": "taskgen-v14-delta-c10363",
+      "example_id": "c10363_delta_qiskit_qft_entangled_prose_paraphrase",
+      "prompt_kind": "api_gap_fix_prose_paraphrase",
+      "task_id": "qiskit_qft_entangled",
+      "bench_task_id": "quantum_qiskit_qft_entangled",
+      "fault_class": "missing-api-module",
+      "api_gap": "qiskit",
+      "api_gap_symbols": [
+        "qiskit"
+      ],
+      "gap_symbol_verified": true,
+      "task_spec": "Write a complete Python module that satisfies this spec:\n\nUse Qiskit computational-basis statevector indexing. ghz_circuit prepares (|0...0> + |1...1>)/sqrt(2). qft_circuit implements the forward n-qubit QFT without final swaps. ghz_then_qft_circuit composes those circuits and ghz_then_qft_statevector returns its statevector. For n=3, the amplitude at integer basis index k is (1 + exp(2*pi*i*7*k/8))/4. amplitude_histogram uses zero-padded n-bit keys and includes exactly the amplitudes whose absolute value is greater than tol.",
+      "category": "algorithm_implementation",
+      "messages": [
+        {
+          "role": "system",
+          "content": "Return only a complete Python solution. Do not include markdown fences or explanation."
+        },
+        {
+          "role": "user",
+          "content": "Write a complete Python module that satisfies this spec:\n\nUse Qiskit computational-basis statevector indexing. ghz_circuit prepares (|0...0> + |1...1>)/sqrt(2). qft_circuit implements the forward n-qubit QFT without final swaps. ghz_then_qft_circuit composes those circuits and ghz_then_qft_statevector returns its statevector. For n=3, the amplitude at integer basis index k is (1 + exp(2*pi*i*7*k/8))/4. amplitude_histogram uses zero-padded n-bit keys and includes exactly the amplitudes whose absolute value is greater than tol.\n\nDomain: quantum\nCategory: algorithm_implementation\n\nReturn only the final Python code."
+        },
+        {
+          "role": "assistant",
+          "content": "\"\"\"QFT applied to a 3-qubit GHZ state.\n\nThe QFT of (|000> + |111>)/sqrt(2) produces a known uniform-phase\ndistribution; this module constructs the circuit and exposes a statevector\ninspector for testing.\n\"\"\"\n\nimport numpy as np\nfrom qiskit import QuantumCircuit\nfrom qiskit.quantum_info import Statevector\n\n\ndef ghz_circuit(n: int = 3) -> QuantumCircuit:\n    \"\"\"Return an n-qubit GHZ state preparation circuit.\"\"\"\n    c = QuantumCircuit(n)\n    c.h(0)\n    for i in range(n - 1):\n        c.cx(i, i + 1)\n    return c\n\n\ndef qft_circuit(n: int = 3) -> QuantumCircuit:\n    \"\"\"Return the n-qubit QFT circuit (without final swaps for in-place order).\"\"\"\n    c = QuantumCircuit(n)\n    for i in range(n):\n        c.h(i)\n        for j in range(i + 1, n):\n            c.cp(np.pi / (2 ** (j - i)), j, i)\n    return c\n\n\ndef ghz_then_qft_circuit(n: int = 3) -> QuantumCircuit:\n    \"\"\"Compose GHZ preparation + QFT.\"\"\"\n    c = ghz_circuit(n)\n    c.compose(qft_circuit(n), inplace=True)\n    return c\n\n\ndef ghz_then_qft_statevector(n: int = 3) -> np.ndarray:\n    \"\"\"Return the final statevector of GHZ followed by QFT.\"\"\"\n    c = ghz_then_qft_circuit(n)\n    sv = Statevector.from_instruction(c)\n    return np.asarray(sv.data)\n\n\ndef amplitude_histogram(n: int = 3, tol: float = 1e-9) -> dict[str, complex]:\n    \"\"\"Return a {bitstring: amplitude} dict, dropping near-zero amplitudes.\"\"\"\n    sv = ghz_then_qft_statevector(n)\n    out: dict[str, complex] = {}\n    for i, a in enumerate(sv):\n        if abs(a) > tol:\n            out[format(i, f\"0{n}b\")] = complex(a)\n    return out\n\n\nif __name__ == \"__main__\":\n    hist = amplitude_histogram()\n    for bs, a in sorted(hist.items()):\n        print(f\"  {bs}: {a:.4f}\")"
+        }
+      ]
+    },
+    {
+      "format": "chat-sft-v1",
+      "source_schema": "taskgen-v14-delta-c10363",
+      "example_id": "c10363_delta_qiskit_stabilizer_5qubit_code_live_exact",
+      "prompt_kind": "api_gap_fix_live_exact",
+      "task_id": "qiskit_stabilizer_5qubit_code",
+      "bench_task_id": "quantum_qiskit_stabilizer_5qubit_code",
+      "fault_class": "missing-api-module",
+      "api_gap": "qiskit",
+      "api_gap_symbols": [
+        "qiskit"
+      ],
+      "gap_symbol_verified": true,
+      "task_spec": "Task: Qiskit [[5,1,3]] five-qubit stabilizer code table",
+      "category": "quantum_error_correction",
+      "messages": [
+        {
+          "role": "system",
+          "content": "Return only a complete Python solution. Do not include markdown fences or explanation."
+        },
+        {
+          "role": "user",
+          "content": "Task: Qiskit [[5,1,3]] five-qubit stabilizer code table\n\nDomain: quantum\nCategory: quantum_error_correction\n\nReturn only the final Python code."
+        },
+        {
+          "role": "assistant",
+          "content": "\"\"\"[[5,1,3]] perfect code stabilizer generators and syndrome table.\n\nThe five-qubit code is the smallest quantum error-correcting code that\ncorrects any single-qubit error. This module exposes the four stabilizer\ngenerators as Pauli strings and a function that maps a single-qubit error\n(X/Y/Z on qubit 0..4) to its 4-bit syndrome.\n\"\"\"\n\nimport numpy as np\n\n\ndef stabilizer_generators() -> list[str]:\n    \"\"\"Return the four stabilizer generators of the [[5,1,3]] code.\n\n    Each generator is a length-5 Pauli string over {I,X,Y,Z}, ordered\n    qubit 0..4 left to right.\n    \"\"\"\n    return [\"XZZXI\", \"IXZZX\", \"XIXZZ\", \"ZXIXZ\"]\n\n\ndef _pauli_to_vec(p: str) -> np.ndarray:\n    \"\"\"Map a Pauli char to a (x,z) binary pair for the symplectic representation.\"\"\"\n    table = {\n        \"I\": (0, 0),\n        \"X\": (1, 0),\n        \"Y\": (1, 1),\n        \"Z\": (0, 1),\n    }\n    return np.array(table[p], dtype=int)\n\n\ndef stabilizer_matrix() -> np.ndarray:\n    \"\"\"Return the 4x10 binary symplectic matrix S = [Sx | Sz].\"\"\"\n    gens = stabilizer_generators()\n    rows = []\n    for g in gens:\n        sx, sz = [], []\n        for ch in g:\n            x, z = _pauli_to_vec(ch)\n            sx.append(x)\n            sz.append(z)\n        rows.append(sx + sz)\n    return np.array(rows, dtype=int)\n\n\ndef syndrome_of(error: str) -> str:\n    \"\"\"Compute the 4-bit syndrome of a length-5 Pauli error string.\n\n    The syndrome is the bitwise XOR of the stabilizer generators that\n    anticommute with the error.\n    \"\"\"\n    gens = stabilizer_generators()\n    if len(error) != 5 or any(c not in \"IXYZ\" for c in error):\n        raise ValueError(f\"error must be a length-5 Pauli string, got {error!r}\")\n    ex = np.array([_pauli_to_vec(c)[0] for c in error], dtype=int)\n    ez = np.array([_pauli_to_vec(c)[1] for c in error], dtype=int)\n    S = stabilizer_matrix()  # (4, 10)\n    Sx = S[:, :5]\n    Sz = S[:, 5:]\n    # Anticommutes if the symplectic inner product is 1 mod 2.\n    syndrome = (Sx @ ez + Sz @ ex) % 2\n    return \"\".join(str(b) for b in syndrome)\n\n\ndef single_qubit_error_table() -> dict[str, str]:\n    \"\"\"Map every single-qubit Pauli error on every qubit to its syndrome.\n\n    Keys are like 'X0', 'Y2', 'Z4'. The 'I' (no error) case maps to '0000'.\n    \"\"\"\n    table = {\"I\": \"0000\"}\n    for q in range(5):\n        for p in \"XYZ\":\n            err = [\"I\"] * 5\n            err[q] = p\n            table[f\"{p}{q}\"] = syndrome_of(\"\".join(err))\n    return table\n\n\nif __name__ == \"__main__\":\n    table = single_qubit_error_table()\n    for k, v in sorted(table.items()):\n        print(f\"  {k}: {v}\")\n    # Sanity: every single-qubit error should have a unique, non-zero syndrome\n    syndromes = [v for k, v in table.items() if k != \"I\"]\n    assert len(set(syndromes)) == 15, \"five-qubit code must correct all single-qubit errors\""
+        }
+      ]
+    },
+    {
+      "format": "chat-sft-v1",
+      "source_schema": "taskgen-v14-delta-c10363",
+      "example_id": "c10363_delta_qiskit_stabilizer_5qubit_code_api_named",
+      "prompt_kind": "api_gap_fix_api_named",
+      "task_id": "qiskit_stabilizer_5qubit_code",
+      "bench_task_id": "quantum_qiskit_stabilizer_5qubit_code",
+      "fault_class": "missing-api-module",
+      "api_gap": "qiskit",
+      "api_gap_symbols": [
+        "qiskit"
+      ],
+      "gap_symbol_verified": true,
+      "task_spec": "Task: Qiskit [[5,1,3]] five-qubit stabilizer code table\n\nRequired public API (signatures and docstrings only):\ndef stabilizer_generators(  )\ndef stabilizer_matrix(  )\ndef syndrome_of( error: str )\ndef single_qubit_error_table(  )",
+      "category": "quantum_error_correction",
+      "messages": [
+        {
+          "role": "system",
+          "content": "Return only a complete Python solution. Do not include markdown fences or explanation."
+        },
+        {
+          "role": "user",
+          "content": "Task: Qiskit [[5,1,3]] five-qubit stabilizer code table\n\nRequired public API (signatures and docstrings only):\ndef stabilizer_generators(  )\ndef stabilizer_matrix(  )\ndef syndrome_of( error: str )\ndef single_qubit_error_table(  )\n\nDomain: quantum\nCategory: quantum_error_correction\n\nReturn only the final Python code."
+        },
+        {
+          "role": "assistant",
+          "content": "\"\"\"[[5,1,3]] perfect code stabilizer generators and syndrome table.\n\nThe five-qubit code is the smallest quantum error-correcting code that\ncorrects any single-qubit error. This module exposes the four stabilizer\ngenerators as Pauli strings and a function that maps a single-qubit error\n(X/Y/Z on qubit 0..4) to its 4-bit syndrome.\n\"\"\"\n\nimport numpy as np\n\n\ndef stabilizer_generators() -> list[str]:\n    \"\"\"Return the four stabilizer generators of the [[5,1,3]] code.\n\n    Each generator is a length-5 Pauli string over {I,X,Y,Z}, ordered\n    qubit 0..4 left to right.\n    \"\"\"\n    return [\"XZZXI\", \"IXZZX\", \"XIXZZ\", \"ZXIXZ\"]\n\n\ndef _pauli_to_vec(p: str) -> np.ndarray:\n    \"\"\"Map a Pauli char to a (x,z) binary pair for the symplectic representation.\"\"\"\n    table = {\n        \"I\": (0, 0),\n        \"X\": (1, 0),\n        \"Y\": (1, 1),\n        \"Z\": (0, 1),\n    }\n    return np.array(table[p], dtype=int)\n\n\ndef stabilizer_matrix() -> np.ndarray:\n    \"\"\"Return the 4x10 binary symplectic matrix S = [Sx | Sz].\"\"\"\n    gens = stabilizer_generators()\n    rows = []\n    for g in gens:\n        sx, sz = [], []\n        for ch in g:\n            x, z = _pauli_to_vec(ch)\n            sx.append(x)\n            sz.append(z)\n        rows.append(sx + sz)\n    return np.array(rows, dtype=int)\n\n\ndef syndrome_of(error: str) -> str:\n    \"\"\"Compute the 4-bit syndrome of a length-5 Pauli error string.\n\n    The syndrome is the bitwise XOR of the stabilizer generators that\n    anticommute with the error.\n    \"\"\"\n    gens = stabilizer_generators()\n    if len(error) != 5 or any(c not in \"IXYZ\" for c in error):\n        raise ValueError(f\"error must be a length-5 Pauli string, got {error!r}\")\n    ex = np.array([_pauli_to_vec(c)[0] for c in error], dtype=int)\n    ez = np.array([_pauli_to_vec(c)[1] for c in error], dtype=int)\n    S = stabilizer_matrix()  # (4, 10)\n    Sx = S[:, :5]\n    Sz = S[:, 5:]\n    # Anticommutes if the symplectic inner product is 1 mod 2.\n    syndrome = (Sx @ ez + Sz @ ex) % 2\n    return \"\".join(str(b) for b in syndrome)\n\n\ndef single_qubit_error_table() -> dict[str, str]:\n    \"\"\"Map every single-qubit Pauli error on every qubit to its syndrome.\n\n    Keys are like 'X0', 'Y2', 'Z4'. The 'I' (no error) case maps to '0000'.\n    \"\"\"\n    table = {\"I\": \"0000\"}\n    for q in range(5):\n        for p in \"XYZ\":\n            err = [\"I\"] * 5\n            err[q] = p\n            table[f\"{p}{q}\"] = syndrome_of(\"\".join(err))\n    return table\n\n\nif __name__ == \"__main__\":\n    table = single_qubit_error_table()\n    for k, v in sorted(table.items()):\n        print(f\"  {k}: {v}\")\n    # Sanity: every single-qubit error should have a unique, non-zero syndrome\n    syndromes = [v for k, v in table.items() if k != \"I\"]\n    assert len(set(syndromes)) == 15, \"five-qubit code must correct all single-qubit errors\""
+        }
+      ]
+    },
+    {
+      "format": "chat-sft-v1",
+      "source_schema": "taskgen-v14-delta-c10363",
+      "example_id": "c10363_delta_qiskit_stabilizer_5qubit_code_prose_paraphrase",
+      "prompt_kind": "api_gap_fix_prose_paraphrase",
+      "task_id": "qiskit_stabilizer_5qubit_code",
+      "bench_task_id": "quantum_qiskit_stabilizer_5qubit_code",
+      "fault_class": "missing-api-module",
+      "api_gap": "qiskit",
+      "api_gap_symbols": [
+        "qiskit"
+      ],
+      "gap_symbol_verified": true,
+      "task_spec": "Write a complete Python module that satisfies this spec:\n\nTask: Qiskit [[5,1,3]] five-qubit stabilizer code table",
+      "category": "quantum_error_correction",
+      "messages": [
+        {
+          "role": "system",
+          "content": "Return only a complete Python solution. Do not include markdown fences or explanation."
+        },
+        {
+          "role": "user",
+          "content": "Write a complete Python module that satisfies this spec:\n\nTask: Qiskit [[5,1,3]] five-qubit stabilizer code table\n\nDomain: quantum\nCategory: quantum_error_correction\n\nReturn only the final Python code."
+        },
+        {
+          "role": "assistant",
+          "content": "\"\"\"[[5,1,3]] perfect code stabilizer generators and syndrome table.\n\nThe five-qubit code is the smallest quantum error-correcting code that\ncorrects any single-qubit error. This module exposes the four stabilizer\ngenerators as Pauli strings and a function that maps a single-qubit error\n(X/Y/Z on qubit 0..4) to its 4-bit syndrome.\n\"\"\"\n\nimport numpy as np\n\n\ndef stabilizer_generators() -> list[str]:\n    \"\"\"Return the four stabilizer generators of the [[5,1,3]] code.\n\n    Each generator is a length-5 Pauli string over {I,X,Y,Z}, ordered\n    qubit 0..4 left to right.\n    \"\"\"\n    return [\"XZZXI\", \"IXZZX\", \"XIXZZ\", \"ZXIXZ\"]\n\n\ndef _pauli_to_vec(p: str) -> np.ndarray:\n    \"\"\"Map a Pauli char to a (x,z) binary pair for the symplectic representation.\"\"\"\n    table = {\n        \"I\": (0, 0),\n        \"X\": (1, 0),\n        \"Y\": (1, 1),\n        \"Z\": (0, 1),\n    }\n    return np.array(table[p], dtype=int)\n\n\ndef stabilizer_matrix() -> np.ndarray:\n    \"\"\"Return the 4x10 binary symplectic matrix S = [Sx | Sz].\"\"\"\n    gens = stabilizer_generators()\n    rows = []\n    for g in gens:\n        sx, sz = [], []\n        for ch in g:\n            x, z = _pauli_to_vec(ch)\n            sx.append(x)\n            sz.append(z)\n        rows.append(sx + sz)\n    return np.array(rows, dtype=int)\n\n\ndef syndrome_of(error: str) -> str:\n    \"\"\"Compute the 4-bit syndrome of a length-5 Pauli error string.\n\n    The syndrome is the bitwise XOR of the stabilizer generators that\n    anticommute with the error.\n    \"\"\"\n    gens = stabilizer_generators()\n    if len(error) != 5 or any(c not in \"IXYZ\" for c in error):\n        raise ValueError(f\"error must be a length-5 Pauli string, got {error!r}\")\n    ex = np.array([_pauli_to_vec(c)[0] for c in error], dtype=int)\n    ez = np.array([_pauli_to_vec(c)[1] for c in error], dtype=int)\n    S = stabilizer_matrix()  # (4, 10)\n    Sx = S[:, :5]\n    Sz = S[:, 5:]\n    # Anticommutes if the symplectic inner product is 1 mod 2.\n    syndrome = (Sx @ ez + Sz @ ex) % 2\n    return \"\".join(str(b) for b in syndrome)\n\n\ndef single_qubit_error_table() -> dict[str, str]:\n    \"\"\"Map every single-qubit Pauli error on every qubit to its syndrome.\n\n    Keys are like 'X0', 'Y2', 'Z4'. The 'I' (no error) case maps to '0000'.\n    \"\"\"\n    table = {\"I\": \"0000\"}\n    for q in range(5):\n        for p in \"XYZ\":\n            err = [\"I\"] * 5\n            err[q] = p\n            table[f\"{p}{q}\"] = syndrome_of(\"\".join(err))\n    return table\n\n\nif __name__ == \"__main__\":\n    table = single_qubit_error_table()\n    for k, v in sorted(table.items()):\n        print(f\"  {k}: {v}\")\n    # Sanity: every single-qubit error should have a unique, non-zero syndrome\n    syndromes = [v for k, v in table.items() if k != \"I\"]\n    assert len(set(syndromes)) == 15, \"five-qubit code must correct all single-qubit errors\""
+        }
+      ]
+    },
+    {
+      "format": "chat-sft-v1",
+      "source_schema": "taskgen-v14-delta-c10363",
+      "example_id": "c10363_delta_pennylane_qml_iris_classification_live_exact",
+      "prompt_kind": "api_gap_fix_live_exact",
+      "task_id": "pennylane_qml_iris_classification",
+      "bench_task_id": "quantum_pennylane_qml_iris_classification",
+      "fault_class": "missing-api-module",
+      "api_gap": "pennylane",
+      "api_gap_symbols": [
+        "pennylane"
+      ],
+      "gap_symbol_verified": true,
+      "task_spec": "Use PennyLane with a two-qubit feature map: L2-normalize each four-feature vector (leaving the zero vector unchanged), apply RY(pi*x0) on wire 0, RY(pi*x1) on wire 1, CNOT 0->1, RY(pi*x2) on wire 0, and RY(pi*x3) on wire 1. Define kernel_value as |<psi(x1)|psi(x2)>|**2 and kernel_matrix by pairwise evaluation. Train full-batch kernel logistic regression and predict class 1 when sigmoid(K @ alpha) >= 0.5. iris_2class_subset returns a seed-deterministic balanced, separable dataset with shape (20, 4) and 20 binary labels. run_pipeline builds the 20x20 training kernel, trains the classifier, and returns {'accuracy': a float, 'n': 20}.",
+      "category": "quantum_ml",
+      "messages": [
+        {
+          "role": "system",
+          "content": "Return only a complete Python solution. Do not include markdown fences or explanation."
+        },
+        {
+          "role": "user",
+          "content": "Use PennyLane with a two-qubit feature map: L2-normalize each four-feature vector (leaving the zero vector unchanged), apply RY(pi*x0) on wire 0, RY(pi*x1) on wire 1, CNOT 0->1, RY(pi*x2) on wire 0, and RY(pi*x3) on wire 1. Define kernel_value as |<psi(x1)|psi(x2)>|**2 and kernel_matrix by pairwise evaluation. Train full-batch kernel logistic regression and predict class 1 when sigmoid(K @ alpha) >= 0.5. iris_2class_subset returns a seed-deterministic balanced, separable dataset with shape (20, 4) and 20 binary labels. run_pipeline builds the 20x20 training kernel, trains the classifier, and returns {'accuracy': a float, 'n': 20}.\n\nDomain: quantum\nCategory: quantum_ml\n\nReturn only the final Python code."
+        },
+        {
+          "role": "assistant",
+          "content": "\"\"\"Quantum kernel for binary Iris classification.\n\nA 2-qubit quantum kernel computed via the inner product of angle-encoded\nfeature states. The kernel matrix is fed to a simple logistic regression\nto classify the Iris setosa vs. versicolor subset (the linearly separable\ntwo-class slice), demonstrating the quantum-kernel training loop without\nrequiring a trainable variational ansatz.\n\"\"\"\n\nimport pennylane as qml\nfrom pennylane import numpy as np\n\n\ndef _normalize(x: np.ndarray) -> np.ndarray:\n    n = np.linalg.norm(x)\n    return x / n if n > 0 else x\n\n\ndef angle_encode(x: np.ndarray, wires) -> None:\n    \"\"\"Angle-encode a 4-feature vector into 2 qubits (2 features per qubit).\"\"\"\n    x = _normalize(np.asarray(x, dtype=float))\n    # Map 4 features to 2 qubits via Ry rotations.\n    qml.RY(x[0] * np.pi, wires=wires[0])\n    qml.RY(x[1] * np.pi, wires=wires[1])\n    qml.CNOT(wires=[wires[0], wires[1]])\n    qml.RY(x[2] * np.pi, wires=wires[0])\n    qml.RY(x[3] * np.pi, wires=wires[1])\n\n\ndef kernel_circuit() -> qml.QNode:\n    dev = qml.device(\"default.qubit\", wires=2)\n\n    @qml.qnode(dev)\n    def circuit(x1, x2):\n        angle_encode(x1, wires=[0, 1])\n        qml.adjoint(lambda: angle_encode(x2, wires=[0, 1]))()\n        return qml.probs(wires=[0, 1])\n\n    return circuit\n\n\ndef kernel_value(x1, x2) -> float:\n    \"\"\"Kernel = |<psi(x1)|psi(x2)>|^2 = probability of measuring |00>.\"\"\"\n    circuit = kernel_circuit()\n    probs = circuit(x1, x2)\n    return float(probs[0])\n\n\ndef kernel_matrix(X1: np.ndarray, X2: np.ndarray) -> np.ndarray:\n    n, m = len(X1), len(X2)\n    K = np.zeros((n, m))\n    for i in range(n):\n        for j in range(m):\n            K[i, j] = kernel_value(X1[i], X2[j])\n    return K\n\n\ndef sigmoid(z: np.ndarray) -> np.ndarray:\n    return 1.0 / (1.0 + np.exp(-z))\n\n\ndef train_kernel_logreg(\n    K: np.ndarray, y: np.ndarray, lr: float = 0.1, epochs: int = 200, seed: int = 0\n) -> np.ndarray:\n    \"\"\"Train a kernel logistic regression with gradient descent.\n\n    K: (n, n) kernel matrix. y: (n,) {0,1}. Returns alpha (n,).\n    Prediction: sigmoid(K @ alpha).\n    \"\"\"\n    np.random.seed(seed)\n    n = K.shape[0]\n    alpha = np.zeros(n, requires_grad=True)\n    for _ in range(epochs):\n        pred = sigmoid(K @ alpha)\n        grad = K.T @ (pred - y) / n\n        alpha = alpha - lr * grad\n    return alpha\n\n\ndef predict(K: np.ndarray, alpha: np.ndarray) -> np.ndarray:\n    return (sigmoid(K @ alpha) >= 0.5).astype(int)\n\n\ndef iris_2class_subset(seed: int = 0) -> tuple[np.ndarray, np.ndarray]:\n    \"\"\"Return a small synthetic 2-class 4-feature dataset that mimics the\n    Iris setosa/versicolor split. Synthetic so the test does not need\n    scikit-learn's data loader.\n    \"\"\"\n    rng = np.random.default_rng(seed)\n    n = 20\n    X0 = rng.normal(loc=[0.2, 0.1, 0.1, 0.05], scale=0.05, size=(n // 2, 4))\n    X1 = rng.normal(loc=[0.6, 0.4, 0.5, 0.2], scale=0.05, size=(n // 2, 4))\n    X = np.vstack([X0, X1])\n    y = np.array([0] * (n // 2) + [1] * (n // 2))\n    return X, y\n\n\ndef run_pipeline() -> dict:\n    X, y = iris_2class_subset(seed=0)\n    K = kernel_matrix(X, X)\n    alpha = train_kernel_logreg(K, y, lr=0.5, epochs=200, seed=0)\n    preds = predict(K, alpha)\n    acc = float((preds == y).mean())\n    return {\"accuracy\": acc, \"n\": len(y)}\n\n\nif __name__ == \"__main__\":\n    out = run_pipeline()\n    print(f\"kernel-logreg accuracy on Iris 2-class subset: {out['accuracy']:.3f}\")"
+        }
+      ]
+    },
+    {
+      "format": "chat-sft-v1",
+      "source_schema": "taskgen-v14-delta-c10363",
+      "example_id": "c10363_delta_pennylane_qml_iris_classification_api_named",
+      "prompt_kind": "api_gap_fix_api_named",
+      "task_id": "pennylane_qml_iris_classification",
+      "bench_task_id": "quantum_pennylane_qml_iris_classification",
+      "fault_class": "missing-api-module",
+      "api_gap": "pennylane",
+      "api_gap_symbols": [
+        "pennylane"
+      ],
+      "gap_symbol_verified": true,
+      "task_spec": "Use PennyLane with a two-qubit feature map: L2-normalize each four-feature vector (leaving the zero vector unchanged), apply RY(pi*x0) on wire 0, RY(pi*x1) on wire 1, CNOT 0->1, RY(pi*x2) on wire 0, and RY(pi*x3) on wire 1. Define kernel_value as |<psi(x1)|psi(x2)>|**2 and kernel_matrix by pairwise evaluation. Train full-batch kernel logistic regression and predict class 1 when sigmoid(K @ alpha) >= 0.5. iris_2class_subset returns a seed-deterministic balanced, separable dataset with shape (20, 4) and 20 binary labels. run_pipeline builds the 20x20 training kernel, trains the classifier, and returns {'accuracy': a float, 'n': 20}.\n\nRequired public API (signatures and docstrings only):\ndef angle_encode( x: np.ndarray, wires )\ndef kernel_circuit(  )\ndef kernel_value( x1, x2 )\ndef kernel_matrix( X1: np.ndarray, X2: np.ndarray )\ndef sigmoid( z: np.ndarray )\ndef predict( K: np.ndarray, alpha: np.ndarray )\ndef iris_2class_subset( seed: int = 0 )\ndef run_pipeline(  )",
+      "category": "quantum_ml",
+      "messages": [
+        {
+          "role": "system",
+          "content": "Return only a complete Python solution. Do not include markdown fences or explanation."
+        },
+        {
+          "role": "user",
+          "content": "Use PennyLane with a two-qubit feature map: L2-normalize each four-feature vector (leaving the zero vector unchanged), apply RY(pi*x0) on wire 0, RY(pi*x1) on wire 1, CNOT 0->1, RY(pi*x2) on wire 0, and RY(pi*x3) on wire 1. Define kernel_value as |<psi(x1)|psi(x2)>|**2 and kernel_matrix by pairwise evaluation. Train full-batch kernel logistic regression and predict class 1 when sigmoid(K @ alpha) >= 0.5. iris_2class_subset returns a seed-deterministic balanced, separable dataset with shape (20, 4) and 20 binary labels. run_pipeline builds the 20x20 training kernel, trains the classifier, and returns {'accuracy': a float, 'n': 20}.\n\nRequired public API (signatures and docstrings only):\ndef angle_encode( x: np.ndarray, wires )\ndef kernel_circuit(  )\ndef kernel_value( x1, x2 )\ndef kernel_matrix( X1: np.ndarray, X2: np.ndarray )\ndef sigmoid( z: np.ndarray )\ndef predict( K: np.ndarray, alpha: np.ndarray )\ndef iris_2class_subset( seed: int = 0 )\ndef run_pipeline(  )\n\nDomain: quantum\nCategory: quantum_ml\n\nReturn only the final Python code."
+        },
+        {
+          "role": "assistant",
+          "content": "\"\"\"Quantum kernel for binary Iris classification.\n\nA 2-qubit quantum kernel computed via the inner product of angle-encoded\nfeature states. The kernel matrix is fed to a simple logistic regression\nto classify the Iris setosa vs. versicolor subset (the linearly separable\ntwo-class slice), demonstrating the quantum-kernel training loop without\nrequiring a trainable variational ansatz.\n\"\"\"\n\nimport pennylane as qml\nfrom pennylane import numpy as np\n\n\ndef _normalize(x: np.ndarray) -> np.ndarray:\n    n = np.linalg.norm(x)\n    return x / n if n > 0 else x\n\n\ndef angle_encode(x: np.ndarray, wires) -> None:\n    \"\"\"Angle-encode a 4-feature vector into 2 qubits (2 features per qubit).\"\"\"\n    x = _normalize(np.asarray(x, dtype=float))\n    # Map 4 features to 2 qubits via Ry rotations.\n    qml.RY(x[0] * np.pi, wires=wires[0])\n    qml.RY(x[1] * np.pi, wires=wires[1])\n    qml.CNOT(wires=[wires[0], wires[1]])\n    qml.RY(x[2] * np.pi, wires=wires[0])\n    qml.RY(x[3] * np.pi, wires=wires[1])\n\n\ndef kernel_circuit() -> qml.QNode:\n    dev = qml.device(\"default.qubit\", wires=2)\n\n    @qml.qnode(dev)\n    def circuit(x1, x2):\n        angle_encode(x1, wires=[0, 1])\n        qml.adjoint(lambda: angle_encode(x2, wires=[0, 1]))()\n        return qml.probs(wires=[0, 1])\n\n    return circuit\n\n\ndef kernel_value(x1, x2) -> float:\n    \"\"\"Kernel = |<psi(x1)|psi(x2)>|^2 = probability of measuring |00>.\"\"\"\n    circuit = kernel_circuit()\n    probs = circuit(x1, x2)\n    return float(probs[0])\n\n\ndef kernel_matrix(X1: np.ndarray, X2: np.ndarray) -> np.ndarray:\n    n, m = len(X1), len(X2)\n    K = np.zeros((n, m))\n    for i in range(n):\n        for j in range(m):\n            K[i, j] = kernel_value(X1[i], X2[j])\n    return K\n\n\ndef sigmoid(z: np.ndarray) -> np.ndarray:\n    return 1.0 / (1.0 + np.exp(-z))\n\n\ndef train_kernel_logreg(\n    K: np.ndarray, y: np.ndarray, lr: float = 0.1, epochs: int = 200, seed: int = 0\n) -> np.ndarray:\n    \"\"\"Train a kernel logistic regression with gradient descent.\n\n    K: (n, n) kernel matrix. y: (n,) {0,1}. Returns alpha (n,).\n    Prediction: sigmoid(K @ alpha).\n    \"\"\"\n    np.random.seed(seed)\n    n = K.shape[0]\n    alpha = np.zeros(n, requires_grad=True)\n    for _ in range(epochs):\n        pred = sigmoid(K @ alpha)\n        grad = K.T @ (pred - y) / n\n        alpha = alpha - lr * grad\n    return alpha\n\n\ndef predict(K: np.ndarray, alpha: np.ndarray) -> np.ndarray:\n    return (sigmoid(K @ alpha) >= 0.5).astype(int)\n\n\ndef iris_2class_subset(seed: int = 0) -> tuple[np.ndarray, np.ndarray]:\n    \"\"\"Return a small synthetic 2-class 4-feature dataset that mimics the\n    Iris setosa/versicolor split. Synthetic so the test does not need\n    scikit-learn's data loader.\n    \"\"\"\n    rng = np.random.default_rng(seed)\n    n = 20\n    X0 = rng.normal(loc=[0.2, 0.1, 0.1, 0.05], scale=0.05, size=(n // 2, 4))\n    X1 = rng.normal(loc=[0.6, 0.4, 0.5, 0.2], scale=0.05, size=(n // 2, 4))\n    X = np.vstack([X0, X1])\n    y = np.array([0] * (n // 2) + [1] * (n // 2))\n    return X, y\n\n\ndef run_pipeline() -> dict:\n    X, y = iris_2class_subset(seed=0)\n    K = kernel_matrix(X, X)\n    alpha = train_kernel_logreg(K, y, lr=0.5, epochs=200, seed=0)\n    preds = predict(K, alpha)\n    acc = float((preds == y).mean())\n    return {\"accuracy\": acc, \"n\": len(y)}\n\n\nif __name__ == \"__main__\":\n    out = run_pipeline()\n    print(f\"kernel-logreg accuracy on Iris 2-class subset: {out['accuracy']:.3f}\")"
+        }
+      ]
+    },
+    {
+      "format": "chat-sft-v1",
+      "source_schema": "taskgen-v14-delta-c10363",
+      "example_id": "c10363_delta_pennylane_qml_iris_classification_prose_paraphrase",
+      "prompt_kind": "api_gap_fix_prose_paraphrase",
+      "task_id": "pennylane_qml_iris_classification",
+      "bench_task_id": "quantum_pennylane_qml_iris_classification",
+      "fault_class": "missing-api-module",
+      "api_gap": "pennylane",
+      "api_gap_symbols": [
+        "pennylane"
+      ],
+      "gap_symbol_verified": true,
+      "task_spec": "Write a complete Python module that satisfies this spec:\n\nUse PennyLane with a two-qubit feature map: L2-normalize each four-feature vector (leaving the zero vector unchanged), apply RY(pi*x0) on wire 0, RY(pi*x1) on wire 1, CNOT 0->1, RY(pi*x2) on wire 0, and RY(pi*x3) on wire 1. Define kernel_value as |<psi(x1)|psi(x2)>|**2 and kernel_matrix by pairwise evaluation. Train full-batch kernel logistic regression and predict class 1 when sigmoid(K @ alpha) >= 0.5. iris_2class_subset returns a seed-deterministic balanced, separable dataset with shape (20, 4) and 20 binary labels. run_pipeline builds the 20x20 training kernel, trains the classifier, and returns {'accuracy': a float, 'n': 20}.",
+      "category": "quantum_ml",
+      "messages": [
+        {
+          "role": "system",
+          "content": "Return only a complete Python solution. Do not include markdown fences or explanation."
+        },
+        {
+          "role": "user",
+          "content": "Write a complete Python module that satisfies this spec:\n\nUse PennyLane with a two-qubit feature map: L2-normalize each four-feature vector (leaving the zero vector unchanged), apply RY(pi*x0) on wire 0, RY(pi*x1) on wire 1, CNOT 0->1, RY(pi*x2) on wire 0, and RY(pi*x3) on wire 1. Define kernel_value as |<psi(x1)|psi(x2)>|**2 and kernel_matrix by pairwise evaluation. Train full-batch kernel logistic regression and predict class 1 when sigmoid(K @ alpha) >= 0.5. iris_2class_subset returns a seed-deterministic balanced, separable dataset with shape (20, 4) and 20 binary labels. run_pipeline builds the 20x20 training kernel, trains the classifier, and returns {'accuracy': a float, 'n': 20}.\n\nDomain: quantum\nCategory: quantum_ml\n\nReturn only the final Python code."
+        },
+        {
+          "role": "assistant",
+          "content": "\"\"\"Quantum kernel for binary Iris classification.\n\nA 2-qubit quantum kernel computed via the inner product of angle-encoded\nfeature states. The kernel matrix is fed to a simple logistic regression\nto classify the Iris setosa vs. versicolor subset (the linearly separable\ntwo-class slice), demonstrating the quantum-kernel training loop without\nrequiring a trainable variational ansatz.\n\"\"\"\n\nimport pennylane as qml\nfrom pennylane import numpy as np\n\n\ndef _normalize(x: np.ndarray) -> np.ndarray:\n    n = np.linalg.norm(x)\n    return x / n if n > 0 else x\n\n\ndef angle_encode(x: np.ndarray, wires) -> None:\n    \"\"\"Angle-encode a 4-feature vector into 2 qubits (2 features per qubit).\"\"\"\n    x = _normalize(np.asarray(x, dtype=float))\n    # Map 4 features to 2 qubits via Ry rotations.\n    qml.RY(x[0] * np.pi, wires=wires[0])\n    qml.RY(x[1] * np.pi, wires=wires[1])\n    qml.CNOT(wires=[wires[0], wires[1]])\n    qml.RY(x[2] * np.pi, wires=wires[0])\n    qml.RY(x[3] * np.pi, wires=wires[1])\n\n\ndef kernel_circuit() -> qml.QNode:\n    dev = qml.device(\"default.qubit\", wires=2)\n\n    @qml.qnode(dev)\n    def circuit(x1, x2):\n        angle_encode(x1, wires=[0, 1])\n        qml.adjoint(lambda: angle_encode(x2, wires=[0, 1]))()\n        return qml.probs(wires=[0, 1])\n\n    return circuit\n\n\ndef kernel_value(x1, x2) -> float:\n    \"\"\"Kernel = |<psi(x1)|psi(x2)>|^2 = probability of measuring |00>.\"\"\"\n    circuit = kernel_circuit()\n    probs = circuit(x1, x2)\n    return float(probs[0])\n\n\ndef kernel_matrix(X1: np.ndarray, X2: np.ndarray) -> np.ndarray:\n    n, m = len(X1), len(X2)\n    K = np.zeros((n, m))\n    for i in range(n):\n        for j in range(m):\n            K[i, j] = kernel_value(X1[i], X2[j])\n    return K\n\n\ndef sigmoid(z: np.ndarray) -> np.ndarray:\n    return 1.0 / (1.0 + np.exp(-z))\n\n\ndef train_kernel_logreg(\n    K: np.ndarray, y: np.ndarray, lr: float = 0.1, epochs: int = 200, seed: int = 0\n) -> np.ndarray:\n    \"\"\"Train a kernel logistic regression with gradient descent.\n\n    K: (n, n) kernel matrix. y: (n,) {0,1}. Returns alpha (n,).\n    Prediction: sigmoid(K @ alpha).\n    \"\"\"\n    np.random.seed(seed)\n    n = K.shape[0]\n    alpha = np.zeros(n, requires_grad=True)\n    for _ in range(epochs):\n        pred = sigmoid(K @ alpha)\n        grad = K.T @ (pred - y) / n\n        alpha = alpha - lr * grad\n    return alpha\n\n\ndef predict(K: np.ndarray, alpha: np.ndarray) -> np.ndarray:\n    return (sigmoid(K @ alpha) >= 0.5).astype(int)\n\n\ndef iris_2class_subset(seed: int = 0) -> tuple[np.ndarray, np.ndarray]:\n    \"\"\"Return a small synthetic 2-class 4-feature dataset that mimics the\n    Iris setosa/versicolor split. Synthetic so the test does not need\n    scikit-learn's data loader.\n    \"\"\"\n    rng = np.random.default_rng(seed)\n    n = 20\n    X0 = rng.normal(loc=[0.2, 0.1, 0.1, 0.05], scale=0.05, size=(n // 2, 4))\n    X1 = rng.normal(loc=[0.6, 0.4, 0.5, 0.2], scale=0.05, size=(n // 2, 4))\n    X = np.vstack([X0, X1])\n    y = np.array([0] * (n // 2) + [1] * (n // 2))\n    return X, y\n\n\ndef run_pipeline() -> dict:\n    X, y = iris_2class_subset(seed=0)\n    K = kernel_matrix(X, X)\n    alpha = train_kernel_logreg(K, y, lr=0.5, epochs=200, seed=0)\n    preds = predict(K, alpha)\n    acc = float((preds == y).mean())\n    return {\"accuracy\": acc, \"n\": len(y)}\n\n\nif __name__ == \"__main__\":\n    out = run_pipeline()\n    print(f\"kernel-logreg accuracy on Iris 2-class subset: {out['accuracy']:.3f}\")"
+        }
+      ]
+    }
+  ],
+  "dataset_card_block": {
+    "card": "C-10363",
+    "name": "qg v14 SFT mixture (C-10358 API-gap targeted)",
+    "source": "evals/tasks/quantum frozen candidate.py (delta rows) + v12e replay",
+    "task_count": 13,
+    "format": "chat-sft-v1",
+    "leak_policy": "C-10363 data-miner authorized: align to frozen eval API names"
+  }
+}

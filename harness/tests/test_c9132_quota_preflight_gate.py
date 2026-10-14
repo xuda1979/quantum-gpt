@@ -38,6 +38,7 @@ _counter = [0]
 def _load_qgh(state_dir, monkeypatch):
     """Fresh qgh module bound to an isolated state dir."""
     monkeypatch.setenv("QGH_STATE_DIR", str(state_dir))
+    monkeypatch.setenv("QGH_ALLOW_SPAWN", "1")
     _counter[0] += 1
     spec = importlib.util.spec_from_file_location("qgh_c9132_%d" % _counter[0], QGH_PATH)
     mod = importlib.util.module_from_spec(spec)
@@ -47,7 +48,7 @@ def _load_qgh(state_dir, monkeypatch):
 
 
 def _card(mod, title, lane, **over):
-    c = mod.H.new_card(title, lane, "goal edge", ["acceptance"], budget_min=5)
+    c = mod.H.new_card(title, lane, "goal edge", ["acceptance"], budget_min=75)
     for k, v in over.items():
         c[k] = v
     return c

@@ -65,6 +65,7 @@ except ImportError:
 
 from json_io import append_line, load_json, save_json  # noqa: E402  (seam re-export, C-9641)
 from time_utils import age_min, now_iso, parse_iso  # noqa: E402  (seam re-export, C-9641)
+from eval_failclosed import eval_failclosed_ok  # noqa: E402  (C-10361 shared gate helper)
 
 
 def append_heartbeat(path, line):
@@ -114,6 +115,105 @@ WIP_LIMITS = {
 DEFAULT_BUDGET_MIN = 25
 STALL_MIN = 10  # heartbeat staleness that counts as a stall (2min ticks)
 MAX_BUDGET_MIN = 90
+# _normalize_card (C-9655) fabricates this budget_min for cards that do not
+# declare one. A budget-infeasible classifier must NOT treat this fabricated
+# value as an explicit small budget: normalize-default 60 means the budget was
+# never explicitly declared (unknown), not "provably cannot fit". Only an
+# explicitly-declared budget strictly below this sentinel proves the card was
+# provisioned too small for its box-bound lane leg.
+NORMALIZE_BUDGET_DEFAULT = 60
+
+
+# C-10143/C-10152a: minimum wall-clock (minutes) a box-bound lane compute leg
+# takes end-to-end. A card whose budget_min is below this can NEVER complete
+# its leg in one worker slot -- every dispatch only produces PARTIAL/BLOCKED/
+# dead at reap, stamped as a fault bounce and re-dispatched forever (the
+# PARTIAL-loop death mode: 26/30 last bounces). Dispatch must REFUSE such
+# budget-infeasible cards at preflight so they stay ready with NO bounce
+# strike instead of riding into a 3x auto-retire death.
+LANE_MIN_LEG_BUDGET_MIN = {
+    "evaluator": 70,  # C-10024/C-10036: full 18-task holdout leg ~70 min
+    # C-10155: trainer-ops worker slot is durable launch+verify (train runs
+    # DETACHED on the box); 60 = measured historical max and equals
+    # NORMALIZE_BUDGET_DEFAULT so only explicitly-declared tiny budgets
+    # (< 60) refuse.
+    "trainer-ops": 60,
+}
+
+
+def card_budget_infeasible(card):
+    """C-10143/C-10152a: True when a box-bound card budget_min is BELOW its
+    lane minimum leg time -- a PERMANENT budget/planning infeasibility that
+    can never be completed in one worker slot. Returns a why-string when
+    infeasible else None. Deterministic: lanes with no measured minimum are
+    fail-open (None); a card with no declared budget is unknown, not provably
+    infeasible (None)."""
+    lane = card.get("lane")
+    min_leg = LANE_MIN_LEG_BUDGET_MIN.get(lane)
+    if min_leg is None:
+        return None
+    declared = card.get("budget_min")
+    if declared is None:
+        return None
+    try:
+        budget = int(declared)
+    except (TypeError, ValueError):
+        return None
+    # classify only when budget was EXPLICITLY declared below BOTH the lane leg
+    # minimum AND the _normalize_card fabrication default (60) -- a normalized-60
+    # card never had a budget set (unknown).
+    if budget < NORMALIZE_BUDGET_DEFAULT and budget < min_leg:
+        return (
+            f"budget-infeasible: {lane} leg needs ~{min_leg} min but card has only "
+            f"{budget}-min slot; dispatch would only auto-retire it at 3bounce "
+            "(C-10143) -- keep ready, no fault strike"
+        )
+    return None
+
+
+# C-10152a/b: dispatch_refused must fire EXACTLY ONCE for a permanently
+# budget-infeasible card -- a per-invocation refused_ids (C-9506) resets each
+# tick, so a budget-infeasible card would be re-refused every dispatch (churn)
+# or dispatched after the first refusal. Durably marking it in OPS lets the
+# candidate filter skip it (stay ready, unclaimed, no event) after the first
+# refusal.
+BUDGET_INFEASIBLE_KEY = "budget_infeasible_cards"  # OPS list of card ids
+
+
+def durably_mark_budget_infeasible(ops, card_id):
+    """C-10152a: append card_id to OPS budget-infeasible set (idempotent).
+    Crash-isolated: never raises."""
+    try:
+        lst = list(ops.get(BUDGET_INFEASIBLE_KEY) or [])
+        if card_id not in lst:
+            lst.append(card_id)
+        ops[BUDGET_INFEASIBLE_KEY] = lst
+    except Exception:
+        pass
+    return ops.get(BUDGET_INFEASIBLE_KEY) or []
+
+
+def budget_infeasible_durably_marked(ops, card_id):
+    """C-10152a: True once a budget-infeasible card has been durably marked so
+    the dispatch candidate filter can skip it (stays ready/unclaimed)."""
+    try:
+        return card_id in (ops.get(BUDGET_INFEASIBLE_KEY) or [])
+    except Exception:
+        return False
+
+
+def unmark_budget_infeasible(ops, card_id):
+    """C-10152a followup: clear a stale durable mark when a card's budget was
+    raised to feasible (C-10156/C-10159 wedged ~22h with stale marks). The
+    dispatch preflight clears marks for feasible candidates so OPS state
+    matches reality. Crash-isolated: never raises."""
+    try:
+        lst = ops.get(BUDGET_INFEASIBLE_KEY) or []
+        if isinstance(lst, (list, tuple)) and card_id in lst:
+            ops[BUDGET_INFEASIBLE_KEY] = [c for c in lst if c != card_id]
+    except Exception:
+        pass
+    return ops.get(BUDGET_INFEASIBLE_KEY) or []
 
 
 def _is_placeholder_acceptance(item):
@@ -927,7 +1027,20 @@ def claim_card(queue, card_id, agent_name):
 
 
 def release_card(card, status, result, reason=None):
-    """Terminal transition for a card. 'bounced' with budget left re-arms as ready."""
+    """Terminal transition for a card. 'bounced' with budget left re-arms as ready.
+
+    C-10289: re-arming an OVERRUN-KILLED card with the SAME fixed budget is a
+    repeat-kill guarantee. The fleet-thrash card measured 86 overrun-killed
+    no-verdict workers in one 3h window; 83/86 were per-suite TDD-fix cards
+    with budget_min=20 that needed more than 20min to reach a RESULT, and
+    86/86 had a fresh heartbeat <10min before reap (healthy workers killed
+    by a too-small slot). When the bounce reason records an overrun
+    (bounce_reason from a reaped overrun-killed/harvested-at-deadline
+    outcome), the re-armed budget ESCALATES each bounce -- capped at
+    MAX_BUDGET_MIN -- so a card that genuinely needs more time gets a real
+    second chance instead of a guaranteed repeat overrun-kill. Bounces that
+    are NOT overruns (verdict/gate/environmental) keep the same budget.
+    """
     card["status"] = status
     card["result"] = (result or "")[:400]
     if reason:
@@ -939,6 +1052,14 @@ def release_card(card, status, result, reason=None):
             card["claimed_by"] = None
             card["claimed_utc"] = None
             card["deadline_utc"] = None
+            _reason = (card.get("bounce_reason") or "") + " " + (result or "")
+            if _reason and any(
+                sig in _reason for sig in ("overran deadline", "harvested at deadline")
+            ):
+                old = int(card.get("budget_min") or DEFAULT_BUDGET_MIN)
+                card["budget_min"] = min(
+                    MAX_BUDGET_MIN, max(old + 20, int(old * 1.5))
+                )
 
 
 def bounce_reason(verdict, outcome, over):
@@ -1361,6 +1482,57 @@ def is_wrapper_only_output(tail_lines):
     return True
 
 
+def is_fork_eagain_text(text):
+    """C-10302: True iff worker output shows an OS fork() EAGAIN (host
+    process-table exhaustion) -- never a card fault.
+
+    The observed fleet-thrash signature (primary evidence, EVENTS.jsonl +
+    agent logs 2026-10-08/09): of 1652 reaped events, 1465 carry
+    'fork: Resource temporarily unavailable' in their LAST dispatch segment
+    (C-10218.log:589-635 shows a wall of these lines), and 1452 of those
+    were reaped DEAD with no verdict. The reap environmental decision matches
+    API errors, exec-endpoint failures, and wrapper-only output, but a
+    fork-EAGAIN dead worker has body len>0, is not wrapper-only, is not an
+    API error, and is not an exec endpoint failure -- so it classified as
+    NON-environmental and burned a bounce strike; the card re-dispatched into
+    the same exhausted host (C-10218: 212 dead reaps). Three tick crashes in
+    the same windows also show BlockingIOError(35, 'Resource temporarily
+    unavailable'), confirming the host fork() actually fails.
+
+    Narrow + fail-closed: matches ONLY the exact bash/flock/claude-wrapper
+    "fork: Resource temporarily unavailable" line the OS prints under EAGAIN
+    (process-table exhaustion), never other fork errors ("Cannot allocate
+    memory", "Resource deadlock avoided") and never a normal worker body.
+    """
+    t = (text or "").lower()
+    return "fork: resource temporarily unavailable" in t
+
+
+def is_api_error_text(text):
+    """C-10302: True iff worker output shows a Claude-CLI / provider API
+    outage (never a card fault).
+
+    The Claude CLI prints its outage with a generic "API Error:" prefix
+    (e.g. "API Error: 502 <urlopen error [Errno 51] Network is unreachable>"
+    or "API Error: 502 ... Name or service not known ... aihuanxin.cn" -
+    the exact lines observed 2026-10-08/09 in six live worker logs that were
+    then reaped dead/overrun with no verdict). The reap path must classify
+    these ENVIRONMENTAL so the card re-arms WITHOUT a bounce strike instead
+    of taking dead-card strikes during a provider outage.
+
+    The generic "API Error:" prefix subsumes every new outage variant of the
+    CLI (the C-10192 "ONE classifier" intent: a new variant like "Connection
+    closed mid-response" is recognized here too). Bare-legacy signatures in
+    API_ERROR_SIGNATURES ("Not logged in", "rate limit", ...) are honored
+    case-insensitively, so this classifier is a strict superset of the old
+    inline `any(sig in text for sig in API_ERROR_SIGNATURES)` check.
+    """
+    t = (text or "").lower()
+    if "api error:" in t:
+        return True
+    return any(sig.lower() in t for sig in API_ERROR_SIGNATURES)
+
+
 def is_gate_skip_blocked(text):
     """True iff a worker BLOCKED result cites the window-gate SKIP marker.
 
@@ -1390,33 +1562,12 @@ def check_gate(gate, result_text):
             return True, "reviewer approved"
         return False, "no REVIEW: APPROVED verdict"
     if gate == "eval-failclosed":
-        ok_markers = ("adapter-applied" in text) and ("adapter-probe-differs" in text)
-        if ok_markers and "byte-identical" not in text:
-            return True, "adapter-applied + probe-differs markers present"
-        # C-10321 postmortem: base-only probe legs carry NO adapter markers
-        # by design (adapter=None), so the adapter-marker rule above bounced
-        # the base-only card 3x and auto-retired it despite complete verified
-        # work. A base-only leg passes on its own fail-closed evidence:
-        # an explicit base-only leg marker, a MEASURED pass_base fraction,
-        # and sha pin(s) (64-hex full or 8-hex bank-pin form). The
-        # 'byte-identical' taint fails both paths equally.
-        low = text.lower()
-        base_only_marker = bool(
-            re.search(r"leg[_ -]kind\s*=\s*base-only", low)
-            or re.search(r"base-only (?:probe )?leg", low)
-        )
-        measured_pass_base = bool(re.search(r"pass_base\s*[=:]\s*\d+\s*/\s*\d+", low))
-        has_sha = bool(
-            re.search(r"\b[0-9a-f]{64}\b", low) or re.search(r"\b[0-9a-f]{8}\b", low)
-        )
-        if (
-            base_only_marker
-            and measured_pass_base
-            and has_sha
-            and "byte-identical" not in low
-        ):
-            return True, "base-only leg: measured pass_base + sha pins present"
-        return False, "eval leg missing fail-closed markers"
+        # C-10361: shared helper accepts BOTH the legacy hyphenated runner
+        # tokens (adapter-applied / adapter-probe-differs) AND the verdict
+        # JSON field names (adapter_applied / adapter_probe_differs). Also
+        # keeps the C-10321 base-only probe-leg rule (measured pass_base +
+        # sha pins). Fail-closed: 'byte-identical' taint fails every path.
+        return eval_failclosed_ok(text)
     if gate == "sha-verified":
         if re.search(r"[0-9a-f]{64}", text):
             return True, "sha256 evidence present"
@@ -2044,6 +2195,31 @@ def load_banked_scorer_sha_pins(state_dir=None):
     return bank
 
 
+def embed_scorer_sha_pins(verdict, state_dir=None):
+    """C-10212 / C-10333 (twin of harness_lib.embed_scorer_sha_pins):
+    stamp a composed verdict with the banked holdout + scorer sha pins so
+    sha_pin_violation() returns None.
+
+    Pins are SCORER ATTESTATIONS, never measurements: this helper returns
+    a NEW dict (the input is never mutated) that is the input plus
+    holdout_sha256 + scorer_shas read from load_banked_scorer_sha_pins --
+    the exact C-9131 bank. A composer calling this on a fresh leg embeds
+    all 4 pinned scorer shas + the holdout pin so a genuinely good adapter
+    verdict can actually reach goal_done's sha gate (C-10333).
+
+    Fail-closed: no/malformed bank raises ValueError (never silently
+    emits an unpinned verdict that goal_done would blame
+    scorer_sha_pins_missing)."""
+    bank = load_banked_scorer_sha_pins(state_dir=state_dir)
+    if bank is None:
+        raise ValueError("scorer_sha_pin_bank_missing: compose refuses an "
+                         "unpinned verdict (no banked pins)")
+    out = dict(verdict)
+    out["holdout_sha256"] = bank["holdout_sha256"]
+    out["scorer_shas"] = dict(bank["scorer_shas"])
+    return out
+
+
 def is_qwen38_27b_model(name):
     """C-9119: does this id resolve to the GOAL's Qwen3.8-27B family?
     Case-insensitive and path-tolerant: requires BOTH the "qwen3.8"
@@ -2096,7 +2272,16 @@ def leg_provenance_violation(verdict, _os_path_exists=None):
     <25 lines.
     """
     exists = _os_path_exists or os.path.exists
-    FIXTURE_ID_PREFIXES = ("pid-leg", "cache-leg", "win-leg")
+    # C-10323: fixture tokens are substring-matched (not startswith-only) so
+    # an EMBEDDED 'pid-leg'/'cache-leg'/'win-leg'/'c9750-canonical' identity
+    # (e.g. '2026-10-09-pid-leg1-bogus') is still a fixture shape. Real
+    # runners emit numeric pids + hex cache/window hashes that never contain
+    # these tokens.
+    FIXTURE_ID_TOKENS = ("pid-leg", "cache-leg", "win-leg", "c9750-canonical")
+    FIXTURE_REF_SUBSTRINGS = (
+        "/var/folders/", "/private/var/folders/", "/tmp/",
+        "c9750-canonical-", "canonical-leg", "/T/leg",
+    )
     for name in ("leg1", "leg2"):
         leg = verdict.get(name)
         if not isinstance(leg, dict):
@@ -2104,8 +2289,33 @@ def leg_provenance_violation(verdict, _os_path_exists=None):
         ref = leg.get("ref")
         ind = leg.get("independence") if isinstance(leg.get("independence"), dict) else {}
         ids = (ind.get("leg_process_id"), ind.get("candidate_cache_id"), ind.get("window_id"))
-        if any(isinstance(x, str) and x.startswith(FIXTURE_ID_PREFIXES) for x in ids):
+        # C-10323 GAP-B: substring match, not prefix-only.
+        if any(isinstance(x, str) and any(t in x for t in FIXTURE_ID_TOKENS) for x in ids):
             return f"{name}_fixture_identity"
+        # C-10323 GAP-C: the scores FIELD is a C-9750 fixture vector (the
+        # incident wrote the fixture path into scores); gate it exactly like
+        # ref so a fixture path can never hide behind a clean outputs/ ref.
+        scores = leg.get("scores")
+        if isinstance(scores, str) and any(t in scores for t in FIXTURE_REF_SUBSTRINGS):
+            if not (("/outputs/" in scores) or scores.rstrip("/").endswith("/outputs")):
+                return f"{name}_fixture_scores_ref"
+        if isinstance(ref, str) and any(t in ref for t in FIXTURE_REF_SUBSTRINGS):
+            if not (("/outputs/" in ref) or ref.rstrip("/").endswith("/outputs")):
+                return f"{name}_fixture_ref"
+
+        # C-10309/C-10311: a leg ref that EXISTS but is NOT under repo
+        # outputs/ (or a box-verified /.../outputs/ path) is a synthetic
+        # twin shape (e.g. .c10311_work/dry_r2_distinct.json). Fail-closed:
+        # relative refs must start with outputs/; absolute refs must contain
+        # /outputs/. A dotdir/other relative ref is rejected even when the
+        # file exists.
+        if isinstance(ref, str) and ref:
+            r = ref.replace(os.sep, "/")
+            under_outputs = (r.startswith("outputs/")
+                             or "/outputs/" in r
+                             or r.rstrip("/").endswith("/outputs"))
+            if not under_outputs:
+                return f"{name}_ref_non_outputs_dotdir"
         # C-9752 core rule: a leg must show REAL scores evidence — an existing
         # scores/ref file, or a recorded scores sha. A ref pointing at a
         # nonexistent file with no sha is the C-9750 fixture shape (its
@@ -2116,6 +2326,7 @@ def leg_provenance_violation(verdict, _os_path_exists=None):
         elif not leg.get("scores_sha256"):
             return f"{name}_no_ref_no_sha"
     return None
+
 
 def goal_done(goal, verdicts):
     """18/18 achieved = a fail-closed TWO-LEG verdict shows 18/18 +
@@ -2214,6 +2425,9 @@ CONSECUTIVE_SPAWN_FAIL_KEY = "consecutive_spawn_failures"
 SPAWN_FAIL_THRESHOLD = 2
 SPAWN_FAILURES_BY_CARD_KEY = "spawn_failures_by_card"
 BACKOFF_MIN = 15
+# C-10287: env-blocked requeue loop detection. See harness_lib.py twin.
+ENV_BLOCKED_REQUEUES_BY_CARD_KEY = "env_blocked_requeues_by_card"
+ENV_BLOCKED_THRESHOLD = 4  # 4 consecutive env-blocked reaps -> quarantine
 
 
 def load_ops(state_dir):
@@ -2273,6 +2487,39 @@ def note_spawn_result(state_dir, ops, ok, card=None, environmental=False):
                     datetime.now(timezone.utc) + timedelta(minutes=BACKOFF_MIN)
                 ).strftime("%Y-%m-%dT%H:%M:%SZ")
     return ops
+
+
+def env_blocked_streak(ops, card):
+    """C-10287: consecutive env-blocked requeue count for a card (abs 0)."""
+    e = (ops.get(ENV_BLOCKED_REQUEUES_BY_CARD_KEY) or dict()).get(card) or dict()
+    return int(e.get("consecutive", 0))
+
+
+def note_env_blocked(state_dir, ops, card):
+    """C-10287: record one env-blocked BLOCKED reap for a card.
+
+    A SEPARATE streak from the spawn-death breaker: the dispatch-success
+    path must never reset it, so a card that keeps returning BLOCKED-with-env
+    is eventually quarantined instead of looping forever.
+    """
+    by = ops.setdefault(ENV_BLOCKED_REQUEUES_BY_CARD_KEY, dict())
+    e = by.setdefault(card, dict())
+    e["consecutive"] = int(e.get("consecutive", 0)) + 1
+    e["last_utc"] = now_iso()
+    return e["consecutive"]
+
+
+def clear_env_blocked(state_dir, ops, card):
+    """C-10287: a NON-environmental reap (real work) resets the streak."""
+    by = ops.setdefault(ENV_BLOCKED_REQUEUES_BY_CARD_KEY, dict())
+    if card in by:
+        by[card]["consecutive"] = 0
+        by[card].setdefault("last_utc", now_iso())
+
+
+def env_blocked_quarantined(ops, card):
+    """C-10287: fail-closed read -- streak at/above threshold = quarantined."""
+    return env_blocked_streak(ops, card) >= ENV_BLOCKED_THRESHOLD
 
 
 def card_backoff_until(ops, card):
@@ -2656,6 +2903,18 @@ def render_standup(goal, queue, fleet, tick_no, verdicts=None, probes=None, stat
                 )
         else:
             L.append("- none armed")
+        quarantined = sorted(
+            cid
+            for cid in (ops.get(ENV_BLOCKED_REQUEUES_BY_CARD_KEY) or dict())
+            if env_blocked_quarantined(ops, cid)
+        )
+        if quarantined:
+            L.append("### ENV-BLOCKED QUARANTINED (C-10287)")
+            for cid in quarantined:
+                e = (ops.get(ENV_BLOCKED_REQUEUES_BY_CARD_KEY) or dict()).get(cid) or dict()
+                L.append(
+                    f"- {cid} streak={e.get('consecutive')} since {e.get('last_utc')} (threshold {ENV_BLOCKED_THRESHOLD})"
+                )
     if verdicts:
         L.append("")
         L.append("### LATEST VERDICTS (fail-closed eval)")
@@ -2942,6 +3201,18 @@ def worker_env(card_id=None):
     return env
 
 
+def _spawn_state_is_production():
+    """True only when STATE resolves to the repo production harness/state dir.
+
+    C-STALE storm followup (2026-09-30): gates spawn_worker's real-command
+    branch. Everything else (tmp/fixture state dirs under test) gets the
+    no-op sleep stub, so a test that forgets QGH_NO_SPAWN=1 can no longer
+    mint live ghost workers. The QGH_ALLOW_SPAWN=1 operator override is
+    checked at the spawn site so this predicate stays purely about paths.
+    """
+    return os.path.realpath(STATE) == os.path.realpath(_default_harness_state_dir())
+
+
 def spawn_worker(goal, queue, card, dep_results):
     """Spawn one headless claude worker for a card. Returns fleet entry or None.
 
@@ -2982,15 +3253,36 @@ def spawn_worker(goal, queue, card, dep_results):
     # Minimal deterministic env: workers get credentials from the sourced files,
     # never from whatever session happened to run the tick.
     env = worker_env(card_id=card["id"])
-    proc = subprocess.Popen(
-        worker_command(),
-        stdin=open(brief_path),
-        stdout=open(log_path, "a", encoding="utf-8"),
-        stderr=subprocess.STDOUT,
-        cwd=REPO,
-        env=env,
-        start_new_session=True,
-    )
+    # C-STALE storm fix (2026-09-30): the opt-in QGH_NO_SPAWN env could not
+    # stop tests that FORGET to set it -- tick-2 of test_c10152b_stale_budget_
+    # mark_unmark.py reached spawn_worker without QGH_NO_SPAWN=1 and spawned
+    # FIVE live ghost trainer-ops workers for card C-STALE (pids 90720/93635/
+    # 93939/96889/98320 + successors every ~30-60s), each burning a 60-min
+    # budget on a card absent from production QUEUE.json. Fail closed by
+    # DEFAULT: a REAL worker launches only when STATE resolves to the repo
+    # production harness/state dir, or the operator sets QGH_ALLOW_SPAWN=1.
+    # Any other state dir gets the sleep stub; dispatch semantics intact.
+    if os.environ.get("QGH_NO_SPAWN") == "1" or not (
+        _spawn_state_is_production() or os.environ.get("QGH_ALLOW_SPAWN") == "1"
+    ):
+        proc = subprocess.Popen(
+            ["/bin/sleep", "5"],
+            stdin=subprocess.DEVNULL,
+            stdout=open(log_path, "a", encoding="utf-8"),
+            stderr=subprocess.STDOUT,
+            cwd=REPO,
+            start_new_session=True,
+        )
+    else:
+        proc = subprocess.Popen(
+            worker_command(),
+            stdin=open(brief_path),
+            stdout=open(log_path, "a", encoding="utf-8"),
+            stderr=subprocess.STDOUT,
+            cwd=REPO,
+            env=env,
+            start_new_session=True,
+        )
     # Deadline derives from THIS process's clock, never from the card dict:
     # a lost-update race must not resurrect a stale (past) deadline that the
     # reaper would read as overrun and use to kill a healthy worker.
@@ -3030,6 +3322,37 @@ def spawn_worker(goal, queue, card, dep_results):
     return entry
 
 
+def _mark_ghost_auto_resolved(card_id, state_dir=None):
+    """C-10146: durably mark a ghost card as auto-resolved AND emit the twin
+    event in the same heartbeat. Returns True when the marker was created
+    (i.e. this heartbeat is the FIRST detection of the ghost), False when the
+    ghost was already marked (later heartbeats must NOT re-fire).
+
+    The durable <state>/ghost/<card>.resolved marker is the source of truth
+    for dedupe: even if the twin event is lost/rolled back, the marker keeps
+    subsequent heartbeats quiet. The ghost_card_auto_resolved twin event gives
+    the retrospective finder a same-card pairing so the fully-handled burst no
+    longer files a bogus watcher card (C-10210/C-10295).
+
+    Fail-open contract: a marker write failure must NOT unwind the heartbeat.
+    Detection (ghost) stays visible; the auto-resolve is best-effort.
+    """
+    state_dir = state_dir or STATE
+    marker = os.path.join(state_dir, "ghost", f"{card_id}.resolved")
+    if os.path.exists(marker):
+        return False  # already auto-resolved -- dedupe (C-10295 core)
+    try:
+        os.makedirs(os.path.dirname(marker), exist_ok=True)
+        event(state_dir, "ghost_card_auto_resolved", {"card": card_id})
+        with open(marker, "w", encoding="utf-8") as f:
+            f.write(now_iso() + "\n")
+        return True
+    except Exception:
+        # Fail-open: the heartbeat append already succeeded; the ghost stays
+        # visible so the retrospective can still count it unresolved.
+        return True
+
+
 def cmd_heartbeat(args):
     """Worker heartbeat (C-9073/C-9115): the sanctioned append route.
 
@@ -3043,6 +3366,14 @@ def cmd_heartbeat(args):
     terminal/removed card ID) are VISIBLE in audit history. The heartbeat
     append MUST still succeed -- the worker needs it to survive the stall
     reaper. Fail-open for the write, fail-closed for detection.
+
+    C-10146/C-10295: fire ghost_heartbeat EXACTLY ONCE per ghost card
+    (dedupe via a durable <state>/ghost/<card>.resolved marker), emit the
+    ghost_card_auto_resolved twin in the SAME cmd_heartbeat call, and keep
+    all later heartbeats for that card quiet. Before this fix every heartbeat
+    from a ghost card re-fired ghost_heartbeat (measured burst 2026-10-08:
+    C-10152a x32 / C-10152b x39), so the retrospective counted 71 unresolved
+    events as watchdog gaps and auto-filed C-10295.
     """
     hb = os.path.join(STATE, "agents", f"{args.card}.progress")
     append_heartbeat(hb, args.message)
@@ -3051,7 +3382,8 @@ def cmd_heartbeat(args):
     try:
         queue = load_queue(STATE)
         if find_card(queue, args.card) is None:
-            event(STATE, "ghost_heartbeat", {"card": args.card})
+            if _mark_ghost_auto_resolved(args.card):
+                event(STATE, "ghost_heartbeat", {"card": args.card})
     except Exception:
         pass  # detection must never unwind a successful heartbeat
 
@@ -3179,7 +3511,10 @@ def _reap_locked():
         body = [ln for ln in tail if not ln.startswith("===== dispatch")]
         # API-down signature: claude prints an API error as its final output —
         # non-empty body but still an outage, never a card fault.
-        api_error = verdict is None and any(sig in text for sig in API_ERROR_SIGNATURES)
+        # C-10302: ONE named classifier (matches Claude-CLI 502/urlopen/DNS
+        # outage lines, not just the legacy signature tuple).
+        api_error = verdict is None and is_api_error_text(text)
+        fork_eagain = verdict is None and is_fork_eagain_text(text)
         # C-9124: /exec endpoint failure is environmental (box transport broken, not card fault)
         exec_failure = is_exec_endpoint_failure(text)
         # C-9515: wrapper-only output (claude CLI failed before doing work)
@@ -3189,6 +3524,7 @@ def _reap_locked():
             (not alive and verdict is None and (len(body) == 0 or wrapper_only))
             or api_error
             or exec_failure
+            or fork_eagain
         ) and not stalled
         if outcome is None:
             if not alive:
@@ -3295,6 +3631,11 @@ def _reap_locked():
                         note_spawn_result(
                             STATE, _ops, ok=False, card=card["id"], environmental=True
                         )
+                        # C-10287: count the env-blocked requeue in a SEPARATE
+                        # per-card streak that the dispatch-success path never
+                        # resets. Without it a card returning BLOCKED-with-env
+                        # every cycle loops forever (C-10243: 9x in a window).
+                        note_env_blocked(STATE, _ops, card=card["id"])
                         save_ops(STATE, _ops)
                     else:
                         release_card(card, "bounced", tail[-1] if tail else "", "worker blocked")
@@ -3327,6 +3668,11 @@ def _reap_locked():
             _cid = a.get("card")
             if card_consecutive_spawn_fails(ops, _cid) or card_backoff_active(ops, _cid):
                 note_spawn_result(STATE, ops, ok=True, card=_cid)
+                save_ops(STATE, ops)
+            # C-10287: a real (non-env) reap proves the card can make progress;
+            # clear its env-blocked quarantine streak.
+            if env_blocked_streak(ops, _cid):
+                clear_env_blocked(STATE, ops, card=_cid)
                 save_ops(STATE, ops)
         event(
             STATE,
@@ -5392,8 +5738,17 @@ def _dispatch_locked(args):
             if (lanes is None or c["lane"] in lanes)
             and lane_live.get(c["lane"], 0) < WIP_LIMITS.get(c["lane"], 1)
             and not card_backoff_active(ops, c["id"])
+            and not env_blocked_quarantined(ops, c["id"])  # C-10287
             and c["id"] not in quota_blocked_ids  # C-9132
             and c["id"] not in refused_ids  # C-9506
+            and not (
+                budget_infeasible_durably_marked(ops, c["id"])
+                # C-10152a followup: a durable mark from a SMALLER budget must
+                # not wedge a card whose budget was raised to feasible
+                # (C-10156/C-10159 wedged ~22h this way). Re-check feasibility
+                # at dispatch time; feasible -> unmarked below.
+                and card_budget_infeasible(c)
+            )  # C-10152a: refused+STILL-infeasible -> skip, stay ready/unclaimed
             and not (
                 args.lane is None
                 and c["lane"] in BOX_BOUND_LANES
@@ -5403,6 +5758,35 @@ def _dispatch_locked(args):
         if not candidates:
             break
         card = candidates[0]
+        # C-10152a: PERMANENT budget infeasibility (budget < lane leg minimum)
+        # must refuse ONCE and durably mark so the card stays READY (no fault
+        # strike, no claim, no worker spawn) instead of being dispatched into
+        # an impossible slot that PARTIAL-loops (dominant death mode:
+        # partial-landed, 26/30 last bounces; C-10144/42/24/35).
+        why_infeas = card_budget_infeasible(card)
+        if why_infeas:
+            event(STATE, "dispatch_refused", {"card": card.get("id"), "why": why_infeas[:200]})
+            durably_mark_budget_infeasible(ops, card.get("id"))
+            try:
+                save_ops(STATE, ops)
+            except Exception:
+                pass
+            refused_ids.add(card["id"])
+            continue
+        # C-10152a followup: the candidate may carry a stale durable mark from
+        # a smaller budget; feasibility was re-checked above -- clear it so OPS
+        # state matches reality (fires-once contract re-arms if re-lowered).
+        try:
+            if budget_infeasible_durably_marked(ops, card["id"]):
+                unmark_budget_infeasible(ops, card["id"])
+                save_ops(STATE, ops)
+                event(
+                    STATE,
+                    "budget_mark_cleared",
+                    {"card": card["id"], "budget_min": card.get("budget_min")},
+                )
+        except Exception:
+            pass
         ok, why = dispatch_target_ok(queue, card, lanes=lanes)
         if not ok:
             # fail closed: never claim or spawn against a bad target, but
@@ -5477,6 +5861,21 @@ def _dispatch_locked(args):
         _skip = dict()
         _skip["card"] = cid
         event(STATE, "dispatch_backoff_skip", _skip)
+    # C-10287: make env-blocked quarantine LOUD, not a silent candidate filter.
+    for cid in sorted(
+        c["id"]
+        for c in ready_cards(queue)
+        if env_blocked_quarantined(ops, c["id"]) and not card_backoff_active(ops, c["id"])
+    ):
+        event(
+            STATE,
+            "env_blocked_quarantined",
+            {
+                "card": cid,
+                "streak": env_blocked_streak(ops, cid),
+                "threshold": ENV_BLOCKED_THRESHOLD,
+            },
+        )
     if n_spawned:
         ops = load_ops(STATE)
         for cid in spawned_cards:
@@ -5927,6 +6326,10 @@ H = _types.SimpleNamespace(
     card_backoff_active=card_backoff_active,
     card_backoff_until=card_backoff_until,
     card_consecutive_spawn_fails=card_consecutive_spawn_fails,
+    clear_env_blocked=clear_env_blocked,
+    env_blocked_quarantined=env_blocked_quarantined,
+    env_blocked_streak=env_blocked_streak,
+    note_env_blocked=note_env_blocked,
     check_gate=check_gate,
     claim_card=claim_card,
     cmd_init=cmd_init,
@@ -5940,6 +6343,8 @@ H = _types.SimpleNamespace(
     harvest_log=harvest_log,
     history_card_ids=history_card_ids,
     history_terminal_card_ids=history_terminal_card_ids,
+    is_api_error_text=is_api_error_text,
+    is_fork_eagain_text=is_fork_eagain_text,
     is_exec_endpoint_failure=is_exec_endpoint_failure,
     is_gate_skip_blocked=is_gate_skip_blocked,
     is_qwen38_27b_model=is_qwen38_27b_model,
@@ -5974,6 +6379,7 @@ H = _types.SimpleNamespace(
     save_json=save_json,
     save_ops=save_ops,
     save_queue=save_queue,
+    embed_scorer_sha_pins=embed_scorer_sha_pins,
     scan_verdicts=scan_verdicts,
     sha_pin_violation=sha_pin_violation,
     trim_status_file=trim_status_file,

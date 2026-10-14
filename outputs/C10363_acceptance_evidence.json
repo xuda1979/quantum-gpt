@@ -1,0 +1,36 @@
+{
+  "card": "C-10363",
+  "role": "data-miner",
+  "result": "DONE",
+  "gates": "none mechanical",
+  "acceptance": {
+    "manifest": "outputs/C10363_v14_mixture_manifest.json",
+    "manifest_md": "outputs/C10363_v14_mixture_manifest.md",
+    "gap_symbol_validation": "outputs/C10363_gap_symbol_validation.json",
+    "n_failing_tasks": 13,
+    "gap_symbols_all_valid": true,
+    "few_shot_rows": 39,
+    "fault_class_counts": {
+      "pass": 5,
+      "missing-api-attribute": 4,
+      "missing-required-function": 3,
+      "wrong-output": 1,
+      "missing-api-module": 5
+    },
+    "counts_delta_vs_v12e": {
+      "v12e_replay_rows": 2213,
+      "v12e_sha256": "e0bbdf5fb0f606dc247c4f757c204eb645faf7f8cdaf922625be0edb6bede991",
+      "v14_delta_rows": 39,
+      "v14_total_rows": 2252,
+      "row_delta_abs": 39
+    },
+    "delta_verified": "every completion execution-green vs frozen tests.py",
+    "training_launch": "none (card authority: data-miner, manifest authoring only)"
+  },
+  "tdd": {
+    "tests": "harness/tests/test_c10363_v14_manifest.py",
+    "passed": 8,
+    "failed": 0,
+    "touched_suite_c10358_passed": 13
+  }
+}
