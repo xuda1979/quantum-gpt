@@ -104,6 +104,61 @@ function shouldRetryHeaded(error, attemptedHeadless) {
   return isHeadlessChromiumLaunchCrash(message);
 }
 
+// C-10450: detect the wedged-browser CDP error that makes context.newPage()
+// throw 'Protocol error (Target.createTarget): Failed to open a new tab'. This
+// is a RUNTIME browser wedge (headless Chrome alive but its target manager is
+// not answering), distinct from a launch-time crash. The daemon uses this to
+// relaunch ONLY the browser in-process instead of forcing a full daemon
+// restart by the keeper (measured 380 occurrences + 6 keeper relaunches in the
+// 04:45-05:13Z window on ASI2/ASI3). Fail-closed: any error that is not the
+// exact CDP new-tab marker returns false.
+function isBrowserWedgedProtocolError(error) {
+  const message = String((error && (error.stack || error.message)) || '');
+  return message.includes('Protocol error (Target.createTarget)');
+}
+
+// C-10450: close the wedged persistent browser context and relaunch the
+// browser on the same profile dir. Returns the fresh launch record (context,
+// browserMode, fallbackUsed) so the daemon can keep serving WITHOUT a full
+// daemon restart. Fail-open on close (a wedged browser may not close cleanly).
+async function relaunchBrowserOnWedge(profileDir, previousContext) {
+  if (previousContext) {
+    try {
+      await previousContext.close();
+    } catch {}
+  }
+  const relaunched = await launchPersistentContext(profileDir);
+  return {
+    context: relaunched.context,
+    browserMode: relaunched.browserMode,
+    launchFallbackUsed: relaunched.fallbackUsed,
+  };
+}
+
+// C-10450: bounded in-process browser relaunch+retry loop. When the CDP
+// target manager wedges, context.newPage() throws the Target.createTarget
+// Protocol error. Instead of letting the keeper kill+restart the WHOLE daemon
+// (1-3min outage), try to recover in-process: relaunch the browser on the same
+// profile and retry page acquisition. maxAttempts bounds the loop; any
+// non-wedge error or exhaustion propagates fail-closed.
+async function newPageWithBrowserReload(opts) {
+  const { getContext, setContext, launchFn, log, maxAttempts = 3 } = opts;
+  let current = getContext();
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      const pages = current.pages ? current.pages() : [];
+      const candidate = pages.find((p) => !p.isClosed()) || (await current.newPage());
+      candidate.setDefaultTimeout(30000);
+      return { page: candidate, relaunched: attempt > 1 };
+    } catch (error) {
+      if (attempt >= maxAttempts || !isBrowserWedgedProtocolError(error)) throw error;
+      log('[daemon] Browser wedged (' + error.message + '), relaunching browser in-process...');
+      current = setContext(await launchFn());
+    }
+  }
+  throw new Error('newPageWithBrowserReload: exhausted attempts');
+}
+
 function isHeadlessChromiumLaunchCrash(message) {
   return (
     message.includes('MachPortRendezvousServer') ||
@@ -154,6 +209,9 @@ async function launchPersistentContext(profileDir) {
 
 module.exports = {
   allowHeadedFallback,
+  isBrowserWedgedProtocolError,
+  newPageWithBrowserReload,
+  relaunchBrowserOnWedge,
   buildCommonLaunchOptions,
   buildIsolatedBrowserEnv,
   isHeadlessChromiumLaunchCrash,

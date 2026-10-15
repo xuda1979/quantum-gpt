@@ -18,7 +18,7 @@ const fs = require('fs');
 const path = require('path');
 const { assertAutomationAllowed } = require('./huanxin_manual_lock');
 const { ensureProfileDir } = require('./huanxin_profile');
-const { launchPersistentContext } = require('./huanxin_browser_launch');
+const { isBrowserWedgedProtocolError, launchPersistentContext, newPageWithBrowserReload, relaunchBrowserOnWedge } = require('./huanxin_browser_launch');
 const { openShell, readTerminalText, sendCommand, focusTerminal } = require('./huanxin_shell_exec');
 
 const ENV_PORTS = { AI: 19006, ai1: 19001, ai2: 19002, ai3: 19003, ASI1: 20646, ASI2: 19004, ASI3: 20653 };
@@ -190,17 +190,28 @@ async function main() {
   }
 
   const { profileDir } = ensureProfileDir();
-  const launch = await launchPersistentContext(profileDir);
-  const context = launch.context;
+  let browserLaunchInfo = await launchPersistentContext(profileDir);
+  let context = browserLaunchInfo.context;
   const ipcDir = ensureFileTransportDir(args.env);
   recoverInterruptedFileTransport(ipcDir, args.env);
 
   async function ensureLauncherPage() {
-    let candidate = context.pages().find((page) => !page.isClosed()) || null;
-    if (!candidate) {
-      candidate = await context.newPage();
-    }
-    candidate.setDefaultTimeout(30000);
+    const { page: candidate } = await newPageWithBrowserReload({
+      getContext: () => context,
+      setContext: (nextContext) => {
+        context = nextContext;
+        return context;
+      },
+      launchFn: async () => {
+        const relaunched = await relaunchBrowserOnWedge(profileDir, context);
+        context = relaunched.context;
+        browserLaunchInfo = relaunched;
+        activePage = null;
+        launcherPage = null;
+        return context;
+      },
+      log: (msg) => console.error(msg),
+    });
     return candidate;
   }
 
@@ -317,8 +328,8 @@ async function main() {
         env: args.env,
         pid: process.pid,
         profileDir,
-        browserMode: launch.browserMode,
-        launchFallbackUsed: launch.fallbackUsed,
+        browserMode: browserLaunchInfo.browserMode,
+        launchFallbackUsed: browserLaunchInfo.fallbackUsed,
         startedAt: new Date().toISOString(),
       },
       null,
@@ -349,8 +360,8 @@ async function main() {
       return {
         ok: true,
         envName: args.env,
-        browserMode: launch.browserMode,
-        launchFallbackUsed: launch.fallbackUsed,
+        browserMode: browserLaunchInfo.browserMode,
+        launchFallbackUsed: browserLaunchInfo.fallbackUsed,
         url: redactAuthUrl(activePage.url()),
         command,
         output: output || '',
@@ -461,8 +472,8 @@ async function main() {
                 ? `Huanxin daemon ready for ${args.env}`
                 : startupError || `Huanxin daemon ${startupState} for ${args.env}`,
           authDriftDetected: isAuthUrl(currentUrl),
-          browserMode: launch.browserMode,
-          launchFallbackUsed: launch.fallbackUsed,
+          browserMode: browserLaunchInfo.browserMode,
+          launchFallbackUsed: browserLaunchInfo.fallbackUsed,
         })
       );
       return;
@@ -530,8 +541,8 @@ async function main() {
       port: args.port,
       pid: process.pid,
       profileDir,
-      browserMode: launch.browserMode,
-      launchFallbackUsed: launch.fallbackUsed,
+      browserMode: browserLaunchInfo.browserMode,
+      launchFallbackUsed: browserLaunchInfo.fallbackUsed,
     };
     console.log(JSON.stringify(info, null, 2));
     startBoot().catch(() => {});
