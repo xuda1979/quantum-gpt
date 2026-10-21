@@ -137,10 +137,47 @@ def _stall_findings(events):
     ]
 
 
+# C-9702/C-10146/C-10152a/C-10507/C-10517: every auto-detected failure class
+# carries an in-path PROOF that the event was already contained. The
+# retrospective must count the RESIDUAL (events whose own record does NOT
+# prove auto-remediation), never the raw burst — a fully-self-healed window
+# must NOT mint a "add automatic detection+fix" watcher card for a failure
+# mode that already has automatic detection+fix (C-10247 residual model).
+_CONTAINMENT_PROOF = {}
+
+
+def _box_exec_dead_auto_remediated(ev, all_events):
+    """box_exec_dead is auto-remediated iff its OWN `autofix` field is truthy —
+    the flag is emitted in the SAME in-tick call that performs the reconciler
+    kick (qgh.py event(STATE, 'box_exec_dead', {'box': name, 'autofix':
+    bool(_kick)})). A missing autofix field cannot be proven -> counts
+    fail-open (never silently suppress)."""
+    return bool(ev.get("autofix"))
+
+
+_CONTAINMENT_PROOF["box_exec_dead"] = _box_exec_dead_auto_remediated
+
+
 def _error_kind_findings(events):
-    """ERROR-class kinds seen >=5 times NOT known-remediated — each is an
-    un-automated failure mode: file a watcher/fixer card."""
-    counts = Counter(e.get("kind") for e in events if e.get("kind") in _error_kinds())
+    """ERROR-class kinds seen >=5 times among UNPROVEN events — each residue is
+    an un-automated failure mode: file a watcher/fixer card. An event whose
+    own record proves in-path auto-remediation (e.g. box_exec_dead.autofix==true
+    from the C-9702 kick) is NOT counted — the residual (unproven events only)
+    drives the threshold. Events that CANNOT be proven auto-remediated always
+    count fail-open (a missing proof is never silently suppressed)."""
+    unproven = []
+    for ev in events:
+        kind = ev.get("kind")
+        if kind not in _error_kinds():
+            continue
+        helper = _CONTAINMENT_PROOF.get(kind)
+        try:
+            if helper is not None and helper(ev, events):
+                continue
+        except Exception:
+            pass  # a broken helper must never hide events (fail-open)
+        unproven.append(ev)
+    counts = Counter(e.get("kind") for e in unproven)
     out = []
     for kind, n in counts.most_common(5):
         if n >= 5 and kind not in KNOWN_REMEDIATED:
