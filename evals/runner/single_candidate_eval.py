@@ -25,6 +25,7 @@ import argparse
 import importlib.util
 import json
 import multiprocessing as _mp
+import os
 import sys
 from pathlib import Path
 
@@ -32,6 +33,34 @@ from candidate_sanitize import sanitize_candidate_text
 from candidate_security import reject_candidate_source
 
 ROOT = Path(__file__).resolve().parents[2]
+
+# C-10547: the box ASI eval interpreters have a DRIFTED default site-packages
+# (C-10400 measured; C-10434 proved /root/work/filestorage/pyenv_f1 has all 4
+# quantum libs: pennylane 0.45.1, cirq 1.7.0, qiskit 2.5.2, braket). Without
+# overlay injection the 5 holdout tasks (pennylane_vqe_h2 / cirq_qaoa_line /
+# braket_bell_state / qiskit_qft_entangled / pennylane_qml_iris_classification)
+# fail "No module named 'pennylane'|'cirq'|'braket'|'qiskit'" regardless of
+# candidate quality. Single_candidate_eval is the fork-safe subprocess that
+# exec_modules candidate code into a FRESH interpreter, so it is the single
+# seam every leg funnels through. Prepend the overlay (when it exists) to
+# sys.path BEFORE candidates/tests import ANY quantum lib.
+BOX_OVERLAY_PYTHONPATH = Path(os.environ.get("QG_OVERLAY_PYTHONPATH")
+                              or "/root/work/filestorage/pyenv_f1")
+
+
+def _inject_box_overlay():
+    """Prepend the box quantum-lib overlay to sys.path (fail-safe).
+
+    The overlay is a site-packages-style directory of pure wheels. When it
+    does not exist on this box (e.g. local Mac dev, non-ASI boxes) this is a
+    no-op: never fail a leg for a missing optional overlay. When present it
+    is prepended so candidate/tests imports resolve quantum libs over the
+    (drifted) default env. <10 lines.
+    """
+    p = Path(str(BOX_OVERLAY_PYTHONPATH))
+    if p.is_dir() and str(p) not in sys.path:
+        sys.path.insert(0, str(p))
+
 
 # 2026-09-13 (fork-deadlock class, live): this runner executes candidate code in
 # a fresh interpreter, but a task's candidate/tests may themselves spawn worker
@@ -47,6 +76,8 @@ except (RuntimeError, ValueError):
         _mp.set_start_method("spawn")
     except Exception:
         pass
+
+_inject_box_overlay()
 
 
 def _load_module(path: Path, name: str):

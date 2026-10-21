@@ -17,6 +17,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import subprocess
 import sys
@@ -24,7 +25,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(REPO / "harness"))
-from contracts import LANES, LANE_FILES, render_lane_md, LANES_DIR  # noqa: E402
+from contracts import LANE_FILES, LANES, LANES_DIR, render_lane_md  # noqa: E402
 
 # State dirs: subdirs are FINE (state/probes, state/briefs); ROOT files must
 # match this allowlist (state files scripts write deterministically).
@@ -96,7 +97,78 @@ def lint_ports() -> list[str]:
 
 def run_all() -> list[str]:
     """All checks. <5 lines."""
-    return lint_state() + lint_sapo() + lint_docs() + lint_ports()
+    return (lint_state() + lint_sapo() + lint_docs() + lint_ports()
+            + lint_scorer_pins())
+
+
+
+def lint_scorer_pins(repo_root=None) -> list[str]:
+    """C-10558: fail closed when scorer / holdout-manifest / beats_base diverge
+    from the C-9131 scorer pin bank. Every scorer file's on-disk sha, the
+    holdout bench sha, and the manifest pin must match the banked values."""
+    import hashlib as _hashlib
+
+    if str(REPO) not in sys.path:
+        sys.path.insert(0, str(REPO))
+    from evals.runner import holdout_freeze as fzmod
+
+    root = Path(repo_root) if repo_root is not None else REPO
+    bank_path = root / "harness" / "state" / "scorer_sha_pins.json"
+    bench_rel = fzmod.BENCH_RELPATH
+    manifest_rel = fzmod.MANIFEST_RELPATH
+    issues = []
+    if not bank_path.is_file():
+        return ["scorer-pin-drift: C-9131 bank missing: " + str(bank_path)]
+    try:
+        bank = json.loads(bank_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return ["scorer-pin-drift: C-9131 bank unreadable: " + str(bank_path)]
+    bank_shas = bank.get("scorer_shas") or {}
+    hold = bank.get("holdout_sha256")
+
+    def _sha(rel):
+        p = root / rel
+        if not p.is_file():
+            return None
+        return _hashlib.sha256(p.read_bytes()).hexdigest()
+
+    manifest = {}
+    try:
+        for line in (root / manifest_rel).read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            parts = line.split(None, 1)
+            if len(parts) == 2 and len(parts[0]) == 64:
+                manifest[parts[1]] = parts[0].lower()
+    except OSError:
+        issues.append("scorer-pin-drift: freeze manifest missing: " + str(root / manifest_rel))
+
+    if hold is None:
+        issues.append("scorer-pin-drift: bank lacks holdout_sha256")
+    else:
+        disk = _sha(bench_rel)
+        m_pin = manifest.get(bench_rel)
+        if disk is not None and str(disk).lower() != str(hold).lower():
+            issues.append("scorer-pin-drift: " + bench_rel + " disk " + str(disk) + " != bank " + str(hold))
+        if m_pin is not None and str(m_pin).lower() != str(hold).lower():
+            issues.append("scorer-pin-drift: " + bench_rel + " manifest " + str(m_pin) + " != bank " + str(hold))
+
+    for rel in fzmod.SCORER_CHAIN:
+        want = bank_shas.get(rel)
+        if not want:
+            issues.append("scorer-pin-drift: bank lacks pin for " + rel)
+            continue
+        disk = _sha(rel)
+        m_pin = manifest.get(rel)
+        if disk is None:
+            issues.append("scorer-pin-drift: " + rel + " missing on disk")
+            continue
+        if str(disk).lower() != str(want).lower():
+            issues.append("scorer-pin-drift: " + rel + " disk " + str(disk) + " != bank " + str(want))
+        if m_pin is not None and str(m_pin).lower() != str(want).lower():
+            issues.append("scorer-pin-drift: " + rel + " manifest " + str(m_pin) + " != bank " + str(want))
+    return issues
 
 
 def main() -> None:

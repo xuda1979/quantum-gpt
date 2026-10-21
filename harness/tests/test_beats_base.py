@@ -99,5 +99,38 @@ class TestDecisionRecorded(unittest.TestCase):
             self.assertIn(token, text)
 
 
+class TestPinnedCanonicalBaseTable(unittest.TestCase):
+    """C-10548: beats_base consumes the pinned canonical base pass table.
+
+    The composer must compare pass_adapter against the SINGLE frozen
+    base number (outputs/canonical_base_pass_table.json pass_base_int)
+    and the verdict must carry the canonical_base_table path so the goal
+    beats_base gate is reproducible, not an ad-hoc 3/18.
+    """
+
+    def test_beats_base_from_table_imports_pinned_number(self):
+        out = BB.beats_base_from_table("5/18")
+        verdict, rule = out["verdict"], out["rule"]
+        self.assertTrue(verdict)
+        self.assertEqual(rule, BB.BEATS_PASS_COUNT)
+        self.assertGreater(out["pass_adapter_int"], out["pass_base_int"])
+        self.assertEqual(out["pass_base"], "4/18")
+        self.assertTrue(out["canonical_base_table"].endswith("canonical_base_pass_table.json"))
+
+    def test_beats_base_from_table_at_parity_fails_closed(self):
+        # C-0013 core: equality without composite tiebreak raises. The
+        # composer's bank rule handles parity as an explicit NO-BANK.
+        with self.assertRaises(BB.BeatsBaseError):
+            BB.beats_base_from_table("4/18")
+
+    def test_beats_base_from_table_below_base_no_bank(self):
+        out = BB.beats_base_from_table("3/18")
+        self.assertFalse(out["verdict"])
+
+    def test_beats_base_from_table_missing_table_fails_closed(self):
+        with self.assertRaises(BB.BeatsBaseError):
+            BB.beats_base_from_table("5/18", table_path="/nonexistent/canonical_base_pass_table.json")
+
+
 if __name__ == "__main__":
     unittest.main()

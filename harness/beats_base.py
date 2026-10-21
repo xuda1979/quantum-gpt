@@ -5,6 +5,12 @@ BEATS_PASS_COUNT = "pass-count"
 BEATS_COMPOSITE = "composite-tiebreak"
 FULL_TIE = "full-tie-deadlock"
 
+import json
+from pathlib import Path
+
+REPO = Path(__file__).resolve().parent.parent
+CANONICAL_BASE_TABLE = REPO / "outputs" / "canonical_base_pass_table.json"
+
 
 class BeatsBaseError(ValueError):
     """Fail-closed: missing/malformed evidence, or a tie with no tiebreak."""
@@ -52,3 +58,45 @@ def beats_base(pass_adapter, pass_base, composite_adapter=None, composite_base=N
     if composite_adapter != composite_base:
         return composite_adapter > composite_base, BEATS_COMPOSITE
     return False, FULL_TIE
+
+
+def beats_base_from_table(pass_adapter, composite_adapter=None, table_path=None):
+    """C-10548: check beats_base against the pinned canonical base pass table.
+
+    The canonical table (outputs/canonical_base_pass_table.json) is the
+    single frozen base number -- never an ad-hoc in-leg base count. A
+    missing/unreadable table fails closed (BeatsBaseError). The returned
+    dict carries the canonical_base_table path so a verdict can cite it.
+    """
+    tp = Path(table_path) if table_path else CANONICAL_BASE_TABLE
+    if not tp.is_file():
+        raise BeatsBaseError(
+            "canonical_base_pass_table missing: " + str(tp)
+            + " (C-10548: beats_base needs the pinned base table)"
+        )
+    try:
+        t = json.loads(tp.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        raise BeatsBaseError(
+            "canonical_base_pass_table unreadable: " + str(tp) + ": " + str(exc)
+        )
+    base_int = t.get("pass_base_int")
+    n_rows = t.get("n_rows")
+    if not isinstance(base_int, int) or not isinstance(n_rows, int) or n_rows <= 0:
+        raise BeatsBaseError("canonical_base_pass_table malformed (pass_base_int/n_rows)")
+    ka, na = _parse(pass_adapter)
+    if na is not None and ka > na:
+        raise BeatsBaseError(f"out-of-range score: {pass_adapter!r}")
+    verdict, rule = beats_base(
+        pass_adapter, "%d/%d" % (base_int, n_rows),
+        composite_adapter=composite_adapter, composite_base=t.get("base_composite"),
+    )
+    return dict(
+        verdict=verdict,
+        rule=rule,
+        pass_adapter=str(ka) + "/" + str(na or n_rows),
+        pass_base="%d/%d" % (base_int, n_rows),
+        pass_adapter_int=ka,
+        pass_base_int=base_int,
+        canonical_base_table=str(tp),
+    )

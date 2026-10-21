@@ -1,0 +1,100 @@
+{
+ "card": "C-10364",
+ "created_utc": "2026-10-13",
+ "source": "outputs/scores_C-10335_base_18.json",
+ "n_rows": 18,
+ "pass_base": "4/18",
+ "pass_base_int": 4,
+ "passed_tasks": [
+  "quantum_binary_measurement_decoder",
+  "quantum_phase_register_roundtrip",
+  "quantum_qiskit_qft_entangled",
+  "quantum_superdense_coding"
+ ],
+ "rows": [
+  {
+   "task_id": "quantum_binary_measurement_decoder",
+   "pass_": true
+  },
+  {
+   "task_id": "quantum_braket_bell_state",
+   "pass_": false
+  },
+  {
+   "task_id": "quantum_channel_depolarizing",
+   "pass_": false
+  },
+  {
+   "task_id": "quantum_cirq_qaoa_line",
+   "pass_": false
+  },
+  {
+   "task_id": "quantum_density_matrix_partial_trace",
+   "pass_": false
+  },
+  {
+   "task_id": "quantum_error_correction_shor_9qubit",
+   "pass_": false
+  },
+  {
+   "task_id": "quantum_gate_alias_normalization",
+   "pass_": false
+  },
+  {
+   "task_id": "quantum_ghz_state_witness",
+   "pass_": false
+  },
+  {
+   "task_id": "quantum_grover_oracle_diffusion",
+   "pass_": false
+  },
+  {
+   "task_id": "quantum_pennylane_qml_iris_classification",
+   "pass_": false
+  },
+  {
+   "task_id": "quantum_pennylane_vqe_h2",
+   "pass_": false
+  },
+  {
+   "task_id": "quantum_phase_estimation_circuit",
+   "pass_": false
+  },
+  {
+   "task_id": "quantum_phase_register_roundtrip",
+   "pass_": true
+  },
+  {
+   "task_id": "quantum_qaoa_maxcut",
+   "pass_": false
+  },
+  {
+   "task_id": "quantum_qiskit_qft_entangled",
+   "pass_": true
+  },
+  {
+   "task_id": "quantum_qiskit_stabilizer_5qubit_code",
+   "pass_": false
+  },
+  {
+   "task_id": "quantum_superdense_coding",
+   "pass_": true
+  },
+  {
+   "task_id": "quantum_trotterized_hamiltonian_evolution",
+   "pass_": false
+  }
+ ],
+ "beats_base_rule": "C-10364 canonical_base_pass_table: bank iff pass_adapter > 4/18 (pinned C-10335 base)",
+ "holdout_sha256": "b40ca7f2b16e19809059c7dde60414e6e88631d0613e36425002c376f03ea7f1",
+ "scorer_shas": {
+  "evals/runner/candidate_sanitize.py": "bbf4bc53a55f8a0983c4e3f3633b9eb1c0ab424ffd233df84875e5a063a962c2",
+  "evals/runner/single_candidate_eval.py": "21b80d0cebbf83fc33684dc160496e93c6a054cb3764dd7a03d2c4369c7e0d39",
+  "harness/beats_base.py": "d83f03ba89b40f2534099683c8048d8fd8095cb13fcfdbc76dac18c2ee501165",
+  "scripts/run_asi2_base_adapter_rubric_eval.py": "2ad0d56265ca41bd5859d86d8b7f76cc5bfcef44b2461e7f381358f5a158a5da"
+ },
+ "scorer_sha_pin_source": "harness/state/scorer_sha_pins.json (C-9131 bank)",
+ "holdout_sha_source": "sapo_promotion_holdout_v1_18.sha256 (C-0024)",
+ "reconciled_by": "C-10537",
+ "reconciled_utc": "2026-10-21"
+}
