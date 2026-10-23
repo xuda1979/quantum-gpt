@@ -1,0 +1,47 @@
+{
+ "card": "C-10605",
+ "kind": "v23_mixture_manifest",
+ "base_corpus": "/Users/daxu/software/quantum-gpt/outputs/C10605_v22_train_chatml.jsonl",
+ "base_corpus_sha256": "076484ce3d91f4260bb5f629ae558fed22d65e9186511d45c2cef52b6636705a",
+ "base_rows": 3545,
+ "folds_c10605_v23_enrichment": true,
+ "enrichment_rows": 16,
+ "enrichment_new_rows": 16,
+ "enrichment_sha256": "2454cf1c9be2d2d5989e91ba3796742b39bcea23d9721c5bde17ff980a7cc37c",
+ "reweight_weight": 3,
+ "targets": [
+  "quantum_qaoa_maxcut",
+  "quantum_qiskit_qft_entangled",
+  "quantum_qiskit_stabilizer_5qubit_code",
+  "quantum_pennylane_qml_iris_classification"
+ ],
+ "per_target": {
+  "quantum_qaoa_maxcut": {
+   "rows_before": 9,
+   "rows_after_fold": 13,
+   "rows_after": 39
+  },
+  "quantum_qiskit_qft_entangled": {
+   "rows_before": 9,
+   "rows_after_fold": 13,
+   "rows_after": 39
+  },
+  "quantum_qiskit_stabilizer_5qubit_code": {
+   "rows_before": 204,
+   "rows_after_fold": 208,
+   "rows_after": 624
+  },
+  "quantum_pennylane_qml_iris_classification": {
+   "rows_before": 42,
+   "rows_after_fold": 46,
+   "rows_after": 138
+  }
+ },
+ "train_file": "/Users/daxu/software/quantum-gpt/outputs/C10605_v23_train_chatml.jsonl",
+ "train_sha256": "82882429ecc8554aa20970878420d43610a027e2d62d5f3b61693856cc9d1b4e",
+ "train_rows": 4121,
+ "rest_rows_after": 3281,
+ "source_adapter_sha256": "6d28fa780807f8ad82e250bd43b843107876bd94a1d28adc6e851a75b267f212",
+ "source_measurement": "outputs/eval_leg1_c10605_v22/sft-27b-q38-v22-mixture-20261022T064943Z/step-354/leg1_step-354-c10605-v22-midrun_scores.json",
+ "no_fabrication": true
+}
