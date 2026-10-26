@@ -1,0 +1,48 @@
+{
+ "card": "C-10605",
+ "kind": "canonical_leg2_reconfirm_verdict",
+ "composed_at_utc": "2026-10-26T06:55:00Z",
+ "run": "sft-27b-q38-v22-resume-20261023T081500Z",
+ "step": "step-1941",
+ "adapter": "/root/work/quantum-gpt/outputs/sft-27b-q38-v22-resume-20261023T081500Z/checkpoints/step-1941/adapter",
+ "adapter_model_sha256": "373b6e6dea3fa9e7b2a87fecb2b2fc455f4cdcc8d75ea59d554057b4992c2b3c",
+ "leg2": {
+  "mechanism": "sequential-single-slice",
+  "box": "ASI2",
+  "seed": "c10605-v22resume-1941-leg2",
+  "transport": "pull-box-exec-daemon",
+  "leg_process_id": "leg2-pid-1539-e927ff11",
+  "dispatch_pid": "1536",
+  "started_utc": "2026-10-26T03:03:16Z",
+  "envelope_written_utc": "2026-10-26T06:30:24Z",
+  "duration_sec": 10300,
+  "adapter_applied_marker": true,
+  "adapter_probe_differs_marker": true,
+  "checkpoint_pin": "/root/work/quantum-gpt/harness/state/probes/c9063_target_checkpoint.json"
+ },
+ "benchmark": "evals/benchmarks/sapo_promotion_holdout_v1_18.txt",
+ "benchmark_sha256": "b40ca7f2b16e19809059c7dde60414e6e88631d0613e36425002c376f03ea7f1",
+ "evidence": {
+  "local_dir": "outputs/eval_leg2_c10605_v22resume_1941/",
+  "scores_card": "leg2_scores.json",
+  "envelope": "holdout_leg2.json",
+  "log": "leg2_step-1941.log",
+  "scores_sha256": "36454c64fe589b130f3926c50a85a18f3226e554360465e8e65fe30be3bdfdfd",
+  "envelope_sha256": "c24208d8154383acfdba242ef69cfceadaef48bac8670dc46cb4f3ae64a58e00",
+  "box_out_dir": "/root/work/quantum-gpt/outputs/eval_leg2_c10605_v22resume_1941"
+ },
+ "scores": {
+  "pass_adapter": 18,
+  "pass_base": 4,
+  "truncated_adapter": 0
+ },
+ "leg1_verdict": "outputs/quarantine_synthetic/verdict_C10605_v22resume_step1941_18of18_20261024T095443Z.json",
+ "cross_leg_agreement": {
+  "leg1_pass_adapter": 18,
+  "leg2_pass_adapter": 18,
+  "leg1_pass_base": 4,
+  "leg2_pass_base": 4,
+  "agreement": true
+ },
+ "no_fabrication": true
+}
