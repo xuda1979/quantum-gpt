@@ -1,0 +1,51 @@
+{
+ "card": "C-10605",
+ "kind": "canonical_leg1_verdict",
+ "composed_at_utc": "2026-10-24T09:54:43Z",
+ "run": "sft-27b-q38-v22-resume-20261023T081500Z",
+ "step": "step-1941",
+ "adapter": "/root/work/quantum-gpt/outputs/sft-27b-q38-v22-resume-20261023T081500Z/checkpoints/step-1941/adapter",
+ "adapter_model_sha256": "373b6e6dea3fa9e7b2a87fecb2b2fc455f4cdcc8d75ea59d554057b4992c2b3c",
+ "adapter_config_sha256": "065fd2764b9535480a1871e72d4264fffc136f67855c220ab0e38c84eb5aa021",
+ "base_model": "/root/work/filestorage/Qwen3.8-27B",
+ "benchmark": "evals/benchmarks/sapo_promotion_holdout_v1_18.txt",
+ "runner_mechanism": "parallel-3-slice",
+ "transport": "direct-local",
+ "seed": "c10605-v22resume-081500Z",
+ "leg_process_id": "leg1-pid-275999-23453b74",
+ "created_utc_env": "2026-10-24T09:14:58Z",
+ "gates": {
+  "adapter_applied_marker": true,
+  "adapter_probe_differs_marker": true,
+  "n_records": 36,
+  "n_tasks": 18,
+  "probe_differs_all_18": true,
+  "candidates_sha256_verified_36_of_36": true,
+  "adapter_sha256_measured_on_box": true
+ },
+ "measured": {
+  "pass_adapter": "18/18",
+  "pass_base": "4/18",
+  "distinguished_wins": 14,
+  "regressions": 0,
+  "bankable": true,
+  "note": "FIRST 18/18 on sapo_promotion_holdout_v1_18; v22-resume warm-continue from v22 step-1205 (14/18 at step-354), 31-row mined enrichment folded x3, max_length 1536."
+ },
+ "evidence": {
+  "local_bundle": "outputs/c10605_v22resume_1941_evidence/",
+  "scores_card": "leg1_step-1941_merged_scores.json",
+  "envelope": "holdout_leg1_step-1941.json",
+  "slices": [
+   "leg1_step-1941_slice0_scores.json",
+   "leg1_step-1941_slice1_scores.json",
+   "leg1_step-1941_slice2_scores.json"
+  ],
+  "candidates_index": "candidates_sha256_index.txt",
+  "box_out_dir": "/root/work/quantum-gpt/outputs/eval_leg1_c10605_v22resume/sft-27b-q38-v22-resume-20261023T081500Z/step-1941"
+ },
+ "scores": {
+  "pass_adapter": 18,
+  "pass_base": 4
+ },
+ "no_fabrication": true
+}

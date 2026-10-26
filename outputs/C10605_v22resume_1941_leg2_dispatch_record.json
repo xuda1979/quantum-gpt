@@ -1,0 +1,22 @@
+{
+  "card": "C-10605",
+  "kind": "durable_dispatch_record",
+  "leg": "leg2",
+  "ts_utc": "2026-10-26T03:02:46Z",
+  "run": "sft-27b-q38-v22-resume-20261023T081500Z",
+  "step_tag": "step-1941-c10605-v22resume-leg2",
+  "seed": "c10605-v22resume-1941-leg2",
+  "adapter": "/root/work/quantum-gpt/outputs/sft-27b-q38-v22-resume-20261023T081500Z/checkpoints/step-1941/adapter",
+  "benchmark": "/root/work/quantum-gpt/evals/benchmarks/sapo_promotion_holdout_v1_18.txt",
+  "mechanism": "sequential-single-slice",
+  "out_dir": "/root/work/quantum-gpt/outputs/eval_leg2_c10605_v22resume_1941",
+  "leg1_mechanism": "parallel-3-slice",
+  "leg1_verdict": "outputs/quarantine_synthetic/verdict_C10605_v22resume_step1941_18of18_20261024T095443Z.json",
+  "box_adapter_sha": "373b6e6dea3fa9e7b2a87fecb2b2fc455f4cdcc8d75ea59d554057b4992c2b3c",
+  "box_benchmark_sha": "b40ca7f2b16e19809059c7dde60414e6e88631d0613e36425002c376f03ea7f1",
+  "box_leg2_script_sha": "1c590a8ba447b99188a06aee2a49419962244dba216d58880a4c3baaa34d0679",
+  "prior_evals_live": "0",
+  "leg2_pid": "1536",
+  "dispatch_box": "ASI2",
+  "dispatch_status": "PASS"
+}

@@ -1,0 +1,124 @@
+{
+  "leg": "leg1",
+  "runner_mechanism": "parallel-3-slice",
+  "box": "ASI2",
+  "adapter": "/root/work/quantum-gpt/outputs/sft-27b-q38-v22-resume-20261023T081500Z/checkpoints/step-1941/adapter",
+  "base_model": "/root/work/filestorage/Qwen3.8-27B",
+  "benchmark": "evals/benchmarks/sapo_promotion_holdout_v1_18.txt",
+  "adapter_applied_marker": true,
+  "adapter_probe_differs_marker": true,
+  "leg_log": "/root/work/quantum-gpt/outputs/eval_leg1_c10605_v22resume/sft-27b-q38-v22-resume-20261023T081500Z/step-1941/leg1_step-1941-c10605-v22resume-midrun.log",
+  "scores": "/root/work/quantum-gpt/outputs/eval_leg1_c10605_v22resume/sft-27b-q38-v22-resume-20261023T081500Z/step-1941/leg1_step-1941-c10605-v22resume-midrun_scores.json",
+  "max_new_tokens": 4096,
+  "checkpoint_pin": "/root/work/quantum-gpt/harness/state/probes/c9063_target_checkpoint.json",
+  "seed": "c10605-v22resume-081500Z",
+  "created_utc": "2026-10-24T09:14:58Z",
+  "candidates_vs_base_diff": {
+    "card": "C-9110",
+    "status": "MEASURED",
+    "reason": null,
+    "n_checked": 18,
+    "n_byte_match": 0,
+    "matching_task_ids": [],
+    "per_task": {
+      "quantum_binary_measurement_decoder": {
+        "differ": true,
+        "adapter_candidate_sha256": "1b8212d589dca99823c60e4c58c3b6ac9e015f6f84238133ffff98a488ea572b",
+        "base_candidate_sha256": "5c1c16d3c9b88ff68ced9016a4916315f762828f98892349e0451db91498520f"
+      },
+      "quantum_braket_bell_state": {
+        "differ": true,
+        "adapter_candidate_sha256": "03083e8374a044276d1c351847cf7afec5eda85a8079bdb78a769940d3c794b8",
+        "base_candidate_sha256": "4af11d9aec731ba89add7548a588b64606e499b5474f7818252dc72116335676"
+      },
+      "quantum_channel_depolarizing": {
+        "differ": true,
+        "adapter_candidate_sha256": "f988ef2fcd68683ca9d7ff95c491aa88d74d0cc38156c07c4294c57f78f35670",
+        "base_candidate_sha256": "a1aed6b9e0af433e606e24451349736487d13f9dd4be051dd7673e6e023d56af"
+      },
+      "quantum_cirq_qaoa_line": {
+        "differ": true,
+        "adapter_candidate_sha256": "aea6da8e94971c8e55927452222394f2138313f48b63933af53ba34b14d1d2c7",
+        "base_candidate_sha256": "14c7cae009bd31f5f2f347273fafb4589167f47036f49892a7d4b0e18de6026d"
+      },
+      "quantum_density_matrix_partial_trace": {
+        "differ": true,
+        "adapter_candidate_sha256": "788700b394a34ef96d60ab457ec07322c53b69100895f7a54cd014c6039aed45",
+        "base_candidate_sha256": "f38a4e08bf295556fb9c631ada038ee9c5ebe50bf88b6b00b0bd7891f8a2b473"
+      },
+      "quantum_error_correction_shor_9qubit": {
+        "differ": true,
+        "adapter_candidate_sha256": "11280f313757e77f16660e3e1854bba90082a476f71352884b98e3d93b4ea378",
+        "base_candidate_sha256": "79847bbc300a2ddb2e7e28f380bfdbf84d42cc5bbacb93ae81ded34381a90fe2"
+      },
+      "quantum_gate_alias_normalization": {
+        "differ": true,
+        "adapter_candidate_sha256": "44c529e2836df3240fa9ff12471196d662ea49e57f4090bef6ef615eb7d9eabd",
+        "base_candidate_sha256": "b98fac136e333fcbb49e6f44162910afdbe6ec517c649cbe2d8ebf9c63c5811c"
+      },
+      "quantum_ghz_state_witness": {
+        "differ": true,
+        "adapter_candidate_sha256": "9e53bf98772dfa8cb47aa5e4e76c0bd44c16db69ba73963df7056d2f7b1febd2",
+        "base_candidate_sha256": "0fe2903d3a4012fb1364bc774820b7b88d8ff5e1ae94fb6e2fee3f0750ffdc3d"
+      },
+      "quantum_grover_oracle_diffusion": {
+        "differ": true,
+        "adapter_candidate_sha256": "a8860f9099334857f28f26a98bd52840fd3d08307ffdffa84ce754267d1b1866",
+        "base_candidate_sha256": "83bb59d8900dee544eabf6dbb9f4bd91f0b5d2586433145ed92ca7cfcb115fb7"
+      },
+      "quantum_pennylane_qml_iris_classification": {
+        "differ": true,
+        "adapter_candidate_sha256": "07a41768e630254475d4f955449ff82bffeeb386811f011b464e23382ec171ee",
+        "base_candidate_sha256": "68b9dac1454354bee5bddabe6bffb45df5d465e4b1cb0d51593896dae700fe78"
+      },
+      "quantum_pennylane_vqe_h2": {
+        "differ": true,
+        "adapter_candidate_sha256": "99366e84afd8ecd375cac9faabf18fb2d3e9c357cac7ebd66896a9080846cf8c",
+        "base_candidate_sha256": "c3205740962d0d41292464d08347d060b0dec5210e61a559ecca9cf6108c688e"
+      },
+      "quantum_phase_estimation_circuit": {
+        "differ": true,
+        "adapter_candidate_sha256": "cd20fab12d6e6ca353c3e40bc07297052e4302577c3e1cb42a4ae0ae076bc53d",
+        "base_candidate_sha256": "d10fd7c3a154cd9b72e28d8d3bb7ec0e5b8083c47ff9c57be063801bc9d5d017"
+      },
+      "quantum_phase_register_roundtrip": {
+        "differ": true,
+        "adapter_candidate_sha256": "62d0eecbd75b7ddcd57200fb9a5aa744ecc0b572aee7621fcbcca0f0d94df247",
+        "base_candidate_sha256": "2c8a13b9f2647cc8c4444af939ab76a20d636e8c66f7f60036c7380b09cab267"
+      },
+      "quantum_qaoa_maxcut": {
+        "differ": true,
+        "adapter_candidate_sha256": "7c117ccfc7e44f7c771fb0492d81a43cf227d8cb7fd410c5569cc5d6b2082ae1",
+        "base_candidate_sha256": "bbd358a5ec62f94c006fe1b134487d38409a664cb3a3887679f45e5c39e056db"
+      },
+      "quantum_qiskit_qft_entangled": {
+        "differ": true,
+        "adapter_candidate_sha256": "bd6779c31372d9d3f3e9474ad79d54f49eb8895259917616a2418bdb395b671f",
+        "base_candidate_sha256": "c8f852eabb9a7ec6ccd7f1309b3763f49c27179c44bb30b89a18f091edb73f31"
+      },
+      "quantum_qiskit_stabilizer_5qubit_code": {
+        "differ": true,
+        "adapter_candidate_sha256": "14a87a6d253e82f5d111e2ccdc68280e430d276a32b7139dc14e8ade5856154e",
+        "base_candidate_sha256": "bf2e64a659e7b3567a1922a84a1edffc7c0ea2daffb8d5a010cbe56aaa310a19"
+      },
+      "quantum_superdense_coding": {
+        "differ": true,
+        "adapter_candidate_sha256": "4a441146c7758385944791e2ef0c791275e4009fc9cc97c555517a133e348f54",
+        "base_candidate_sha256": "874add4cf32764f7293dc2d54985982b440fe724123b14796ef06a16662b13c8"
+      },
+      "quantum_trotterized_hamiltonian_evolution": {
+        "differ": true,
+        "adapter_candidate_sha256": "cb084659cd843c33a2c9a9f1e3356aac39137df4b7e8685831b057fc419fa968",
+        "base_candidate_sha256": "b35598763eb3f96a6f8a7bcac5eac0617388513121918de8b31bd5af4927926c"
+      }
+    },
+    "evidence_source": "candidate_path",
+    "scores_sha256": "4920d2b9d949f13e6992e46f0792887e62745b0cf06bf39d0c8b575a1cbf4ad1",
+    "match_max_fraction": 0.5,
+    "generated_utc": "2026-10-24T09:14:58Z"
+  },
+  "leg_process_id": "leg1-pid-275999-23453b74",
+  "candidate_cache_id": "/root/work/quantum-gpt/outputs/eval_leg1_c10605_v22resume/sft-27b-q38-v22-resume-20261023T081500Z/step-1941/candidates",
+  "window_id": "none",
+  "transport": "direct-local"
+}

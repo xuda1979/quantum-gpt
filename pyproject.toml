@@ -13,6 +13,7 @@ extend-exclude = [
   "browser-automation",  # JS not Python
   "_legacy",
   ".benchmarks",
+  "outputs",             # eval evidence/candidates are sha-pinned artifacts, not source
 ]
 
 [tool.ruff.lint]
@@ -39,6 +40,7 @@ ignore = [
 "harness/tests/*" = ["E402"]  # same seam, harness tree
 "scripts/*" = ["E402"]
 "training/*" = ["E402"]
+".c*_work/*" = ["E402", "UP031"]  # card work-dir scripts: sys.path hack + percent-format tolerable
 
 [tool.ruff.format]
 quote-style = "double"

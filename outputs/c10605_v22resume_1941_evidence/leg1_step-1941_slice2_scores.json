@@ -1,0 +1,380 @@
+{
+  "created_at_utc": "2026-10-24T08:29:48Z",
+  "base_model": "/root/work/filestorage/Qwen3.8-27B",
+  "adapter": "/root/work/quantum-gpt/outputs/sft-27b-q38-v22-resume-20261023T081500Z/checkpoints/step-1941/adapter",
+  "benchmark": "evals/benchmarks/sapo_promotion_holdout_v1_18.txt",
+  "prompt_mode": "question-only",
+  "reference_hidden": true,
+  "task_ids": [
+    "quantum_braket_bell_state",
+    "quantum_qiskit_qft_entangled",
+    "quantum_qiskit_stabilizer_5qubit_code",
+    "quantum_pennylane_qml_iris_classification",
+    "quantum_phase_register_roundtrip",
+    "quantum_binary_measurement_decoder"
+  ],
+  "heldout_sft_eval": {
+    "base": {
+      "loss": null,
+      "perplexity": null,
+      "examples": 0
+    },
+    "adapter": {
+      "loss": null,
+      "perplexity": null,
+      "examples": 0
+    }
+  },
+  "summary": {
+    "base": {
+      "pass_at_1": "3/6",
+      "scores": {
+        "grammar": 5.0,
+        "algorithm": 3.5,
+        "code_quality": 4.5,
+        "efficiency": 4.833,
+        "overall": 4.46
+      },
+      "by_domain": {
+        "quantum": {
+          "pass_at_1": "3/6",
+          "overall": 4.46
+        }
+      },
+      "by_category": {
+        "algorithm_implementation": {
+          "pass_at_1": "2/3",
+          "overall": 4.627
+        },
+        "quantum_error_correction": {
+          "pass_at_1": "0/1",
+          "overall": 3.88
+        },
+        "quantum_ml": {
+          "pass_at_1": "0/1",
+          "overall": 4.12
+        },
+        "interface_contract": {
+          "pass_at_1": "1/1",
+          "overall": 4.88
+        }
+      }
+    },
+    "adapter": {
+      "pass_at_1": "6/6",
+      "scores": {
+        "grammar": 5.0,
+        "algorithm": 5.0,
+        "code_quality": 4.833,
+        "efficiency": 4.833,
+        "overall": 4.918
+      },
+      "by_domain": {
+        "quantum": {
+          "pass_at_1": "6/6",
+          "overall": 4.918
+        }
+      },
+      "by_category": {
+        "algorithm_implementation": {
+          "pass_at_1": "3/3",
+          "overall": 4.96
+        },
+        "quantum_error_correction": {
+          "pass_at_1": "1/1",
+          "overall": 4.75
+        },
+        "quantum_ml": {
+          "pass_at_1": "1/1",
+          "overall": 5.0
+        },
+        "interface_contract": {
+          "pass_at_1": "1/1",
+          "overall": 4.88
+        }
+      }
+    }
+  },
+  "records": [
+    {
+      "model": "base",
+      "task_id": "quantum_braket_bell_state",
+      "name": "Amazon Braket Bell state preparation and parity check",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "candidate_path": "/root/work/quantum-gpt/outputs/eval_leg1_c10605_v22resume/sft-27b-q38-v22-resume-20261023T081500Z/step-1941/candidates/base/quantum_braket_bell_state.py",
+      "passed": false,
+      "details": [
+        "candidate_none_graded_fail",
+        "AttributeError: 'str' object has no attribute 'shape'"
+      ],
+      "scores": {
+        "grammar": 5.0,
+        "algorithm": 2.0,
+        "code_quality": 4.5,
+        "efficiency": 5.0,
+        "overall": 4.12
+      },
+      "output_chars": 5145,
+      "truncated": false,
+      "reference_hidden": true,
+      "prompt_mode": "question-only"
+    },
+    {
+      "model": "base",
+      "task_id": "quantum_qiskit_qft_entangled",
+      "name": "Qiskit QFT on a 3-qubit entangled GHZ state",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "candidate_path": "/root/work/quantum-gpt/outputs/eval_leg1_c10605_v22resume/sft-27b-q38-v22-resume-20261023T081500Z/step-1941/candidates/base/quantum_qiskit_qft_entangled.py",
+      "passed": true,
+      "details": [
+        "Qiskit GHZ + QFT circuit and interference-pattern property correct"
+      ],
+      "scores": {
+        "grammar": 5.0,
+        "algorithm": 5.0,
+        "code_quality": 4.5,
+        "efficiency": 5.0,
+        "overall": 4.88
+      },
+      "output_chars": 1664,
+      "truncated": false,
+      "reference_hidden": true,
+      "prompt_mode": "question-only"
+    },
+    {
+      "model": "base",
+      "task_id": "quantum_qiskit_stabilizer_5qubit_code",
+      "name": "Qiskit [[5,1,3]] five-qubit stabilizer code table",
+      "domain": "quantum",
+      "category": "quantum_error_correction",
+      "candidate_path": "/root/work/quantum-gpt/outputs/eval_leg1_c10605_v22resume/sft-27b-q38-v22-resume-20261023T081500Z/step-1941/candidates/base/quantum_qiskit_stabilizer_5qubit_code.py",
+      "passed": false,
+      "details": [
+        "candidate_none_graded_fail",
+        "AttributeError: module 'candidate' has no attribute 'stabilizer_generators'"
+      ],
+      "scores": {
+        "grammar": 5.0,
+        "algorithm": 2.0,
+        "code_quality": 4.5,
+        "efficiency": 4.0,
+        "overall": 3.88
+      },
+      "output_chars": 2630,
+      "truncated": false,
+      "reference_hidden": true,
+      "prompt_mode": "question-only"
+    },
+    {
+      "model": "base",
+      "task_id": "quantum_pennylane_qml_iris_classification",
+      "name": "PennyLane quantum kernel logistic regression on Iris (2-class subset)",
+      "domain": "quantum",
+      "category": "quantum_ml",
+      "candidate_path": "/root/work/quantum-gpt/outputs/eval_leg1_c10605_v22resume/sft-27b-q38-v22-resume-20261023T081500Z/step-1941/candidates/base/quantum_pennylane_qml_iris_classification.py",
+      "passed": false,
+      "details": [
+        "kernel_matrix() raised: kernel_matrix() takes 1 positional argument but 2 were given"
+      ],
+      "scores": {
+        "grammar": 5.0,
+        "algorithm": 2.0,
+        "code_quality": 4.5,
+        "efficiency": 5.0,
+        "overall": 4.12
+      },
+      "output_chars": 4041,
+      "truncated": false,
+      "reference_hidden": true,
+      "prompt_mode": "question-only"
+    },
+    {
+      "model": "base",
+      "task_id": "quantum_phase_register_roundtrip",
+      "name": "Phase register round-trip utility",
+      "domain": "quantum",
+      "category": "interface_contract",
+      "candidate_path": "/root/work/quantum-gpt/outputs/eval_leg1_c10605_v22resume/sft-27b-q38-v22-resume-20261023T081500Z/step-1941/candidates/base/quantum_phase_register_roundtrip.py",
+      "passed": true,
+      "details": [
+        "phase register round trips correctly"
+      ],
+      "scores": {
+        "grammar": 5.0,
+        "algorithm": 5.0,
+        "code_quality": 4.5,
+        "efficiency": 5.0,
+        "overall": 4.88
+      },
+      "output_chars": 1962,
+      "truncated": false,
+      "reference_hidden": true,
+      "prompt_mode": "question-only"
+    },
+    {
+      "model": "base",
+      "task_id": "quantum_binary_measurement_decoder",
+      "name": "Binary measurement decoder",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "candidate_path": "/root/work/quantum-gpt/outputs/eval_leg1_c10605_v22resume/sft-27b-q38-v22-resume-20261023T081500Z/step-1941/candidates/base/quantum_binary_measurement_decoder.py",
+      "passed": true,
+      "details": [
+        "binary measurement decoder enforces {0,1} registers and correct phase conversion"
+      ],
+      "scores": {
+        "grammar": 5.0,
+        "algorithm": 5.0,
+        "code_quality": 4.5,
+        "efficiency": 5.0,
+        "overall": 4.88
+      },
+      "output_chars": 829,
+      "truncated": false,
+      "reference_hidden": true,
+      "prompt_mode": "question-only"
+    },
+    {
+      "model": "adapter",
+      "task_id": "quantum_braket_bell_state",
+      "name": "Amazon Braket Bell state preparation and parity check",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "candidate_path": "/root/work/quantum-gpt/outputs/eval_leg1_c10605_v22resume/sft-27b-q38-v22-resume-20261023T081500Z/step-1941/candidates/adapter/quantum_braket_bell_state.py",
+      "passed": true,
+      "details": [
+        "Braket Bell circuit, sampling, and parity check all correct"
+      ],
+      "scores": {
+        "grammar": 5.0,
+        "algorithm": 5.0,
+        "code_quality": 5.0,
+        "efficiency": 5.0,
+        "overall": 5.0
+      },
+      "output_chars": 1385,
+      "truncated": false,
+      "reference_hidden": true,
+      "prompt_mode": "question-only"
+    },
+    {
+      "model": "adapter",
+      "task_id": "quantum_qiskit_qft_entangled",
+      "name": "Qiskit QFT on a 3-qubit entangled GHZ state",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "candidate_path": "/root/work/quantum-gpt/outputs/eval_leg1_c10605_v22resume/sft-27b-q38-v22-resume-20261023T081500Z/step-1941/candidates/adapter/quantum_qiskit_qft_entangled.py",
+      "passed": true,
+      "details": [
+        "Qiskit GHZ + QFT circuit and interference-pattern property correct"
+      ],
+      "scores": {
+        "grammar": 5.0,
+        "algorithm": 5.0,
+        "code_quality": 5.0,
+        "efficiency": 5.0,
+        "overall": 5.0
+      },
+      "output_chars": 1693,
+      "truncated": false,
+      "reference_hidden": true,
+      "prompt_mode": "question-only"
+    },
+    {
+      "model": "adapter",
+      "task_id": "quantum_qiskit_stabilizer_5qubit_code",
+      "name": "Qiskit [[5,1,3]] five-qubit stabilizer code table",
+      "domain": "quantum",
+      "category": "quantum_error_correction",
+      "candidate_path": "/root/work/quantum-gpt/outputs/eval_leg1_c10605_v22resume/sft-27b-q38-v22-resume-20261023T081500Z/step-1941/candidates/adapter/quantum_qiskit_stabilizer_5qubit_code.py",
+      "passed": true,
+      "details": [
+        "[[5,1,3]] stabilizers, symplectic matrix, and 15-distinct-syndrome property correct"
+      ],
+      "scores": {
+        "grammar": 5.0,
+        "algorithm": 5.0,
+        "code_quality": 5.0,
+        "efficiency": 4.0,
+        "overall": 4.75
+      },
+      "output_chars": 2799,
+      "truncated": false,
+      "reference_hidden": true,
+      "prompt_mode": "question-only"
+    },
+    {
+      "model": "adapter",
+      "task_id": "quantum_pennylane_qml_iris_classification",
+      "name": "PennyLane quantum kernel logistic regression on Iris (2-class subset)",
+      "domain": "quantum",
+      "category": "quantum_ml",
+      "candidate_path": "/root/work/quantum-gpt/outputs/eval_leg1_c10605_v22resume/sft-27b-q38-v22-resume-20261023T081500Z/step-1941/candidates/adapter/quantum_pennylane_qml_iris_classification.py",
+      "passed": true,
+      "details": [
+        "PennyLane quantum kernel + logistic regression on Iris 2-class subset correct"
+      ],
+      "scores": {
+        "grammar": 5.0,
+        "algorithm": 5.0,
+        "code_quality": 5.0,
+        "efficiency": 5.0,
+        "overall": 5.0
+      },
+      "output_chars": 3402,
+      "truncated": false,
+      "reference_hidden": true,
+      "prompt_mode": "question-only"
+    },
+    {
+      "model": "adapter",
+      "task_id": "quantum_phase_register_roundtrip",
+      "name": "Phase register round-trip utility",
+      "domain": "quantum",
+      "category": "interface_contract",
+      "candidate_path": "/root/work/quantum-gpt/outputs/eval_leg1_c10605_v22resume/sft-27b-q38-v22-resume-20261023T081500Z/step-1941/candidates/adapter/quantum_phase_register_roundtrip.py",
+      "passed": true,
+      "details": [
+        "phase register round trips correctly"
+      ],
+      "scores": {
+        "grammar": 5.0,
+        "algorithm": 5.0,
+        "code_quality": 4.5,
+        "efficiency": 5.0,
+        "overall": 4.88
+      },
+      "output_chars": 807,
+      "truncated": false,
+      "reference_hidden": true,
+      "prompt_mode": "question-only"
+    },
+    {
+      "model": "adapter",
+      "task_id": "quantum_binary_measurement_decoder",
+      "name": "Binary measurement decoder",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "candidate_path": "/root/work/quantum-gpt/outputs/eval_leg1_c10605_v22resume/sft-27b-q38-v22-resume-20261023T081500Z/step-1941/candidates/adapter/quantum_binary_measurement_decoder.py",
+      "passed": true,
+      "details": [
+        "binary measurement decoder enforces {0,1} registers and correct phase conversion"
+      ],
+      "scores": {
+        "grammar": 5.0,
+        "algorithm": 5.0,
+        "code_quality": 4.5,
+        "efficiency": 5.0,
+        "overall": 4.88
+      },
+      "output_chars": 433,
+      "truncated": false,
+      "reference_hidden": true,
+      "prompt_mode": "question-only"
+    }
+  ],
+  "duration_sec": 3670.446,
+  "score_scale": "0-5; algorithm is executable test pass/fail weighted, grammar is Python syntax, quality/efficiency are static heuristics"
+}

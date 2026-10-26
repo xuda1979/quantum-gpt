@@ -1,0 +1,374 @@
+{
+  "created_at_utc": "2026-10-24T08:38:53Z",
+  "base_model": "/root/work/filestorage/Qwen3.8-27B",
+  "adapter": "/root/work/quantum-gpt/outputs/sft-27b-q38-v22-resume-20261023T081500Z/checkpoints/step-1941/adapter",
+  "benchmark": "evals/benchmarks/sapo_promotion_holdout_v1_18.txt",
+  "prompt_mode": "question-only",
+  "reference_hidden": true,
+  "task_ids": [
+    "quantum_gate_alias_normalization",
+    "quantum_phase_estimation_circuit",
+    "quantum_qaoa_maxcut",
+    "quantum_superdense_coding",
+    "quantum_grover_oracle_diffusion",
+    "quantum_density_matrix_partial_trace"
+  ],
+  "heldout_sft_eval": {
+    "base": {
+      "loss": null,
+      "perplexity": null,
+      "examples": 0
+    },
+    "adapter": {
+      "loss": null,
+      "perplexity": null,
+      "examples": 0
+    }
+  },
+  "summary": {
+    "base": {
+      "pass_at_1": "1/6",
+      "scores": {
+        "grammar": 5.0,
+        "algorithm": 2.5,
+        "code_quality": 4.25,
+        "efficiency": 4.667,
+        "overall": 4.103
+      },
+      "by_domain": {
+        "quantum": {
+          "pass_at_1": "1/6",
+          "overall": 4.103
+        }
+      },
+      "by_category": {
+        "api_normalization": {
+          "pass_at_1": "0/1",
+          "overall": 4.12
+        },
+        "algorithm_implementation": {
+          "pass_at_1": "0/4",
+          "overall": 3.905
+        },
+        "reasoning": {
+          "pass_at_1": "1/1",
+          "overall": 4.88
+        }
+      }
+    },
+    "adapter": {
+      "pass_at_1": "6/6",
+      "scores": {
+        "grammar": 5.0,
+        "algorithm": 5.0,
+        "code_quality": 4.317,
+        "efficiency": 4.833,
+        "overall": 4.792
+      },
+      "by_domain": {
+        "quantum": {
+          "pass_at_1": "6/6",
+          "overall": 4.792
+        }
+      },
+      "by_category": {
+        "api_normalization": {
+          "pass_at_1": "1/1",
+          "overall": 4.88
+        },
+        "algorithm_implementation": {
+          "pass_at_1": "4/4",
+          "overall": 4.748
+        },
+        "reasoning": {
+          "pass_at_1": "1/1",
+          "overall": 4.88
+        }
+      }
+    }
+  },
+  "records": [
+    {
+      "model": "base",
+      "task_id": "quantum_gate_alias_normalization",
+      "name": "Gate alias normalization repair",
+      "domain": "quantum",
+      "category": "api_normalization",
+      "candidate_path": "/root/work/quantum-gpt/outputs/eval_leg1_c10605_v22resume/sft-27b-q38-v22-resume-20261023T081500Z/step-1941/candidates/base/quantum_gate_alias_normalization.py",
+      "passed": false,
+      "details": [
+        "candidate_none_graded_fail",
+        "AttributeError: module 'candidate' has no attribute 'normalize_gate_sequence'"
+      ],
+      "scores": {
+        "grammar": 5.0,
+        "algorithm": 2.0,
+        "code_quality": 4.5,
+        "efficiency": 5.0,
+        "overall": 4.12
+      },
+      "output_chars": 763,
+      "truncated": false,
+      "reference_hidden": true,
+      "prompt_mode": "question-only"
+    },
+    {
+      "model": "base",
+      "task_id": "quantum_phase_estimation_circuit",
+      "name": "Quantum phase estimation unitary eigenvalue extraction",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "candidate_path": "/root/work/quantum-gpt/outputs/eval_leg1_c10605_v22resume/sft-27b-q38-v22-resume-20261023T081500Z/step-1941/candidates/base/quantum_phase_estimation_circuit.py",
+      "passed": false,
+      "details": [
+        "candidate_none_graded_fail",
+        "AttributeError: module 'candidate' has no attribute 'phase_estimation'"
+      ],
+      "scores": {
+        "grammar": 5.0,
+        "algorithm": 2.0,
+        "code_quality": 3.8,
+        "efficiency": 4.0,
+        "overall": 3.7
+      },
+      "output_chars": 7354,
+      "truncated": false,
+      "reference_hidden": true,
+      "prompt_mode": "question-only"
+    },
+    {
+      "model": "base",
+      "task_id": "quantum_qaoa_maxcut",
+      "name": "QAOA MaxCut cost function and classical simulation",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "candidate_path": "/root/work/quantum-gpt/outputs/eval_leg1_c10605_v22resume/sft-27b-q38-v22-resume-20261023T081500Z/step-1941/candidates/base/quantum_qaoa_maxcut.py",
+      "passed": false,
+      "details": [
+        "candidate_none_graded_fail",
+        "AttributeError: module 'candidate' has no attribute 'maxcut_cost'"
+      ],
+      "scores": {
+        "grammar": 5.0,
+        "algorithm": 2.0,
+        "code_quality": 4.5,
+        "efficiency": 4.0,
+        "overall": 3.88
+      },
+      "output_chars": 4596,
+      "truncated": false,
+      "reference_hidden": true,
+      "prompt_mode": "question-only"
+    },
+    {
+      "model": "base",
+      "task_id": "quantum_superdense_coding",
+      "name": "Superdense coding encode/decode",
+      "domain": "quantum",
+      "category": "reasoning",
+      "candidate_path": "/root/work/quantum-gpt/outputs/eval_leg1_c10605_v22resume/sft-27b-q38-v22-resume-20261023T081500Z/step-1941/candidates/base/quantum_superdense_coding.py",
+      "passed": true,
+      "details": [
+        "all message mappings round-trip correctly"
+      ],
+      "scores": {
+        "grammar": 5.0,
+        "algorithm": 5.0,
+        "code_quality": 4.5,
+        "efficiency": 5.0,
+        "overall": 4.88
+      },
+      "output_chars": 1551,
+      "truncated": false,
+      "reference_hidden": true,
+      "prompt_mode": "question-only"
+    },
+    {
+      "model": "base",
+      "task_id": "quantum_grover_oracle_diffusion",
+      "name": "Grover oracle and diffusion operator simulation",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "candidate_path": "/root/work/quantum-gpt/outputs/eval_leg1_c10605_v22resume/sft-27b-q38-v22-resume-20261023T081500Z/step-1941/candidates/base/quantum_grover_oracle_diffusion.py",
+      "passed": false,
+      "details": [
+        "candidate_none_graded_fail",
+        "AttributeError: module 'candidate' has no attribute 'uniform_superposition'"
+      ],
+      "scores": {
+        "grammar": 5.0,
+        "algorithm": 2.0,
+        "code_quality": 3.7,
+        "efficiency": 5.0,
+        "overall": 3.92
+      },
+      "output_chars": 5415,
+      "truncated": false,
+      "reference_hidden": true,
+      "prompt_mode": "question-only"
+    },
+    {
+      "model": "base",
+      "task_id": "quantum_density_matrix_partial_trace",
+      "name": "Density matrix construction and partial trace",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "candidate_path": "/root/work/quantum-gpt/outputs/eval_leg1_c10605_v22resume/sft-27b-q38-v22-resume-20261023T081500Z/step-1941/candidates/base/quantum_density_matrix_partial_trace.py",
+      "passed": false,
+      "details": [
+        "candidate missing required function(s): density_from_state, tensor_product, purity"
+      ],
+      "scores": {
+        "grammar": 5.0,
+        "algorithm": 2.0,
+        "code_quality": 4.5,
+        "efficiency": 5.0,
+        "overall": 4.12
+      },
+      "output_chars": 5307,
+      "truncated": false,
+      "reference_hidden": true,
+      "prompt_mode": "question-only"
+    },
+    {
+      "model": "adapter",
+      "task_id": "quantum_gate_alias_normalization",
+      "name": "Gate alias normalization repair",
+      "domain": "quantum",
+      "category": "api_normalization",
+      "candidate_path": "/root/work/quantum-gpt/outputs/eval_leg1_c10605_v22resume/sft-27b-q38-v22-resume-20261023T081500Z/step-1941/candidates/adapter/quantum_gate_alias_normalization.py",
+      "passed": true,
+      "details": [
+        "Gate alias normalization handles casing, whitespace, and invalid aliases"
+      ],
+      "scores": {
+        "grammar": 5.0,
+        "algorithm": 5.0,
+        "code_quality": 4.5,
+        "efficiency": 5.0,
+        "overall": 4.88
+      },
+      "output_chars": 401,
+      "truncated": false,
+      "reference_hidden": true,
+      "prompt_mode": "question-only"
+    },
+    {
+      "model": "adapter",
+      "task_id": "quantum_phase_estimation_circuit",
+      "name": "Quantum phase estimation unitary eigenvalue extraction",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "candidate_path": "/root/work/quantum-gpt/outputs/eval_leg1_c10605_v22resume/sft-27b-q38-v22-resume-20261023T081500Z/step-1941/candidates/adapter/quantum_phase_estimation_circuit.py",
+      "passed": true,
+      "details": [
+        "Phase estimation simulation correct for all test cases"
+      ],
+      "scores": {
+        "grammar": 5.0,
+        "algorithm": 5.0,
+        "code_quality": 4.5,
+        "efficiency": 5.0,
+        "overall": 4.88
+      },
+      "output_chars": 764,
+      "truncated": false,
+      "reference_hidden": true,
+      "prompt_mode": "question-only"
+    },
+    {
+      "model": "adapter",
+      "task_id": "quantum_qaoa_maxcut",
+      "name": "QAOA MaxCut cost function and classical simulation",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "candidate_path": "/root/work/quantum-gpt/outputs/eval_leg1_c10605_v22resume/sft-27b-q38-v22-resume-20261023T081500Z/step-1941/candidates/adapter/quantum_qaoa_maxcut.py",
+      "passed": true,
+      "details": [
+        "QAOA MaxCut functions correct for all test cases"
+      ],
+      "scores": {
+        "grammar": 5.0,
+        "algorithm": 5.0,
+        "code_quality": 4.5,
+        "efficiency": 5.0,
+        "overall": 4.88
+      },
+      "output_chars": 1362,
+      "truncated": false,
+      "reference_hidden": true,
+      "prompt_mode": "question-only"
+    },
+    {
+      "model": "adapter",
+      "task_id": "quantum_superdense_coding",
+      "name": "Superdense coding encode/decode",
+      "domain": "quantum",
+      "category": "reasoning",
+      "candidate_path": "/root/work/quantum-gpt/outputs/eval_leg1_c10605_v22resume/sft-27b-q38-v22-resume-20261023T081500Z/step-1941/candidates/adapter/quantum_superdense_coding.py",
+      "passed": true,
+      "details": [
+        "all message mappings round-trip correctly"
+      ],
+      "scores": {
+        "grammar": 5.0,
+        "algorithm": 5.0,
+        "code_quality": 4.5,
+        "efficiency": 5.0,
+        "overall": 4.88
+      },
+      "output_chars": 449,
+      "truncated": false,
+      "reference_hidden": true,
+      "prompt_mode": "question-only"
+    },
+    {
+      "model": "adapter",
+      "task_id": "quantum_grover_oracle_diffusion",
+      "name": "Grover oracle and diffusion operator simulation",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "candidate_path": "/root/work/quantum-gpt/outputs/eval_leg1_c10605_v22resume/sft-27b-q38-v22-resume-20261023T081500Z/step-1941/candidates/adapter/quantum_grover_oracle_diffusion.py",
+      "passed": true,
+      "details": [
+        "Grover oracle and diffusion simulation correct for all test cases"
+      ],
+      "scores": {
+        "grammar": 5.0,
+        "algorithm": 5.0,
+        "code_quality": 4.5,
+        "efficiency": 5.0,
+        "overall": 4.88
+      },
+      "output_chars": 941,
+      "truncated": false,
+      "reference_hidden": true,
+      "prompt_mode": "question-only"
+    },
+    {
+      "model": "adapter",
+      "task_id": "quantum_density_matrix_partial_trace",
+      "name": "Density matrix construction and partial trace",
+      "domain": "quantum",
+      "category": "algorithm_implementation",
+      "candidate_path": "/root/work/quantum-gpt/outputs/eval_leg1_c10605_v22resume/sft-27b-q38-v22-resume-20261023T081500Z/step-1941/candidates/adapter/quantum_density_matrix_partial_trace.py",
+      "passed": true,
+      "details": [
+        "Density matrix and partial trace operations correct for all test cases"
+      ],
+      "scores": {
+        "grammar": 5.0,
+        "algorithm": 5.0,
+        "code_quality": 3.4,
+        "efficiency": 4.0,
+        "overall": 4.35
+      },
+      "output_chars": 5950,
+      "truncated": false,
+      "reference_hidden": true,
+      "prompt_mode": "question-only"
+    }
+  ],
+  "duration_sec": 4215.71,
+  "score_scale": "0-5; algorithm is executable test pass/fail weighted, grammar is Python syntax, quality/efficiency are static heuristics"
+}
