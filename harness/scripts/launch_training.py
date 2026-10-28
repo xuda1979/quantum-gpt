@@ -20,6 +20,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(REPO / "harness" / "scripts"))
+import box_health_preflight as _BHP  # noqa: E402
 from run_and_report import run_box  # noqa: E402
 
 PROBE_PATH = REPO / "harness" / "state" / "probes" / "train.json"
@@ -74,7 +75,7 @@ def compile_gate(box: str) -> dict:
     import races. py_compile sweep of /root/work/training/*.py. <12 lines."""
     sh = (
         "bad=0; for f in /root/work/training/*.py; do "
-        "python3 -m py_compile \"$f\" 2>/dev/null || { echo \"BAD:$f\"; bad=1; }; done; "
+        'python3 -m py_compile "$f" 2>/dev/null || { echo "BAD:$f"; bad=1; }; done; '
         "echo GATE_RC=$bad"
     )
     r = run_box(box, sh, timeout=120)
@@ -84,8 +85,30 @@ def compile_gate(box: str) -> dict:
     return {"ok": ok, "bad_files": bad_files, "status": r.get("status")}
 
 
+def box_health_gate(probes_dir=None, box="ASI3"):
+    """C-10569: fail-closed box-health preflight for a REAL trainer launch.
+    Refuses when the target box probe is NOT positively READY (status=='ready'
+    AND summary has 'EXEC=ok'). UNKNOWN/unreachable/wedged/missing => BLOCK
+    before spend. Existing queued/running cards untouched. <5 lines."""
+    return _BHP.box_health_gate(
+        probes_dir=probes_dir or _BHP.DEFAULT_PROBES_DIR,
+        box=box,
+    )
+
+
 def launch(box: str, benchmark: str, resume_from: str) -> dict:
-    """Gate on compile, then launch training on box with setsid. <15 lines."""
+    """Gate on box-health + compile, then launch training with setsid. <15 lines."""
+    # C-10569: refuse a REAL (compute-spending) trainer launch when the target
+    # box is NOT positively READY (UNKNOWN / unreachable / wedged exec). Runs
+    # FIRST (cheap, local, frozen probe) so a dead box never even attempts
+    # box-side spend (compile gate / setsid exec).
+    bhg = box_health_gate(box=box)
+    if not bhg["go"]:
+        probe = _probe_data(_run_name(), benchmark)
+        probe["launch_result"] = "BLOCKED_BOX_HEALTH"
+        probe["box_health"] = bhg
+        _write_probe(probe)
+        return {"blocked": True, "box_health": bhg, "probe": probe}
     gate = compile_gate(box)
     if not gate["ok"]:
         probe = _probe_data(_run_name(), benchmark)

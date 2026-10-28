@@ -22299,3 +22299,530 @@ C-9603 monitor: box-verified ASI3 trainer run=sapo-27b-ai-20260921T033826 STEP33
 - ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. USER ACTION likely required (console re-login) if authDrift; keeper cannot fix auth.
 - ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
 - ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- c10409 bus fallback probe
+- c10409 isolation probe: sandbox only
+- c10409 seam precedence probe
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- TRAINING-REAL [sft-27b-q38-v17-mixture-20261015T041826Z] engine=sft measured step=156 (C-10433)
+- TRAINING-REAL [r1] engine=sft measured step=1 (C-10433)
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- TRAINING-REAL [sft-27b-q38-v17-mixture-20261015T041826Z] engine=sft measured step=156 (C-10433)
+- TRAINING-REAL [r1] engine=sft measured step=1 (C-10433)
+- TRAINING-REAL [sft-27b-q38-v17-mixture-20261015T041826Z] engine=sft measured step=156 (C-10433)
+- TRAINING-REAL [r1] engine=sft measured step=1 (C-10433)
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- TRAINING-REAL [sft-27b-q38-v21-mixture-20261021T154856Z] engine=sft measured step=74 (C-10433)
+- TRAINING-REAL [sft-27b-q38-v17-mixture-20261015T041826Z] engine=sft measured step=156 (C-10433)
+- TRAINING-REAL [r1] engine=sft measured step=1 (C-10433)
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- TRAINING-REAL [sft-27b-q38-v17-mixture-20261015T041826Z] engine=sft measured step=156 (C-10433)
+- TRAINING-REAL [r1] engine=sft measured step=1 (C-10433)
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- TRAINING-REAL [sft-27b-q38-v17-mixture-20261015T041826Z] engine=sft measured step=156 (C-10433)
+- TRAINING-REAL [r1] engine=sft measured step=1 (C-10433)
+- c10409 bus fallback probe
+- c10409 isolation probe: sandbox only
+- c10409 seam precedence probe
+- TRAINING-REAL [r1] engine=sft measured step=1 (C-10433)
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- c10409 bus fallback probe
+- c10409 isolation probe: sandbox only
+- c10409 seam precedence probe
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- TRAINING-REAL [sft-27b-q38-v17-mixture-20261015T041826Z] engine=sft measured step=156 (C-10433)
+- TRAINING-REAL [r1] engine=sft measured step=1 (C-10433)
+- TRAINING-REAL [sft-27b-q38-v21-mixture-20261021T154856Z] engine=sft measured step=269 (C-10433)
+- c10409 bus fallback probe
+- c10409 isolation probe: sandbox only
+- c10409 seam precedence probe
+- TRAINING-REAL [sft-27b-q38-v17-mixture-20261015T041826Z] engine=sft measured step=156 (C-10433)
+- TRAINING-REAL [r1] engine=sft measured step=1 (C-10433)
+- c10409 bus fallback probe
+- c10409 isolation probe: sandbox only
+- c10409 seam precedence probe
+- TRAINING-REAL [sft-27b-q38-v17-mixture-20261015T041826Z] engine=sft measured step=156 (C-10433)
+- TRAINING-REAL [r1] engine=sft measured step=1 (C-10433)
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- 🚨 STRATEGIC-STAGNATION: holdout stuck at 3/18 for 44 days. The current approach is NOT working. Requires strategy change, not more of the same.. Approach needs rethink.
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- 🚨 STRATEGIC-STAGNATION: holdout stuck at 3/18 for 44 days. The current approach is NOT working. Requires strategy change, not more of the same.. Approach needs rethink.
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=-1.
+- training_watch [unknown]: TRAINING-UNMEASURABLE: no step-metrics rows
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- TRAINING-REAL [sft-27b-q38-v20-refresh-20261021T200013Z] engine=sft measured step=12 (C-10433)
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- c10409 bus fallback probe
+- c10409 isolation probe: sandbox only
+- c10409 seam precedence probe
+- TRAINING-REAL [sft-27b-q38-v17-mixture-20261015T041826Z] engine=sft measured step=156 (C-10433)
+- TRAINING-REAL [r1] engine=sft measured step=1 (C-10433)
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- 🚨 STRATEGIC-STAGNATION: holdout stuck at 3/18 for 44 days. The current approach is NOT working. Requires strategy change, not more of the same.. Approach needs rethink.
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- TRAINING-REAL [sft-27b-q38-v21-mixture-20261021T154856Z] engine=sft measured step=498 (C-10433)
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- TRAINING-REAL [sft-27b-q38-c10599-bump-20261021T220345Z] engine=sft measured step=8 (C-10433)
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- C-10602 eval leg1 v21-final step-498 measured: pass_adapter=9/18 pass_base=4/18 beats_base=True adapter_applied=True adapter_probe_differs=True adapter_sha256=5af9b99801071533de145620d857fc382f60ee7d99ffee65158203ee2200a172 leg_process_id=leg1-pid-167675-29b50b3f banked=True verdict=verdict_C10602_v21_final_20261022T003934Z.json
+- TRAINING-REAL [sft-27b-q38-v20-refresh-20261021T200013Z] engine=sft measured step=444 (C-10433)
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- training_watch [unknown]: LOG-STALE: log stale 4128s >= 4080s (cadence-aware)
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- TRAINING-REAL [sft-27b-q38-c10599-bump-20261021T220345Z] engine=sft measured step=486 (C-10433)
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- 2026-10-22T04:13:12Z C-10604 v20-refresh leg1 step-final measured: pass_adapter=8/18 pass_base=4/18 beats_base=True banked=False (champion remains v21 9/18, sha 5af9b998...). Verdict: outputs/verdict_C10604_v20refresh_final_20261022T041256Z.json
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- training_watch [unknown]: LOG-STALE: log stale 4463s >= 4080s (cadence-aware)
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- TRAINING-REAL [sft-27b-q38-v22-mixture-20261022T061422Z] engine=sft measured step=1 (C-10433)
+- training_watch [unknown]: TRAINING-UNMEASURABLE: no step-metrics rows
+- TRAINING-REAL [sft-27b-q38-v22-mixture-20261022T062713Z] engine=sft measured step=3 (C-10433)
+- training_watch [unknown]: TRAINING-UNMEASURABLE: no step-metrics rows
+- TRAINING-REAL [sft-27b-q38-v22-mixture-20261022T064054Z] engine=sft measured step=1 (C-10433)
+- training_watch [unknown]: TRAINING-UNMEASURABLE: no step-metrics rows
+- TRAINING-REAL [sft-27b-q38-v22-mixture-20261022T064943Z] engine=sft measured step=3 (C-10433)
+- 2026-10-22T06:59:33Z C-10605 v22 training LAUNCHED: run=sft-27b-q38-v22-mixture-20261022T064943Z pid=304400 box=ASI3 mode=sharded max_len=1536 (fixes v14-v21 512 truncation) rows=3545 warm-continue v21-champion(9/18). torchrun 8x crashes at seq>512 (rank4 acl Conv2D) — r2/r4 evidence; sharded mode stable — r3/r5 evidence.
+- C-10605 eval leg1 c10599-bump step-486 measured: pass_adapter=6/18 pass_base=4/18 beats_base=True adapter_applied=True adapter_probe_differs=True adapter_sha256=8a2aa8deb853538d2a75c6f9480d5518bed1f13aadaeab94af0e3336112fbf05 leg_process_id=leg1-pid-194222-1149b25b champion=9 banked=False verdict=outputs/verdict_C10605_final_20261022T075119Z.json
+- 2026-10-22T08:35:00Z C-10605 v22 MIDRUN eval leg DISPATCHED: step-119 box=ASI1 direct-local 3-slice seed=c10605-v22midrun-064943Z pid=202752 out=outputs/eval_leg1_c10605_v22/.../step-119 (bypasses ASI2 watcher backlog 1300+; dispatch record outputs/C10605_v22_midrun_dispatch_record.json). c10599-bump final measured 6/18 vs base 4/18 — beats base, < champion 9, not banked (verdict_C10605_final_20261022T075119Z.json).
+- c10409 bus fallback probe
+- c10409 isolation probe: sandbox only
+- c10409 seam precedence probe
+- TRAINING-REAL [sft-27b-q38-v17-mixture-20261015T041826Z] engine=sft measured step=156 (C-10433)
+- TRAINING-REAL [r1] engine=sft measured step=1 (C-10433)
+- TRAINING-REAL [sft-27b-q38-v22-mixture-20261022T064943Z] engine=sft measured step=225 (C-10433)
+- c10409 bus fallback probe
+- c10409 isolation probe: sandbox only
+- c10409 seam precedence probe
+- TRAINING-REAL [sft-27b-q38-v17-mixture-20261015T041826Z] engine=sft measured step=156 (C-10433)
+- TRAINING-REAL [r1] engine=sft measured step=1 (C-10433)
+- TRAINING-REAL [sft-27b-q38-v22-mixture-20261022T064943Z] engine=sft measured step=246 (C-10433)
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=-1.
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- training_watch [unknown]: LOG-STALE: log stale 4091s >= 4080s (cadence-aware)
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- TRAINING-REAL [sft-27b-q38-v22-resume-20261023T081500Z] engine=sft measured step=2 (C-10433)
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- training_watch [unknown]: LOG-STALE: log stale 4125s >= 4080s (cadence-aware)
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- training_watch [unknown]: TRAINING-UNMEASURABLE: summary fetch failed (transport flake)
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=1.
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=1.
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK

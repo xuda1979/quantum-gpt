@@ -63,9 +63,9 @@ try:
 except ImportError:
     QPG = None
 
+from eval_failclosed import eval_failclosed_ok  # noqa: E402  (C-10361 shared gate helper)
 from json_io import append_line, load_json, save_json  # noqa: E402  (seam re-export, C-9641)
 from time_utils import age_min, now_iso, parse_iso  # noqa: E402  (seam re-export, C-9641)
-from eval_failclosed import eval_failclosed_ok  # noqa: E402  (C-10361 shared gate helper)
 
 
 def append_heartbeat(path, line):
@@ -114,7 +114,15 @@ WIP_LIMITS = {
 
 DEFAULT_BUDGET_MIN = 25
 STALL_MIN = 10  # heartbeat staleness that counts as a stall (2min ticks)
-MAX_BUDGET_MIN = 90
+# C-10603/C-10075: a real fail-closed 18-task holdout leg measures ~173 min
+# of box compute. MAX_BUDGET_MIN=90 clamped BOTH new_card and the C-10289
+# overrun escalation to 90, so every healthy box-bound worker was
+# overrun-killed at 90min and re-armed with the SAME too-small 90 -> the
+# harness killed workers as fast as they launched (C-10603: 9 died / 5
+# landed / 15 dispatched, all 9 deaths fresh-heartbeat overrun-killed).
+# 360 min = 6h, a sane hard ceiling that fits any measured leg with 2x
+# headroom while still preventing a runaway budget.
+MAX_BUDGET_MIN = 360
 # _normalize_card (C-9655) fabricates this budget_min for cards that do not
 # declare one. A budget-infeasible classifier must NOT treat this fabricated
 # value as an explicit small budget: normalize-default 60 means the budget was
@@ -1057,9 +1065,7 @@ def release_card(card, status, result, reason=None):
                 sig in _reason for sig in ("overran deadline", "harvested at deadline")
             ):
                 old = int(card.get("budget_min") or DEFAULT_BUDGET_MIN)
-                card["budget_min"] = min(
-                    MAX_BUDGET_MIN, max(old + 20, int(old * 1.5))
-                )
+                card["budget_min"] = min(MAX_BUDGET_MIN, max(old + 20, int(old * 1.5)))
 
 
 def bounce_reason(verdict, outcome, over):
@@ -1954,7 +1960,9 @@ def scan_verdicts(repo_root, limit=12):
                 except OSError:
                     pass
         cands.sort(reverse=True)
-        for _, p in cands[:limit]:
+        for _, p in cands:
+            if len(verdicts) >= limit:
+                break
             d = load_json(p, {})
             if not d:
                 continue
@@ -1964,6 +1972,10 @@ def scan_verdicts(repo_root, limit=12):
             if d.get("_DISCLAIMER"):
                 # C-9744: synthetic/demo fixture composition (explicit
                 # _DISCLAIMER field); never a goal candidate.
+                continue
+            if fixture_verdict_violation(d) is not None:
+                # C-10397: test/fixture verdict pollution never consumes
+                # a scan slot (the C-10390 transient 99999-test shape).
                 continue
             d["_file"] = os.path.basename(p)
             verdicts.append(d)
@@ -2212,12 +2224,115 @@ def embed_scorer_sha_pins(verdict, state_dir=None):
     scorer_sha_pins_missing)."""
     bank = load_banked_scorer_sha_pins(state_dir=state_dir)
     if bank is None:
-        raise ValueError("scorer_sha_pin_bank_missing: compose refuses an "
-                         "unpinned verdict (no banked pins)")
+        raise ValueError(
+            "scorer_sha_pin_bank_missing: compose refuses an " "unpinned verdict (no banked pins)"
+        )
     out = dict(verdict)
     out["holdout_sha256"] = bank["holdout_sha256"]
     out["scorer_shas"] = dict(bank["scorer_shas"])
     return out
+
+
+def fixture_verdict_violation(verdict):
+    """C-10397 (qgh twin): named fixture/test-verdict violation on a verdict
+    file, or None.  Same fail-closed tokens as harness_lib's twin: a
+    99999-test runner pid, /var/folders (or private variant) tempdir path,
+    or a pid-0- placeholder in any identity field is a fixture shape; a
+    verdict claiming canonical/measured status whose evidence refs are not
+    real outputs/ files is a fixture shape.  scan_verdicts skips these
+    BEFORE the top-limit slice so a transient test verdict can never bury
+    the real canonical banker.
+    """
+    id_tokens = ("99999-test", "-pid-0-", "/private/var/folders", "/var/folders")
+    for field in ("leg_process_id", "cache_id", "window_id"):
+        val = verdict.get(field)
+        if isinstance(val, str) and any(token in val for token in id_tokens):
+            return "fixture_verdict_" + field
+    for name in ("leg1", "leg2"):
+        leg = verdict.get(name)
+        if isinstance(leg, dict):
+            ind = leg.get("independence") or leg.get("leg_independence") or {}
+            if isinstance(ind, dict):
+                for field in ("leg_process_id", "candidate_cache_id", "window_id"):
+                    val = ind.get(field)
+                    if isinstance(val, str) and any(token in val for token in id_tokens):
+                        return f"fixture_verdict_{name}_{field}"
+    ev = verdict.get("evidence")
+    if isinstance(ev, dict):
+        dangling = []
+        for field in ("envelope", "scores", "env", "leg_env", "leg_scores"):
+            ref = ev.get(field)
+            if isinstance(ref, str) and ref:
+                r = ref.replace(os.sep, "/")
+                if not (r.startswith("outputs/") or "/outputs/" in r):
+                    dangling.append(field)
+        if dangling and (
+            verdict.get("kind") == "canonical_leg1_verdict" or verdict.get("beats_base") is True
+        ):
+            return "fixture_verdict_evidence_dangling"
+    return None
+
+
+def quarantine_fixture_verdicts(repo_root, dry_run=False):
+    """C-10397 (qgh twin): sweep outputs/ for fixture/test verdicts and move
+    them to outputs/quarantine_synthetic/ so the listdir scan path is clean.
+    Returns moved basenames.  Only fixture_verdict_violation-flagged files
+    are moved; real canonical verdicts are untouched."""
+    out_dir = os.path.join(repo_root, "outputs")
+    q_dir = os.path.join(out_dir, "quarantine_synthetic")
+    moved = []
+    if not os.path.isdir(out_dir):
+        return moved
+    os.makedirs(q_dir, exist_ok=True)
+    for name in sorted(os.listdir(out_dir)):
+        if not (name.startswith("verdict") and name.endswith(".json")):
+            continue
+        p = os.path.join(out_dir, name)
+        try:
+            d = load_json(p, {})
+        except Exception:
+            continue
+        if not d:
+            continue
+        if fixture_verdict_violation(d) is None:
+            continue
+        dst = os.path.join(q_dir, name)
+        if dry_run:
+            moved.append(name)
+            continue
+        try:
+            os.replace(p, dst)
+            moved.append(name)
+        except OSError:
+            pass
+    return moved
+
+
+def env_identity_violation(verdict):
+    """C-10452: None iff BOTH legs pin a REAL exec-env identity
+    (interpreter / overlay / box). A verdict that would retire the goal
+    must name the exec-env that produced its scores or fail closed:
+      - leg.exec_env missing -> env_identity_missing
+      - fixture-shaped interpreter (/tmp/, /var/folders/) -> {name}_fixture_interpreter
+      - missing interpreter or overlay -> {name}_env_identity_missing
+    """
+    for name in ("leg1", "leg2"):
+        leg = verdict.get(name)
+        if not isinstance(leg, dict):
+            return f"{name}_missing"
+        ee = leg.get("exec_env")
+        if not isinstance(ee, dict):
+            return "env_identity_missing"
+        interp = ee.get("interpreter")
+        if not isinstance(interp, str) or not interp:
+            return f"{name}_env_identity_missing"
+        if "/tmp/" in interp or "/var/folders/" in interp:
+            return f"{name}_fixture_interpreter"
+        overlay = ee.get("overlay")
+        box = ee.get("box")
+        if (not isinstance(overlay, str) or not overlay) and (not isinstance(box, str) or not box):
+            return f"{name}_env_identity_missing"
+    return None
 
 
 def is_qwen38_27b_model(name):
@@ -2279,8 +2394,12 @@ def leg_provenance_violation(verdict, _os_path_exists=None):
     # these tokens.
     FIXTURE_ID_TOKENS = ("pid-leg", "cache-leg", "win-leg", "c9750-canonical")
     FIXTURE_REF_SUBSTRINGS = (
-        "/var/folders/", "/private/var/folders/", "/tmp/",
-        "c9750-canonical-", "canonical-leg", "/T/leg",
+        "/var/folders/",
+        "/private/var/folders/",
+        "/tmp/",
+        "c9750-canonical-",
+        "canonical-leg",
+        "/T/leg",
     )
     for name in ("leg1", "leg2"):
         leg = verdict.get(name)
@@ -2311,9 +2430,9 @@ def leg_provenance_violation(verdict, _os_path_exists=None):
         # file exists.
         if isinstance(ref, str) and ref:
             r = ref.replace(os.sep, "/")
-            under_outputs = (r.startswith("outputs/")
-                             or "/outputs/" in r
-                             or r.rstrip("/").endswith("/outputs"))
+            under_outputs = (
+                r.startswith("outputs/") or "/outputs/" in r or r.rstrip("/").endswith("/outputs")
+            )
             if not under_outputs:
                 return f"{name}_ref_non_outputs_dotdir"
         # C-9752 core rule: a leg must show REAL scores evidence — an existing
@@ -4194,7 +4313,7 @@ def box_exec_probe(port, attempts=2, sleep_s=5, urlopen_fn=None, json_mod=None):
         try:
             _r = urlopen_fn(
                 _url.Request(
-                    "http://127.0.0.1:%d/exec" % port,
+                    f"http://127.0.0.1:{port}/exec",
                     data=json_mod.dumps({"command": "echo BOX_ALIVE_PROBE"}).encode(),
                     headers={"Content-Type": "application/json"},
                 ),
@@ -4275,7 +4394,7 @@ def box_health_alive(port, urlopen_fn=None, json_mod=None):
     json_mod = json_mod or _json
     uf = urlopen_fn or _url.urlopen
     try:
-        uf(_url.Request("http://127.0.0.1:%d/health" % port), timeout=5)
+        uf(_url.Request(f"http://127.0.0.1:{port}/health"), timeout=5)
         return True
     except Exception:
         return False
@@ -4295,10 +4414,16 @@ def box_exec_dead_gate(port, exec_ok_fn=None, health_alive_fn=None):
     injectable for deterministic unit tests."""
     exec_ok = exec_ok_fn
     if exec_ok is None:
-        exec_ok = lambda p: box_exec_probe(p, attempts=2)
+
+        def exec_ok(p):  # noqa: F811
+            return box_exec_probe(p, attempts=2)
+
     health_alive = health_alive_fn
     if health_alive is None:
-        health_alive = lambda p: box_health_alive(p)
+
+        def health_alive(p):  # noqa: F811
+            return box_health_alive(p)
+
     try:
         if exec_ok(port):
             return False  # exec echo works -> alive, done
@@ -4307,6 +4432,135 @@ def box_exec_dead_gate(port, exec_ok_fn=None, health_alive_fn=None):
         return True  # exec AND health both dead -> genuinely dead
     except Exception:
         return True  # fail-closed: probe error -> assume dead
+
+
+def _tw_fetch_box_summary(urlopen_fn=None, fetch_attempts=5, base_sleep_s=2.0):
+    """C-10561: fetch the box-side training summary, retry+backoff on transport flakes.
+
+    Returns the parsed summary dict, or None when every attempt fails (the
+    caller still degrade to fail-closed TRAINING-UNMEASURABLE, C-10433).
+    """
+    import json as _json
+    import time as _time
+    import urllib.request as _url
+
+    urlopen_fn = urlopen_fn or _url.urlopen
+    port = 20653
+    for _attempt in range(max(1, fetch_attempts)):
+        try:
+            _r = urlopen_fn(
+                _url.Request(
+                    f"http://127.0.0.1:{port}/exec",
+                    data=_json.dumps(
+                        {"command": "python3 /tmp/tw_summary.py 2>&1 | base64"}
+                    ).encode(),
+                    headers={"Content-Type": "application/json"},
+                ),
+                timeout=20,
+            )
+            _out = _json.loads(_r.read()).get("output", "")
+            _b64 = "".join(_out.split())
+            if not _b64 or "c9591_no_script" in _out:
+                return None
+            import base64 as _b64mod
+
+            return _json.loads(_b64mod.b64decode(_b64).decode("utf-8", "replace"))
+        except Exception:
+            if _attempt < fetch_attempts - 1 and base_sleep_s:
+                _time.sleep(base_sleep_s * (2**_attempt))
+    return None
+
+
+def _tw_measure(d, now_s=None):
+    """C-10433: turn a box summary dict (or None) into {alarms, real}.
+    fail-closed:
+      d is None                       -> [TRAINING-UNMEASURABLE], real=None
+      no rows                         -> [TRAINING-UNMEASURABLE], real=None
+      rows older than ~20min          -> [LOG-STALE],             real=None
+      healthy (fresh rows)            -> [], real={run, engine, step, ...}
+    """
+    from harness_lib import training_watch_alarms
+
+    if not d:
+        return {
+            "alarms": [
+                {
+                    "kind": "TRAINING-UNMEASURABLE",
+                    "detail": "summary fetch failed (transport flake)",
+                }
+            ],
+            "real": None,
+        }
+    rows = d.get("rows") or []
+    last_mtime = d.get("mtime")
+    ns = now_s if now_s is not None else d.get("now") or 0
+    if not rows:
+        return {
+            "alarms": [{"kind": "TRAINING-UNMEASURABLE", "detail": "no step-metrics rows"}],
+            "real": None,
+        }
+    alarms = training_watch_alarms(rows, ns or 0, last_mtime)
+    if alarms:
+        return {"alarms": alarms, "real": None}
+    last_row = rows[-1]
+    step = last_row.get("step")
+    if step is None:
+        return {
+            "alarms": [{"kind": "TRAINING-UNMEASURABLE", "detail": "no step field in rows"}],
+            "real": None,
+        }
+    return {
+        "alarms": [],
+        "real": {
+            "run": d.get("run") or "unknown",
+            "engine": d.get("engine") or "sft",
+            "step": step,
+            "mtime": last_mtime,
+            "now": ns,
+            "rows": rows,
+        },
+    }
+
+
+def _tw_persist_real(state_dir, real):
+    """C-10433: record a REAL measured trainer into OPS.json + STATUS.md."""
+    from harness_lib import append_status_line
+
+    try:
+        run = real.get("run") or "unknown"
+        step = real.get("step")
+        engine = real.get("engine") or "sft"
+        ops = load_ops(state_dir)
+        seen = ops.setdefault("training_watch_fired", {})
+        key = "TRAINING-REAL:" + engine
+        if seen.get(key) != run:
+            for _old_kind in list(seen.keys()):
+                if _old_kind != key:
+                    seen.pop(_old_kind, None)
+            seen[key] = run
+            save_ops(state_dir, ops)
+            append_status_line(
+                "- TRAINING-REAL ["
+                + run
+                + "] engine="
+                + engine
+                + " measured step="
+                + str(step)
+                + " (C-10433)"
+            )
+            event(
+                state_dir,
+                "training_alarm_training_real",
+                {"run": run, "engine": engine, "step": step},
+            )
+        else:
+            ops2 = load_ops(state_dir)
+            ops2.setdefault("training_watch_fired", {})
+            ops2["training_watch_fired"][key] = run
+            ops2["training_watch_fired"].pop("TRAINING-UNMEASURABLE", None)
+            save_ops(state_dir, ops2)
+    except Exception:
+        pass
 
 
 def training_watch():
@@ -4321,17 +4575,23 @@ def training_watch():
         import json as _json
         import urllib.request as _url
 
-        from harness_lib import append_status_line, training_watch_alarms
+        from harness_lib import append_status_line
 
         # Box-side summary script (pushed once to /tmp/tw_summary.py): the exec
         # transport front-truncates long outputs, so raw metric rows are lossy.
         # The script emits a tiny JSON {run, mtime, now, rows[12 compact]}.
         _script_b64 = _b64_mod.b64encode(
             b"import json,glob,os,time\n"
-            b"ds=sorted(glob.glob('/root/work/software/quantum-gpt/outputs/sapo-27b-ai-*'),"
-            b"key=os.path.getmtime)\n"
-            b"d=ds[-1] if ds else ''\n"
-            b"f=os.path.join(d,'grpo_step_metrics.jsonl') if d else ''\n"
+            b"def _is_demo(n): return 'live-demo' in n or 'live_demo' in n or 'demo' in n\n"
+            b"sfts=sorted([d for d in glob.glob('/root/work/quantum-gpt/outputs/sft-*') if not _is_demo(os.path.basename(d))],key=os.path.getmtime)\n"
+            b"d=sfts[-1] if sfts else ''\n"
+            b"engine='sft'\n"
+            b"f=os.path.join(d,'sft_step_metrics.jsonl') if d else ''\n"
+            b"if not d:\n"
+            b"    gs=sorted(glob.glob('/root/work/software/quantum-gpt/outputs/sapo-27b-ai-*'),key=os.path.getmtime)\n"
+            b"    d=gs[-1] if gs else ''\n"
+            b"    engine='grpo'\n"
+            b"    f=os.path.join(d,'grpo_step_metrics.jsonl') if d else ''\n"
             b"rows=[]\n"
             b"m=None\n"
             b"try:\n"
@@ -4339,26 +4599,14 @@ def training_watch():
             b"    rows=[json.loads(l) for l in open(f).read().strip().splitlines()[-12:]]\n"
             b"except Exception:\n"
             b"    pass\n"
-            b"small=[{k:r.get(k) for k in ('step','mean_reward','pass_rate',"
-            b"'entropy_mean','seq_kl_after')} for r in rows]\n"
-            b"print(json.dumps({'run':os.path.basename(d),'mtime':m,"
-            b"'now':time.time(),'rows':small}))\n"
+            b"small=[{k:r.get(k) for k in ('step','mean_reward','pass_rate','entropy_mean','seq_kl_after','train_loss','epoch')} for r in rows]\n"
+            b"print(json.dumps({'run':os.path.basename(d) if d else '','engine': engine if d else None,'mtime':m,'now':time.time(),'rows':small}))\n"
         ).decode()
-        # measured eval ground truth: per-row passed flags from eval_results.jsonl
-        _script_b64 = _b64_mod.b64encode(
-            b"import json,os\n"
-            b"d=sorted(glob.glob('/root/work/software/quantum-gpt/outputs/sapo-27b-ai-*'),"
-            b"key=os.path.getmtime)[-1] if glob.glob("
-            b"'/root/work/software/quantum-gpt/outputs/sapo-27b-ai-*') else ''\n"
-            b"ev=os.path.join(d,'eval_results.jsonl') if d else ''\n"
-            b"ev_rows=[]\n"
-            b"try:\n"
-            b"    ev_rows=[json.loads(l) for l in open(ev).read().strip().splitlines()]\n"
-            b"except Exception:\n"
-            b"    pass\n"
-            b"ev_small=[{'step':r.get('step'),'passed':bool(r.get('passed'))} for r in ev_rows]\n"
-            b"print(json.dumps({'run':os.path.basename(d),'eval_rows':ev_small}))\n"
-        ).decode()
+        # C-10561: eval-truth script is handled by training_watch_eval_truth() ->
+        # /tmp/tw_eval.py, NOT here. Overwriting _script_b64 here replaced the SFT
+        # summary script with the eval script before the push to /tmp/tw_summary.py
+        # (NameError glob.glob without import glob; reads eval_results.jsonl).
+        # _tw_fetch_box_summary then could never land step-metrics rows.
         # C-9688 (fail-closed): a down/timing-out exec box is a NORMAL measured
         # condition, not a crash. Guard the script-push write so a transport
         # failure degrades to the TRAINING-UNMEASURABLE path below instead of
@@ -4381,51 +4629,24 @@ def training_watch():
             # keep d = None -> falls through to TRAINING-UNMEASURABLE alarm
             pass
 
-        def _fetch_summary():
-            r = _url.urlopen(
-                _url.Request(
-                    "http://127.0.0.1:20653/exec",
-                    data=_json.dumps(
-                        {"command": "python3 /tmp/tw_summary.py 2>&1 | base64"}
-                    ).encode(),
-                    headers={"Content-Type": "application/json"},
-                ),
-                timeout=20,
-            )
-            out = _json.loads(r.read()).get("output", "")
-            b64 = "".join(out.split())
-            if not b64 or "c9591_no_script" in out:
-                return None
-            import base64 as _b64
-
-            return _json.loads(_b64.b64decode(b64).decode("utf-8", "replace"))
-
-        # transport is flaky (intermittent empty exec responses): 2 attempts
-        d = None
-        for _attempt in range(2):
-            try:
-                d = _fetch_summary()
-                if d:
-                    break
-            except Exception:
-                if _attempt == 0:
-                    import time as _time
-
-                    _time.sleep(2)
+        # C-10561 retry backoff fetch avoids transport flake false alarm
+        # (a transient daemon exec cloud must never falsify a healthy trainer).
+        d = _tw_fetch_box_summary(fetch_attempts=5, base_sleep_s=2.0)
+        meas = _tw_measure(d)
         run = "unknown"
-        if not d:
-            alarms = [
+        alarms = meas["alarms"]
+        if meas["real"]:
+            run = meas["real"]["run"]
+            _step = meas["real"]["step"]
+            _engine = meas["real"]["engine"]
+            _tw_persist_real(
+                STATE,
                 {
-                    "kind": "TRAINING-UNMEASURABLE",
-                    "detail": "summary fetch failed twice (transport flake)",
-                }
-            ]
-        else:
-            run = d.get("run", "unknown")
-            rows = d.get("rows", [])
-            last_mtime = d.get("mtime")
-            now_s = d.get("now")
-            alarms = training_watch_alarms(rows, now_s or 0, last_mtime)
+                    "run": run,
+                    "engine": _engine,
+                    "step": _step,
+                },
+            )
         if not alarms:
             return
         ops = load_ops(STATE)
@@ -4687,6 +4908,19 @@ def cmd_tick(_args):
         # auto-eval: scan for new training checkpoints and queue eval cards
         auto_eval_scan()
         training_watch()
+        # C-10397: sweep fixture/test verdicts out of outputs/ BEFORE any
+        # listdir-based scan can surface them (transient test verdicts with
+        # 99999-test pids / fixture tempdirs pollute goal_done banking).
+        try:
+            _n_quarantined = quarantine_fixture_verdicts(REPO)
+            if _n_quarantined:
+                event(
+                    STATE,
+                    "verdict_fixture_quarantined",
+                    {"moved": _n_quarantined[:12], "count": len(_n_quarantined)},
+                )
+        except Exception as _q_exc:
+            event(STATE, "verdict_fixture_quarantine_error", {"err": repr(_q_exc)[:160]})
         # C-9541: alert when training is running but no checkpoints produced
         try:
             _ops_post = load_ops(STATE)
@@ -6388,3 +6622,4 @@ H = _types.SimpleNamespace(
 
 if __name__ == "__main__":
     main()
+# C-10561 write-marker 20261021

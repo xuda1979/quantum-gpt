@@ -64,7 +64,7 @@ def _frozen_ids():
         for line in Path(FROZEN_BENCH).read_text().splitlines()
         if line.strip() and not line.startswith("#")
     ]
-    assert len(ids) == 18, "frozen holdout drifted: %d tasks" % len(ids)
+    assert len(ids) == 18, f"frozen holdout drifted: {len(ids)} tasks"
     return ids
 
 
@@ -97,8 +97,13 @@ def _write_scores(tmp, name, passes):
 
 
 def _write_leg(tmp, leg, passes, runner, markers=(True, True)):
-    scores = _write_scores(tmp, leg, passes)
-    log = tmp / (leg + ".log")
+    # C-10566/C-10527: real-under-outputs/ legs for the compose CLI
+    # provenance gate -- scores/log/envelope all land under tmp/outputs/
+    # so the C-10337/C-10316 fixture-path check treats them as REAL.
+    outd = tmp / "outputs"
+    outd.mkdir(exist_ok=True)
+    scores = _write_scores(outd, leg, passes)
+    log = outd / (leg + ".log")
     # C-9117: stamp independence fields in both envelope and log for corroboration
     # C-9752: realistic (non-fixture) leg identities — the C-9750 incident
     # used literal 'pid-leg*'/'cache-leg*'/'win-leg*' shapes which the
@@ -129,6 +134,15 @@ def _write_leg(tmp, leg, passes, runner, markers=(True, True)):
         leg=leg,
         runner_mechanism=runner,
         box="ASI2",
+        # C-10452: real exec-env identity so the compose env-identity gate
+        # accepts these fire-drill legs (same as real ASI2 evaluations).
+        interpreter="/usr/local/python3.11.14/bin/python3",
+        overlay="/root/work/filestorage/pyenv_f1",
+        exec_env=dict(
+            interpreter="/usr/local/python3.11.14/bin/python3",
+            overlay="/root/work/filestorage/pyenv_f1",
+            box="ASI2",
+        ),
         adapter=str(tmp / "adapter"),
         base_model=str(tmp / "base"),
         # C-9612: reproducibility seed — the compose gate refuses
@@ -165,7 +179,7 @@ def _write_leg(tmp, leg, passes, runner, markers=(True, True)):
         },
         checkpoint_pin=str(pin_path),
     )
-    p = tmp / (leg + ".json")
+    p = outd / (leg + ".json")
     p.write_text(json.dumps(env))
     return p
 

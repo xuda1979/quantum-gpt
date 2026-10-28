@@ -40,6 +40,8 @@ def full_step(
     s += f"S{step} kl_aft 6.08e-03 ent {entropy:.3f}\n"
     s += f"S{step} pass {pass_rate:.3f} rew 0.1375 shaped {shaped:.4f}\n"
     s += f"S{step} rstd 0.2222 sig 0.2222 syn 1.000 trunc 0.000\n"
+    s += f"S{step} pstd 0.1111 sstd 0.1111 istd 0.1111 vstd 0.1111 irate 0.500 vrate 0.500 lama 0.2500 clih 0.0000 clil 0.0000\n"
+    s += f"S{step} ess 1668.0000\n"
     s += f"S{step} tok 1668 rlen 417.0\n"
     s += f"S{step} clip 0.0000 fail False skip {str(skipped).lower()} trust False\n"
     s += f"S{step} lr 2e-05 ema 0.1200 ts 05:12:33Z\n"

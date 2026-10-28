@@ -26,6 +26,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(REPO / "harness"))
 sys.path.insert(0, str(REPO / "harness" / "scripts"))
+import box_health_preflight as _BHP  # noqa: E402
 from harness_config import get  # noqa: E402
 from run_and_report import run_box  # noqa: E402
 
@@ -56,18 +57,22 @@ def parse_latest_checkpoint(paths) -> str | None:
         if n > best_n:
             best_n, best = n, p
     return best
+
+
 def latest_run_advancing(lines, now_iso=None, freshness_window_s=600):
     import json as _json
-    from datetime import datetime, timezone
+    from datetime import datetime
+
     def _ts(rec):
-        raw = rec.get('timestamp_utc') if rec else None
+        raw = rec.get("timestamp_utc") if rec else None
         if not raw:
             return None
         try:
-            return datetime.fromisoformat(str(raw).replace('Z', '+00:00'))
+            return datetime.fromisoformat(str(raw).replace("Z", "+00:00"))
         except ValueError:
             return None
-    text = chr(10).join((lines or []))
+
+    text = chr(10).join(lines or [])
     dec = _json.JSONDecoder()
     recs = []
     i = 0
@@ -87,20 +92,21 @@ def latest_run_advancing(lines, now_iso=None, freshness_window_s=600):
     if not recs:
         return dict(advancing=False, latest_step=None)
     last = recs[-1]
-    latest_step = last.get('step')
+    latest_step = last.get("step")
     advancing = False
     if len(recs) >= 2:
-        prev_step = recs[-2].get('step')
+        prev_step = recs[-2].get("step")
         if isinstance(latest_step, int) and isinstance(prev_step, int):
             advancing = latest_step > prev_step
     if now_iso:
-        now = datetime.fromisoformat(str(now_iso).replace('Z', '+00:00'))
+        now = datetime.fromisoformat(str(now_iso).replace("Z", "+00:00"))
         last_ts = _ts(last)
         if last_ts and (now - last_ts).total_seconds() > freshness_window_s:
             advancing = False
     elif len(recs) < 2:
         advancing = False
     return dict(advancing=advancing, latest_step=latest_step)
+
 
 PGUARD_SH = "pgrep -f 'qwen_sft_peft|torchrun.*qwen_sft' >/dev/null && echo TRAINER_RUNNING || echo TRAINER_DOWN"
 COMPILE_SH = (
@@ -118,7 +124,7 @@ LS_ALL_SH = (
     # within the newest run. A warm-consumed shard checkpoint (older mtime)
     # must never win over the fresher run that consumed it.
     "for p in {repo}/outputs/sft-27b-q38-v10*/checkpoints/step-*/adapter; do "
-    "[ -e \"$p/adapter_config.json\" ] || continue; "
+    '[ -e "$p/adapter_config.json" ] || continue; '
     "stat -c '%Y %n' \"$p\" 2>/dev/null; done "
     "| sort -n | tail -40"
 )
@@ -227,13 +233,13 @@ def boot_verify(box: str, run_name: str) -> dict:
     return {"alive": False, "pid": pid if "pid" in dir() else "", "log_stages": stages}
 
 
-def load_die_exclusions(box='ASI3'):
+def load_die_exclusions(box="ASI3"):
     """Read the persistent die-exclusion ledger for a box. C-9689.
 
     Exclusion knowledge (dies proven faulty by past 507015 aicore crashes) is
     persisted in harness/state/np_die_exclusions.json so no relaunch loses it.
     Returns the box's dies_excluded list, or [] when absent/unknown. <12 lines."""
-    p = REPO / 'harness' / 'state' / 'np_die_exclusions.json'
+    p = REPO / "harness" / "state" / "np_die_exclusions.json"
     if not p.exists():
         return []
     try:
@@ -242,9 +248,9 @@ def load_die_exclusions(box='ASI3'):
         return []
     if not isinstance(data, dict):
         return []
-    if data.get('box') != box:
+    if data.get("box") != box:
         return []
-    dies = data.get('dies_excluded')
+    dies = data.get("dies_excluded")
     if not isinstance(dies, list):
         return []
     out = []
@@ -254,6 +260,18 @@ def load_die_exclusions(box='ASI3'):
         except (TypeError, ValueError):
             continue
     return out
+
+
+def box_health_gate(probes_dir=None, box=BOX):
+    """C-10569: fail-closed box-health preflight for a real (compute-spending)
+    trainer launch on the trainer box (ASI3 default). Refuses when the target
+    box probe is NOT positively READY (status=='ready' AND summary has
+    'EXEC=ok'). UNKNOWN/unreachable/wedged/missing => BLOCK before spend.
+    Existing queued/running cards are untouched (launch seam only). <5 lines."""
+    return _BHP.box_health_gate(
+        probes_dir=probes_dir or _BHP.DEFAULT_PROBES_DIR,
+        box=box,
+    )
 
 
 def resume(
@@ -287,6 +305,11 @@ def resume(
     )
     if dry_run:
         return {**result, "status": "DRY_RUN", "command": cmd}
+    # C-10569: refuse a REAL (compute-spending) trainer launch when the
+    # trainer box is NOT positively READY (UNKNOWN / unreachable / wedged).
+    bhg = box_health_gate()
+    if not bhg["go"]:
+        return {**result, "status": "BLOCKED_BOX_HEALTH", "box_health": bhg}
     r = run_box(BOX, cmd, timeout=30)
     result["launch"] = r.get("status")
     result["boot"] = boot_verify(BOX, run_name)

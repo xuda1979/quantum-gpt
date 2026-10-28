@@ -108,11 +108,28 @@ def detach_from_caller_setsid():
 def build_envelope(
     leg, mechanism, box, adapter, base_model, benchmark, leg_log, scores, max_new_tokens=None
 ):
-    """Fail-closed defaults: markers stay false until the log verifies."""
+    """Fail-closed defaults: markers stay false until the log verifies.
+
+    C-10452: stamps exec-env identity (interpreter + overlay) so a real leg
+    is compose-ready for the env-identity fail-closed gate. The interpreter
+    is the current python that BUILT the envelope (sys.executable) and the
+    overlay resolves to the runtime overlay id (pyenv path on ASI boxes)."""
+    import sys as _sys
+
+    interp = str(_sys.executable)
+    if str(box).startswith("ASI"):
+        overlay = "/root/work/filestorage/pyenv_f1"
+    else:
+        from pathlib import Path as _Path
+
+        overlay = str(_Path(_sys.base_prefix).resolve())
     return {
         "leg": leg,
         "runner_mechanism": mechanism,
         "box": box,
+        "interpreter": interp,
+        "overlay": overlay,
+        "exec_env": dict(interpreter=interp, overlay=overlay, box=box),
         "adapter": str(adapter),
         "base_model": str(base_model),
         "benchmark": str(benchmark),

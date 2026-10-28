@@ -19,13 +19,15 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(REPO / "harness" / "scripts"))
-from run_and_report import run_box  # noqa: E402
 import os  # noqa: E402
 import sys  # noqa: E402
 from pathlib import Path as _P  # noqa: E402
 
+from run_and_report import run_box  # noqa: E402
+
 sys.path.insert(0, str(_P(__file__).resolve().parent.parent))
 import asi2_authoritative_adapter_gate as _AG  # noqa: E402
+import box_health_preflight as _BHP  # noqa: E402
 
 
 def _eval_cmd(adapter: str, task_start: int, task_count: int) -> str:
@@ -132,11 +134,26 @@ def preflight(state_dir=None, box_resolver=None):
     b = c9707.get("banked_adapter_path_recorded")
     if isinstance(b, str) and b:
         cands.append({"path": b, "step": _AG._extract_step(b)})
+
     def _resolve(p):
         return _live_resolve(p, box_resolve=box_resolver)
-    return _AG.gate(tot=tot if isinstance(tot, dict) else {},
-                    c9707=c9707, candidates=cands,
-                    resolve=_resolve, min_step=8)
+
+    return _AG.gate(
+        tot=tot if isinstance(tot, dict) else {},
+        c9707=c9707,
+        candidates=cands,
+        resolve=_resolve,
+        min_step=8,
+    )
+
+
+def box_health_gate(probes_dir=None, box="ASI2"):
+    """C-10569: fail-closed box-health preflight for a real (compute-spending)
+    eval leg. Refuses when the target box probe is NOT positively READY
+    (status=='ready' AND summary has 'EXEC=ok'). UNKNOWN/reachable-but-wedged/
+    conn-refused/missing => BLOCK. Existing queued/running cards are untouched
+    (this is the launch seam only). <5 lines."""
+    return _BHP.box_health_gate(probes_dir=probes_dir, box=box)
 
 
 def _json_load(path):
@@ -152,7 +169,6 @@ def _json_load(path):
         return None
 
 
-
 def main():
     """Dispatch. <15 lines."""
     ap = argparse.ArgumentParser(description="Run eval leg with timeout + markers")
@@ -162,20 +178,26 @@ def main():
     ap.add_argument("--task-start", type=int, default=0)
     ap.add_argument("--task-count", type=int, default=18)
     ap.add_argument("--dry-run", action="store_true")
-    ap.add_argument("--preflight", action="store_true",
-                    help="C-9713: run authoritative-adapter gate; no compute")
+    ap.add_argument(
+        "--preflight",
+        action="store_true",
+        help="C-9713: run authoritative-adapter gate; no compute",
+    )
     ap.add_argument("--state-dir", default=None)
     ap.add_argument(
-        "--workflow-gate", action="store_true", default=None,
+        "--workflow-gate",
+        action="store_true",
+        default=None,
         help="C-9751: enforce workflow_gate check (train att must be OK) "
-             "before launching real compute. Default ON for real legs.")
+        "before launching real compute. Default ON for real legs.",
+    )
     args = ap.parse_args()
 
     if args.preflight:
         g = preflight(args.state_dir)
-        print("PREFLIGHT_ADAPTER_OK=%s" % g["adapter_ok"])
-        print("PREFLIGHT_ADAPTER=%s" % (g.get("adapter") or "None"))
-        print("PREFLIGHT_REASON=%s" % (g.get("block_reason") or ""))
+        print(f"PREFLIGHT_ADAPTER_OK={g['adapter_ok']}")
+        print(f"PREFLIGHT_ADAPTER={g.get('adapter') or 'None'}")
+        print(f"PREFLIGHT_REASON={g.get('block_reason') or ''}")
         raise SystemExit(0 if g["adapter_ok"] else 10)
 
     if args.dry_run:
@@ -186,18 +208,46 @@ def main():
         print("  markers: adapter_applied, probe_differs")
         print("  output: JSON with elapsed_s, status, timed_out, markers")
     else:
+        # C-10569: refuse a REAL (compute-spending) eval leg when the target
+        # eval box is NOT positively READY (UNKNOWN / unreachable / wedged
+        # exec). Runs BEFORE the workflow gate (cheap local frozen probe) so a
+        # dead box never spends the serialized eval slot (C-10541 x2 bounce).
+        bhg = box_health_gate(box=args.box)
+        if not bhg["go"]:
+            print(
+                json.dumps(
+                    {
+                        "status": "BLOCKED_BY_BOX_HEALTH",
+                        "box": args.box,
+                        "box_health": bhg,
+                        "note": "target eval box probe is NOT positively READY; "
+                        "run harness/scripts/box_health_preflight.py check "
+                        "--box " + args.box,
+                    },
+                    indent=2,
+                )
+            )
+            raise SystemExit(10)
         # C-9751 LAYER 2: a real (compute-consuming) eval leg may run only when
         # the workflow gate says GO — the train stage must hold a valid OK
         # attestation. A failed/missing predecessor stage can never trigger
         # this expensive stage. Fail-closed: gate error -> abort leg.
-        from workflow_gate import check as wf_check, DEFAULT_ATT_DIR
+        from workflow_gate import DEFAULT_ATT_DIR
+        from workflow_gate import check as wf_check
+
         rc = wf_check("eval_leg", DEFAULT_ATT_DIR)
         if rc != 0:
-            print(json.dumps({
-                "status": "BLOCKED_BY_WORKFLOW_GATE", "gate_rc": rc,
-                "note": "predecessor train stage not attested OK; "
+            print(
+                json.dumps(
+                    {
+                        "status": "BLOCKED_BY_WORKFLOW_GATE",
+                        "gate_rc": rc,
+                        "note": "predecessor train stage not attested OK; "
                         "run harness/scripts/workflow_audit.py train",
-            }, indent=2))
+                    },
+                    indent=2,
+                )
+            )
             raise SystemExit(rc)
         result = run_leg(args.box, args.adapter, args.timeout, args.task_start, args.task_count)
         print(json.dumps(result, indent=2, default=str))

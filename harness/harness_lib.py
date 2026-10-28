@@ -118,7 +118,11 @@ WIP_LIMITS = {
 
 DEFAULT_BUDGET_MIN = 25
 STALL_MIN = 10  # heartbeat staleness that counts as a stall (2min ticks)
-MAX_BUDGET_MIN = 90
+# C-10603/C-10075: mnemonic-clamped 90-min budget cap killed every healthy
+# box-bound worker (a real 18-task holdout leg takes ~173min). Raised to
+# 360 so a box-bound leg is schedulable and overrun escalation can give a
+# genuine second chance. Mirrors qgh.MAX_BUDGET_MIN 1:1.
+MAX_BUDGET_MIN = 360
 
 
 def _is_placeholder_acceptance(item):
@@ -1160,15 +1164,8 @@ def check_gate(gate, result_text):
             or re.search(r"base-only (?:probe )?leg", low)
         )
         measured_pass_base = bool(re.search(r"pass_base\s*[=:]\s*\d+\s*/\s*\d+", low))
-        has_sha = bool(
-            re.search(r"\b[0-9a-f]{64}\b", low) or re.search(r"\b[0-9a-f]{8}\b", low)
-        )
-        if (
-            base_only_marker
-            and measured_pass_base
-            and has_sha
-            and "byte-identical" not in low
-        ):
+        has_sha = bool(re.search(r"\b[0-9a-f]{64}\b", low) or re.search(r"\b[0-9a-f]{8}\b", low))
+        if base_only_marker and measured_pass_base and has_sha and "byte-identical" not in low:
             return True, "base-only leg: measured pass_base + sha pins present"
         return False, "eval leg missing fail-closed markers"
     if gate == "sha-verified":
@@ -1649,7 +1646,9 @@ def scan_verdicts(repo_root, limit=12):
                 except OSError:
                     pass
         cands.sort(reverse=True)
-        for _, p in cands[:limit]:
+        for _, p in cands:
+            if len(verdicts) >= limit:
+                break
             d = load_json(p, {})
             if not d:
                 continue
@@ -1659,6 +1658,10 @@ def scan_verdicts(repo_root, limit=12):
             if d.get("_DISCLAIMER"):
                 # C-9744: synthetic/demo fixture composition; never a
                 # goal candidate (fail-closed, see goal_done).
+                continue
+            if fixture_verdict_violation(d) is not None:
+                # C-10397: test/fixture verdict pollution never consumes
+                # a scan slot.
                 continue
             d["_file"] = os.path.basename(p)
             verdicts.append(d)
@@ -1890,6 +1893,133 @@ def load_banked_scorer_sha_pins(state_dir=None):
     return bank
 
 
+def embed_scorer_sha_pins(verdict, state_dir=None):
+    """C-10212 / C-10333 (twin of qgh.embed_scorer_sha_pins): stamp a
+    composed verdict with the banked holdout + scorer sha pins so
+    sha_pin_violation() returns None.
+
+    Pins are SCORER ATTESTATIONS, never measurements: this helper returns
+    a NEW dict (the input is never mutated) that is the input plus
+    holdout_sha256 + scorer_shas read from load_banked_scorer_sha_pins --
+    the exact C-9131 bank. A composer calling this on a fresh leg embeds
+    all 4 pinned scorer shas + the holdout pin so a genuinely good adapter
+    verdict can actually reach goal_done's sha gate (C-10333).
+
+    Fail-closed: no/malformed bank raises ValueError (never silently
+    emits an unpinned verdict that goal_done would blame
+    scorer_sha_pins_missing)."""
+    bank = load_banked_scorer_sha_pins(state_dir=state_dir)
+    if bank is None:
+        raise ValueError(
+            "scorer_sha_pin_bank_missing: compose refuses an " "unpinned verdict (no banked pins)"
+        )
+    out = dict(verdict)
+    out["holdout_sha256"] = bank["holdout_sha256"]
+    out["scorer_shas"] = dict(bank["scorer_shas"])
+    return out
+
+
+def fixture_verdict_violation(verdict):
+    """C-10397 (harness_lib twin): named fixture/test-verdict violation on
+    a verdict file, or None. Same fail-closed tokens as qgh's twin: a
+    99999-test runner pid, /var/folders (or private variant) tempdir path,
+    or a pid-0- placeholder in any identity field is a fixture shape; a
+    verdict claiming canonical/measured status whose evidence refs are not
+    real outputs/ files is a fixture shape. scan_verdicts skips these
+    BEFORE the top-limit slice so a transient test verdict can never bury
+    the real canonical banker."""
+    id_tokens = ("99999-test", "-pid-0-", "/private/var/folders", "/var/folders")
+    for field in ("leg_process_id", "cache_id", "window_id"):
+        val = verdict.get(field)
+        if isinstance(val, str) and any(token in val for token in id_tokens):
+            return "fixture_verdict_" + field
+    for name in ("leg1", "leg2"):
+        leg = verdict.get(name)
+        if isinstance(leg, dict):
+            ind = leg.get("independence") or leg.get("leg_independence") or {}
+            if isinstance(ind, dict):
+                for field in ("leg_process_id", "candidate_cache_id", "window_id"):
+                    val = ind.get(field)
+                    if isinstance(val, str) and any(token in val for token in id_tokens):
+                        return f"fixture_verdict_{name}_{field}"
+    ev = verdict.get("evidence")
+    if isinstance(ev, dict):
+        dangling = []
+        for field in ("envelope", "scores", "env", "leg_env", "leg_scores"):
+            ref = ev.get(field)
+            if isinstance(ref, str) and ref:
+                r = ref.replace(os.sep, "/")
+                if not (r.startswith("outputs/") or "/outputs/" in r):
+                    dangling.append(field)
+        if dangling and (
+            verdict.get("kind") == "canonical_leg1_verdict" or verdict.get("beats_base") is True
+        ):
+            return "fixture_verdict_evidence_dangling"
+    return None
+
+
+def quarantine_fixture_verdicts(repo_root, dry_run=False):
+    """C-10397 (harness_lib twin): sweep outputs/ for fixture/test verdicts
+    and move them to outputs/quarantine_synthetic/ so the listdir scan path
+    is clean. Returns moved basenames. Only fixture_verdict_violation-flagged
+    files are moved; real canonical verdicts are untouched."""
+    out_dir = os.path.join(repo_root, "outputs")
+    q_dir = os.path.join(out_dir, "quarantine_synthetic")
+    moved = []
+    if not os.path.isdir(out_dir):
+        return moved
+    os.makedirs(q_dir, exist_ok=True)
+    for name in sorted(os.listdir(out_dir)):
+        if not (name.startswith("verdict") and name.endswith(".json")):
+            continue
+        p = os.path.join(out_dir, name)
+        try:
+            d = load_json(p, {})
+        except Exception:
+            continue
+        if not d:
+            continue
+        if fixture_verdict_violation(d) is None:
+            continue
+        dst = os.path.join(q_dir, name)
+        if dry_run:
+            moved.append(name)
+            continue
+        try:
+            os.replace(p, dst)
+            moved.append(name)
+        except OSError:
+            pass
+    return moved
+
+
+def env_identity_violation(verdict):
+    """C-10452: None iff BOTH legs pin a REAL exec-env identity
+    (interpreter / overlay / box). A verdict that would retire the goal
+    must name the exec-env that produced its scores or fail closed:
+      - leg.exec_env missing -> env_identity_missing
+      - fixture-shaped interpreter (/tmp/, /var/folders/) -> {name}_fixture_interpreter
+      - missing interpreter or overlay -> {name}_env_identity_missing
+    """
+    for name in ("leg1", "leg2"):
+        leg = verdict.get(name)
+        if not isinstance(leg, dict):
+            return f"{name}_missing"
+        ee = leg.get("exec_env")
+        if not isinstance(ee, dict):
+            return "env_identity_missing"
+        interp = ee.get("interpreter")
+        if not isinstance(interp, str) or not interp:
+            return f"{name}_env_identity_missing"
+        if "/tmp/" in interp or "/var/folders/" in interp:
+            return f"{name}_fixture_interpreter"
+        overlay = ee.get("overlay")
+        box = ee.get("box")
+        if (not isinstance(overlay, str) or not overlay) and (not isinstance(box, str) or not box):
+            return f"{name}_env_identity_missing"
+    return None
+
+
 def is_qwen38_27b_model(name):
     """C-9119: does this id resolve to the GOAL's Qwen3.8-27B family?
     Case-insensitive and path-tolerant: requires BOTH the "qwen3.8"
@@ -1942,7 +2072,12 @@ def leg_provenance_violation(verdict, _os_path_exists=None):
     <25 lines.
     """
     exists = _os_path_exists or os.path.exists
-    FIXTURE_ID_PREFIXES = ("pid-leg", "cache-leg", "win-leg")
+    # C-10323 GAP-B parity with qgh: fixture tokens are substring-matched
+    # (not startswith-only) so an EMBEDDED 'pid-leg'/'cache-leg'/'win-leg'/
+    # 'c9750-canonical' identity (e.g. '2026-10-09-pid-leg1-bogus') is a
+    # fixture shape in BOTH twins. Real runners emit numeric pids + hex
+    # cache/window hashes that never contain these tokens.
+    FIXTURE_ID_TOKENS = ("pid-leg", "cache-leg", "win-leg", "c9750-canonical")
     for name in ("leg1", "leg2"):
         leg = verdict.get(name)
         if not isinstance(leg, dict):
@@ -1950,7 +2085,8 @@ def leg_provenance_violation(verdict, _os_path_exists=None):
         ref = leg.get("ref")
         ind = leg.get("independence") if isinstance(leg.get("independence"), dict) else {}
         ids = (ind.get("leg_process_id"), ind.get("candidate_cache_id"), ind.get("window_id"))
-        if any(isinstance(x, str) and x.startswith(FIXTURE_ID_PREFIXES) for x in ids):
+        # C-10323 GAP-B: substring match, not prefix-only.
+        if any(isinstance(x, str) and any(tok in x for tok in FIXTURE_ID_TOKENS) for x in ids):
             return f"{name}_fixture_identity"
         # C-9752 core rule: a leg must show REAL scores evidence — an existing
         # scores/ref file, or a recorded scores sha. A ref pointing at a
@@ -1962,6 +2098,7 @@ def leg_provenance_violation(verdict, _os_path_exists=None):
         elif not leg.get("scores_sha256"):
             return f"{name}_no_ref_no_sha"
     return None
+
 
 def goal_done(goal, verdicts):
     """18/18 achieved = a fail-closed TWO-LEG verdict shows 18/18 +
