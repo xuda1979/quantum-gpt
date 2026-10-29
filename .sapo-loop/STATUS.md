@@ -22826,3 +22826,37 @@ C-9603 monitor: box-verified ASI3 trainer run=sapo-27b-ai-20260921T033826 STEP33
 - ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
 - ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
 - ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK

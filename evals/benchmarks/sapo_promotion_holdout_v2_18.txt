@@ -1,0 +1,23 @@
+# SAPO promotion gate v2: 18 unique, training-disjoint quantum coding tasks.
+# C-10453: frozen 2026-10-16 after C-10452 contamination audit of v1.
+# C-10454 (2026-10-17): ids normalized to canonical task.json id spelling
+# (quantum_ prefix) so eval runners resolve task dirs. Task set, order, and
+# contents UNCHANGED from the 2026-10-16 freeze. Old sha: 42d32d11...
+quantum_bernstein_vazirani_hidden_string
+quantum_bit_flip_code_correction
+quantum_bitstring_maxcut_landscape
+quantum_bogoliubov_transform_fermion
+quantum_classical_shadow_tomography
+quantum_deutsch_jozsa_balance_test
+quantum_gate_alias_casefold_barrier
+quantum_grover_multiple_solutions
+quantum_hadamard_test_expectation
+quantum_hamiltonian_simulation_trotter
+quantum_maxcut_assignment_enumerator
+quantum_maxcut_partition_ranker
+quantum_qaoa_maxcut_5cycle
+quantum_qft_periodic_state
+quantum_qml_variational_classifier
+quantum_rl_v2_binary_stabilizer_tableau
+quantum_rl_v2_phase_flip_channel_kraus
+quantum_superdense_identity_lookup
