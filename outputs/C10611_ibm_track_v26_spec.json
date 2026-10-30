@@ -1,0 +1,31 @@
+{
+ "card": "C-10611",
+ "created_utc": "2026-10-30T00:44:48Z",
+ "tasks": 28,
+ "rows": 56,
+ "styles": {
+  "qhe_completion": 28,
+  "hard_instruction": 28
+ },
+ "modules": [
+  "qiskit.circuit",
+  "qiskit.circuit.library",
+  "qiskit.dagcircuit",
+  "qiskit.primitives",
+  "qiskit.qasm2",
+  "qiskit.qpy",
+  "qiskit.quantum_info",
+  "qiskit.synthesis",
+  "qiskit.transpiler",
+  "qiskit_aer",
+  "qiskit_aer.noise"
+ ],
+ "difficulty": {
+  "basic": 20,
+  "intermediate": 30,
+  "difficult": 6
+ },
+ "leak_guard": "sha256 vs 139-benchmark {canonical,test,prompt} set: 0 hits",
+ "benchmark_manifest": "/Users/daxu/software/quantum-gpt/evals/benchmarks/ibm_qiskit/MANIFEST.json",
+ "no_fabrication": true
+}
