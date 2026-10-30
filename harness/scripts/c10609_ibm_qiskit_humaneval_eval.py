@@ -37,6 +37,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import re
 import subprocess
 import sys
@@ -72,6 +73,37 @@ def sha256_file(p: Path) -> str:
         for chunk in iter(lambda: f.read(1 << 20), b""):
             h.update(chunk)
     return h.hexdigest()
+
+
+def journal_append(journal_path: Path, rec: dict) -> None:
+    """Crash-safe per-task result append (one JSON line, fsync per task).
+
+    If the process dies mid-write, only the tail line can tear — a torn
+    line fails json.loads and is discarded by journal_load."""
+    line = json.dumps(rec, ensure_ascii=False) + "\n"
+    with open(journal_path, "a", encoding="utf-8") as f:
+        f.write(line)
+        f.flush()
+        os.fsync(f.fileno())
+
+
+def journal_load(journal_path: Path) -> dict[str, dict]:
+    """Load {task_id: rec} from a journal; drop a torn final line."""
+    done: dict[str, dict] = {}
+    if not journal_path.is_file():
+        return done
+    raw = journal_path.read_text(encoding="utf-8", errors="replace")
+    lines = raw.splitlines()
+    for ln in lines:
+        ln = ln.strip()
+        if not ln:
+            continue
+        try:
+            rec = json.loads(ln)
+            done[rec["task_id"]] = rec
+        except (json.JSONDecodeError, KeyError):
+            continue  # torn tail line from a hard kill — discard
+    return done
 
 
 def verify_freeze(style: str) -> list[dict]:
@@ -179,6 +211,14 @@ def main() -> int:
     ap.add_argument("--task-start", type=int, default=0)
     ap.add_argument("--task-count", type=int, default=0, help="0 = all")
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument(
+        "--resume-journal",
+        default=None,
+        help="journal file of per-task results from a killed run; tasks already "
+        "present are skipped (their journaled results are reused verbatim), "
+        "the rest are generated + execed, then all results are merged into "
+        "one envelope",
+    )
     ap.add_argument("--device", default="npu")
     ap.add_argument("--npu-max-memory-gib", type=int, default=54)
     args = ap.parse_args()
@@ -271,13 +311,39 @@ def main() -> int:
         model.generate(enc, max_new_tokens=8, do_sample=False, pad_token_id=tok.eos_token_id)
         emit(stage="adapter_probe_generated")
 
-    # 5) per-task generate + exec
+    # 5) per-task generate + exec (journaled per task: crash-safe resume)
+    journal_path = out_dir / "journal.jsonl"
+    resumed: dict[str, dict] = {}
+    if args.resume_journal:
+        resumed = journal_load(Path(args.resume_journal))
+        if not resumed:
+            raise SystemExit(f"RESUME FAIL: journal {args.resume_journal} empty or unreadable")
+        emit(
+            stage="resume_journal_loaded",
+            path=args.resume_journal,
+            resumed_tasks=len(resumed),
+        )
     results = []
     pass_count = 0
     t_start = time.time()
     workdir = out_dir / "_exec_work"
     workdir.mkdir(exist_ok=True)
     for i, row in enumerate(sl):
+        prior = resumed.get(row["task_id"])
+        if prior is not None:
+            passed = bool(prior["passed"])
+            pass_count += int(passed)
+            results.append(prior)
+            emit(
+                stage="task_done",
+                idx=i + 1,
+                of=len(sl),
+                task_id=row["task_id"],
+                passed=passed,
+                running_pass=pass_count,
+                resumed=True,
+            )
+            continue
         user_prompt = build_user_prompt(row, args.style)
         msgs = [
             {"role": "system", "content": SYS_PROMPT},
@@ -315,6 +381,7 @@ def main() -> int:
             "code_chars": len(code),
         }
         results.append(rec)
+        journal_append(journal_path, rec)
         emit(
             stage="task_done",
             idx=i + 1,
@@ -340,6 +407,8 @@ def main() -> int:
         "adapter_sha256": adapter_sha,
         "mode": base_sha_note,
         "max_new_tokens": args.max_new_tokens,
+        "resumed_from_journal": bool(args.resume_journal),
+        "resumed_tasks": len(resumed),
         "pass_count": pass_count,
         "fail_count": len(sl) - pass_count,
         "elapsed_s": elapsed,
