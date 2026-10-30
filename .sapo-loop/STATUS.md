@@ -22860,3 +22860,93 @@ C-9603 monitor: box-verified ASI3 trainer run=sapo-27b-ai-20260921T033826 STEP33
 - ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
 - ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
 - ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+
+## 2026-10-30 11:24 CST — C-10611 v26 corpus BANKED (28/28 green); C-10610 IBM baseline battery LIVE on ASI2
+- **C-10611 DONE** (commit 550e7d904): v26 IBM-track generalization corpus — 28 fresh qiskit-2.5 tasks, dual-style (qhe_completion + hard_instruction), 56 rows. Gates: G1 freeze 278 bench rows verified, G2 0 leak hits vs 834 benchmark hashes, G3 gold 28/28 exec-green, G4 dual style 28+28, G5 56/56 reassembly exec-green. Fixed 11 red tasks (aer add_quantum_error qubits arg; bell_choi dephasing channel for purity 1/2; CNOTDihedral from circuit; estimator V2 scalar evs; schmidt list-unpack; Clifford(HGate()); partial-trace |10> semantics; W3 exact via negative-control Toffoli) + 2 systematic builder bugs (completion_body dedent broke ALL qhe reassemblies → keep indent; stray-state hygiene).
+- **C-10610 LIVE**: IBM Qiskit HumanEval 139 baseline battery (4 runs: base×2 styles + champion-1941×2 styles) running on ASI2 since 02:26Z. Fixed en route (commit 6278fea6f): runner out_dir.resolve() (relative-path subprocess cwd bug), apply_chat_template return_dict=False (transformers 5.2.0.dev0 BatchEncoding), box env completed (qiskit/aer/ibm-runtime/matplotlib/networkx/pylatexenc installed; canonical dry-run 139/139 both styles on box). Champion sha 373b6e6d verified pre-launch. Watcher live (logs/c10610_battery_watch.log, 15-min polls). ETA ~35h at observed 3.75 min/task.
+- Hygiene: stale c10380 fire launchd agent booted out (was re-creating state-root log every 180s); 4 sapo-loop strays → scratch/sapo-strays/; lint gate CLEAN.
+- Old C-10608 watcher pipeline tail (2 background task notifications) = wound-down v25 watcher, no action (per task #9 no-SFT doctrine).
+- NEXT: C-10611 admission manifest for 28 RL tasks (#10) while battery grinds; then SAPO RL task dirs (#11) and C-10612 dispatch on champion warm-start.
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+
+## 2026-10-30 15:14 CST — C-10611 tasks #10/#11 DONE: 28 qg_* RL task dirs emitted + fail-closed admission 28/28
+- **#11 EMITTED** (harness/scripts/c10611_emit_rl_task_dirs.py): 28 SAPO RL task dirs under evals/tasks/quantum/qg_*/ — task.json (id/domain/category/framework/task_prompt/candidate_file/test_file), candidate.py (G5-verified reference), tests.py (run_tests(candidate_path)->{"passed":bool} wrapping builder check()). Contract aligned with training/grpo_trainer.py + agentic_grpo_trainer.py discovery (two-level evals/tasks layout) and evals/runner/single_candidate_eval.py scoring. Smoke 28/28: reference green + empty-negative red.
+- **#10 ADMITTED**: scripts/verify_sapo_tasks.py --tasks-dir evals/tasks --allow-candidate-reference --strict --ids-file (28 qg ids) → accepted 28/28, rejected 0. Artifacts: outputs/C10611_rl_admission_manifest.json (hash-pinned v1, task/tests/reference/prompt sha256), _report.json, _replay.jsonl (28 verified chat-sft rows). Integrity recheck 28/28 OK; holdout-disjoint vs sapo_promotion_holdout_v1_18 + v2_18 + quantum_generalization_holdout_v2_hard (0 overlap).
+- **Admission caught a real bug**: qg_cnot_dihedral_phase check() only asserted non-empty string → mutant passed (mutant_passes_tests rejection). Strengthened in builder (commit-pending) + regenerated task dir: now asserts '4*x_0' + '4*x_1' present, no 'x_0*x_1' mixed term (qiskit 2.5: poly = '0 + 4*x_0 + 4*x_1'). Corpus rows unaffected (tests never embedded in prompts; rerun diff = byte-identical 56/56). Builder gates re-verified: G1 278 rows, G2 0 leaks, G3 28/28, G4 dual-style, G5 56/56 re-exec green. Lint gate CLEAN.
+- C-10610 battery still grinding on ASI2 (44 task events @ 06:24Z poll, watcher healthy). NEXT: C-10612 SAPO RL dispatch (#12) on hold pending user go.
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+
+## 2026-10-30 19:42 CST — C-10610 battery RECOVERED post-restart: journal resume + hardened watcher (commit b6624fe16)
+
+- Root cause of 11:26Z stall: ASI2 container restarted mid-run1 (base_qhe 74/139), killing the battery + the old run had NO journal — all progress lost.
+- Fix landed (commit b6624fe16):
+  - c10609 runner: per-task journal.jsonl (fsync/task, torn-tail tolerant) + --resume-journal
+  - c10610 dispatch: idempotent 4-run chain, journal-aware relaunch
+  - c10610 watcher: --max-poll-h (72h default), liveness check → battery_stale_dead on 3 gone-polls
+- Battery RELAUNCHED 11:33:44Z with journaling live (base_qhe journal materialized at task 0; task_done idx 1/139 confirmed). Watcher PID 63915 (72h deadline).
+- qiskit 2.6.1 + aer 0.18.2 verified on box post-restart.
+- NEXT: watcher runs to BATTERY_DONE (ETA ~10-12h for 4×139 tasks); then envelopes → C-10610 analysis (base vs champion-1941 on QHE styles).
