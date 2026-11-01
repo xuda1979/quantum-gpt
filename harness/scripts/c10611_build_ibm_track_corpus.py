@@ -315,7 +315,12 @@ def cnotdihedral_phase_poly():
     return str(elem.poly)''',
             tests="""def check(candidate):
     out = candidate()
-    assert isinstance(out, str) and len(out) > 0""",
+    assert isinstance(out, str) and len(out) > 0
+    s = out.replace(" ", "")
+    # X0 → x_0 phase; CX propagates; Z1 adds x_1 (pi = 4 half-turns each)
+    assert "4*x_0" in s, f"missing 4*x_0 term: {out!r}"
+    assert "4*x_1" in s, f"missing 4*x_1 term: {out!r}"
+    assert "x_0*x_1" not in s, f"unexpected mixed term: {out!r}\"""",
         )
     )
 
