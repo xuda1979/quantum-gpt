@@ -1,0 +1,10 @@
+{
+  "id": "qg_estimator_observables",
+  "name": "estimator observables",
+  "domain": "quantum",
+  "category": "primitives",
+  "framework": "qiskit",
+  "task_prompt": "Using qiskit.primitives.StatevectorEstimator (V2), estimate <ZZ> for the 2-qubit circuit X on qubit 0 then CX(0,1); return the single float expectation.\nYou must implement this using a function named `estimator_zz_expectation` taking no arguments.",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

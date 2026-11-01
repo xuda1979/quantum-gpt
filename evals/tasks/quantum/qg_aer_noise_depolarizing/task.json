@@ -1,0 +1,10 @@
+{
+  "id": "qg_aer_noise_depolarizing",
+  "name": "aer noise depolarizing",
+  "domain": "quantum",
+  "category": "aer_simulation",
+  "framework": "qiskit",
+  "task_prompt": "Build a NoiseModel with a 1-qubit depolarizing error (p=0.1) applied to 'h' and 'cx' in qiskit_aer, run the Bell circuit for 2048 shots with seed_simulator=11, and return the fraction of shots that are 00 or 11.\nYou must implement this using a function named `depolarized_bell_fidelity` taking no arguments.",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

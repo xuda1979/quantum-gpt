@@ -1,0 +1,10 @@
+{
+  "id": "qg_statevector_partial_trace_order",
+  "name": "statevector partial trace order",
+  "domain": "quantum",
+  "category": "quantum_info",
+  "framework": "qiskit",
+  "task_prompt": "From the 2-qubit Statevector |10> (qubit 0 in |1>, qubit 1 in |0>), trace out qubit 0 and return the remaining single-qubit DensityMatrix as a numpy array (must be |1>: diag(0,1)).\nYou must implement this using a function named `trace_out_first` taking no arguments.",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

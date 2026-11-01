@@ -1,0 +1,10 @@
+{
+  "id": "qg_barrier_grouping",
+  "name": "barrier grouping",
+  "domain": "quantum",
+  "category": "circuit_construction",
+  "framework": "qiskit",
+  "task_prompt": "Build a 3-qubit circuit with x(0), barrier, x(1), x(2), and return the number of instruction tuples (qc.data entries).\nYou must implement this using a function named `barrier_split_count` taking no arguments.",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

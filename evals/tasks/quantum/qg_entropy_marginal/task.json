@@ -1,0 +1,10 @@
+{
+  "id": "qg_entropy_marginal",
+  "name": "entropy marginal",
+  "domain": "quantum",
+  "category": "quantum_info",
+  "framework": "qiskit",
+  "task_prompt": "Create the Bell |00>+|11> Statevector, compute the entropy of qubit 0 (marginal) via DensityMatrix and qiskit.quantum_info.entropy, and return it.\nYou must implement this using a function named `bell_marginal_entropy` taking no arguments.",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

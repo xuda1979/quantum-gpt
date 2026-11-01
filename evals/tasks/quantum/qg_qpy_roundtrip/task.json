@@ -1,0 +1,10 @@
+{
+  "id": "qg_qpy_roundtrip",
+  "name": "qpy roundtrip",
+  "domain": "quantum",
+  "category": "serialization",
+  "framework": "qiskit",
+  "task_prompt": "Serialize a QuantumCircuit (h, cx on 2 qubits) to QPY bytes with qiskit.qpy.dump and load it back with qpy.load; return the loaded circuit's depth.\nYou must implement this using a function named `qpy_roundtrip_depth` taking no arguments.",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

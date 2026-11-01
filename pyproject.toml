@@ -14,6 +14,9 @@ extend-exclude = [
   "_legacy",
   ".benchmarks",
   "outputs",             # eval evidence/candidates are sha-pinned artifacts, not source
+  "evals/tasks",         # task fixtures: candidate/tests bytes are sha-pinned by admission
+                         # manifests; hook autofix (ruff --fix, ruff-format, EOF/whitespace
+                         # fixers) would mutate pinned bytes and break reference_sha256
 ]
 
 [tool.ruff.lint]
@@ -32,7 +35,9 @@ ignore = [
   "B904",   # raise from in except — enable later, noisy now
   "UP007",  # Optional[X] vs X | None — keep py3.9 runtime compat readable
   "UP038",  # isinstance(x, A | B) is py3.10+; canonical runtime venv is py3.9
-    # (canary: tests::test_training_has_no_runtime_union_isinstance)
+            # (canary: tests::test_training_has_no_runtime_union_isinstance)
+            # NOTE: rule removed in ruff>=0.12, but the pre-commit hook pins
+            # ruff 0.6.9 where it is still active — keep ignoring it there.
 ]
 
 [tool.ruff.lint.per-file-ignores]

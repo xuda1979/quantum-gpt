@@ -1,0 +1,10 @@
+{
+  "id": "qg_synthesis_clifford_t",
+  "name": "synthesis clifford t",
+  "domain": "quantum",
+  "category": "synthesis",
+  "framework": "qiskit",
+  "task_prompt": "Generate a random 2-qubit Clifford with seed=13 (qiskit.quantum_info.random_clifford), synthesize it to a circuit with qiskit.synthesis.synth_clifford_full, and verify operator equality: return True if the synthesized circuit's Operator equals the Clifford's operator.\nYou must implement this using a function named `clifford_synth_2q` taking no arguments.",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

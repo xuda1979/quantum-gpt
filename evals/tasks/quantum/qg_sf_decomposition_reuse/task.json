@@ -1,0 +1,10 @@
+{
+  "id": "qg_sf_decomposition_reuse",
+  "name": "sf decomposition reuse",
+  "domain": "quantum",
+  "category": "quantum_info",
+  "framework": "qiskit",
+  "task_prompt": "Compute the Schmidt decomposition of the state |01> with qiskit.quantum_info.schmidt_decomposition and return the number of nonzero Schmidt coefficients (with default tolerance).\nYou must implement this using a function named `schmidt_equal_split` taking no arguments.",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

@@ -1,0 +1,10 @@
+{
+  "id": "qg_fidelity_interference",
+  "name": "fidelity interference",
+  "domain": "quantum",
+  "category": "quantum_info",
+  "framework": "qiskit",
+  "task_prompt": "Return the quantum state fidelity between the |+> Statevector and the DensityMatrix of |+> (qiskit.quantum_info.state_fidelity). The result must equal 1.0.\nYou must implement this using a function named `plus_state_fidelity` taking no arguments.",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

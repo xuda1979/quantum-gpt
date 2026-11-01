@@ -1,0 +1,10 @@
+{
+  "id": "qg_transpile_depth_ring",
+  "name": "transpile depth ring",
+  "domain": "quantum",
+  "category": "transpilation",
+  "framework": "qiskit",
+  "task_prompt": "Transpile a 3-qubit ring of CX gates (CX(0,1), CX(1,2), CX(2,0)) onto the coupling map [[0,1],[1,0],[1,2],[2,1]] with optimization_level=3 and return the final circuit depth.\nYou must implement this using a function named `ring_depth_2` taking no arguments.",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

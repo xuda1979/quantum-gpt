@@ -1,0 +1,10 @@
+{
+  "id": "qg_cnot_dihedral_phase",
+  "name": "cnot dihedral phase",
+  "domain": "quantum",
+  "category": "quantum_info",
+  "framework": "qiskit",
+  "task_prompt": "Build a CNOTDihedral element from the circuit X on qubit 0, CX(0,1), Z on qubit 1, and return its phase polynomial (the .poly SpecialPolynomial) as a string.\nYou must implement this using a function named `cnotdihedral_phase_poly` taking no arguments.",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

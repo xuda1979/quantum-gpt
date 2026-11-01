@@ -1,0 +1,10 @@
+{
+  "id": "qg_amplitude_damping_t1",
+  "name": "amplitude damping t1",
+  "domain": "quantum",
+  "category": "noise_modeling",
+  "framework": "qiskit",
+  "task_prompt": "Simulate |1> under amplitude damping (gamma=0.25) for 512 shots with seed_simulator=2 using qiskit_aer's amplitude_damping_error on an 'id' gate applied twice; return the fraction of shots measured as 1.\nYou must implement this using a function named `amplitude_damping_survival` taking no arguments.",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

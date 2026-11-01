@@ -1,0 +1,10 @@
+{
+  "id": "qg_random_unitary_seed",
+  "name": "random unitary seed",
+  "domain": "quantum",
+  "category": "quantum_info",
+  "framework": "qiskit",
+  "task_prompt": "Using qiskit.quantum_info.random_unitary with seed=7 on 2 qubits, verify the drawn matrix is unitary and return it.\nYou must implement this using a function named `seeded_random_unitary` taking no arguments.",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

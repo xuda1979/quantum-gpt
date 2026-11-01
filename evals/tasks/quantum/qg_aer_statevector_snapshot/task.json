@@ -1,0 +1,10 @@
+{
+  "id": "qg_aer_statevector_snapshot",
+  "name": "aer statevector snapshot",
+  "domain": "quantum",
+  "category": "aer_simulation",
+  "framework": "qiskit",
+  "task_prompt": "Run the 3-qubit GHZ circuit on AerSimulator(method='statevector') with a save_statevector instruction appended and return the Statevector from the result's data.\nYou must implement this using a function named `ghz_save_statevector` taking no arguments.",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

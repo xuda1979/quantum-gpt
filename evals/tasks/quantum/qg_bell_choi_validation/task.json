@@ -1,0 +1,10 @@
+{
+  "id": "qg_bell_choi_validation",
+  "name": "bell choi validation",
+  "domain": "quantum",
+  "category": "quantum_info",
+  "framework": "qiskit",
+  "task_prompt": "Build the Choi representation of the fully-dephasing (Z) channel on one qubit, apply it to half of a Bell pair via qiskit.quantum_info DensityMatrix.evolve with qargs, and return the resulting DensityMatrix (purity 1/2).\nYou must implement this using a function named `bell_choi_channel` taking no arguments.",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

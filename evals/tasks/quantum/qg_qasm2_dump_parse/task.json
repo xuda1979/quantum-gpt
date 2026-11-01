@@ -1,0 +1,10 @@
+{
+  "id": "qg_qasm2_dump_parse",
+  "name": "qasm2 dump parse",
+  "domain": "quantum",
+  "category": "serialization",
+  "framework": "qiskit",
+  "task_prompt": "Dump a 3-qubit QuantumCircuit containing only a single X on qubit 2 to OpenQASM 2 text with qiskit.qasm2.dumps, re-load it with qasm2.loads, and return the loaded circuit's num_qubits.\nYou must implement this using a function named `qasm2_roundtrip_qubits` taking no arguments.",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

@@ -1,0 +1,10 @@
+{
+  "id": "qg_w_state_3q",
+  "name": "w state 3q",
+  "domain": "quantum",
+  "category": "circuit_construction",
+  "framework": "qiskit",
+  "task_prompt": "Build a 3-qubit W-state (|001>+|010>+|100>)/sqrt(3) circuit with qiskit QuantumCircuit using Ry/CX rotations, and return the circuit.\nYou must implement this using a function named `w_state_3` taking no arguments.",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

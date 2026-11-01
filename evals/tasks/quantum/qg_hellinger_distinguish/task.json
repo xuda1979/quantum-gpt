@@ -1,0 +1,10 @@
+{
+  "id": "qg_hellinger_distinguish",
+  "name": "hellinger distinguish",
+  "domain": "quantum",
+  "category": "quantum_info",
+  "framework": "qiskit",
+  "task_prompt": "Compute qiskit.quantum_info.hellinger_fidelity between the probability dicts of |00> and |11> (basis states, given as counts-like dicts) and return the value.\nYou must implement this using a function named `hellinger_orthogonal` taking no arguments.",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}

@@ -1,0 +1,10 @@
+{
+  "id": "qg_phase_oracle_3sat",
+  "name": "phase oracle 3sat",
+  "domain": "quantum",
+  "category": "circuit_construction",
+  "framework": "qiskit",
+  "task_prompt": "Build a 3-qubit phase oracle that flips the sign of |111> using a QuantumCircuit (H/CX/CCZ construction or an MCZ), and return the circuit.\nYou must implement this using a function named `three_sat_mark` taking no arguments.",
+  "candidate_file": "candidate.py",
+  "test_file": "tests.py"
+}
