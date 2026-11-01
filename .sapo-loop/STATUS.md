@@ -22950,3 +22950,127 @@ C-9603 monitor: box-verified ASI3 trainer run=sapo-27b-ai-20260921T033826 STEP33
 - Battery RELAUNCHED 11:33:44Z with journaling live (base_qhe journal materialized at task 0; task_done idx 1/139 confirmed). Watcher PID 63915 (72h deadline).
 - qiskit 2.6.1 + aer 0.18.2 verified on box post-restart.
 - NEXT: watcher runs to BATTERY_DONE (ETA ~10-12h for 4×139 tasks); then envelopes → C-10610 analysis (base vs champion-1941 on QHE styles).
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI1: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI1: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+
+## 2026-11-01 14:10 CST — C-10610 battery RELAUNCHED (3rd) + host-side reconciler live: env-wipe root cause found
+
+- Watcher declared battery_stale_dead 2026-10-30T21:42Z (task events frozen at 48). Diagnosis pass found the REAL failure chain:
+  - ASI2 container restarted ~15:57Z Oct 30 (3rd restart; PID1 uptime confirmed). No OOM (dmesg clean, 2TB RAM idle). External restarts every 2–4.5h.
+  - Container restart ALSO wipes pip site-packages (ephemeral layer) — first relaunch died instantly: "qiskit runtime missing on box". Journals in /root/work survive; pip env does NOT.
+  - qiskit/aer/pylatexenc restored 05:14Z, then full eval env (matplotlib/networkx/qiskit-ibm-runtime, per 22922 env manifest) restored 05:58Z. Pins from requirements-cpu-eval.txt authority (qiskit>=1.2,<3.0 → 2.6.1, aer 0.18.2, pylatexenc).
+- Battery relaunched 05:40Z (champion sha 373b6e6d verified): journal resume re-verified 48 rows instantly, generating task 49+ by 05:44Z. run1 base_qhe in flight.
+  - ⚠️ data-integrity caveat: tasks 49–~53 ran 05:40–05:58Z BEFORE matplotlib/networkx restore completed; any `passed:false` rows in that window from ImportError must be re-run at analysis time (check envelope stderr/tracebacks for ImportError vs genuine fail).
+- NEW: harness/scripts/c10610_battery_reconciler.py — host-side supervisor (daemon_reconciler doctrine: ONE remedy per class). Classes: A container-restart → re-dispatch idempotent battery (journal resume); B env-wipe → pip3 authority pins then re-dispatch; C transport flap → no-op retry. 300s cycles, 180s relaunch cooldown, 96h fail-closed. Live since 06:09Z (pid 25513, logs/c10610_battery_reconciler.log).
+- Container-lifetime math: battery needs ~32h compute vs 2–4.5h container lifetimes → expect ~8-12 auto-relaunch cycles, each losing ≤1 in-flight task (fsync-per-task journal). Reconciler absorbs this without operator action.
+- NEXT: reconciler drives to BATTERY_DONE (4 envelopes) → C-10610 analysis (base vs champion-1941, qhe_completion vs hard_instruction) → re-run suspect ImportError rows first.
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+- ⚠️ BOX-EXEC-DEAD ASI3: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI3: exec round-trip OK
+
+## 2026-11-01 16:10 C
+- COMMITTED a4891aa43 fix(C-10435): reconciler relaunch bypasses keeper 300s cooldown lock.
+  RED→GREEN test_c10435_reconciler_cooldown_bypass.py 3/3 (stale lock cleared before keeper;
+  KEEPER_SCRIPT/ENVKEEP_DIR hoisted to module globals; duplicate import block deduped).
+  Reconciler suite 13/13 green. reconciler-loop launchd agent loaded (exit 0, PID 14611).
+  Removed stale .git/index.lock (14:19, no git process, >1h old).
+- COMMITTED 848107783 fix(C-10611): cnot_dihedral_phase oracle tightened — exact phase-poly
+  terms (4*x_0, 4*x_1, no x_0*x_1). Both v26 corpus rows verified PASS against tightened
+  assertions (output '0 + 4*x_0 + 4*x_1'). Spec regenerated, timestamp-only diff.
+- COMMITTED 7839adc0a feat(C-10610): battery reconciler script committed (182 lines).
+- BATTERY LIVE: reconciler PID 25513, tasks 66/164 at 07:27Z, inner+eval alive, env_ok.
+- ASI3 daemon wedge (ongoing): booting 572s+ with "Huanxin auth expired" — cookie_bridge
+  is the remedy class (auth_drift), NOT relaunch; classified booting so reconciler waits.
+  Safari SSO bridge disabled to avoid foreground interruption → needs operator attention
+  or API-key smoke; watch next cycles.
