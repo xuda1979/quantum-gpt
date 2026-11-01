@@ -23074,3 +23074,20 @@ C-9603 monitor: box-verified ASI3 trainer run=sapo-27b-ai-20260921T033826 STEP33
   is the remedy class (auth_drift), NOT relaunch; classified booting so reconciler waits.
   Safari SSO bridge disabled to avoid foreground interruption → needs operator attention
   or API-key smoke; watch next cycles.
+
+## 2026-11-01 17:05 CST — ASI3 auth wedge RESOLVED; battery 84/164 healthy
+
+- ASI3 daemon RECOVERED: relaunched 16:38 CST (pid 94759), startupState=ready,
+  authDriftDetected=false, shellSurfaceReady=true, exec round-trips OK
+  (BOX_ALIVE_PROBE ~4.3s). Prior "Huanxin auth expired" booting-wedge cleared
+  without Safari SSO bridge intervention. All 3 daemons green (ASI1 ready 3h56m,
+  ASI2 ready, ASI3 ready).
+- C-10610 battery healthy: reconciler pid 25513 live 06:09Z→now, 32 cycles clean.
+  Tasks 52→84 in ~2h50m ≈ 11.3 tasks/h. ETA remaining 80 tasks ≈ 7h barring
+  container restarts (reconciler classes A/B absorb those). Two state_unreadable
+  flaps at 08:29/08:34Z self-cleared (transport, not battery events).
+- Reminder for analysis: re-run any passed:false rows from tasks 49–53 window
+  (pre-matplotlib/networkx restore, 05:40–05:58Z) after checking envelope stderr
+  for ImportError vs genuine fail.
+- ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
+- ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
