@@ -23091,3 +23091,4 @@ C-9603 monitor: box-verified ASI3 trainer run=sapo-27b-ai-20260921T033826 STEP33
   for ImportError vs genuine fail.
 - ⚠️ BOX-EXEC-DEAD ASI2: exec round-trip FAILED — box cannot work. auto-fix reconciler_kick exit=0.
 - ✅ BOX-EXEC-RECOVERED ASI2: exec round-trip OK
+- C-10611 admission COMMITTED (373c9dd2f): 28 qg_* tasks verified, negatives 3/3 rejected, sha-pinned manifest; hooks unblocked via evals/tasks ruff+EOF/ws excludes (pinned-bytes rationale, mirrors outputs/ precedent); UP038 ignore kept for hook ruff 0.6.9 (removed in >=0.12); 28/28 reference_sha256 re-verified OK at HEAD. C-10612 RL dispatch remains STAGED pending operator go.
