@@ -20,9 +20,6 @@ import time
 import urllib.error
 import urllib.request
 from pathlib import Path
-import sys as _sys
-_sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from harness_config import get  # noqa: E402
 
 _sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from harness_config import get  # noqa: E402
@@ -107,11 +104,22 @@ def should_relaunch(cls: str, bad_for_s: int) -> bool:
     return cls in ("conn_refused", "browser_closed") and bad_for_s >= THRESHOLDS.get(cls, 10**9)
 
 
+KEEPER_SCRIPT = "/Users/daxu/software/quantum-gpt-new/scripts/huanxin_all_keepalive.sh"
+ENVKEEP_DIR = Path("/Users/daxu/software/quantum-gpt/harness/state/envkeep")
+
+
 def relaunch_daemon(box: str) -> dict:
-    """Relaunch via the keepalive script (single canonical path). <10 lines."""
-    script = "/Users/daxu/software/quantum-gpt-new/scripts/huanxin_all_keepalive.sh"
+    """Relaunch via keeper (canonical path), bypassing its 300s per-env
+    cooldown lock: the reconciler has ALREADY gated the box as dead for
+    THRESHOLD seconds, so the keeper's lock would only swallow the relaunch
+    (2026-10-15 incident: box_exec_dead x3, zero effective restarts).
+    <10 lines."""
     try:
-        proc = subprocess.run(["bash", script], capture_output=True, text=True, timeout=120)
+        (ENVKEEP_DIR / f"{box}.lock").unlink(missing_ok=True)
+    except OSError:
+        pass  # lock cleanup is best-effort; keeper re-creates it on relaunch
+    try:
+        proc = subprocess.run(["bash", KEEPER_SCRIPT], capture_output=True, text=True, timeout=120)
         return {"action": "relaunch_daemon", "exit": proc.returncode, "tail": proc.stdout[-200:]}
     except subprocess.TimeoutExpired:
         return {"action": "relaunch_daemon", "exit": -1, "tail": "TIMEOUT"}
